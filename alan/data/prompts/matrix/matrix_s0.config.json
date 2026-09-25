@@ -1,0 +1,49 @@
+{
+  "n_configs": 30,
+  "n_test_configs": 6,
+  "n_dev_configs": 4,
+  "seed": 0,
+  "domains": [
+    "investment",
+    "climate"
+  ],
+  "renderings": [
+    "structured",
+    "plain",
+    "varied"
+  ],
+  "n_control_configs": 10,
+  "scaling_horizons": [
+    "1 week",
+    "1 month",
+    "6 months",
+    "2 years",
+    "10 years",
+    "30 years"
+  ],
+  "scaling_factors": [
+    0.1,
+    1.0,
+    10.0
+  ],
+  "horizons": [
+    "1 day",
+    "1 week",
+    "2 weeks",
+    "1 month",
+    "3 months",
+    "6 months",
+    "2 years",
+    "5 years",
+    "10 years",
+    "20 years",
+    "30 years",
+    "100 years"
+  ],
+  "heldout": [
+    "2 weeks",
+    "3 months",
+    "5 years",
+    "20 years"
+  ]
+}

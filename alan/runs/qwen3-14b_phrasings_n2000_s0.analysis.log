@@ -1,0 +1,35 @@
+run Qwen/Qwen3-14B n=2000 factor=phrasing; reference rows 471, variant rows 1421
+variants: {'p1': 482, 'p2': 475, 'p0': 471, 'p3': 464}
+L14 R0: ridge(ref->variants) R^2 vs magnitude 0.901 | R^2 by phrasing {'p1': 0.937, 'p2': 0.882, 'p3': 0.879}
+L22 T3: ridge(ref->variants) R^2 vs magnitude 0.815 | R^2 by phrasing {'p1': 0.729, 'p2': 0.863, 'p3': 0.862}
+L22 R0: ridge(ref->variants) R^2 vs magnitude 0.794 | R^2 by phrasing {'p1': 0.865, 'p2': 0.837, 'p3': 0.663}
+L29 R0: ridge(ref->variants) R^2 vs magnitude 0.893 | R^2 by phrasing {'p1': 0.956, 'p2': 0.842, 'p3': 0.877}
+L37 T3: ridge(ref->variants) R^2 vs magnitude 0.614 | R^2 by phrasing {'p1': 0.394, 'p2': 0.774, 'p3': 0.691}
+wrote figures/qwen3-14b_phrasings_n2000_s0
+run Qwen/Qwen3-14B n=2000
+=== H(sink) at T4: |rho| of the k-th PC with log horizon (same PCA fit); evr_top1; top/median PC std ===
+layer  evr_top1  k=0     k=1     k=2     k=5    top/median
+L14    0.200    0.219  0.016  0.090  0.308   8x
+L22    0.998    0.010  0.224  0.347  0.331   433x
+L29    0.997    0.011  0.355  0.456  0.188   271x
+L37    0.985    0.035  0.349  0.530  0.047   118x
+
+=== H(U-shape): 17 canonical centroids in their own PC plane; polynomial fits vs log10 horizon ===
+cell     PC2: R2 quad  vertex(years)  R2 linear | PC1: R2 linear  R2 quad
+L22 T3   0.891           0.61         0.000     | 0.968           0.970
+
+=== H(variants) by phrasing_id (['0.0', '1.0', '2.0', '3.0']) ===
+cell     pooled|rho_pc1|  per-variant|rho_pc1|  silhouette(variant,PC1-3)  |rho(PC1,variant-mean)|
+L14 R0   0.161            0.86/0.94/0.92/0.95       +0.772                    0.962
+L22 T3   0.749            0.95/0.96/0.94/0.95       +0.186                    0.487
+L22 R0   0.524            0.97/0.97/0.93/0.91       +0.273                    0.609
+L29 R0   0.740            0.78/0.83/0.81/0.62       -0.019                    0.138
+L37 T3   0.716            0.96/0.87/0.96/0.84       +0.149                    0.494
+
+=== H(variants) by horizon_unit (['days', 'months', 'weeks', 'years']) ===
+cell     pooled|rho_pc1|  per-variant|rho_pc1|  silhouette(variant,PC1-3)  |rho(PC1,variant-mean)|
+L14 R0   0.161            0.07/0.10/0.09/0.05       +0.003                    0.154
+L22 T3   0.749            0.37/0.16/0.16/0.11       +0.097                    0.726
+L22 R0   0.524            0.36/0.30/0.09/0.16       +0.117                    0.548
+L29 R0   0.740            0.25/0.04/0.25/0.80       +0.083                    0.599
+L37 T3   0.716            0.26/0.12/0.19/0.57       +0.073                    0.717

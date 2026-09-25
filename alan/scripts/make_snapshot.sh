@@ -12,8 +12,10 @@ if [ -n "$(git status --porcelain)" ]; then echo "working tree is dirty; commit 
 HASH=$(git rev-parse --short HEAD)
 mkdir -p "$DEST"
 echo "snapshot of CodeReclaimers/SPAR-2026 @ $HASH -> $DEST"
-# 1. committed code and docs
+# 1. committed code and docs — but NOT this repo's .gitignore, which ignores data/, runs/ and figures/
+#    (the snapshot must carry them); write a snapshot-appropriate one instead
 git archive HEAD | tar -x -C "$DEST"
+printf '.venv/\n__pycache__/\n*.pyc\n*.egg-info/\n.pytest_cache/\n.idea/\n' > "$DEST/.gitignore"
 # 2. regenerable prompt datasets (small) and run indices / metadata (small), figures and tables
 mkdir -p "$DEST/data/prompts" "$DEST/runs" "$DEST/figures"
 cp -r data/prompts/. "$DEST/data/prompts/"
@@ -47,3 +49,9 @@ done
   echo "full_activations_included: $(ls "$DEST"/runs/*/acts_????.safetensors 2>/dev/null | wc -l) shard files"
 } > "$DEST/SNAPSHOT.yaml"
 du -sh "$DEST" | cut -f1 | xargs -I{} echo "snapshot size {}"
+# 5. guard: if DEST is inside a git repo, none of data/ runs/ figures/ may be ignored there
+if git -C "$DEST" rev-parse --show-toplevel > /dev/null 2>&1; then
+  ign=$(git -C "$DEST" check-ignore "$DEST/data" "$DEST/runs" "$DEST/figures" 2>/dev/null || true)
+  if [ -n "$ign" ]; then echo "ERROR: snapshot paths are git-ignored in the destination repo:" >&2; echo "$ign" >&2; exit 1; fi
+  echo "guard: data/, runs/, figures/ are not ignored in the destination repo"
+fi

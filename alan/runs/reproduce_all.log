@@ -1,0 +1,27 @@
+2026-09-25 08:46:51 START commit 1c52286
+2026-09-25 08:46:51 datasets
+2026-09-25 08:46:53 datasets done
+2026-09-25 08:46:53 capture qwen3-14b_investment_n2000_s0 start
+2026-09-25 09:03:14 capture qwen3-14b_investment_n2000_s0 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-09-25 09:03:14 capture qwen3-14b_matrix_s0 start
+2026-09-25 09:17:55 analysis qwen3-14b_investment_n2000_s0 done
+2026-09-25 09:34:33 capture qwen3-14b_matrix_s0 done: 3240 samples, format adherence 3000/3240 = 0.926
+2026-09-25 09:34:33 capture qwen3-14b_extended_n2000_s0 start
+2026-09-25 09:41:45 analysis qwen3-14b_matrix_s0 done
+2026-09-25 09:53:10 capture qwen3-14b_extended_n2000_s0 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-09-25 09:53:10 capture qwen3-14b_phrasings_n2000_s0 start
+2026-09-25 10:07:08 analysis qwen3-14b_extended_n2000_s0 done
+2026-09-25 10:15:03 capture qwen3-14b_phrasings_n2000_s0 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-09-25 10:15:03 capture qwen3-14b_units_paired_n2000_s1 start
+2026-09-25 10:16:23 analysis qwen3-14b_phrasings_n2000_s0 done
+2026-09-25 10:30:56 capture qwen3-14b_units_paired_n2000_s1 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-09-25 10:30:56 all captures done; waiting for analyses
+2026-09-25 10:31:03 analysis qwen3-14b_units_paired_n2000_s1 done
+2026-09-25 10:31:03 checksums
+qwen3-14b_investment_n2000_s0: n=2000 index=1ff5eb2fae5d T3sum=379394 R0sum=280070
+qwen3-14b_matrix_s0: n=3240 index=bc99f1e9b46b T3sum=576689 R0sum=378579
+qwen3-14b_extended_n2000_s0: n=2000 index=75f809c2cfb2 T3sum=386625 R0sum=280911
+qwen3-14b_phrasings_n2000_s0: n=2000 index=1e5330b6ab7d T3sum=371805 R0sum=275853
+qwen3-14b_units_paired_n2000_s1: n=2000 index=fb9ef9e343d0 T3sum=382975 R0sum=279953
+wrote snapshot/checksums_post_20260925.json
+2026-09-25 10:31:06 ALL DONE

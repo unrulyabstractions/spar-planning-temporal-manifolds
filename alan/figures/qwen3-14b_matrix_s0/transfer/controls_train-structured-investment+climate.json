@@ -1,0 +1,47 @@
+{
+  "tag": "train-structured-investment+climate",
+  "layer": 37,
+  "position": "T8",
+  "alpha": 1.0,
+  "controls": {
+    "mention": {
+      "n": 240,
+      "rmse": 0.6994540854208899,
+      "bias": -0.14940015367996526,
+      "rmse_debiased": 0.6833122358719887,
+      "medae": 0.5270360767531086,
+      "rho": 0.8939678905777422,
+      "within2x": 0.3125,
+      "worst_group": 0.0,
+      "worst_group_name": "100 years",
+      "rho_resid_distractor": 0.7329730306532326
+    },
+    "role": {
+      "n": 240,
+      "rmse": 0.7719485607019421,
+      "bias": -0.3008525370789749,
+      "rmse_debiased": 0.7109095099258019,
+      "medae": 0.5556159019470215,
+      "rho": 0.9145256851109351,
+      "within2x": 0.23333333333333334,
+      "worst_group": 0.0,
+      "worst_group_name": "10 years",
+      "rho_resid_distractor": 0.6051028602731598
+    },
+    "factual": {
+      "n": 240,
+      "rmse": 3.400622846127041,
+      "bias": -3.229958136800248,
+      "rmse_debiased": 1.0637697947013958,
+      "medae": 3.2392334938049316,
+      "rho": 0.7102543792620465,
+      "within2x": 0.0,
+      "worst_group": 0.0,
+      "worst_group_name": "1 day"
+    },
+    "scaling": {
+      "slope_mean": 0.6064700067043305,
+      "n": 360
+    }
+  }
+}
