@@ -1,0 +1,10 @@
+snapshot_commit: 17f6e95 (code files updated in place from 768ca50; Alan removed the PDFs, astra review, update-20260924.md)
+snapshot_date: 2026-09-25T14:33:31Z
+source: https://github.com/CodeReclaimers/SPAR-2026
+runs:
+  - qwen3-14b_extended_n2000_s0: Qwen/Qwen3-14B 2000 prompts; 2026-09-25T09:34:35 -> 2026-09-25T09:53:09
+  - qwen3-14b_investment_n2000_s0: Qwen/Qwen3-14B 2000 prompts; 2026-09-25T08:46:55 -> 2026-09-25T09:03:13
+  - qwen3-14b_matrix_s0: Qwen/Qwen3-14B 3240 prompts; 2026-09-25T09:03:16 -> 2026-09-25T09:34:32
+  - qwen3-14b_phrasings_n2000_s0: Qwen/Qwen3-14B 2000 prompts; 2026-09-25T09:53:12 -> 2026-09-25T10:15:02
+  - qwen3-14b_units_paired_n2000_s1: Qwen/Qwen3-14B 2000 prompts; 2026-09-25T10:15:05 -> 2026-09-25T10:30:55
+activation_subsets: https://huggingface.co/datasets/CodeReclaimers/spar-planning-temporal-manifolds-activations (public; 464 MB; see README)
