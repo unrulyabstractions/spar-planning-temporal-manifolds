@@ -1,0 +1,13 @@
+# Same stack as alan/pyproject.toml (Alan used torch 2.11 + cu128, transformers 5.17).
+torch>=2.10
+transformers>=5.2
+accelerate>=1.0
+safetensors>=0.5
+numpy>=2.0
+scipy>=1.14
+scikit-learn>=1.5
+pandas>=2.2
+pyarrow>=17
+matplotlib>=3.9
+tqdm>=4.66
+pytest>=8

@@ -1,0 +1,134 @@
+{
+  "n": 5520,
+  "hash": "6694c149ca29",
+  "by_condition": {
+    "distractor": 3360,
+    "main": 2160
+  },
+  "distractor_by_split_group": {
+    "dev/seen": 320,
+    "test/seen": 720,
+    "test/unseen": 720,
+    "train/seen": 1600
+  },
+  "families": {
+    "entity_age": {
+      "description": "age of an organisation or account (generalises Alan's 'mention' control)",
+      "seen": [
+        "{Entity} was established {D} ago.",
+        "{Entity} was set up {D} ago."
+      ],
+      "unseen": [
+        "{Entity} has existed for {D}.",
+        "{Entity} first opened {D} ago."
+      ],
+      "durations": [
+        "1 day",
+        "1 week",
+        "2 weeks",
+        "1 month",
+        "3 months",
+        "6 months",
+        "2 years",
+        "5 years",
+        "10 years",
+        "20 years",
+        "30 years",
+        "100 years"
+      ]
+    },
+    "prep_time": {
+      "description": "time available to prepare the answer (generalises Alan's 'role' control)",
+      "seen": [
+        "You have {D} to prepare your recommendation.",
+        "Your recommendation is due in {D}."
+      ],
+      "unseen": [
+        "The meeting where you present your choice is in {D}.",
+        "You were given {D} to study the two options."
+      ],
+      "durations": [
+        "1 hour",
+        "2 hours",
+        "1 day",
+        "3 days",
+        "1 week",
+        "2 weeks",
+        "1 month"
+      ]
+    },
+    "tenure": {
+      "description": "the decision-maker's own history in the role",
+      "seen": [
+        "You have held this role for {D}.",
+        "You took on this responsibility {D} ago."
+      ],
+      "unseen": [
+        "Your predecessor held the role for {D}.",
+        "You last reviewed {role_np}'s plans {D} ago."
+      ],
+      "durations": [
+        "1 day",
+        "1 week",
+        "2 weeks",
+        "1 month",
+        "3 months",
+        "6 months",
+        "2 years",
+        "5 years",
+        "10 years",
+        "20 years",
+        "30 years"
+      ]
+    },
+    "background_event": {
+      "description": "an unrelated local event",
+      "seen": [
+        "The office building was last renovated {D} ago.",
+        "The local school finished building its new gym {D} ago."
+      ],
+      "unseen": [
+        "The town library changed its opening hours {D} ago.",
+        "{Project} was completed {D} ago."
+      ],
+      "durations": [
+        "1 day",
+        "1 week",
+        "2 weeks",
+        "1 month",
+        "3 months",
+        "6 months",
+        "2 years",
+        "5 years",
+        "10 years",
+        "20 years",
+        "30 years"
+      ]
+    },
+    "other_horizon": {
+      "description": "a horizon-like duration that belongs to a different decision (defeats the 'horizon'-sentence regex)",
+      "seen": [
+        "For an unrelated decision last year, {role_np} used a time horizon of {D}.",
+        "{Neighbour} plans its {thing} over a horizon of {D}."
+      ],
+      "unseen": [
+        "The previous plan, which has now ended, covered a period of {D}.",
+        "A separate long-term project of {role_np} runs for {D}."
+      ],
+      "durations": [
+        "1 day",
+        "1 week",
+        "2 weeks",
+        "1 month",
+        "3 months",
+        "6 months",
+        "2 years",
+        "5 years",
+        "10 years",
+        "20 years",
+        "30 years",
+        "100 years"
+      ]
+    }
+  }
+}
