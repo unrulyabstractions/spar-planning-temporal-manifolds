@@ -1,0 +1,49 @@
+{
+  "experiment": "exp4",
+  "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "off",
+    "n_response": 6,
+    "max_think_tokens": 1024,
+    "limit": null,
+    "seed": 0
+  },
+  "git": null,
+  "started": "2026-09-24T03:05:34",
+  "out_dir": "/workspace/results/horizon/exp4_Qwen3-8B_think-off",
+  "layer": 11,
+  "pos": 1,
+  "variants": [
+    "clean",
+    "distractor",
+    "horizon_first",
+    "implicit"
+  ],
+  "table": [
+    [
+      0.998099115728609,
+      0.9995464407273817,
+      0.0,
+      0.6428571428571429
+    ],
+    [
+      0.9965497788659582,
+      0.9994027161982718,
+      1.0,
+      0.8666666666666667
+    ],
+    [
+      0.9041603754247399,
+      0.9986961818648145,
+      0.25,
+      1.0
+    ],
+    [
+      0.8798653129601202,
+      0.9997560581903608,
+      1.0,
+      0.9772727272727273
+    ]
+  ],
+  "wall_seconds": 67.6
+}

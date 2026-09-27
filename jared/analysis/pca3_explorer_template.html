@@ -1,0 +1,245 @@
+<title>Horizon Manifold Explorer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #f4f5f8; --panel: #ffffff; --ink: #1a1d23; --muted: #667085; --line: #dfe3ea;
+    --accent: #3557c9; --accent-ink: #ffffff; --chip: #eceef3; --control: #8c8c8c;
+    --good: #2e7d32;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1116; --panel: #161a22; --ink: #e7eaf0; --muted: #98a2b3; --line: #2a303b;
+      --accent: #7d95ee; --accent-ink: #0e1116; --chip: #1f2530; --control: #6f7683;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0e1116; --panel: #161a22; --ink: #e7eaf0; --muted: #98a2b3; --line: #2a303b;
+    --accent: #7d95ee; --accent-ink: #0e1116; --chip: #1f2530; --control: #6f7683;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--ground); color: var(--ink); font-family: "IBM Plex Sans", system-ui, sans-serif;
+         font-size: 14px; line-height: 1.45; padding-inline: 16px; padding-block: 12px 24px; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; margin-bottom: 10px; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; text-wrap: balance; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  .app { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 14px; }
+  @media (max-width: 820px) { .app { grid-template-columns: 1fr; } }
+  .rail { display: flex; flex-direction: column; gap: 14px; }
+  .block { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+  .label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .seg { display: flex; gap: 4px; }
+  .seg button, .chips button, .nav button {
+    font: inherit; color: var(--ink); background: var(--chip); border: 1px solid transparent; border-radius: 4px;
+    padding: 5px 9px; cursor: pointer; }
+  .seg button { flex: 1; }
+  .seg button[aria-pressed="true"], .chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chips button { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; padding: 4px 7px; }
+  .chips .sep { flex-basis: 100%; height: 0; }
+  .chips .region { width: 100%; font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .layer { display: flex; align-items: center; gap: 8px; }
+  .layer input[type=range] { flex: 1; accent-color: var(--accent); }
+  .layer output { min-width: 3.2em; text-align: right; font-weight: 500; }
+  .nav { display: flex; gap: 4px; }
+  .nav button { padding: 3px 8px; }
+  .toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .toggle input { accent-color: var(--accent); }
+  .plotwrap { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; min-height: 520px;
+              height: min(72vh, 760px); position: relative; }
+  #plot { position: absolute; inset: 0; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 12px; font-size: 13px; }
+  .stats div { display: contents; }
+  .stats dt { color: var(--muted); }
+  .stats dd { margin: 0; text-align: right; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  kbd { font-family: "IBM Plex Mono", monospace; font-size: 11px; background: var(--chip); border: 1px solid var(--line);
+        border-radius: 3px; padding: 0 4px; }
+  .legend { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--control); display: inline-block; }
+</style>
+
+<header>
+  <h1>Horizon manifold explorer</h1>
+  <p>Qwen3-8B residual stream, PC1–3 per layer and token, 116 prompts. Drag to rotate, scroll to zoom.</p>
+</header>
+
+<div class="app">
+  <aside class="rail">
+    <div class="block">
+      <div class="label">Thinking</div>
+      <div class="seg" id="modes"></div>
+    </div>
+    <div class="block">
+      <div class="label">Layer</div>
+      <div class="layer">
+        <div class="nav"><button id="layer-prev" aria-label="previous layer">‹</button><button id="layer-next" aria-label="next layer">›</button></div>
+        <input type="range" id="layer" min="0" max="36" value="11">
+        <output id="layer-out" class="mono" for="layer">L11</output>
+      </div>
+    </div>
+    <div class="block">
+      <div class="label">Token position</div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="block">
+      <div class="label">Color</div>
+      <div class="seg" id="colors">
+        <button data-c="horizon" aria-pressed="true">horizon</button>
+        <button data-c="ratio" aria-pressed="false">horizon ÷ far delay</button>
+      </div>
+      <div class="legend"><span class="swatch"></span> gray = no horizon stated (20 controls)</div>
+      <label class="toggle" style="margin-top:10px"><input type="checkbox" id="keep" checked> keep camera when switching</label>
+      <label class="toggle" style="margin-top:6px"><input type="checkbox" id="ctrl" checked> show controls</label>
+    </div>
+    <div class="block">
+      <div class="label">This view</div>
+      <dl class="stats mono" id="stats"></dl>
+    </div>
+    <p class="hint"><kbd>←</kbd> <kbd>→</kbd> layer &nbsp; <kbd>↑</kbd> <kbd>↓</kbd> token &nbsp; <kbd>m</kbd> mode</p>
+  </aside>
+  <div class="plotwrap"><div id="plot"></div></div>
+</div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
+<script>
+(function () {
+  const DATA = JSON.parse(document.getElementById("data").textContent);
+  const modes = Object.keys(DATA.modes);
+  const state = { mode: modes[0], layer: 11, pos: 1, color: "horizon", keep: true, ctrl: true };
+  const meta0 = DATA.modes[state.mode].meta;
+  if (meta0 && meta0.probe_layer != null) { state.layer = meta0.probe_layer; state.pos = meta0.probe_pos; }
+
+  // Viridis (perceptually ordered sequential) for horizon; blue–gray–red diverging for the ratio.
+  const VIRIDIS = [[0, "#440154"], [0.25, "#3b528b"], [0.5, "#21918c"], [0.75, "#5ec962"], [1, "#fde725"]];
+  const DIVERGING = [[0, "#2c6fbb"], [0.5, "#b8bcc4"], [1, "#c0392b"]];
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  const TICKS = [["30 s", 30 / 31557600], ["1 hr", 3600 / 31557600], ["1 day", 1 / 365], ["1 mo", 1 / 12],
+                 ["1 yr", 1], ["10 yr", 10], ["100 yr", 100], ["500 yr", 500]];
+
+  function cur() {
+    const m = DATA.modes[state.mode];
+    const layer = m.layers[Math.min(state.layer, m.layers.length - 1)];
+    const pos = Math.min(state.pos, m.tokens.length - 1);
+    return { m, cell: layer[pos], pos };
+  }
+
+  function render() {
+    const { m, cell, pos } = cur();
+    const pts = m.points;
+    const isCtrl = pts.map((p) => p.lh == null);
+    const idxH = [], idxC = [];
+    pts.forEach((p, i) => (isCtrl[i] ? idxC : idxH).push(i));
+    const traces = [];
+    if (cell) {
+      const xyz = cell.xyz;
+      const val = (i) => state.color === "horizon" ? pts[i].lh : pts[i].ratio;
+      const hover = (i) => `${pts[i].h}<br>near: ${pts[i].near}<br>far: ${pts[i].far}` +
+        (pts[i].ans ? `<br>answer: ${pts[i].ans}` : "");
+      const cbar = state.color === "horizon"
+        ? { title: { text: "horizon", font: { size: 11 } }, tickvals: TICKS.map((t) => Math.log10(t[1])),
+            ticktext: TICKS.map((t) => t[0]), thickness: 12, len: 0.6 }
+        : { title: { text: "log10(horizon / far delay)", font: { size: 11 } }, thickness: 12, len: 0.6 };
+      traces.push({
+        type: "scatter3d", mode: "markers", name: "horizon prompts",
+        x: idxH.map((i) => xyz[i][0]), y: idxH.map((i) => xyz[i][1]), z: idxH.map((i) => xyz[i][2]),
+        text: idxH.map(hover), hovertemplate: "%{text}<extra></extra>",
+        marker: { size: 4.5, color: idxH.map(val), colorscale: state.color === "horizon" ? VIRIDIS : DIVERGING,
+                  cmid: state.color === "ratio" ? 0 : undefined, colorbar: cbar, showscale: true,
+                  line: { width: 0.5, color: css("--panel") } },
+      });
+      if (state.ctrl) traces.push({
+        type: "scatter3d", mode: "markers", name: "no horizon",
+        x: idxC.map((i) => xyz[i][0]), y: idxC.map((i) => xyz[i][1]), z: idxC.map((i) => xyz[i][2]),
+        text: idxC.map(hover), hovertemplate: "%{text}<extra></extra>",
+        marker: { size: 4.5, color: css("--control"), line: { width: 0.5, color: css("--panel") } },
+      });
+    }
+    const axis = (t) => ({ title: { text: t, font: { size: 11 } }, showbackground: false, gridcolor: css("--line"),
+                           zerolinecolor: css("--line"), tickfont: { size: 9, color: css("--muted") },
+                           color: css("--muted"), range: [-1.05, 1.05] });
+    const layout = {
+      paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)", margin: { l: 0, r: 0, t: 8, b: 0 },
+      showlegend: false, font: { family: "IBM Plex Sans, system-ui, sans-serif", color: css("--ink") },
+      hoverlabel: { font: { family: "IBM Plex Mono, monospace", size: 12 } },
+      scene: { xaxis: axis("PC1"), yaxis: axis("PC2"), zaxis: axis("PC3"), aspectmode: "cube" },
+      uirevision: state.keep ? "keep" : `${state.mode}-${state.layer}-${pos}`,
+    };
+    Plotly.react("plot", traces, layout, { displaylogo: false, responsive: true,
+      modeBarButtonsToRemove: ["toImage"] });
+    renderStats(m, cell, pos);
+    document.getElementById("layer-out").value = `L${state.layer}`;
+    document.getElementById("layer").value = state.layer;
+    document.querySelectorAll("#chips button").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.p === pos)));
+    document.querySelectorAll("#modes button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === state.mode)));
+    document.querySelectorAll("#colors button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.c === state.color)));
+  }
+
+  function renderStats(m, cell, pos) {
+    const rows = [];
+    const tok = JSON.stringify(m.tokens[pos]);
+    rows.push(["token", tok], ["region", pos < m.n_suffix ? "turn suffix" : pos === m.n_suffix ? "answer" : "response"]);
+    if (cell) {
+      rows.push(["PC1 evr · rho", `${cell.evr[0].toFixed(2)} · ${cell.rho[0].toFixed(2)}`]);
+      rows.push(["PC2 evr · rho", `${cell.evr[1].toFixed(2)} · ${cell.rho[1].toFixed(2)}`]);
+      rows.push(["PC3 evr · rho", `${cell.evr[2].toFixed(2)} · ${cell.rho[2].toFixed(2)}`]);
+    } else rows.push(["", "constant column, no geometry"]);
+    const mt = m.meta || {};
+    if (mt.probe_layer != null) rows.push(["probe best", `L${mt.probe_layer} pos ${mt.probe_pos}, R² ${(+mt.probe_r2).toFixed(3)}`]);
+    if (mt.peak_layer != null) rows.push(["PC1 peak", `L${mt.peak_layer}, rho ${(+mt.peak_rho).toFixed(2)}`]);
+    if (mt.forced != null) rows.push(["force-closed", `${mt.forced} / 116`]);
+    document.getElementById("stats").innerHTML = rows.map(([k, v]) =>
+      `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  }
+
+  function buildChips() {
+    const m = DATA.modes[state.mode];
+    const box = document.getElementById("chips");
+    box.innerHTML = "";
+    m.tokens.forEach((t, i) => {
+      if (i === 0) box.insertAdjacentHTML("beforeend", `<span class="region">turn suffix</span>`);
+      if (i === m.n_suffix) box.insertAdjacentHTML("beforeend", `<span class="sep"></span><span class="region">response (answer first)</span>`);
+      const b = document.createElement("button");
+      b.dataset.p = i; b.textContent = JSON.stringify(t).slice(1, -1) || "␣";
+      b.setAttribute("aria-pressed", String(i === state.pos));
+      b.addEventListener("click", () => { state.pos = i; render(); });
+      box.appendChild(b);
+    });
+    document.getElementById("layer").max = m.layers.length - 1;
+  }
+
+  const modeBox = document.getElementById("modes");
+  modes.forEach((mm) => {
+    const b = document.createElement("button");
+    b.dataset.m = mm; b.textContent = mm === "off" ? "off" : "on";
+    b.setAttribute("aria-pressed", String(mm === state.mode));
+    b.addEventListener("click", () => { state.mode = mm; state.pos = Math.min(state.pos, DATA.modes[mm].tokens.length - 1); buildChips(); render(); });
+    modeBox.appendChild(b);
+  });
+  document.getElementById("layer").addEventListener("input", (e) => { state.layer = +e.target.value; render(); });
+  document.getElementById("layer-prev").addEventListener("click", () => step(-1));
+  document.getElementById("layer-next").addEventListener("click", () => step(1));
+  document.querySelectorAll("#colors button").forEach((b) => b.addEventListener("click", () => { state.color = b.dataset.c; render(); }));
+  document.getElementById("keep").addEventListener("change", (e) => { state.keep = e.target.checked; });
+  document.getElementById("ctrl").addEventListener("change", (e) => { state.ctrl = e.target.checked; render(); });
+  function step(d) { const max = DATA.modes[state.mode].layers.length - 1; state.layer = Math.max(0, Math.min(max, state.layer + d)); render(); }
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT") return;
+    const n = DATA.modes[state.mode].tokens.length;
+    if (e.key === "ArrowRight") { step(1); e.preventDefault(); }
+    else if (e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { state.pos = Math.max(0, state.pos - 1); render(); e.preventDefault(); }
+    else if (e.key === "ArrowDown") { state.pos = Math.min(n - 1, state.pos + 1); render(); e.preventDefault(); }
+    else if (e.key === "m") { const i = modes.indexOf(state.mode); state.mode = modes[(i + 1) % modes.length]; buildChips(); render(); }
+  });
+  if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+  buildChips();
+  render();
+})();
+</script>

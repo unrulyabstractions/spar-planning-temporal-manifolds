@@ -1,0 +1,1009 @@
+{
+  "experiment": "exp5",
+  "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "off",
+    "n_response": 6,
+    "max_think_tokens": 1024,
+    "limit": null,
+    "seed": 0
+  },
+  "git": null,
+  "started": "2026-09-24T03:06:45",
+  "out_dir": "/workspace/results/horizon/exp5_Qwen3-8B_think-off",
+  "n_pairs": 48,
+  "skipped": 0,
+  "flips": 33,
+  "width": 72,
+  "tail_tokens": [
+    "\u010a",
+    "You",
+    "\u0120must",
+    "\u0120choose",
+    "\u0120the",
+    "\u0120best",
+    "\u0120investment",
+    ":\u010a",
+    "a",
+    ")",
+    "\u0120",
+    "2",
+    "0",
+    ",",
+    "0",
+    "0",
+    "0",
+    "\u0120dollars",
+    "\u0120in",
+    "\u0120",
+    "1",
+    "\u0120month",
+    ".\u010a",
+    "b",
+    ")",
+    "\u0120",
+    "5",
+    "0",
+    "0",
+    ",",
+    "0",
+    "0",
+    "0",
+    "\u0120dollars",
+    "\u0120in",
+    "\u0120",
+    "5",
+    "\u0120years",
+    ".\u010a",
+    "Select",
+    "\u0120the",
+    "\u0120option",
+    "\u0120with",
+    "\u0120the",
+    "\u0120greatest",
+    "\u0120benefit",
+    "\u0120for",
+    "\u0120this",
+    "\u0120time",
+    "\u0120horizon",
+    ":",
+    "\u0120",
+    "2",
+    "1",
+    "\u0120months",
+    ".\u010a",
+    "Answer",
+    "\u0120with",
+    "\u0120a",
+    ")",
+    "\u0120or",
+    "\u0120b",
+    ").",
+    "<|im_end|>",
+    "\u010a",
+    "<|im_start|>",
+    "assistant",
+    "\u010a",
+    "<think>",
+    "\u010a\u010a",
+    "</think>",
+    "\u010a\u010a"
+  ],
+  "pairs": [
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "16 months",
+      "long": "25 years",
+      "clean_metric": 2.375,
+      "corrupt_metric": -2.375
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "23 months",
+      "long": "16 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -0.75
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "12 months",
+      "long": "35 years",
+      "clean_metric": 3.625,
+      "corrupt_metric": -0.625
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "13 months",
+      "long": "10 years",
+      "clean_metric": 2.0,
+      "corrupt_metric": -6.0
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "11 months",
+      "long": "65 years",
+      "clean_metric": 1.5,
+      "corrupt_metric": 1.0
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "23 months",
+      "long": "11 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -0.375
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "10 months",
+      "long": "34 years",
+      "clean_metric": 2.125,
+      "corrupt_metric": -1.125
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "11 months",
+      "long": "14 years",
+      "clean_metric": 1.125,
+      "corrupt_metric": 0.5
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "10 months",
+      "long": "78 years",
+      "clean_metric": 2.125,
+      "corrupt_metric": -1.375
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "12 months",
+      "long": "40 years",
+      "clean_metric": 3.625,
+      "corrupt_metric": -1.0
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "23 months",
+      "long": "18 years",
+      "clean_metric": 1.875,
+      "corrupt_metric": -0.5
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "20 months",
+      "long": "94 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -0.125
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "12 months",
+      "long": "43 years",
+      "clean_metric": 4.25,
+      "corrupt_metric": -1.25
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "10 months",
+      "long": "98 years",
+      "clean_metric": 1.75,
+      "corrupt_metric": -1.25
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "16 months",
+      "long": "61 years",
+      "clean_metric": 3.5,
+      "corrupt_metric": 0.125
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "18 months",
+      "long": "48 years",
+      "clean_metric": 2.375,
+      "corrupt_metric": 0.5
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "20 months",
+      "long": "54 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -0.625
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "19 months",
+      "long": "76 years",
+      "clean_metric": 1.5,
+      "corrupt_metric": -0.875
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "16 months",
+      "long": "15 years",
+      "clean_metric": 2.375,
+      "corrupt_metric": -1.5
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "14 months",
+      "long": "93 years",
+      "clean_metric": 1.125,
+      "corrupt_metric": -1.375
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "13 months",
+      "long": "85 years",
+      "clean_metric": 2.0,
+      "corrupt_metric": 0.25
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "20 months",
+      "long": "95 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": 0.0
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "20 months",
+      "long": "68 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": 1.0
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "14 months",
+      "long": "16 years",
+      "clean_metric": 2.125,
+      "corrupt_metric": 0.375
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "18 months",
+      "long": "78 years",
+      "clean_metric": 2.0,
+      "corrupt_metric": -1.5
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "11 months",
+      "long": "67 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -1.0
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "14 months",
+      "long": "65 years",
+      "clean_metric": 2.5,
+      "corrupt_metric": 1.0
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "19 months",
+      "long": "74 years",
+      "clean_metric": 2.0,
+      "corrupt_metric": 0.375
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "22 months",
+      "long": "49 years",
+      "clean_metric": 1.625,
+      "corrupt_metric": -0.625
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "21 months",
+      "long": "88 years",
+      "clean_metric": 0.875,
+      "corrupt_metric": -0.625
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "23 months",
+      "long": "44 years",
+      "clean_metric": 1.875,
+      "corrupt_metric": 0.125
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "23 months",
+      "long": "34 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -0.875
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "17 months",
+      "long": "13 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -0.75
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "20 months",
+      "long": "15 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -1.0
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "10 months",
+      "long": "57 years",
+      "clean_metric": 0.5,
+      "corrupt_metric": 0.375
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "17 months",
+      "long": "87 years",
+      "clean_metric": 1.375,
+      "corrupt_metric": -0.625
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "19 months",
+      "long": "14 years",
+      "clean_metric": 1.5,
+      "corrupt_metric": -0.5
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "13 months",
+      "long": "51 years",
+      "clean_metric": 2.0,
+      "corrupt_metric": 0.5
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "17 months",
+      "long": "69 years",
+      "clean_metric": 2.375,
+      "corrupt_metric": 0.375
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "23 months",
+      "long": "29 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -0.625
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "1 years",
+      "long": "7 years",
+      "clean_metric": 1.125,
+      "corrupt_metric": -0.875
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "16 months",
+      "long": "12 years",
+      "clean_metric": 2.0,
+      "corrupt_metric": -0.375
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "11 months",
+      "long": "65 years",
+      "clean_metric": 1.25,
+      "corrupt_metric": -0.375
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "20 months",
+      "long": "91 years",
+      "clean_metric": 0.875,
+      "corrupt_metric": -1.0
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "17 months",
+      "long": "46 years",
+      "clean_metric": 1.375,
+      "corrupt_metric": -0.375
+    },
+    {
+      "rewards": [
+        5000,
+        200000
+      ],
+      "delays": [
+        "6 months",
+        "10 years"
+      ],
+      "short": "14 months",
+      "long": "77 years",
+      "clean_metric": 2.125,
+      "corrupt_metric": 0.125
+    },
+    {
+      "rewards": [
+        1000,
+        50000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "23 months",
+      "long": "12 years",
+      "clean_metric": 1.125,
+      "corrupt_metric": -1.25
+    },
+    {
+      "rewards": [
+        20000,
+        500000
+      ],
+      "delays": [
+        "1 month",
+        "5 years"
+      ],
+      "short": "21 months",
+      "long": "42 years",
+      "clean_metric": 0.875,
+      "corrupt_metric": -0.375
+    }
+  ],
+  "top": [
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 13,
+      "pos": 54,
+      "token": "\u0120months",
+      "score": -3.4906234741210938
+    },
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 15,
+      "pos": 54,
+      "token": "\u0120months",
+      "score": -2.737523317337036
+    },
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 26,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -2.647916555404663
+    },
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 28,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -2.6130149364471436
+    },
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 27,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -2.5668704509735107
+    },
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 23,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -2.564262628555298
+    },
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 24,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -2.56280517578125
+    },
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 14,
+      "pos": 54,
+      "token": "\u0120months",
+      "score": -2.5444626808166504
+    },
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 25,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -2.527048349380493
+    },
+    {
+      "direction": "noising",
+      "component": "resid_post",
+      "layer": 35,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -2.5071396827697754
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 35,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 2.083146810531616
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 33,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 2.0651509761810303
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 31,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 2.0595345497131348
+    },
+    {
+      "direction": "noising",
+      "component": "attn_out",
+      "layer": 23,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -2.0567572116851807
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 32,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 2.0557539463043213
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 34,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 2.0421714782714844
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 30,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 2.039008617401123
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 29,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 1.9464517831802368
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 28,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 1.9307657480239868
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 27,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 1.9202343225479126
+    },
+    {
+      "direction": "denoising",
+      "component": "resid_post",
+      "layer": 26,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 1.8647552728652954
+    },
+    {
+      "direction": "noising",
+      "component": "attn_out",
+      "layer": 26,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -1.5685969591140747
+    },
+    {
+      "direction": "denoising",
+      "component": "attn_out",
+      "layer": 23,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 1.3148385286331177
+    },
+    {
+      "direction": "denoising",
+      "component": "attn_out",
+      "layer": 26,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 1.24044930934906
+    },
+    {
+      "direction": "noising",
+      "component": "mlp_out",
+      "layer": 13,
+      "pos": 54,
+      "token": "\u0120months",
+      "score": -1.116803526878357
+    },
+    {
+      "direction": "noising",
+      "component": "attn_out",
+      "layer": 24,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -0.8526189923286438
+    },
+    {
+      "direction": "denoising",
+      "component": "attn_out",
+      "layer": 24,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": 0.7141395211219788
+    },
+    {
+      "direction": "noising",
+      "component": "mlp_out",
+      "layer": 15,
+      "pos": 54,
+      "token": "\u0120months",
+      "score": -0.6319652199745178
+    },
+    {
+      "direction": "noising",
+      "component": "mlp_out",
+      "layer": 18,
+      "pos": 54,
+      "token": "\u0120months",
+      "score": -0.6088089942932129
+    },
+    {
+      "direction": "noising",
+      "component": "mlp_out",
+      "layer": 24,
+      "pos": 71,
+      "token": "\u010a\u010a",
+      "score": -0.6074164509773254
+    }
+  ],
+  "wall_seconds": 32.5
+}
