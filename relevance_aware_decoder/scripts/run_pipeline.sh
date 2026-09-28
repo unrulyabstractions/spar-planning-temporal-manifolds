@@ -25,7 +25,8 @@ stamp "START model $MODEL batch $BATCH prompts $PROMPTS run $RUN commit $(git re
 
 stamp "1/6 prompts";      $PY scripts/gen_prompts.py data --seed "$SEED" --smoke > runs/gen_prompts.log
 stamp "2/6 unit tests";   $PY -m pytest -q tests >> "$LOG" 2>&1
-stamp "3/6 capture check"; $PY "$ALAN/scripts/verify_capture.py" --model "$MODEL" --n 4 2>&1 | tee -a "$LOG" | tail -1 | grep -q "VERIFY OK" \
+# our copy of alan/scripts/verify_capture.py (fixes the unspaced-label case, e.g. `I choose: **a)`)
+stamp "3/6 capture check"; $PY scripts/verify_capture.py --model "$MODEL" --n 4 2>&1 | tee -a "$LOG" | tail -1 | grep -q "VERIFY OK" \
                             || { stamp "capture check FAILED (see $LOG)"; exit 1; }
 stamp "4/6 capture ($($PY -c "import pandas as pd; print(len(pd.read_parquet('$PROMPTS')))") prompts)"
 $PY -u "$ALAN/scripts/capture.py" "$PROMPTS" "$RUN" --model "$MODEL" --batch-size "$BATCH" ${EXTRA_CAPTURE_ARGS:-} > "$RUN.capture.log" 2>&1

@@ -221,5 +221,6 @@ step-by-step procedure are in [`COST.md`](COST.md). Nothing is rented without ex
     rad/build.py         prompt set (Alan's matrix + distractors, twins, balanced slots/templates)
     rad/analysis.py      ridge (one SVD, many penalties), paired pull, behavior pull, text baselines
     scripts/gen_prompts.py   scripts/evaluate.py   scripts/run_pipeline.sh   scripts/smoke_local.sh
+    scripts/verify_capture.py    capture check (copy of Alan's, also accepts `I choose: **a)`)
     tests/               prompt-set invariants, metric checks, synthetic end-to-end run
     data/                generated prompt files (deterministic; regenerate with gen_prompts.py)
