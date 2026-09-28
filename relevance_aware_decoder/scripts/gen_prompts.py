@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Generate the prompt set: Alan's matrix (unchanged) + distractor prompts for three test tiers.
 
-Usage: gen_prompts.py OUT_DIR [--seed 0] [--smoke]
+Usage: gen_prompts.py OUT_DIR [--seed 0] [--smoke]      (--seed re-draws distractors only; the matrix stays Alan's seed 0)
   -> OUT_DIR/prompts_s{seed}.parquet        (5,520 prompts; input to alan/scripts/capture.py)
      OUT_DIR/prompts_s{seed}_smoke.parquet  (with --smoke: 1 configuration per split, for a local plumbing test)
 """
@@ -13,15 +13,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import rad  # noqa: E402,F401  (puts ../alan on sys.path)
 
-from ptm.matrix import MatrixConfig  # noqa: E402
-from rad.build import DistractorConfig, build_all, dataset_hash, smoke_subset  # noqa: E402
+from rad.build import build_all, config_for_seed, dataset_hash, smoke_subset  # noqa: E402
 from rad.families import FAMILIES  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("out_dir", type=Path); ap.add_argument("--seed", type=int, default=0); ap.add_argument("--smoke", action="store_true")
 a = ap.parse_args(); a.out_dir.mkdir(parents=True, exist_ok=True)
 
-cfg = DistractorConfig(matrix=MatrixConfig(seed=a.seed), seed=a.seed)
+cfg = config_for_seed(a.seed)
 df = build_all(cfg)
 path = a.out_dir / f"prompts_s{a.seed}.parquet"
 df.to_parquet(path, index=False)

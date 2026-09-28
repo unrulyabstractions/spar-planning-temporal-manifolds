@@ -58,6 +58,12 @@ class DistractorConfig:
     seed: int = 0
 
 
+def config_for_seed(seed: int) -> DistractorConfig:
+    """Alan's matrix stays at seed 0 (same clean prompts, configurations and splits for every seed); `seed` only
+    re-draws the distractors (D, template, slot). Distractor uids carry the seed (r{seed}_...), twins stay m0_..."""
+    return DistractorConfig(matrix=MatrixConfig(seed=0), seed=seed)
+
+
 def build_distractors(cfg: DistractorConfig) -> pd.DataFrame:
     fmt = PromptFormat()
     mc = cfg.matrix

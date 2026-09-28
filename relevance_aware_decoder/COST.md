@@ -8,10 +8,10 @@
 |---|---|---|
 | RTX A6000 48 GB | 1.5–2 h | **$0.7–1.1** |
 | RTX 6000 Ada 48 GB | 1.5–1.8 h | **$0.9–1.3** |
-| H100 SXM 80 GB | 1.0–1.2 h | **$3–4** |
+| H100 SXM 80 GB | 1.0–1.3 h | **$3–4** |
 
-Add about $0.2–0.5 for disk and download traffic. **Proposed budget: $5 hard cap** on an A6000 or 6000 Ada. That
-covers one failed attempt and a rerun. A second seed (re-drawn distractors) would add about $0.5–1.
+Add about $0.2–0.5 for disk and traffic. **Proposed budget: $5 hard cap** on an A6000 or 6000 Ada. That covers one
+failed attempt and a rerun. A second seed (re-drawn distractors only) would add about $0.5–1.
 
 A free alternative: Alan's 2× RTX 4080 machine runs the same capture in about an hour. It needs
 `EXTRA_CAPTURE_ARGS="--split 19"`.
@@ -39,14 +39,17 @@ range. So we assume 0.5–0.6 s per prompt, and the 5,520 prompts take **about 4
 | unit tests + capture check (`verify_capture.py`: hooks vs library, must print VERIFY OK) | 5 |
 | capture 5,520 prompts | 45–60 [15–20] |
 | evaluation: 70 cells × 7 decoders (ridge via SVD on the GPU) + bootstrap | 10–15 [5–10] |
-| export subset, copy results back | 5–10 |
-| **total** | **≈ 85–115 [≈ 50–70]** |
+| export subset (7 layers × 10 positions, ≈ 4 GB) + checksums | 5 |
+| copy tier 1 back (≈ 4 GB) + verify checksums locally | 5–10 |
+| **total** | **≈ 90–120 [≈ 55–75]** |
 
-**Disk.** Model 30 GB, full activations about 39 GB (5,520 × 41 layers × 17 positions × 5,120 × 2 bytes), and the
-environment about 10 GB. Rent **150 GB**. At the median $0.13–0.27 per GB-month, that is about $0.03–0.06 per hour.
+**Disk.** Model 30 GB, full activations about 39 GB (5,520 × 41 layers × 17 positions × 5,120 × 2 bytes), the
+analysis subset about 4 GB (5,520 × 7 layers × 10 positions × 5,120 × 2 bytes), and the environment about 10 GB.
+Rent **150 GB**. At the median $0.13–0.27 per GB-month, that is about $0.03–0.06 per hour.
 
-**Traffic.** About 35 GB in (model + Python wheels) and about 2 GB out (results + shareable subset). At the median
-$0.003–0.012/GB, that is under $0.5. Avoid hosts that charge more than $0.02/GB.
+**Traffic.** About 35 GB in (model + Python wheels) and about 4 GB out (tier 1, see step 6). At the median
+$0.003–0.012/GB, that is under $0.5 (the copy-back itself is cents). Avoid hosts that charge more than $0.02/GB. The
+copy-back takes about 1 min at 500 Mbit/s and 5 min at 100 Mbit/s.
 
 ### Price snapshot
 
@@ -76,24 +79,49 @@ to median.
 
        vastai search offers 'num_gpus=1 gpu_ram>=44 cpu_ram>=64 disk_space>=150 reliability>=0.98 inet_down>=500 verified=true' -o 'dph_total'
 
-3. **Create the instance** from a PyTorch image with a 150 GB disk. Then get the code onto it: either
-   `git clone -b relevance-aware-decoder` (once the branch is pushed), or `rsync` this repository.
-   Install the dependencies:
+3. **Create the instance** from a PyTorch image with **torch ≥ 2.10 and Python ≥ 3.12** and a 150 GB disk. Then get
+   the code onto it: `git clone -b relevance-aware-decoder` (the branch is pushed), or `rsync` this repository.
+   Install the dependencies (pinned to the smoke-tested versions; torch is left to the image) and check CUDA:
 
        pip install -r relevance_aware_decoder/requirements.txt
+       python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
 
 4. **Download the model** (public, no token needed):
 
-       huggingface-cli download Qwen/Qwen3-14B
+       hf download Qwen/Qwen3-14B
+
+   Optional (the pipeline downloads it anyway), but it shows the network speed early. The manifest records the exact
+   model revision that was used.
 
 5. **Run inside `tmux`**, so a dropped SSH session doesn't kill it:
 
        bash relevance_aware_decoder/scripts/run_pipeline.sh
 
-   Watch `runs/pipeline.log`. If capture is much slower than about 0.6 s per prompt after 5 minutes, stop and
-   reconsider.
-6. **Copy back:**
-   - `relevance_aware_decoder/results/`;
-   - `runs/*/subset.json` and `runs/*/acts_subset_*`;
-   - the logs.
-7. **Destroy the instance.** A stopped instance still bills for its disk.
+   Watch `runs/pipeline.log` (every step, and any `FAILED at step ...` line with the log to read). Capture progress is
+   in `runs/qwen3-14b_relevance_s0.capture.log`. If capture is much slower than about 0.6 s per prompt after 5 minutes,
+   stop and reconsider. The pipeline refuses to overwrite an existing capture (`OVERWRITE=1` to force).
+6. **Copy back tier 1** (≈ 4 GB): everything needed to redo the whole analysis and audit the run.
+   - `runs/qwen3-14b_relevance_s0/`, **except** the full `acts_NNNN.safetensors` shards: `index.parquet`, `meta.json`,
+     the analysis subset (`subset.json`, `acts_subset_*`: every evaluated layer × position), `manifest.json` (code,
+     prompts, model revision, software, hardware), snapshots of `pipeline.log` and `gen_prompts.log`, `SHA256SUMS`
+     and `SHA256SUMS.shards`;
+   - `results/qwen3-14b_relevance_s0/`;
+   - `runs/*.log` (the capture and evaluate logs are checksummed; the shared `runs/pipeline.log` via its snapshot);
+   - `data/prompts_s0.*`.
+
+   The full shards (≈ 39 GB, all 41 layers × 17 positions) are deliberately left behind: this is an early,
+   iterating experiment, and a recapture costs about $1–2 if other layers are ever needed. `SHA256SUMS.shards`
+   records their hashes, so such a recapture can be checked for byte-identity.
+
+   From the local machine, with rsync so an interrupted copy resumes (just rerun the same command):
+
+       rsync -avP --exclude 'acts_[0-9]*.safetensors' -e "ssh -p PORT" root@HOST:REPO/relevance_aware_decoder/{runs,results,data} relevance_aware_decoder/
+
+   Then **verify** locally: every line must say `OK`.
+
+       cd relevance_aware_decoder && sha256sum -c runs/qwen3-14b_relevance_s0/SHA256SUMS
+
+   If any file fails, rerun rsync with `--checksum` and verify again. If the pipeline failed after capture, the
+   checksums were still written: copy back and verify the same way.
+7. **Destroy the instance, but only after `sha256sum -c` reports every file OK locally.** A stopped instance still
+   bills for its disk, but a destroyed one cannot be recovered.

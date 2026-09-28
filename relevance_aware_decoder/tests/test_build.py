@@ -87,3 +87,16 @@ def test_smoke_subset_keeps_twins(df):
     assert set(sm.split) == {"train", "dev", "test"}
     assert set(sm[sm.condition == "distractor"].twin_uid) <= set(sm.sample_uid)
     assert set(sm.family.dropna()) == {f.name for f in FAMILIES}
+
+
+def test_seed_redraws_distractors_only(df):
+    from rad.build import config_for_seed
+    assert config_for_seed(0) == DistractorConfig()                       # seed 0 = the committed prompt set
+    d1 = build_all(config_for_seed(1))
+    m0, m1 = df[df.condition == "main"], d1[d1.condition == "main"]
+    assert m1.sample_uid.tolist() == m0.sample_uid.tolist() and m1.text.tolist() == m0.text.tolist()
+    x0, x1 = df[df.condition == "distractor"], d1[d1.condition == "distractor"]
+    assert not set(x0.sample_uid) & set(x1.sample_uid)                    # uids distinct across seeds
+    assert set(x1.twin_uid) <= set(m1.sample_uid)                         # twins still resolve
+    assert x1.split.value_counts().to_dict() == x0.split.value_counts().to_dict()
+    assert (x0.distractor_text.to_numpy() != x1.distractor_text.to_numpy()).mean() > 0.5

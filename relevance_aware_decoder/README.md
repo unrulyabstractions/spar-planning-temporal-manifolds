@@ -173,8 +173,8 @@ fewer than 4 are eligible). All thresholds are command-line flags of `scripts/ev
   with renderings would triple their count.
 - **Linear decoders only.** If the verdict is ENTANGLED, a small non-linear probe on the same activations is the
   obvious follow-up (no new capture needed).
-- **One model** (Qwen3-14B, thinking off) and one seed. A second seed only re-draws D, slots and templates. It would
-  cost about half a run (§8).
+- **One model** (Qwen3-14B, thinking off) and one seed. A second seed only re-draws D, slots and templates (`SEED=1`;
+  the clean prompts, configurations and splits stay Alan's). It would cost about half a run (§8).
 - **Six test configurations** (12 scenario clusters) keep the intervals honest, but wide-ish.
 - **Open for discussion:**
   - Are these five families the right ones?
@@ -186,7 +186,7 @@ fewer than 4 are eligible). All thresholds are command-line flags of `scripts/ev
 **Local, no GPU (a few seconds):**
 
     cd relevance_aware_decoder
-    python -m pytest -q tests          # 13 tests, including a synthetic end-to-end run with a known answer
+    python -m pytest -q tests          # 14 tests, including a synthetic end-to-end run with a known answer
     python scripts/gen_prompts.py data --smoke   # writes data/prompts_s0.parquet (+ smoke slice) and prints examples
 
 Use any Python ≥ 3.12 with `requirements.txt` installed. Alan's `ptm` package is imported from `../alan`
@@ -194,25 +194,31 @@ automatically; nothing is installed into or written to that folder.
 
 **Local plumbing test on the 8 GB GPU (recommended before renting):**
 
-    bash scripts/smoke_local.sh        # Qwen3-1.7B on ~600 prompts; checks capture → twins → evaluation → summary
+    bash scripts/smoke_local.sh        # Qwen3-1.7B on ~600 prompts; the whole pipeline, including manifest and checksums
 
 **Full run (one GPU with ≥ 40 GB; see `COST.md` for the vast.ai procedure and guardrails):**
 
-    bash scripts/run_pipeline.sh       # prompts → tests → capture check → capture → evaluate → subset export
+    bash scripts/run_pipeline.sh       # prompts → tests → capture check → capture → subset → evaluate → checksums
 
 **Outputs** go to `results/qwen3-14b_relevance_s0/`:
-- `summary.md`: the verdict tables;
+- `summary.md`: the verdict tables (and how often the ridge penalty hit the edge of its grid);
 - `behavior_gate.csv`, `headline_cells.csv`: pulls with intervals;
 - `sweep.csv`, `sweep_pull.png`: per-cell pulls;
-- `text_baselines.csv`, `selection.csv`, `predictions.npz`.
+- `text_baselines.csv`, `selection.csv`, `predictions.npz`, `manifest.json`.
 
-A shareable activation subset (layers 22, 26, 29 × T0–T8, R0; ≈ 1.7 GB) is also written. The full activations
-(≈ 39 GB) stay on the instance.
+**What is kept.** `runs/qwen3-14b_relevance_s0/` holds the full activations (≈ 39 GB), an analysis subset with every
+evaluated layer × position (≈ 4 GB), `manifest.json` (git commit, prompt hashes, model revision, pip freeze, GPU,
+driver, settings), `SHA256SUMS` over the copy-back set and `SHA256SUMS.shards`. Everything except the full shards
+("tier 1", ≈ 4 GB) is copied back and verified before the instance is destroyed (`COST.md`, steps 6–7). The full
+shards are deliberately discarded (a recapture costs about $1–2; their hashes are kept). `evaluate.py` runs on either
+the full shards or the subset alone, so the whole analysis can be redone locally:
+
+    python scripts/evaluate.py runs/qwen3-14b_relevance_s0 data/prompts_s0.parquet results/rerun   # --acts subset to force the subset
 
 ## 8. Cost
 
-On one 48 GB GPU from vast.ai (RTX A6000 or RTX 6000 Ada), the whole run is about **1.5–2 hours of rental,
-roughly $1–2**. On an H100 it is about 1 hour for roughly $3–4. The estimate, the price snapshot and the
+On one 48 GB GPU from vast.ai (RTX A6000 or RTX 6000 Ada), the whole run, including copying the ≈ 4 GB back, is
+about **1.5–2 hours of rental, roughly $1–2**. On an H100 it is about 1–1.3 hours for roughly $3–4. The estimate, the price snapshot and the
 step-by-step procedure are in [`COST.md`](COST.md). Nothing is rented without explicit confirmation.
 
 ## Files
@@ -222,5 +228,6 @@ step-by-step procedure are in [`COST.md`](COST.md). Nothing is rented without ex
     rad/analysis.py      ridge (one SVD, many penalties), paired pull, behavior pull, text baselines
     scripts/gen_prompts.py   scripts/evaluate.py   scripts/run_pipeline.sh   scripts/smoke_local.sh
     scripts/verify_capture.py    capture check (copy of Alan's, also accepts `I choose: **a)`)
+    scripts/manifest.py          replication manifest (code, prompts, model revision, software, hardware, settings)
     tests/               prompt-set invariants, metric checks, synthetic end-to-end run
     data/                generated prompt files (deterministic; regenerate with gen_prompts.py)
