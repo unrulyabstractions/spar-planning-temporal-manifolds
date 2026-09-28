@@ -1,6 +1,7 @@
 # Running cost on vast.ai (Qwen3-14B, same model as Alan)
 
-**Nothing here has been rented or run.** This is an estimate for the group to approve.
+The estimate below was made before the run (prices of 2026-09-27). **The actual run (2026-09-28) cost ≈ $1**: 1× RTX PRO
+5000 (48 GB) at $0.79/h, pipeline 30 min, rental about 1 hour. Lessons from it are at the end of this file.
 
 ## Bottom line
 
@@ -67,11 +68,11 @@ total per hour. Prices move daily, so re-check before renting.
 The cheapest listings tend to have low reliability or slow networks. The estimates above use the 25th percentile
 to median.
 
-## Procedure (only after explicit approval)
+## Procedure (as used for the 2026-09-28 run)
 
 0. **Locally first:**
    - `python -m pytest -q tests`;
-   - `bash scripts/smoke_local.sh` (Qwen3-1.7B on the 8 GB card). Fix anything here, where it's free.
+   - `bash scripts/smoke_local.sh` (Qwen3-1.7B; an 8 GB GPU is enough). Fix anything here, where it's free.
 1. **Cap the spend.** vast.ai is prepaid, so load only the budget (e.g. $5–10) onto the account.
 2. **Pick an offer.** Single GPU with ≥ 44 GB VRAM, ≥ 64 GB CPU RAM, ≥ 150 GB disk, reliability ≥ 0.98,
    download ≥ 500 Mbps at ≤ $0.01/GB, verified. Use **on-demand, not interruptible**: capture cannot resume
@@ -123,5 +124,21 @@ to median.
 
    If any file fails, rerun rsync with `--checksum` and verify again. If the pipeline failed after capture, the
    checksums were still written: copy back and verify the same way.
+
+   To share the verified copy: `python scripts/upload_hf.py` (dry run: re-verifies the checksums, lists what would go
+   up) with the dataset card in `hf/README.md`; `--upload --repo-id USER/NAME` creates a private HF dataset and uploads.
 7. **Destroy the instance, but only after `sha256sum -c` reports every file OK locally.** A stopped instance still
    bills for its disk, but a destroyed one cannot be recovered.
+
+## Notes from the actual run (2026-09-28, vast.ai web console)
+
+- **Template:** "PyTorch (Vast)" (`vastai/pytorch:cuda-12.8.1-auto`: torch 2.11 + cu128, Python 3.12, SSH opens in
+  tmux). Save your own copy: its **default disk is 16 GB**, set it to **150 GB**, and raise the extra filter to
+  `cuda_max_good>=12.8`. Skip "Add recommended volume settings" (a volume can outlive the instance and keep billing).
+- **Filters that mattered:** GPU RAM bandwidth ≥ 700 GB/s (otherwise GB10 / DGX Spark offers flood the cheap end: ARM,
+  ~270 GB/s); skip CMP 170HX (mining card). Sorting by price is not the default; set it.
+- **Team accounts:** rent in the team context (credit is per context); SSH keys can only be added in the personal
+  context and are used for team rentals too.
+- **Direct-HTTPS Jupyter popup:** not needed for this workflow (SSH only); no certificate has to be installed.
+- **Model cache:** the image sets `HF_HOME=/workspace/.hf_home`; `hf download Qwen/Qwen3-14B` took a few minutes.
+- **Speed:** capture 0.26 s per prompt (batch 16, ~4 s per batch), evaluation ~6 min, tier-1 copy-back 3.7 GB.

@@ -1,6 +1,11 @@
 # Relevance-aware horizon decoder
 
-**Status: design for group review. Nothing has been run yet** (only unit tests and a synthetic dry run).
+**Results: start with the explainer, [`explainer/index.html`](explainer/index.html)** (open it in a browser). It
+walks through the Qwen3-14B run of 2026-09-28 section by section, from Alan's original finding to what this
+experiment adds. Raw outputs: `results/qwen3-14b_relevance_s0/`. Activations (tier 1, ≈ 4 GB) on Hugging Face:
+[`anicola/ptm-relevance-aware-decoder-qwen3-14b`](https://huggingface.co/datasets/anicola/ptm-relevance-aware-decoder-qwen3-14b).
+
+**Status: run once on Qwen3-14B (commit 843a4af, 5,520 prompts).** The design below is the one that was run.
 Branch `relevance-aware-decoder`. Builds directly on Alan's matrix run and code in `../alan/` (used read-only).
 
 ## 1. The question
@@ -33,8 +38,7 @@ context" instead of "the horizon the model is planning with" is not useful.
 | **Wording only** | pull ≈ 0 for trained sentences (A) but not for new wording (B) | The decoder memorised sentences. The question stays open. |
 | **Entangled** | pull stays even for trained sentences (A) | At that layer and token, the two durations are mixed in a way no linear readout can undo. A finding about the representation, and bad news for a linear monitor. |
 
-Each outcome is decided per distractor family, with the rules in §5. Proposed thresholds are listed there
-so the group can agree on them **before** anything runs.
+Each outcome is decided per distractor family, with the rules in §5; their thresholds were fixed before the run.
 
 ## 3. Design
 
@@ -112,7 +116,7 @@ Per family there are 144 prompts in tiers A and B and 288 in tier C (12 scenario
 
 The sweep covers 7 layers {14, 18, 22, 26, 29, 33, 37} × 10 positions {T0–T8, R0} = 70 cells, reporting point
 estimates for every decoder and tier. Full results with bootstrap intervals are reported at two cells:
-Alan's selected cell **L26 T1**, and the cell with the best `rad_all` dev error.
+Alan's selected cell **L26 T1**, and the cell with the best `rad_all` dev error (this turned out to be **L18 T1**).
 
 ## 4. Metrics
 
@@ -148,9 +152,10 @@ amount as behavior? That links to Alan's second candidate, a probe for the behav
 - text baselines on every tier: first-duration regex, "horizon"-sentence regex, and a TF-IDF ridge trained on
   the same rows as each decoder.
 
-## 5. Decision rules (proposed; please agree before running)
+## 5. Decision rules (fixed before the run)
 
 These are applied per family, at each headline cell. Only families that pass the behavior gate are scored.
+`scripts/evaluate.py` applies them and writes the verdicts to `results/qwen3-14b_relevance_s0/summary.md`.
 
 1. **Nothing to remove:** baseline pull < **0.20**.
 2. **Pull removed:** the 95% interval's upper bound is < **0.10**.
@@ -166,20 +171,19 @@ These are applied per family, at each headline cell. Only families that pass the
 Headline claim: SEPARABLE at the headline cell in at least 4 of the eligible families (or in all of them, if
 fewer than 4 are eligible). All thresholds are command-line flags of `scripts/evaluate.py`.
 
-## 6. Limitations and open choices for the group
+## 6. Limitations and open questions
 
 - **Explicit horizons only**, and still single-turn. A pass here is necessary for a multi-turn monitor, not sufficient.
 - **Distractor prompts are plain prose only** (the clean prompts cover all three renderings). Crossing distractors
   with renderings would triple their count.
-- **Linear decoders only.** If the verdict is ENTANGLED, a small non-linear probe on the same activations is the
-  obvious follow-up (no new capture needed).
+- **Linear decoders only.** A small non-linear probe on the same activations is the obvious follow-up (no new
+  capture needed: the kept subset is enough).
 - **One model** (Qwen3-14B, thinking off) and one seed. A second seed only re-draws D, slots and templates (`SEED=1`;
   the clean prompts, configurations and splits stay Alan's). It would cost about half a run (§8).
 - **Six test configurations** (12 scenario clusters) keep the intervals honest, but wide-ish.
-- **Open for discussion:**
-  - Are these five families the right ones?
+- **Open questions for a next iteration:**
+  - Are these five families the right ones, and which kinds are missing?
   - Should `other_horizon` be split into "plainly irrelevant" and "arguably relevant" versions?
-  - Are the thresholds right?
 
 ## 7. How to run
 
@@ -192,7 +196,7 @@ fewer than 4 are eligible). All thresholds are command-line flags of `scripts/ev
 Use any Python ≥ 3.12 with `requirements.txt` installed. Alan's `ptm` package is imported from `../alan`
 automatically; nothing is installed into or written to that folder.
 
-**Local plumbing test on the 8 GB GPU (recommended before renting):**
+**Local plumbing test on a small GPU (8 GB is enough; worth doing before renting one):**
 
     bash scripts/smoke_local.sh        # Qwen3-1.7B on ~600 prompts; the whole pipeline, including manifest and checksums
 
@@ -206,20 +210,25 @@ automatically; nothing is installed into or written to that folder.
 - `sweep.csv`, `sweep_pull.png`: per-cell pulls;
 - `text_baselines.csv`, `selection.csv`, `predictions.npz`, `manifest.json`.
 
-**What is kept.** `runs/qwen3-14b_relevance_s0/` holds the full activations (≈ 39 GB), an analysis subset with every
-evaluated layer × position (≈ 4 GB), `manifest.json` (git commit, prompt hashes, model revision, pip freeze, GPU,
-driver, settings), `SHA256SUMS` over the copy-back set and `SHA256SUMS.shards`. Everything except the full shards
-("tier 1", ≈ 4 GB) is copied back and verified before the instance is destroyed (`COST.md`, steps 6–7). The full
-shards are deliberately discarded (a recapture costs about $1–2; their hashes are kept). `evaluate.py` runs on either
-the full shards or the subset alone, so the whole analysis can be redone locally:
+**What is kept.** On the GPU machine, `runs/qwen3-14b_relevance_s0/` holds the full activations (≈ 39 GB), an
+analysis subset with every evaluated layer × position (≈ 4 GB), `manifest.json` (git commit, prompt hashes, model
+revision, pip freeze, GPU, driver, settings), `SHA256SUMS` over the copy-back set and `SHA256SUMS.shards`. Only
+"tier 1" (everything except the full shards, ≈ 4 GB) is copied back and verified before the instance is destroyed
+(`COST.md`, steps 6–7). The full shards were deliberately discarded (a recapture costs about $1–2; their hashes are
+kept). `results/` is in git; the activation subset is not. It is published as a Hugging Face dataset,
+[`anicola/ptm-relevance-aware-decoder-qwen3-14b`](https://huggingface.co/datasets/anicola/ptm-relevance-aware-decoder-qwen3-14b) (card: `hf/README.md`; uploaded with `scripts/upload_hf.py`). `evaluate.py` runs on either the full shards or the subset alone, so the whole analysis can be
+redone from tier 1:
 
     python scripts/evaluate.py runs/qwen3-14b_relevance_s0 data/prompts_s0.parquet results/rerun   # --acts subset to force the subset
 
 ## 8. Cost
 
-On one 48 GB GPU from vast.ai (RTX A6000 or RTX 6000 Ada), the whole run, including copying the ≈ 4 GB back, is
-about **1.5–2 hours of rental, roughly $1–2**. On an H100 it is about 1–1.3 hours for roughly $3–4. The estimate, the price snapshot and the
-step-by-step procedure are in [`COST.md`](COST.md). Nothing is rented without explicit confirmation.
+**Actual run (2026-09-28):** 1× RTX PRO 5000 (48 GB) on vast.ai at $0.79/h; the pipeline took 30 min (capture
+0.26 s per prompt), the whole rental about 1 hour, **≈ $1** in total.
+
+The estimate made beforehand: on one 48 GB GPU (RTX A6000 or RTX 6000 Ada) about 1.5–2 hours of rental, roughly
+$1–2; on an H100 about 1–1.3 hours for roughly $3–4. The estimate, the price snapshot and the step-by-step procedure
+are in [`COST.md`](COST.md).
 
 ## Files
 
@@ -229,5 +238,9 @@ step-by-step procedure are in [`COST.md`](COST.md). Nothing is rented without ex
     scripts/gen_prompts.py   scripts/evaluate.py   scripts/run_pipeline.sh   scripts/smoke_local.sh
     scripts/verify_capture.py    capture check (copy of Alan's, also accepts `I choose: **a)`)
     scripts/manifest.py          replication manifest (code, prompts, model revision, software, hardware, settings)
+    scripts/upload_hf.py         tier-1 upload to Hugging Face (dry run by default; card in hf/README.md)
     tests/               prompt-set invariants, metric checks, synthetic end-to-end run
     data/                generated prompt files (deterministic; regenerate with gen_prompts.py)
+    results/             evaluation outputs of the Qwen3-14B run
+    explainer/           results explainer (index.html) and the script that makes its figures
+    hf/                  Hugging Face dataset card for the tier-1 data

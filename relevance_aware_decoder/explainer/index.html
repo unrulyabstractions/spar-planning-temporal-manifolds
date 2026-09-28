@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Relevance-Aware Horizon Decoder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #1A242D;
+  --muted: #56636E;
+  --rule: #D6DDE2;
+  --accent: #1D6A84;
+  --accent-soft: #E3EEF2;
+  --warn: #9A5B12;
+  --warn-soft: #F6EBDD;
+  --plate: #FFFFFF;
+  --mark: #FBE7B5;
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11171C;
+    --surface: #182027;
+    --ink: #E2E8EC;
+    --muted: #9AA7B1;
+    --rule: #2B363F;
+    --accent: #72B9D1;
+    --accent-soft: #1B2C34;
+    --warn: #E0A866;
+    --warn-soft: #2E2419;
+    --plate: #F4F6F7;
+    --mark: #5A4A1C;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11171C;
+  --surface: #182027;
+  --ink: #E2E8EC;
+  --muted: #9AA7B1;
+  --rule: #2B363F;
+  --accent: #72B9D1;
+  --accent-soft: #1B2C34;
+  --warn: #E0A866;
+  --warn-soft: #2E2419;
+  --plate: #F4F6F7;
+  --mark: #5A4A1C;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 17px/1.62 var(--sans);
+  padding-inline: 20px;
+  padding-block: 40px 80px;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { max-width: 1080px; margin-inline: auto; display: grid; gap: 72px; }
+.col { max-width: 68ch; }
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(2rem, 4.5vw, 2.8rem); letter-spacing: -0.01em; }
+h2 { font-size: clamp(1.5rem, 3vw, 1.9rem); }
+h3 { font-size: 1.15rem; font-family: var(--sans); font-weight: 600; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+.eyebrow {
+  font: 500 0.78rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.muted { color: var(--muted); }
+.stack { display: grid; gap: 16px; }
+.stack-lg { display: grid; gap: 28px; }
+
+header.intro { display: grid; gap: 20px; }
+.lede { font-size: 1.12rem; color: var(--muted); max-width: 62ch; }
+.meta { font: 400 0.82rem/1.5 var(--mono); color: var(--muted); }
+
+/* table of contents */
+.toc { display: grid; gap: 0; border-top: 1px solid var(--rule); max-width: 760px; }
+.toc a {
+  display: grid; grid-template-columns: 2.4em 1fr; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--rule);
+  text-decoration: none; color: var(--ink);
+}
+.toc a:hover .toc-q { color: var(--accent); }
+.toc-n { font-family: var(--mono); color: var(--accent); font-size: 0.9rem; padding-top: 2px; }
+.toc-q { font-weight: 600; }
+.toc-a { color: var(--muted); font-weight: 400; }
+
+/* sections */
+section.finding { display: grid; gap: 24px; scroll-margin-top: 24px; }
+.finding-head { display: grid; gap: 10px; }
+.question { font-size: 1.05rem; color: var(--muted); }
+
+figure { margin: 0; display: grid; gap: 10px; }
+.plate {
+  background: var(--plate);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+}
+.plate img { margin-inline: auto; }
+.plate.narrow img { max-width: 720px; width: 100%; }
+figcaption { font-size: 0.86rem; color: var(--muted); max-width: 90ch; }
+figcaption code { font-size: 0.95em; }
+
+.readings { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px 32px; }
+.reading { display: grid; gap: 6px; align-content: start; }
+.reading h3 { font-size: 0.78rem; font-family: var(--mono); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.reading p + p { margin-top: 8px; }
+
+.for-us {
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 16px 20px;
+  display: grid; gap: 6px;
+  max-width: 78ch;
+}
+.for-us .eyebrow { font-size: 0.72rem; }
+.caveat {
+  background: var(--warn-soft);
+  border-radius: 6px;
+  padding: 14px 20px;
+  max-width: 78ch;
+  display: grid; gap: 6px;
+}
+.caveat .eyebrow { color: var(--warn); font-size: 0.72rem; }
+
+/* prompt specimen */
+.prompt {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 16px 18px;
+  font: 400 0.86rem/1.6 var(--mono);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-width: 88ch;
+}
+.prompt .label { color: var(--accent); font-weight: 500; }
+mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 2px; }
+
+/* token strip */
+.tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.tok {
+  display: grid; gap: 2px; justify-items: center;
+  border: 1px solid var(--rule); background: var(--surface);
+  border-radius: 4px; padding: 6px 8px; min-width: 52px;
+}
+.tok b { font: 500 0.72rem/1 var(--mono); color: var(--accent); }
+.tok span { font: 400 0.8rem/1.2 var(--mono); white-space: nowrap; }
+.tok.resp { border-style: dashed; }
+.tok.hot { border-color: var(--warn); }
+.tok.hot b { color: var(--warn); }
+
+/* small tables */
+.tbl-wrap { overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 16px 7px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 500 0.74rem/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+td.num { font-family: var(--mono); font-size: 0.88rem; }
+tr.em td { font-weight: 600; }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.metric { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; align-content: start; }
+.metric .name { font-weight: 600; }
+.metric .desc { font-size: 0.92rem; color: var(--muted); }
+
+.vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; max-width: 820px; }
+.vs-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.vs-card .big { font: 500 1.6rem/1.1 var(--mono); }
+.vs-card .who { font: 500 0.74rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px 40px; }
+.summary ul { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; }
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+footer { font-size: 0.85rem; color: var(--muted); display: grid; gap: 8px; max-width: 80ch; }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; padding-inline: 16px; }
+  .page { gap: 56px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+caption { max-width: 80ch; }
+th.grp, td.grp { padding-left: 28px; border-left: 1px solid var(--rule); }
+td.num { padding-right: 28px; }
+.plate img { image-rendering: auto; }
+</style>
+
+</head>
+<body>
+<main class="page">
+
+<header class="intro">
+  <p class="eyebrow">SPAR · Planning Temporal Manifolds · relevance-aware decoder</p>
+  <h1>Can a horizon decoder learn to ignore irrelevant durations?</h1>
+  <p class="lede">Alan found that a linear horizon decoder on Qwen3-14B is pulled toward durations the model's decision ignores. This experiment trains decoders <em>with</em> such distractors and tests whether they stay on the real horizon, including for new wording and for kinds of distractor they never saw.</p>
+  <p class="meta">Run <code>qwen3-14b_relevance_s0</code>, 2026-09-28 · code <code>relevance_aware_decoder/</code>, branch <code>relevance-aware-decoder</code>, commit <code>843a4af</code> · <code>Qwen/Qwen3-14B</code>, thinking off · 5,520 prompts · single turn, explicit horizons, one seed.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#background"><span class="toc-n">0</span><span><span class="toc-q">Background.</span> <span class="toc-a">The question, and what Alan found.</span></span></a>
+    <a href="#setup"><span class="toc-n">1</span><span><span class="toc-q">What this experiment adds.</span> <span class="toc-a">Five distractor families, clean twins, three test tiers.</span></span></a>
+    <a href="#behavior"><span class="toc-n">2</span><span><span class="toc-q">Does the model ignore the distractors?</span> <span class="toc-a">Yes, all five kinds.</span></span></a>
+    <a href="#baseline"><span class="toc-n">3</span><span><span class="toc-q">Is the ordinary decoder pulled?</span> <span class="toc-a">Yes, and it loses half its accuracy. Alan's result replicates.</span></span></a>
+    <a href="#tiers"><span class="toc-n">4</span><span><span class="toc-q">Does training with distractors remove the pull?</span> <span class="toc-a">Almost entirely, with one exception per cell.</span></span></a>
+    <a href="#where"><span class="toc-n">5</span><span><span class="toc-q">Where in the network?</span> <span class="toc-a">Everywhere for trained kinds; the exceptions depend on depth.</span></span></a>
+    <a href="#disturbance"><span class="toc-n">6</span><span><span class="toc-q">So is the readout robust now?</span> <span class="toc-a">No. The pull is gone; the disturbance isn't.</span></span></a>
+    <a href="#text"><span class="toc-n">7</span><span><span class="toc-q">Does it beat reading the text?</span> <span class="toc-a">No, not with explicit horizons.</span></span></a>
+    <a href="#summary"><span class="toc-n">8</span><span><span class="toc-q">Summary and next steps.</span></span></a>
+    <a href="#reproduce"><span class="toc-n">9</span><span><span class="toc-q">Reproduce.</span> <span class="toc-a">Code, model revision, data kept.</span></span></a>
+  </nav>
+</header>
+
+<!-- 0 -->
+<section class="finding" id="background">
+  <div class="finding-head">
+    <p class="eyebrow">0 · Background</p>
+    <h2>The question, and what Alan found</h2>
+  </div>
+  <div class="col stack">
+    <p>PTM asks whether the time horizon a model is planning over can be read from its residual stream at <strong>turn-boundary tokens</strong> (the tokens between the user's turn and the model's answer). A per-turn horizon monitor would be built on such a readout.</p>
+    <p>Alan built one on Qwen3-14B: a ridge decoder from one layer × token cell to log horizon, trained on a matched matrix of two-option decisions. It works well on new scenarios. His selected cell is <strong>layer 26, token T1</strong>.</p>
+    <p>He then tested it with <strong>relevance controls</strong>: the same prompts plus one sentence with an irrelevant duration D.</p>
+  </div>
+  <div class="vs">
+    <div class="vs-card"><span class="who">The model's choice</span><span class="big">≈ 0</span><p class="muted">Logistic coefficient of log D: −0.03 (“mention”: <em>“… was established D ago.”</em>) and −0.11 (“role”: <em>“You have D to prepare your recommendation.”</em>), versus −1.7 to −2.0 for the real horizon.</p></div>
+    <div class="vs-card"><span class="who">The decoder's error</span><span class="big">+0.58 / +0.74</span><p class="muted">Correlation between the decoder's error and D − H at L26 T1 (mention / role). Every one of his 70 layer × token cells shows it (&gt; +0.14 mention, &gt; +0.30 role).</p></div>
+  </div>
+  <div class="col stack">
+    <p>So the readout followed “durations in the prompt” rather than the horizon the model acts on. Alan listed a decoder trained <em>with</em> such controls, a “relevance-aware” decoder, as a next step (<code>alan/progress-20260925.md</code>). This experiment is that step.</p>
+  </div>
+  <div class="for-us"><p class="eyebrow">Why it matters</p><p>His decoder had only ever seen prompts with one duration, so it had no reason to tell “the horizon” from “a duration”. Whether the <em>model's</em> activations keep the two apart was still open. If they don't, a linear per-turn monitor would report the wrong thing.</p></div>
+</section>
+
+<!-- 1 -->
+<section class="finding" id="setup">
+  <div class="finding-head">
+    <p class="eyebrow">1 · Setup</p>
+    <h2>What this experiment adds</h2>
+  </div>
+  <div class="col stack">
+    <p>Every <strong>distractor prompt</strong> is one of Alan's plain-prose matrix prompts plus one sentence with an irrelevant duration <strong>D</strong>. Each has a <strong>clean twin</strong>: the identical prompt without that sentence.</p>
+  </div>
+<div class="prompt">You are the head of a household planning its finances. The household is deciding how to invest. Two options are available: a) 1,000 dollars in 6 months, or b) 10,000 dollars in 20 years. Your time horizon for this decision is <mark>1 day</mark>: choose the option that provides the greatest benefit within it. <mark>You took on this responsibility 5 years ago.</mark> Select one of the two options and give your reasoning. …   <span class="muted">(H = 1 day, D = 5 years, family “tenure”)</span></div>
+  <div class="col stack">
+    <p>Alan's two controls become two of five <strong>families</strong>, each a different role for the duration. Each family has four templates: two <em>seen</em> (allowed in training) and two <em>unseen</em> (test only). The sentence goes in one of three positions, balanced across prompts.</p>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Family</th><th>Example (seen)</th><th>Example (unseen)</th><th>D range</th></tr></thead>
+      <tbody>
+        <tr><td>entity age</td><td>The household's savings account was established {D} ago. <span class="muted">(Alan's “mention”)</span></td><td>… has existed for {D}.</td><td>1 day – 100 years</td></tr>
+        <tr><td>prep time</td><td>You have {D} to prepare your recommendation. <span class="muted">(Alan's “role”)</span></td><td>You were given {D} to study the two options.</td><td>1 hour – 1 month</td></tr>
+        <tr><td>tenure</td><td>You have held this role for {D}.</td><td>Your predecessor held the role for {D}.</td><td>1 day – 30 years</td></tr>
+        <tr><td>background event</td><td>The office building was last renovated {D} ago.</td><td>The town library changed its opening hours {D} ago.</td><td>1 day – 30 years</td></tr>
+        <tr><td>other horizon</td><td>For an unrelated decision last year, the household used a time horizon of {D}.</td><td>The previous plan, which has now ended, covered a period of {D}.</td><td>1 day – 100 years</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col stack">
+    <p>Decoders use Alan's recipe (ridge from one cell to log₁₀ horizon, penalty chosen on dev). All tests use held-out scenarios only: 6 option configurations × 2 domains that no decoder saw. The tiers ask progressively harder questions:</p>
+  </div>
+  <div class="metrics">
+    <div class="metric"><span class="name">Baseline</span><span class="desc">Trained on clean prompts only. This is Alan's decoder (his “condition 2”: all three renderings).</span></div>
+    <div class="metric"><span class="name">A · trained sentences</span><span class="desc">Trained with distractors of all five families (seen templates). Tested on those sentences in new scenarios.</span></div>
+    <div class="metric"><span class="name">B · new wording</span><span class="desc">Same decoder, tested on the <em>unseen</em> templates of the same families.</span></div>
+    <div class="metric"><span class="name">C · new family</span><span class="desc">Trained with four families, tested on the fifth (leave one family out). The hardest test.</span></div>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/pull_metrics.png" alt="Four-panel illustration with synthetic data: one pair's readout moving toward D; many pairs whose slope is the pull; why an unpaired correlation shows a fake pull; and the behavioral version of the pull." loading="lazy"></div>
+    <figcaption>The main metric (illustration with synthetic data). <strong>Pull</strong> = the slope of “readout with the sentence − readout of the twin” against “log D − log H”: 0 means the readout ignores D; 1 means it follows D all the way. Intervals come from resampling whole scenarios. Panel 3 shows why prompts are paired: an unpaired correlation such as ρ(error, D − H) can be large even when the true pull is zero.</figcaption>
+  </figure>
+  <div class="summary">
+    <div class="stack">
+      <h3>Reused from Alan</h3>
+      <ul>
+        <li>The <code>ptm</code> package (prompt formats, capture hooks, storage), imported read-only from <code>alan/</code>.</li>
+        <li>His matched matrix: 2,160 clean prompts, same seed and train/dev/test splits.</li>
+        <li>His decoder recipe, his cell L26 T1, and his regex text baselines.</li>
+        <li>His two control sentences, as the first seen template of two families.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>New here</h3>
+      <ul>
+        <li>3,360 distractor prompts: five families, seen/unseen templates, balanced positions, each with a clean twin.</li>
+        <li>Decoders trained with distractors (all families, and leave one family out).</li>
+        <li>The paired pull metric, and its behavioral counterpart on the model's choice logits.</li>
+        <li>Accuracy on distractor prompts versus their twins (section 6).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="finding" id="behavior">
+  <div class="finding-head">
+    <p class="eyebrow">2 · Behavior</p>
+    <h2>Does the model itself ignore the distractors?</h2>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/behavior_pull.png" alt="Dot plot of behavior pull with 95% intervals for five families, all close to zero: entity age +0.061, prep time −0.007, tenure −0.017, background event +0.020, other horizon −0.007." loading="lazy"></div>
+    <figcaption>Behavior pull per family with 95% intervals (672 prompt pairs each, resampled over 60 scenarios).</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>How to read it</h3><p>Same scale as the decoder's pull, but for the model's <em>choice</em>: how far its short-vs-long preference moves toward what D would imply. 0 means the sentence doesn't bias the decision.</p></div>
+    <div class="reading"><h3>What it shows</h3><p>All five are close to zero. The largest is entity age at +0.06: small, but its interval excludes zero.</p><p>For scale, one decade of real horizon moves the choice by 5.0 log-odds. The model acts on H, not on D.</p></div>
+  </div>
+  <div class="for-us"><p class="eyebrow">What it means</p><p>For all five families, a horizon monitor <em>should</em> ignore D. One detail matters later (section 6): the extra sentence still <strong>flips 7–11% of choices</strong> compared with the twin, in no consistent direction. The model's own decision is slightly disturbed by an extra sentence, without being pulled toward D.</p></div>
+</section>
+
+<!-- 3 -->
+<section class="finding" id="baseline">
+  <div class="finding-head">
+    <p class="eyebrow">3 · The problem, replicated</p>
+    <h2>Is the ordinary decoder pulled toward D?</h2>
+  </div>
+  <div class="vs">
+    <div class="vs-card"><span class="who">Pull toward D, L26 T1</span><span class="big">0.10 – 0.25</span><p class="muted">Baseline decoder, per family. Across all 70 cells (averaged over families) it ranges from 0.07 to 0.33, median 0.19.</p></div>
+    <div class="vs-card"><span class="who">Accuracy (within 2×), L26 T1</span><span class="big">0.93 → 0.52</span><p class="muted">On the clean twins versus the distractor prompts. One irrelevant sentence costs about half the decoder's accuracy.</p></div>
+  </div>
+  <div class="col stack">
+    <p>For example, a clean prompt with H = 5 years reads 4.98 years. Adding “Your recommendation is due in 3 days.” moves the reading to about 9 months: 30% of the way toward 3 days on a log scale, and outside the within-2× window.</p>
+    <p>Alan's metric on this data gives <strong>+0.56</strong> for entity age (his “mention”: +0.58) and <strong>+0.81</strong> for prep time (his “role”: +0.74). His finding replicates on a fresh capture.</p>
+    <p>The two numbers answer different questions. Alan's correlation says how <em>consistently</em> the error lines up with D. The pull says how <em>far</em> the readout moves: 10% of the way for entity age and 25% for prep time.</p>
+  </div>
+  <div class="caveat"><p class="eyebrow">Why pairing matters, in real data</p><p>After training with distractors (section 4) the paired pull is ≈ 0, yet the unpaired correlation still reads +0.02 to +0.24 at L26 T1 (tier A). Decoders over-read short horizons and under-read long ones, and D − H is correlated with H. That produces an apparent pull even when there is none.</p></div>
+</section>
+
+<!-- 4 -->
+<section class="finding" id="tiers">
+  <div class="finding-head">
+    <p class="eyebrow">4 · The fix</p>
+    <h2>Does training with distractors remove the pull?</h2>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/pull_by_tier.png" alt="Two panels of dot plots, one per cell. Orange baseline dots sit between about 0.10 and 0.26. Blue dots for tiers A, B and C sit near zero, except prep time tier C at 0.18 in layer 26 and other horizon tier C at 0.15 in layer 18." loading="lazy"></div>
+    <figcaption>Pull with 95% intervals at two cells: Alan's cell (L26 T1), for comparability, and the cell where the distractor-trained decoder had the lowest error on the dev set (L18 T1; chosen on dev data, not test).</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>How to read it</h3><p>Each family has four dots: orange is the baseline decoder, and the blues are tiers A → B → C, from easiest to hardest test.</p></div>
+    <div class="reading"><h3>What it shows</h3><p><strong>A and B:</strong> the pull is gone (at most 0.04), for trained sentences and for new wording.</p><p><strong>C:</strong> at most 0.04 for four of five families at each cell. The exception differs by cell: <em>prep time</em> at L26 (0.18, against a baseline of 0.25) and <em>other horizon</em> at L18 (0.15).</p></div>
+  </div>
+  <div class="for-us"><p class="eyebrow">What it means</p><p>The two exceptions are plausible. <em>Prep time</em> is the only family with durations under a day (1 and 2 hours). <em>Other horizon</em> uses the word “horizon” itself. A decoder that never saw them has no reason to discount them. Clean accuracy doesn't suffer: within-2× goes from 0.891 to 0.863 at L26 T1 and from 0.845 to 0.836 at L18 T1.</p></div>
+</section>
+
+<!-- 5 -->
+<section class="finding" id="where">
+  <div class="finding-head">
+    <p class="eyebrow">5 · Across the network</p>
+    <h2>Where in the network does this hold?</h2>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/sweep.png" alt="Eight heatmaps over 7 layers by 10 token positions. Top row, pull toward D: baseline is 0.07 to 0.33 and darkest at layer 14; tiers A and B are near zero everywhere; tier C is near zero with a slight tint. Bottom row, accuracy lost: the baseline loses 0.22 to 0.69; tier A loses little; tiers B and C still lose substantially." loading="lazy"></div>
+    <figcaption>Every layer × token cell (T0–T8 are the turn-boundary tokens, R0 the first response token), averaged over the five families. Top row: pull toward D. Bottom row: accuracy lost on distractor prompts compared with their twins (section 6). Rings mark the two cells of section 4.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>Top row (pull)</h3><p>The baseline is pulled most at layer 14 and at tokens T5 and T7, and least at T2. Training removes the pull in every cell for tiers A and B. Tier C keeps a faint residue: median 0.06.</p></div>
+    <div class="reading"><h3>The exceptions, by depth</h3><p><em>Other horizon</em> is hardest early and fades with depth: tier-C pull 0.20 at layer 14, 0.07–0.08 from layer 29 on. <em>Prep time</em> goes the other way: 0.03 at layer 14, 0.11–0.12 from layer 26 on.</p></div>
+  </div>
+  <div class="for-us"><p class="eyebrow">What it means</p><p>The two families move in opposite directions with depth, so no single layer is robust to both kinds of unseen distractor.</p></div>
+</section>
+
+<!-- 6 -->
+<section class="finding" id="disturbance">
+  <div class="finding-head">
+    <p class="eyebrow">6 · The main caveat</p>
+    <h2>So is the readout robust to distractors now?</h2>
+  </div>
+  <div class="col stack">
+    <p>Not quite. In the bottom row above, tiers B and C still lose a lot of accuracy, even where the pull toward D is about zero. The sentence still moves the readout, just <em>not toward D</em>.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/background_event_up_close.png" alt="Three scatter plots for the background event family at layer 26 token T1. Baseline: points rise with the gap, pull +0.12, spread 0.48 decades. Tier A: a tight flat band, pull 0.00, spread 0.12. Tier C: a flat but wide band, pull −0.01, spread 0.27." loading="lazy"></div>
+    <figcaption>One family up close (background event, L26 T1). Each dot is one prompt pair: how much the sentence moved the readout, against how far D is from H. The line's slope is the pull; spread is the root-mean-square movement, in decades.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>How to read it</h3><p>A tilted cloud means pull toward D. A flat but <em>wide</em> cloud means the sentence knocks the readout around, in no particular direction.</p></div>
+    <div class="reading"><h3>What it shows</h3><p>Baseline: tilted and wide. Tier A: flat and tight, so the sentence barely matters. Tier C: flat but more than twice as wide as A. The pull is gone; the disturbance isn't.</p></div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <caption class="muted" style="text-align:left; caption-side:top; padding-bottom:8px; font-size:0.9rem">Accuracy (within 2× of the true horizon), all five families pooled. Twins are the same prompts without the sentence.</caption>
+      <thead><tr><th>Decoder / test</th><th>L26 T1: distractor</th><th>twin</th><th class="grp">L18 T1: distractor</th><th>twin</th></tr></thead>
+      <tbody>
+        <tr><td>Baseline</td><td class="num">0.52</td><td class="num">0.93</td><td class="num grp">0.34</td><td class="num">0.90</td></tr>
+        <tr><td>A · trained sentences</td><td class="num">0.92</td><td class="num">0.95</td><td class="num grp">0.87</td><td class="num">0.90</td></tr>
+        <tr><td>B · new wording</td><td class="num">0.80</td><td class="num">0.95</td><td class="num grp">0.64</td><td class="num">0.90</td></tr>
+        <tr class="em"><td>C · new family</td><td class="num">0.67</td><td class="num">0.94</td><td class="num grp">0.52</td><td class="num">0.91</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="for-us"><p class="eyebrow">What it means</p><p>For a monitor, what matters is getting the horizon right, not only avoiding D. Training with distractors helps a lot for sentences it has seen (A), less for new wording (B), and a new kind of distractor still costs 27 points at L26 T1 (C). A pull metric alone would miss this: it only looks in D's direction.</p></div>
+  <div class="caveat"><p class="eyebrow">Caveat</p><p>For <em>prep time</em>, where D is always short, a pull toward D shows up partly as a constant shift (−0.53 decades in tier C at L26 T1) rather than as slope. The slope-based pull underestimates it for that family.</p></div>
+</section>
+
+<!-- 7 -->
+<section class="finding" id="text">
+  <div class="finding-head">
+    <p class="eyebrow">7 · Text baselines</p>
+    <h2>Does an activation decoder beat simply reading the text?</h2>
+  </div>
+  <div class="vs">
+    <div class="vs-card"><span class="who">Regex on the “horizon” sentence</span><span class="big">0.94</span><p class="muted">Within-2× on all distractor test prompts. Perfect on four families; 0.68 on <em>other horizon</em>, which was designed to fool it.</p></div>
+    <div class="vs-card"><span class="who">Decoder on unseen kinds (tier C, L26 T1)</span><span class="big">0.67</span><p class="muted">For comparison: the naive regex (first duration in the prompt) gets 0.08, and a bag-of-words ridge 0.25–0.62.</p></div>
+  </div>
+  <div class="for-us"><p class="eyebrow">What it means</p><p>Same conclusion as Alan's: when the horizon is written out, a regex wins. An activation monitor has to earn its place where the horizon is <strong>implicit</strong> or built up over <strong>several turns</strong>, which is where PTM is aimed.</p></div>
+</section>
+
+<hr>
+
+<!-- 8 -->
+<section class="finding" id="summary">
+  <div class="finding-head">
+    <p class="eyebrow">8 · Summary</p>
+    <h2>What we learned, and what's next</h2>
+  </div>
+  <div class="summary">
+    <div class="stack">
+      <h3>Findings (single turn, explicit horizon, one model, one seed)</h3>
+      <ul>
+        <li>The model's choice ignores all five kinds of irrelevant duration (behavior pull ≤ 0.06).</li>
+        <li>A decoder trained on clean prompts is pulled 7–33% of the way toward them (depending on layer and token) and loses about half its accuracy. This replicates Alan.</li>
+        <li>Training with distractors removes the pull toward D: fully for trained kinds and new wording, and mostly for unseen kinds.</li>
+        <li>It does <strong>not</strong> make the readout robust. New wording and new kinds still cost 15–39 points of accuracy.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Next steps (the kept activations suffice for the first four)</h3>
+      <ul>
+        <li>Robustness check: the behavior pull without the 108 pairs where the model wrote <code>**a)</code> in one prompt and <code>a)</code> in its twin.</li>
+        <li>Report a disturbance metric (spread, or accuracy versus twin) next to the pull.</li>
+        <li>Is the disturbance one direction (“an extra sentence is here”) that can be projected out? Compare with the model's own 7–11% choice flips.</li>
+        <li>A small non-linear probe on the same activations.</li>
+        <li>More distractor kinds in training (needs a new capture).</li>
+        <li>Implicit and multi-turn horizons, where a regex can't help.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="finding" id="reproduce">
+  <div class="finding-head">
+    <p class="eyebrow">9 · Reproduce</p>
+    <h2>Code, model and data</h2>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <tbody>
+        <tr><th>Code</th><td><code>relevance_aware_decoder/</code> on branch <code>relevance-aware-decoder</code>, commit <code>843a4af</code>. It imports Alan's <code>ptm</code> from <code>../alan</code> without modifying it.</td></tr>
+        <tr><th>Run</th><td><code>bash relevance_aware_decoder/scripts/run_pipeline.sh</code> on one GPU with ≥ 40 GB: prompts → tests → capture check → capture → activation subset → evaluation → checksums. <code>scripts/smoke_local.sh</code> runs the same pipeline on Qwen3-1.7B on an 8 GB card. Rental procedure and costs: <code>COST.md</code>.</td></tr>
+        <tr><th>Model</th><td><code>Qwen/Qwen3-14B</code>, revision <code>40c069824f4251a91eefaf281ebe4c544efd3e18</code>, bf16, thinking off.</td></tr>
+        <tr><th>Hardware</th><td>1× RTX PRO 5000 Blackwell (48 GB) on vast.ai, torch 2.11 + CUDA 12.8. Pipeline 30 min (capture 23.5 min, 0.26 s per prompt; answer format followed on 5,520/5,520 prompts), ≈ $1 in total.</td></tr>
+        <tr><th>Results</th><td><code>results/qwen3-14b_relevance_s0/</code>: tables, per-cell predictions, per-prompt index with generations and choice logits, and a manifest (code, prompt hashes, model revision, software, hardware).</td></tr>
+        <tr><th>Activations</th><td>Not in git; published on Hugging Face as <a href="https://huggingface.co/datasets/anicola/ptm-relevance-aware-decoder-qwen3-14b">anicola/ptm-relevance-aware-decoder-qwen3-14b</a> (≈ 3.7 GB): all 5,520 prompts at the 7 evaluated layers (14, 18, 22, 26, 29, 33, 37) × tokens T0–T8 and R0, with SHA-256 checksums. <code>scripts/evaluate.py --acts subset</code> reruns the full analysis from them. The full capture (41 layers × 17 positions, ≈ 39 GB) was not kept; its checksums are recorded, so a recapture can be checked for identity.</td></tr>
+        <tr><th>Figures</th><td><code>explainer/make_figs.py</code> regenerates every figure on this page except the metric illustration.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>Alan's results quoted in section 0 are from <code>alan/progress-20260925.md</code>. All other numbers are from <code>results/qwen3-14b_relevance_s0/</code> (<code>headline_cells.csv</code>, <code>sweep.csv</code>, <code>behavior_gate.csv</code>, <code>text_baselines.csv</code>, <code>predictions.npz</code>). Intervals are 95% percentile bootstraps over scenarios.</p>
+</footer>
+
+</main>
+</body>
+</html>
