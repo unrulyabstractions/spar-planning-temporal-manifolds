@@ -1,0 +1,29 @@
+{
+  "cells": [
+    "L26:T1",
+    "L18:T1"
+  ],
+  "eligible": [
+    "entity_age",
+    "prep_time",
+    "tenure",
+    "background_event",
+    "other_horizon"
+  ],
+  "beta_h": -4.975038354112673,
+  "args": {
+    "run_dir": "runs/qwen3-14b_relevance_s0",
+    "prompts": "data/prompts_s0.parquet",
+    "out_dir": "results/qwen3-14b_relevance_s0",
+    "layers": "14,18,22,26,29,33,37",
+    "positions": "T0,T1,T2,T3,T4,T5,T6,T7,T8,R0",
+    "alphas": "0.01,0.1,1,10,100,1000,10000,100000,1000000",
+    "n_boot": 2000,
+    "cells_full": "L26:T1,auto",
+    "behavior_gate": 0.1,
+    "removed": 0.1,
+    "min_baseline_pull": 0.2,
+    "max_clean_drop": 0.05,
+    "acts": "auto"
+  }
+}

@@ -1,0 +1,19 @@
+# The stack the local smoke test passed with (ptm_env, 2026-09-28). Needs Python >= 3.12 (numpy 2.5, scipy 1.18).
+# Alan used torch 2.11 + cu128 and transformers 5.17.
+#
+# torch is NOT pinned: use the CUDA-matched torch that ships with the PyTorch image (>= 2.10), so pip leaves it alone.
+# If the image's torch is older, pip pulls a new wheel that may not match the host's CUDA driver; check with
+#   python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
+torch>=2.10
+transformers==5.17.0
+accelerate==1.15.0
+huggingface_hub==1.31.0      # provides the `hf` CLI (`huggingface-cli` no longer works)
+safetensors==0.8.0
+numpy==2.5.3
+scipy==1.18.1
+scikit-learn==1.9.1
+pandas==3.0.6
+pyarrow==25.0.1
+matplotlib==3.11.1
+tqdm==4.70.0
+pytest==9.1.1
