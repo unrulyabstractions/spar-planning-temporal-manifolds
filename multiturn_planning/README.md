@@ -2,8 +2,7 @@
 
 Exploratory experiment for the project's core question (proposal: *Planning Temporal Manifolds*, RQ1–RQ2):
 when a model builds a plan over several turns, can the horizon it is planning over be read from its
-activations at turn boundaries? Author: Augusto Nicola. Status: **design + local pilots; nothing run on the
-target model yet.**
+activations at turn boundaries? Author: Augusto Nicola. Status: **first full run done** (Qwen3-14B, `qwen3-14b_mtp_s0`, 2026-09-29).
 
 ## Why the design looks like this
 
@@ -84,6 +83,7 @@ scripts/adherence.py  format-adherence report
 scripts/evaluate.py   A-D -> results/<run>/{A,B,C,D}_*.csv, behavior.json, summary.md  (--quick: sanity pass)
 scripts/run_pipeline.sh  tests -> capture -> adherence -> quick evaluate -> checksums (QUICK_EVAL=0 for the full
                       analysis on the box; by default it runs locally after copy-back, so no GPU idles on CPU work)
+requirements.txt   pinned stack (same as relevance_aware_decoder)
 tests/             prompts/parsing/positions on the Qwen3 tokenizer; synthetic end-to-end check of A-D
 ```
 
@@ -109,3 +109,27 @@ tests/             prompts/parsing/positions on the Qwen3 tokenizer; synthetic e
   worse (2/15 wrote details). Reverted; **step replies are now prefilled with `Step <n>:`** instead. Checked
   locally on 1.7B: steps 15/15 numbered and parsed (its outlines still fail, so it stays unusable).
 - Local 4B runs need `--batch 4 --gpu-gib 4.5` (turn 6 contexts no longer fit at batch 8 on 8 GB).
+
+## Full run: `qwen3-14b_mtp_s0` (Qwen3-14B, commit a13c941, 2026-09-29)
+
+1x RTX PRO 5000 Blackwell 48 GB on vast.ai: capture 19 min (480 conversations x 7 turns), rental ~1.4 h,
+~$1.15 incl. transfer. 4.6 GB of activations (local only, `runs/`, verified `sha256sum -c` 22/22); analysis
+run locally (`results/qwen3-14b_mtp_s0/`, ~13 min on 12 cores; on the box it was ~10x slower from BLAS thread
+oversubscription, now pinned in `run_pipeline.sh`). The box's `adherence.txt` used the older whole-conversation
+rule (403/480 usable); the analysis uses the step-level rule (all 480 usable, 2,323 of 2,400 steps).
+
+- **Adherence**: outlines titles-only 100%, step numbering 100% (prefill), "Plan Completed" 100%, step
+  horizons parsed 97% (the rest "Time horizon: Ongoing", 75 of them at step 5).
+- **Behavior**: steps stay within the target; last step vs target slope 0.93, rho 0.89. For targets of a
+  year or more the early steps barely depend on the target (step 1 = 1 month; steps 2-4 within a year); only
+  step 5 stretches. No target: median last step ~5 weeks.
+- **A**: turn 1 boundary reads H_target (R2 0.98, within 2x 95%, PC1 |rho| 0.88). Later turns: refit R2
+  0.94-0.97, but the turn-1 probe transfers poorly (R2 0.56-0.73, within 2x 27-40%): the direction changes.
+- **B** (horizon condition): text baseline R2 0.86 -> text + activations 0.89 (L28 P7), within 2x
+  67% -> 72%; shuffled max 0.000. No-horizon condition inconclusive.
+- **C**: best turn-1 cell adds 0.08-0.11 R2 over target + wording for steps 1-4 (best shuffled 0.03-0.05;
+  step 4: 0.00); nothing for step 5. Single shuffle; the goal text may explain it.
+- **D**: probe from stated-target plans orders self-chosen horizons at rho 0.78-0.86 (boundary window), but
+  badly scaled (R2 <= 0.52).
+
+Results explainer (workspace): `our_work/mtp-explainer/index.html`.

@@ -94,7 +94,10 @@ if __name__ == "__main__":
     C.to_csv(res / "C_first_turn.csv", index=False)
     log += ["## C · turn-1 activations and later steps, beyond H_target", "",
             "```", fmt(best(C, "delta_r2", by="step"),
-                       ["step", "layer", "pos", "r2_target_only", "r2_target_plus_act", "delta_r2"]), "```", ""]
+                       ["step", "layer", "pos", "r2_target_only", "r2_target_plus_act", "delta_r2",
+                        "delta_r2_shuffled"]), "```", "",
+            "noise floor: best shuffled delta per step (same cells, residuals permuted within scenario):", "",
+            "```", fmt(best(C, "delta_r2_shuffled", by="step"), ["step", "layer", "pos", "delta_r2_shuffled"]), "```", ""]
 
     log.append(f"_evaluate: {time.time() - t0:.0f}s_")
     (res / "summary.md").write_text("\n".join(log))

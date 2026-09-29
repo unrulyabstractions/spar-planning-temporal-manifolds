@@ -17,6 +17,13 @@ NAME=${NAME:-$(basename "$MODEL" | tr 'A-Z' 'a-z')_mtp_s0}
 [[ "${SMOKE:-0}" == 1 ]] && NAME=smoke_$(basename "$MODEL") && SMOKE_ARG=--smoke
 RUN=runs/$NAME; RES=results/$NAME; LOG=runs/pipeline.log
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# Rented containers often see all host cores (e.g. 32) but get a share (e.g. 8); BLAS then oversubscribes and the
+# CPU-bound analysis ran ~10x slower on the box than locally. Pin to the cores we actually have.
+cores() {   # the container's CPU quota (cgroup v2 cpu.max "quota period"), else nproc
+    local q p; read -r q p 2>/dev/null < /sys/fs/cgroup/cpu.max || { nproc; return; }
+    if [[ "$q" == max || -z "$p" ]]; then nproc; else echo $(( (q + p - 1) / p )); fi
+}
+NCORES=$(cores); export OMP_NUM_THREADS=${OMP_NUM_THREADS:-$NCORES} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-$NCORES}
 mkdir -p runs results
 stamp() { echo "$(date '+%F %T') $*" | tee -a "$LOG"; }
 STEP=setup; CAPTURED=0
@@ -33,7 +40,7 @@ on_error() {
 trap 'on_error $? $LINENO' ERR
 step() { STEP=$1; stamp "$STEP"; }
 
-stamp "START model $MODEL batch $BATCH run $RUN commit $(git rev-parse --short HEAD 2>/dev/null || echo none)"
+stamp "START model $MODEL batch $BATCH threads $NCORES run $RUN commit $(git rev-parse --short HEAD 2>/dev/null || echo none)"
 if [[ -e "$RUN/index.parquet" ]]; then
     if [[ "${OVERWRITE:-0}" == 1 ]]; then stamp "OVERWRITE=1: removing $RUN $RES"; rm -rf "$RUN" "$RES" "$RUN".*.log
     else stamp "FAILED at step setup: $RUN already holds a capture; move it or set OVERWRITE=1"; exit 1; fi

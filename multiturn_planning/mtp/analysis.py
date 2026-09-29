@@ -5,11 +5,11 @@ for a step turn (t = 2..6) the reply's own horizon, step t-1, is not yet in the 
 
   A  persistence   y = log H_target. Probe fit on turn-1 rows, tested on turn-t rows (same position/layer).
   B  next step     y = log H_step of the reply about to be written, at that turn's pre-reply positions.
-                   Compared with a text baseline that sees what's written: log H_target, previous step's
-                   log H_step, step index. Reported as R2 of text, of activations, and of text + activations
+                   Compared with a text baseline that sees what's written: log H_target, the wording of the
+                   horizon sentence, previous step's log H_step, step index. Reported as R2 of text, of activations, and of text + activations
                    (activations fit to the text baseline's cross-fitted residual).
-  C  first turn    y_j = log H_step of step j (j = 1..5), from turn-1 pre-reply positions, beyond log H_target
-                   (same residual scheme with a baseline on log H_target only).
+  C  first turn    y_j = log H_step of step j (j = 1..5), from turn-1 pre-reply positions, beyond the text
+                   (same residual scheme; baseline on log H_target + wording; shuffled-residual control).
   D  no horizon    B on the no-horizon conversations (the model chose every horizon), within-D and with the
                    probe trained on the horizon conversations.
 
@@ -157,7 +157,25 @@ def text_features(st, with_target: bool) -> np.ndarray:
     cols = [onehot, np.where(has_prev, prev, 0.0)[:, None], has_prev[:, None].astype(float)]
     if with_target:
         cols.append(st.log_h_target.values[:, None])
+        cols.append(wording_dummies(st))
     return np.concatenate(cols, 1)
+
+
+def wording_dummies(frame) -> np.ndarray:
+    """One-hot of the horizon sentence's wording (known text), first wording as reference; empty if absent."""
+    if "wording" not in frame or frame.wording.isna().all():
+        return np.zeros((len(frame), 0))
+    levels = sorted(frame.wording.dropna().unique())[1:]
+    return np.stack([(frame.wording.values == w).astype(float) for w in levels], 1) if levels else np.zeros((len(frame), 0))
+
+
+def shuffle_within(values, groups, seed=0) -> np.ndarray:
+    """Permute values within each group (keeps the scenario structure; breaks the link to activations)."""
+    rng, out = np.random.default_rng(seed), values.copy()
+    for s in np.unique(groups):
+        idx = np.where(groups == s)[0]
+        out[idx] = rng.permutation(values[idx])
+    return out
 
 
 def analysis_b(df, acts, valid, meta, positions, layers_i, convs, condition, shuffle_seed=0):
@@ -168,11 +186,7 @@ def analysis_b(df, acts, valid, meta, positions, layers_i, convs, condition, shu
     y, g = st.log_h_step.values, st.scenario.values
     base = cv_predict_linear(text_features(st, condition == "horizon"), y, g)
     resid = y - base
-    rng = np.random.default_rng(shuffle_seed)
-    shuffled = resid.copy()
-    for s in np.unique(g):                                  # shuffle within scenario: keeps group structure
-        idx = np.where(g == s)[0]
-        shuffled[idx] = rng.permutation(resid[idx])
+    shuffled = shuffle_within(resid, g, shuffle_seed)
     mt = metrics(y, base)
     out = []
     for li in layers_i:
@@ -223,17 +237,21 @@ def analysis_c(df, acts, meta, positions, layers_i, convs):
         if has.sum() < MIN_N:
             continue
         yj, g, rows_j = yj_all[has], first.scenario.values[has], first.row.values[has]
-        base = cv_predict_linear(first.log_h_target.values[has][:, None], yj, g)
+        F = np.concatenate([first.log_h_target.values[has][:, None], wording_dummies(first[has])], 1)
+        base = cv_predict_linear(F, yj, g)                  # text baseline: H_target + wording
         resid = yj - base
+        shuffled = shuffle_within(resid, g, j)
         mt = metrics(yj, base)
         for li in layers_i:
             for pn in positions:
                 pi = meta["positions"].index(pn)
                 X = feature(acts, rows_j, li, pi)
                 mc = metrics(yj, base + cv_predict(X, resid, g))
+                ms = metrics(yj, base + cv_predict(X, shuffled, g))
                 out.append({"step": j, "layer": meta["layers"][li], "pos": pn, "n": len(yj),
                             "r2_target_only": mt["r2"], "r2_target_plus_act": mc["r2"],
-                            "delta_r2": mc["r2"] - mt["r2"], "within2x_target_only": mt["within2x"],
+                            "delta_r2": mc["r2"] - mt["r2"], "delta_r2_shuffled": ms["r2"] - mt["r2"],
+                            "within2x_target_only": mt["within2x"],
                             "within2x_target_plus_act": mc["within2x"]})
     return pd.DataFrame(out)
 
