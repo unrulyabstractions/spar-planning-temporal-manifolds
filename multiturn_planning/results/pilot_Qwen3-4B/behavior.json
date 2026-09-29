@@ -1,0 +1,9 @@
+{
+ "n_clean_conversations": 13,
+ "slope_last_step_vs_target": 1.030543738542014,
+ "rho_last_step_vs_target": 0.9733285267845752,
+ "frac_steps_within_target": 1.0,
+ "frac_monotone_plans": 0.8461538461538461,
+ "none_last_step_median_years": 0.3915605241586511,
+ "none_last_step_iqr_decades": 0.27853696838404435
+}
