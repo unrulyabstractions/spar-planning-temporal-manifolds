@@ -55,7 +55,8 @@ SYSTEM = (
     "Step <n>: <title>\n"
     "Time horizon: <how far from today this step will be complete, as a single duration: a number and a unit>\n"
     "Details: <two or three sentences>\n"
-    f'3. After step {N_STEPS}, when the user says "{CONTINUE}" again, reply only "{DONE}".'
+    f'3. You give steps {", ".join(str(i) for i in range(1, N_STEPS))} and {N_STEPS}, one per "{CONTINUE}"; never '
+    f'skip a step. Only after step {N_STEPS} has been given, reply to the next "{CONTINUE}" with only "{DONE}".'
 )
 
 

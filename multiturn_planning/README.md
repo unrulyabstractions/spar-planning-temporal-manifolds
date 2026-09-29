@@ -97,4 +97,8 @@ tests/             prompts/parsing/positions on the Qwen3 tokenizer; synthetic e
   ρ 0.97, every step within the target. Often a counting pattern ("1 day, 2 days, 3 days…") or a last step
   equal to the target, so the text baseline for B will be strong. The analysis runs end to end (4 s);
   its probe numbers mean nothing at 3 scenarios.
+- **Qwen3-14B smoke on the rented box** (RTX PRO 5000, 48 s for 15 conversations): outline and "Plan Completed"
+  100%, but only 6/15 fully usable: in 8 conversations the model answered the 5th `Continue` with "Plan
+  Completed" (steps 1-4 fine, step 5 skipped): an off-by-one on rule 3 ("After step 5, when the user says
+  Continue again"). Fix: rule 3 now enumerates "steps 1, 2, 3, 4 and 5, one per Continue; never skip a step".
 - Local 4B runs need `--batch 4 --gpu-gib 4.5` (turn 6 contexts no longer fit at batch 8 on 8 GB).
