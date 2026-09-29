@@ -32,6 +32,7 @@ from sklearn.model_selection import GroupKFold
 ALPHAS = np.logspace(-2, 6, 17)
 LOG2 = np.log10(2)
 N_FOLDS = 6
+MIN_N = 5          # fewer valid samples than this in a cell: skipped
 
 
 # ---- loading -----------------------------------------------------------------------------------------------
@@ -117,6 +118,8 @@ def analysis_a(df, acts, valid, meta, positions, layers_i):
             for t in sorted(hor.turn.unique()):
                 cur = hor[hor.turn == t].set_index("conv_id").loc[first.index]
                 ok = valid[cur.row.values, pi]
+                if ok.sum() < MIN_N:                   # e.g. E on turns whose replies all hit max_new
+                    continue
                 Xt = feature(acts, cur.row.values, li, pi)
                 pred_t = np.full(len(cur), np.nan)
                 pred_in = np.full(len(cur), np.nan)
@@ -155,6 +158,8 @@ def text_features(st, with_target: bool) -> np.ndarray:
 def analysis_b(df, acts, valid, meta, positions, layers_i, convs, condition, shuffle_seed=0):
     st = step_table(df, convs)
     st = st[st.condition == condition]
+    if len(st) < MIN_N or st.scenario.nunique() < 2:
+        return pd.DataFrame()
     y, g = st.log_h_step.values, st.scenario.values
     base = cv_predict_linear(text_features(st, condition == "horizon"), y, g)
     resid = y - base
@@ -187,6 +192,8 @@ def analysis_d_transfer(df, acts, meta, positions, layers_i, convs):
     """Probe for the upcoming H_step trained on all horizon conversations, applied to the no-horizon ones."""
     st = step_table(df, convs)
     tr, te = st[st.condition == "horizon"], st[st.condition == "none"]
+    if len(tr) < MIN_N or len(te) < MIN_N:
+        return pd.DataFrame()
     out = []
     for li in layers_i:
         for pn in positions:
@@ -202,6 +209,8 @@ def analysis_d_transfer(df, acts, meta, positions, layers_i, convs):
 def analysis_c(df, acts, meta, positions, layers_i, convs):
     hor = df[(df.condition == "horizon") & df.conv_id.isin(convs)]
     first = hor[hor.turn == 1].set_index("conv_id").sort_index()
+    if len(first) < MIN_N or first.scenario.nunique() < 2:
+        return pd.DataFrame()
     out = []
     for j in range(1, 6):
         yj = hor[hor.turn == j + 1].set_index("conv_id").loc[first.index].log_h_step.values

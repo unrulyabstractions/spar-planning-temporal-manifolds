@@ -9,10 +9,13 @@ import argparse
 import json
 import sys
 import time
+import warnings
 from pathlib import Path
 
 import pandas as pd
 
+warnings.filterwarnings("ignore", message="An input array is constant")
+warnings.filterwarnings("ignore", message="Mean of empty slice")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from mtp import analysis as an  # noqa: E402
 
@@ -20,11 +23,15 @@ PRE = [f"P{i}" for i in range(9)]
 
 
 def best(df, col, by=None, n=1):
+    if df.empty:
+        return df
     d = df.sort_values(col, ascending=False)
     return d.groupby(by).head(n) if by else d.head(n)
 
 
 def fmt(df, cols):
+    if df.empty:
+        return "(too few clean conversations for this analysis)"
     return df[cols].to_string(index=False, float_format=lambda v: f"{v:.3f}")
 
 
@@ -54,12 +61,15 @@ if __name__ == "__main__":
     A = an.analysis_a(df, acts, valid, meta, pre + ["E"], li)
     A.to_csv(res / "A_persistence.csv", index=False)
     b1 = best(A[A.turn == 1], "r2")
-    cell = A[(A.layer == b1.layer.iloc[0]) & (A.pos == b1.pos.iloc[0])]
+    cell = A[(A.layer == b1.layer.iloc[0]) & (A.pos == b1.pos.iloc[0])] if len(b1) else A.iloc[:0]
+    where = f"layer {b1.layer.iloc[0]}, {b1.pos.iloc[0]}" if len(b1) else "none"
     log += ["## A · persistence of H_target (probe from turn 1, tested at turn t)", "",
-            f"best turn-1 cell: layer {b1.layer.iloc[0]}, {b1.pos.iloc[0]}; that cell across turns:", "",
+            f"best turn-1 cell: {where}; that cell across turns:", "",
             "```", fmt(cell, ["turn", "r2", "rho", "within2x", "r2_same_turn", "pc1_rho"]), "```", ""]
 
-    B = pd.concat([an.analysis_b(df, acts, valid, meta, pre + ["H", "V"], li, convs, c) for c in ("horizon", "none")])
+    Bs = [an.analysis_b(df, acts, valid, meta, pre + ["H", "V"], li, convs, c) for c in ("horizon", "none")]
+    Bs = [x for x in Bs if not x.empty]
+    B = pd.concat(Bs) if Bs else pd.DataFrame(columns=["condition", "pos"])
     B.to_csv(res / "B_next_step.csv", index=False)
     log += ["## B / D · the step about to be written (text baseline vs activations)", "",
             "```", fmt(best(B[~B.pos.isin(["H", "V"])], "delta_r2", by="condition", n=3),
