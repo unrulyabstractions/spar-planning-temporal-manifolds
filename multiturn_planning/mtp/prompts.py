@@ -55,9 +55,14 @@ SYSTEM = (
     "Step <n>: <title>\n"
     "Time horizon: <how far from today this step will be complete, as a single duration: a number and a unit>\n"
     "Details: <two or three sentences>\n"
-    f'3. You give steps {", ".join(str(i) for i in range(1, N_STEPS))} and {N_STEPS}, one per "{CONTINUE}"; never '
-    f'skip a step. Only after step {N_STEPS} has been given, reply to the next "{CONTINUE}" with only "{DONE}".'
+    f'3. After step {N_STEPS}, when the user says "{CONTINUE}" again, reply only "{DONE}".'
 )
+
+
+def step_prefill(step: int) -> str:
+    """Start of the assistant's reply on step turns (written for the model, then it continues). It comes after
+    the pre-reply window P0..P8, so the activations there are unchanged; the step number is known text anyway."""
+    return f"Step {step}:"
 
 
 @dataclass(frozen=True)

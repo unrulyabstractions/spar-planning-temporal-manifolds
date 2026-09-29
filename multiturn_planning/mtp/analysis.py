@@ -55,12 +55,17 @@ def load_run(run: Path):
 
 
 def clean_conversations(df: pd.DataFrame) -> set[str]:
-    """Conversations whose 5 step turns all parsed a horizon, carry the right step number, and weren't truncated."""
+    """Conversations whose outline is titles only (no step details, so no step horizon is written before its turn)
+    and whose 5 step turns all parsed a horizon, carry the right step number, and weren't truncated."""
     st = df[df.kind == "step"]
     ok = st.groupby("conv_id").apply(
         lambda g: len(g) == 5 and g.h_step_years.notna().all() and (g.step_no == g.turn - 1).all()
         and not g.truncated.any())
-    return set(ok[ok].index)
+    keep = set(ok[ok].index)
+    if "outline_full" in df:
+        o = df[df.kind == "outline"]
+        keep -= set(o[o.outline_full.astype(bool) | o.truncated.astype(bool)].conv_id)
+    return keep
 
 
 # ---- metrics and probes ---------------------------------------------------------------------------------------

@@ -30,8 +30,13 @@ written so far.
   itself. One prompt per scenario, so plans are sampled (Qwen3 non-thinking settings: T 0.7, top-p 0.8,
   top-k 20), 16 per scenario. The horizon condition is greedy.
 - Thinking off (the proposal's main condition): Qwen3's template adds an empty think block to the current turn.
+- **Step replies are prefilled with `Step <n>:`** (the proposal's "constrained decoding" backup): the model
+  continues from there, so it can't skip, renumber or end early. The prefill comes after the boundary window
+  P0–P8, so the activations there are unchanged (causal model), and the step number is known text anyway.
 - Guard: a step reply that starts a second step or appends "Plan Completed" is cut there and closed with
-  `<|im_end|>` (logged as `cut`; the proposal's "constrained decoding" backup).
+  `<|im_end|>` (logged as `cut`).
+- **Usable conversation** = titles-only outline (so no step horizon is written before its turn) + all 5 steps
+  parsed, correctly numbered, not truncated. Only usable conversations enter B, C, D and the behavior check.
 
 Size: 288 horizon + 192 no-horizon = **480 conversations**, 3,360 assistant turns.
 
@@ -100,5 +105,7 @@ tests/             prompts/parsing/positions on the Qwen3 tokenizer; synthetic e
 - **Qwen3-14B smoke on the rented box** (RTX PRO 5000, 48 s for 15 conversations): outline and "Plan Completed"
   100%, but only 6/15 fully usable: in 8 conversations the model answered the 5th `Continue` with "Plan
   Completed" (steps 1-4 fine, step 5 skipped): an off-by-one on rule 3 ("After step 5, when the user says
-  Continue again"). Fix: rule 3 now enumerates "steps 1, 2, 3, 4 and 5, one per Continue; never skip a step".
+  Continue again"). Spelling out "steps 1, 2, 3, 4 and 5 … never skip a step" gave 8/15 and made outlines
+  worse (2/15 wrote details). Reverted; **step replies are now prefilled with `Step <n>:`** instead. Checked
+  locally on 1.7B: steps 15/15 numbered and parsed (its outlines still fail, so it stays unusable).
 - Local 4B runs need `--batch 4 --gpu-gib 4.5` (turn 6 contexts no longer fit at batch 8 on 8 GB).

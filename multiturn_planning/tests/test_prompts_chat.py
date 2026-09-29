@@ -96,3 +96,16 @@ def test_cut_step_reply_keeps_one_step(tok):
     assert cut and tok.decode(kept[:-1]).rstrip() == one
     ids = tok(one + "<|im_end|>", add_special_tokens=False)["input_ids"]
     assert cut_step_reply(tok, ids) == (ids, False)
+
+
+def test_prefilled_step_reply_keeps_window_and_positions(tok):
+    """Prefill goes after P8: the window is computed on the prompt alone; H/V/E land inside prefill + continuation."""
+    from mtp.prompts import step_prefill
+    prompt = encode_prompt(tok, messages_for_turn("hi", ["1. A\n2. B"]))
+    pre = tok.encode(step_prefill(1), add_special_tokens=False)
+    rest = tok(" A\nTime horizon: 3 months\nDetails: x.<|im_end|>", add_special_tokens=False)["input_ids"]
+    pos = turn_positions(tok, prompt, pre + rest)
+    assert [pos[f"P{i}"] for i in range(9)] == pre_window(tok, prompt) and pos["P8"] == len(prompt) - 1
+    seq = prompt + pre + rest
+    assert tok.decode(seq[: pos["V"] + 1]).endswith("3 months") and pos["H"] > len(prompt) + len(pre)
+    assert parse_step(tok.decode(pre + rest[:-1])) == {"step_no": 1, "h_step_text": "3 months", "h_step_years": 0.25}

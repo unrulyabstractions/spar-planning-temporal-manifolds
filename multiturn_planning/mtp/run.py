@@ -3,6 +3,7 @@
 Per turn k (1 outline, 2..6 steps, 7 "Plan Completed"):
   1. render the history with the chat template (thinking off), batch-generate reply k (left padding;
      greedy for the horizon condition, sampled with Qwen's non-thinking settings for the no-horizon condition);
+     step replies are prefilled with "Step <n>:" (after the pre-reply window, so P0..P8 are unaffected);
   2. re-run prompt_k + reply_k teacher-forced, unbatched (no padding), and keep the residual stream at the
      named positions for the selected layers.
 
@@ -27,7 +28,7 @@ from safetensors.torch import save_file
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .chat import POSITIONS, clean_reply, cut_step_reply, encode_prompt, messages_for_turn, turn_positions
-from .prompts import N_STEPS, SYSTEM, ConversationSpec, outline_mentions_time, parse_step
+from .prompts import N_STEPS, SYSTEM, ConversationSpec, outline_mentions_time, parse_step, step_prefill
 
 N_TURNS = N_STEPS + 2
 MAX_NEW = {1: 200, **{k: 220 for k in range(2, N_STEPS + 2)}, N_STEPS + 2: 16}
@@ -129,8 +130,10 @@ def run(specs: list[ConversationSpec], out_dir: Path, model_name: str, batch_siz
             for b in range(0, len(group), batch_size):
                 chunk = group[b:b + batch_size]
                 prompts = [encode_prompt(tok, messages_for_turn(s.first_user, replies[s.conv_id])) for s in chunk]
-                gen = generate_batch(tok, model, prompts, MAX_NEW[k], greedy, seed=1000 * k + b)
+                pre = tok.encode(step_prefill(k - 1), add_special_tokens=False) if turn_kind(k) == "step" else []
+                gen = generate_batch(tok, model, [p + pre for p in prompts], MAX_NEW[k], greedy, seed=1000 * k + b)
                 for s, p, r in zip(chunk, prompts, gen):
+                    r = pre + r                                   # the reply as it stands in the conversation
                     r, cut = cut_step_reply(tok, r) if turn_kind(k) == "step" else (r, False)
                     pos = turn_positions(tok, p, r)
                     valid = [pos[n] is not None for n in POSITIONS]
@@ -161,6 +164,6 @@ def run(specs: list[ConversationSpec], out_dir: Path, model_name: str, batch_siz
          "git_commit": _git_commit(), "torch": torch.__version__, "transformers": transformers.__version__,
          "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
          "n_conversations": len(specs), "batch_size": batch_size, "n_layers": n_layers, "d_model": model.config.hidden_size, "layers": layers,
-         "positions": POSITIONS, "n_turns": N_TURNS, "system": SYSTEM, "max_new": MAX_NEW, "sampling": SAMPLING,
+         "positions": POSITIONS, "n_turns": N_TURNS, "system": SYSTEM, "step_prefill": step_prefill(0).replace("0", "<n>"), "max_new": MAX_NEW, "sampling": SAMPLING,
          "wall_seconds": round(time.time() - t0, 1)}, indent=1))
     log(f"done: {len(df)} turn rows in {shard} shards, {time.time() - t0:.0f}s")
