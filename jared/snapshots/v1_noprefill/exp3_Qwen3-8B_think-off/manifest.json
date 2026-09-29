@@ -1,0 +1,54 @@
+{
+  "experiment": "exp3",
+  "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "off",
+    "n_response": 6,
+    "max_think_tokens": 1024,
+    "limit": null,
+    "seed": 0
+  },
+  "git": null,
+  "started": "2026-09-24T03:05:13",
+  "out_dir": "/workspace/results/horizon/exp3_Qwen3-8B_think-off",
+  "layer": 11,
+  "pos": 1,
+  "probe_source": "E0",
+  "n_prompts": 108,
+  "within": 0.1878635324656123,
+  "between": 1.3973167727459306,
+  "ratio": 0.1344459152926599,
+  "spelling_means": {
+    "1 hours": {
+      "1 hour": -3.349026918411255,
+      "60 minutes": -3.5945606231689453,
+      "3600 seconds": -3.9428701400756836
+    },
+    "1 days": {
+      "1 day": -2.0624587535858154,
+      "24 hours": -2.0677096843719482,
+      "1440 minutes": -2.1322638988494873
+    },
+    "7 days": {
+      "1 week": -1.8434553146362305,
+      "7 days": -1.7162593603134155,
+      "168 hours": -1.3546990156173706
+    },
+    "1 months": {
+      "1 month": -0.8737695813179016,
+      "30 days": -1.5224595069885254,
+      "4 weeks": -0.8869936466217041
+    },
+    "1 years": {
+      "1 year": 0.0370684452354908,
+      "12 months": -0.035705167800188065,
+      "365 days": -0.28810688853263855
+    },
+    "10 years": {
+      "10 years": 0.9998605847358704,
+      "120 months": 0.6087843775749207,
+      "1 decade": 0.5394246578216553
+    }
+  },
+  "wall_seconds": 17.8
+}
