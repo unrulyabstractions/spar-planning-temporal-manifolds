@@ -76,7 +76,9 @@ mtp/run.py         batched generation turn by turn + teacher-forced capture (saf
 mtp/analysis.py    analyses A-D and behavior
 scripts/capture.py generate + capture   (--smoke: 15-conversation slice; --gpu-gib: CPU offload for local tests)
 scripts/adherence.py  format-adherence report
-scripts/evaluate.py   A-D -> results/<run>/{A,B,C,D}_*.csv, behavior.json, summary.md
+scripts/evaluate.py   A-D -> results/<run>/{A,B,C,D}_*.csv, behavior.json, summary.md  (--quick: sanity pass)
+scripts/run_pipeline.sh  tests -> capture -> adherence -> quick evaluate -> checksums (QUICK_EVAL=0 for the full
+                      analysis on the box; by default it runs locally after copy-back, so no GPU idles on CPU work)
 tests/             prompts/parsing/positions on the Qwen3 tokenizer; synthetic end-to-end check of A-D
 ```
 

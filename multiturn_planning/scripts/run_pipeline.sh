@@ -2,7 +2,9 @@
 # Full run on ONE GPU (Qwen3-14B bf16 ~ 30 GB: a 48 GB card). Every step logs to runs/pipeline.log.
 #
 #   bash multiturn_planning/scripts/run_pipeline.sh          # from the repo root
-#   env: PY, MODEL, BATCH, NAME (run name), SMOKE=1 (15-conversation slice), OVERWRITE=1
+#   env: PY, MODEL, BATCH, NAME (run name), SMOKE=1 (15-conversation slice), OVERWRITE=1,
+#        QUICK_EVAL=0 (full analysis here; the default 1 runs a few-minute sanity pass so a rented GPU isn't
+#        kept idle during the CPU-bound analysis; run the full `scripts/evaluate.py` locally afterwards)
 #
 # Steps: 1 unit tests · 2 capture · 3 adherence report · 4 evaluate · 5 checksums (RUN/SHA256SUMS over
 # everything to copy back; verify with `sha256sum -c` before destroying the instance).
@@ -40,6 +42,7 @@ step "1/5 unit tests";  $PY -m pytest -q tests >> "$LOG" 2>&1
 step "2/5 capture";     $PY -u scripts/capture.py "$RUN" --model "$MODEL" --batch "$BATCH" ${SMOKE_ARG:-} > "$RUN.capture.log" 2>&1
 CAPTURED=1; stamp "   $(tail -1 "$RUN.capture.log")"
 step "3/5 adherence";   $PY scripts/adherence.py "$RUN" 2>/dev/null | tee "$RUN/adherence.txt" | tee -a "$LOG"
-step "4/5 evaluate";    $PY -u scripts/evaluate.py "$RUN" > "$RUN.evaluate.log" 2>&1
+EVAL_ARGS=$([[ "${QUICK_EVAL:-1}" == 1 ]] && echo --quick || true)
+step "4/5 evaluate ${EVAL_ARGS:-(full)}"; $PY -u scripts/evaluate.py "$RUN" $EVAL_ARGS > "$RUN.evaluate.log" 2>&1
 step "5/5 checksums"; checksums
 stamp "DONE: $(wc -l < "$RUN/SHA256SUMS") files in $RUN/SHA256SUMS ($(du -sh "$RUN" | cut -f1)). Verify the copy with: cd multiturn_planning && sha256sum -c $RUN/SHA256SUMS"

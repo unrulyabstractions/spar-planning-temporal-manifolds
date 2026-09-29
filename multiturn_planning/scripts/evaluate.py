@@ -2,7 +2,8 @@
 
     python scripts/evaluate.py runs/<name> [--layers 16,24,32] [--quick]
 
---quick: pre-reply positions P0, P4, P8 and U only (fast look at a pilot).
+--quick: pre-reply positions P0, P4, P8 and U only, and (unless --layers is given) only the proposal's
+         0.4 / 0.6 / 0.8 L layers: a few-minute sanity pass, e.g. on the rented box. Run the full version locally.
 """
 
 import argparse
@@ -46,11 +47,16 @@ if __name__ == "__main__":
     res.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     df, acts, valid, meta = an.load_run(run)
-    layers = [int(x) for x in a.layers.split(",")] if a.layers else meta["layers"]
+    if a.layers:
+        layers = [int(x) for x in a.layers.split(",")]
+    elif a.quick:
+        layers = [round(f * meta["n_layers"]) for f in (0.4, 0.6, 0.8)]
+    else:
+        layers = meta["layers"]
     li = [meta["layers"].index(l) for l in layers]
     pre = ["P0", "P4", "P8", "U"] if a.quick else PRE + ["U"]
     convs = an.clean_conversations(df)
-    log = [f"# Multi-turn planning: {run.name}", "",
+    log = [f"# Multi-turn planning: {run.name}" + (" (quick pass)" if a.quick else ""), "",
            f"model `{meta['model']}` · {df.conv_id.nunique()} conversations · clean (all 5 steps parsed and "
            f"numbered): {len(convs)} · layers {layers}", ""]
 
