@@ -55,12 +55,12 @@ def load_run(run: Path):
 
 
 def clean_conversations(df: pd.DataFrame) -> set[str]:
-    """Conversations whose outline is titles only (no step details, so no step horizon is written before its turn)
-    and whose 5 step turns all parsed a horizon, carry the right step number, and weren't truncated."""
+    """Usable conversations: the outline is titles only (no step details, so no step horizon is written before its
+    turn) and the 5 step turns carry the right step number and weren't truncated. A step whose horizon didn't parse
+    (e.g. "Time horizon: Ongoing") is dropped on its own in `step_table`, not with its conversation."""
     st = df[df.kind == "step"]
     ok = st.groupby("conv_id").apply(
-        lambda g: len(g) == 5 and g.h_step_years.notna().all() and (g.step_no == g.turn - 1).all()
-        and not g.truncated.any())
+        lambda g: len(g) == 5 and (g.step_no == g.turn - 1).all() and not g.truncated.any())
     keep = set(ok[ok].index)
     if "outline_full" in df:
         o = df[df.kind == "outline"]
@@ -145,8 +145,8 @@ def step_table(df, convs) -> pd.DataFrame:
     """One row per step turn with the text-baseline features."""
     st = df[(df.kind == "step") & df.conv_id.isin(convs)].sort_values(["conv_id", "turn"]).copy()
     st["k"] = st.turn - 1
-    st["prev_log_h"] = st.groupby("conv_id").log_h_step.shift(1)
-    return st
+    st["prev_log_h"] = st.groupby("conv_id").log_h_step.shift(1)     # before dropping: NaN after an unparsed step
+    return st[st.log_h_step.notna()]
 
 
 def text_features(st, with_target: bool) -> np.ndarray:
@@ -218,15 +218,18 @@ def analysis_c(df, acts, meta, positions, layers_i, convs):
         return pd.DataFrame()
     out = []
     for j in range(1, 6):
-        yj = hor[hor.turn == j + 1].set_index("conv_id").loc[first.index].log_h_step.values
-        g = first.scenario.values
-        base = cv_predict_linear(first.log_h_target.values[:, None], yj, g)
+        yj_all = hor[hor.turn == j + 1].set_index("conv_id").loc[first.index].log_h_step.values
+        has = ~np.isnan(yj_all)                             # step j parsed
+        if has.sum() < MIN_N:
+            continue
+        yj, g, rows_j = yj_all[has], first.scenario.values[has], first.row.values[has]
+        base = cv_predict_linear(first.log_h_target.values[has][:, None], yj, g)
         resid = yj - base
         mt = metrics(yj, base)
         for li in layers_i:
             for pn in positions:
                 pi = meta["positions"].index(pn)
-                X = feature(acts, first.row.values, li, pi)
+                X = feature(acts, rows_j, li, pi)
                 mc = metrics(yj, base + cv_predict(X, resid, g))
                 out.append({"step": j, "layer": meta["layers"][li], "pos": pn, "n": len(yj),
                             "r2_target_only": mt["r2"], "r2_target_plus_act": mc["r2"],
@@ -238,6 +241,8 @@ def analysis_c(df, acts, meta, positions, layers_i, convs):
 # ---- behavior ---------------------------------------------------------------------------------------------------
 
 def behavior(df, convs) -> dict:
+    allsteps = df[(df.kind == "step") & df.conv_id.isin(convs)]
+    unparsed = allsteps[allsteps.log_h_step.isna()]
     st = step_table(df, convs)
     hor = st[st.condition == "horizon"]
     last = hor[hor.k == 5]
@@ -245,7 +250,11 @@ def behavior(df, convs) -> dict:
     mono = st.groupby("conv_id").log_h_step.apply(lambda v: bool(np.all(np.diff(v.values) >= -1e-9)))
     within = (hor.log_h_step <= hor.log_h_target + np.log10(1.1)).mean()
     none_span = st[(st.condition == "none") & (st.k == 5)].log_h_step
-    return {"n_clean_conversations": len(convs),
+    return {"n_usable_conversations": len(convs), "n_usable_steps": len(st),
+            "frac_steps_unparsed": len(unparsed) / max(len(allsteps), 1),
+            "frac_steps_ongoing": unparsed.h_step_text.fillna("").str.lower().str.contains("ongoing").sum()
+                                  / max(len(allsteps), 1),
+            "usable_steps_per_k": st.groupby("k").size().to_dict(),
             "slope_last_step_vs_target": slope,
             "rho_last_step_vs_target": spearmanr(last.log_h_target, last.log_h_step)[0] if len(last) > 2 else np.nan,
             "frac_steps_within_target": within, "frac_monotone_plans": mono.mean(),

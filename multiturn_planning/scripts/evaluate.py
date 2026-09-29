@@ -57,8 +57,8 @@ if __name__ == "__main__":
     pre = ["P0", "P4", "P8", "U"] if a.quick else PRE + ["U"]
     convs = an.clean_conversations(df)
     log = [f"# Multi-turn planning: {run.name}" + (" (quick pass)" if a.quick else ""), "",
-           f"model `{meta['model']}` · {df.conv_id.nunique()} conversations · clean (all 5 steps parsed and "
-           f"numbered): {len(convs)} · layers {layers}", ""]
+           f"model `{meta['model']}` · {df.conv_id.nunique()} conversations · usable (titles-only outline, 5 "
+           f"numbered steps): {len(convs)} · layers {layers}", ""]
 
     beh = an.behavior(df, convs)
     json.dump(beh, open(res / "behavior.json", "w"), indent=1)

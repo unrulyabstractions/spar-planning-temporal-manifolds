@@ -60,3 +60,16 @@ def test_a_reads_target_at_every_turn_and_c_sees_the_plan():
     assert (A.r2 > 0.8).all()
     C = an.analysis_c(df, acts, meta, ["P0", "P8"], [0], an.clean_conversations(df)).groupby("pos").delta_r2.mean()
     assert C["P8"] > 0.03 > C["P0"]          # z is ~6% of the variance of log H_step here (target spans 3.4 decades)
+
+
+def test_unparsed_step_drops_only_that_step():
+    df, acts, valid, meta = fake_run(2)
+    hit = df[(df.kind == "step") & (df.turn == 6)].index[:10]          # step 5 "Ongoing" in 10 conversations
+    df.loc[hit, ["h_step_years", "log_h_step"]] = np.nan
+    convs = an.clean_conversations(df)
+    assert len(convs) == df.conv_id.nunique()                          # conversations kept
+    st = an.step_table(df, convs)
+    assert len(st) == (df.kind == "step").sum() - 10 and st.log_h_step.notna().all()
+    assert not an.analysis_b(df, acts, valid, meta, ["P8"], [0], convs, "horizon").empty
+    C = an.analysis_c(df, acts, meta, ["P8"], [0], convs)
+    assert set(C.step) == {1, 2, 3, 4, 5} and C[C.step == 5].n.iloc[0] == (C[C.step == 1].n.iloc[0] - 10)

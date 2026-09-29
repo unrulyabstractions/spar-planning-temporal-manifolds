@@ -21,8 +21,12 @@ print(f"conversations with all 5 steps parsed and numbered right: {ok.mean():.0%
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.parent))
 from mtp.analysis import clean_conversations  # noqa: E402
 usable = clean_conversations(df)
-print(f"USABLE (titles-only outline + all 5 steps right): {len(usable) / df.conv_id.nunique():.0%} "
+print(f"USABLE conversations (titles-only outline, 5 numbered steps): {len(usable) / df.conv_id.nunique():.0%} "
       f"({len(usable)}/{df.conv_id.nunique()})")
+us = st[st.conv_id.isin(usable)]
+print(f"USABLE steps (horizon parsed, in usable conversations): {us.h_step_years.notna().sum()}/{len(st)}; "
+      f"unparsed: {us.h_step_years.isna().sum()} (of which 'ongoing': "
+      f"{us.h_step_text.fillna('').str.lower().str.contains('ongoing').sum()})")
 h = st.dropna(subset=["h_step_years"])
 mono = h.groupby("conv_id").h_step_years.apply(lambda v: bool(np.all(np.diff(v.values) >= 0)))
 print(f"non-decreasing step horizons: {mono.mean():.0%}")

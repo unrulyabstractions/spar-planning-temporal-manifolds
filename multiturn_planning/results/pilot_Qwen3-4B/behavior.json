@@ -1,9 +1,19 @@
 {
- "n_clean_conversations": 13,
+ "n_usable_conversations": 15,
+ "n_usable_steps": 73,
+ "frac_steps_unparsed": 0.02666666666666667,
+ "frac_steps_ongoing": 0.02666666666666667,
+ "usable_steps_per_k": {
+  "1": 15,
+  "2": 15,
+  "3": 15,
+  "4": 15,
+  "5": 13
+ },
  "slope_last_step_vs_target": 1.030543738542014,
  "rho_last_step_vs_target": 0.9733285267845752,
  "frac_steps_within_target": 1.0,
- "frac_monotone_plans": 0.8461538461538461,
+ "frac_monotone_plans": 0.8666666666666667,
  "none_last_step_median_years": 0.3915605241586511,
  "none_last_step_iqr_decades": 0.27853696838404435
 }
