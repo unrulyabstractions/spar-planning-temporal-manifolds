@@ -64,7 +64,7 @@ def test_a_reads_target_at_every_turn_and_c_sees_the_plan():
 
 def test_unparsed_step_drops_only_that_step():
     df, acts, valid, meta = fake_run(2)
-    hit = df[(df.kind == "step") & (df.turn == 6)].index[:10]          # step 5 "Ongoing" in 10 conversations
+    hit = df[(df.kind == "step") & (df.turn == 6) & (df.condition == "horizon")].index[:10]   # 10 step-5 "Ongoing"
     df.loc[hit, ["h_step_years", "log_h_step"]] = np.nan
     convs = an.clean_conversations(df)
     assert len(convs) == df.conv_id.nunique()                          # conversations kept
