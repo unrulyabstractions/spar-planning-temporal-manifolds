@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Multi-Turn Planning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #1A242D;
+  --muted: #56636E;
+  --rule: #D6DDE2;
+  --accent: #1D6A84;
+  --accent-soft: #E3EEF2;
+  --warn: #9A5B12;
+  --warn-soft: #F6EBDD;
+  --plate: #FFFFFF;
+  --mark: #FBE7B5;
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11171C;
+    --surface: #182027;
+    --ink: #E2E8EC;
+    --muted: #9AA7B1;
+    --rule: #2B363F;
+    --accent: #72B9D1;
+    --accent-soft: #1B2C34;
+    --warn: #E0A866;
+    --warn-soft: #2E2419;
+    --plate: #F4F6F7;
+    --mark: #5A4A1C;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11171C;
+  --surface: #182027;
+  --ink: #E2E8EC;
+  --muted: #9AA7B1;
+  --rule: #2B363F;
+  --accent: #72B9D1;
+  --accent-soft: #1B2C34;
+  --warn: #E0A866;
+  --warn-soft: #2E2419;
+  --plate: #F4F6F7;
+  --mark: #5A4A1C;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 17px/1.62 var(--sans);
+  padding-inline: 20px;
+  padding-block: 40px 80px;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { max-width: 1080px; margin-inline: auto; display: grid; gap: 72px; }
+.col { max-width: 68ch; }
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(2rem, 4.5vw, 2.8rem); letter-spacing: -0.01em; }
+h2 { font-size: clamp(1.5rem, 3vw, 1.9rem); }
+h3 { font-size: 1.15rem; font-family: var(--sans); font-weight: 600; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+.eyebrow {
+  font: 500 0.78rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.muted { color: var(--muted); }
+.stack { display: grid; gap: 16px; }
+.stack-lg { display: grid; gap: 28px; }
+
+header.intro { display: grid; gap: 20px; }
+.lede { font-size: 1.12rem; color: var(--muted); max-width: 62ch; }
+.meta { font: 400 0.82rem/1.5 var(--mono); color: var(--muted); }
+
+/* table of contents */
+.toc { display: grid; gap: 0; border-top: 1px solid var(--rule); max-width: 760px; }
+.toc a {
+  display: grid; grid-template-columns: 2.4em 1fr; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--rule);
+  text-decoration: none; color: var(--ink);
+}
+.toc a:hover .toc-q { color: var(--accent); }
+.toc-n { font-family: var(--mono); color: var(--accent); font-size: 0.9rem; padding-top: 2px; }
+.toc-q { font-weight: 600; }
+.toc-a { color: var(--muted); font-weight: 400; }
+
+/* sections */
+section.finding { display: grid; gap: 24px; scroll-margin-top: 24px; }
+.finding-head { display: grid; gap: 10px; }
+.question { font-size: 1.05rem; color: var(--muted); }
+
+figure { margin: 0; display: grid; gap: 10px; }
+.plate {
+  background: var(--plate);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+}
+.plate img { margin-inline: auto; }
+.plate.narrow img { max-width: 720px; width: 100%; }
+figcaption { font-size: 0.86rem; color: var(--muted); max-width: 90ch; }
+figcaption code { font-size: 0.95em; }
+
+.readings { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px 32px; }
+.reading { display: grid; gap: 6px; align-content: start; }
+.reading h3 { font-size: 0.78rem; font-family: var(--mono); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.reading p + p { margin-top: 8px; }
+
+.for-us {
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 16px 20px;
+  display: grid; gap: 6px;
+  max-width: 78ch;
+}
+.for-us .eyebrow { font-size: 0.72rem; }
+.caveat {
+  background: var(--warn-soft);
+  border-radius: 6px;
+  padding: 14px 20px;
+  max-width: 78ch;
+  display: grid; gap: 6px;
+}
+.caveat .eyebrow { color: var(--warn); font-size: 0.72rem; }
+
+/* prompt specimen */
+.prompt {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 16px 18px;
+  font: 400 0.86rem/1.6 var(--mono);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-width: 88ch;
+}
+.prompt .label { color: var(--accent); font-weight: 500; }
+mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 2px; }
+
+/* token strip */
+.tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.tok {
+  display: grid; gap: 2px; justify-items: center;
+  border: 1px solid var(--rule); background: var(--surface);
+  border-radius: 4px; padding: 6px 8px; min-width: 52px;
+}
+.tok b { font: 500 0.72rem/1 var(--mono); color: var(--accent); }
+.tok span { font: 400 0.8rem/1.2 var(--mono); white-space: nowrap; }
+.tok.resp { border-style: dashed; }
+.tok.hot { border-color: var(--warn); }
+.tok.hot b { color: var(--warn); }
+
+/* small tables */
+.tbl-wrap { overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 16px 7px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 500 0.74rem/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+td.num { font-family: var(--mono); font-size: 0.88rem; }
+tr.em td { font-weight: 600; }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.metric { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; align-content: start; }
+.metric .name { font-weight: 600; }
+.metric .desc { font-size: 0.92rem; color: var(--muted); }
+
+.vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; max-width: 820px; }
+.vs-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.vs-card .big { font: 500 1.6rem/1.1 var(--mono); }
+.vs-card .who { font: 500 0.74rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px 40px; }
+.summary ul { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; }
+.summary .stack { align-content: start; }
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+footer { font-size: 0.85rem; color: var(--muted); display: grid; gap: 8px; max-width: 80ch; }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; padding-inline: 16px; }
+  .page { gap: 56px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+caption { max-width: 80ch; }
+th.grp, td.grp { padding-left: 28px; border-left: 1px solid var(--rule); }
+td.num { padding-right: 28px; }
+.plate img { image-rendering: auto; }
+
+/* methods primer */
+.primer { display: grid; gap: 36px; }
+.concept { display: grid; gap: 12px; max-width: 80ch; }
+.concept h3 { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; }
+.concept p + p { margin-top: 0; }
+.concept ul, .concept ol { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.def { border-left: 3px solid var(--accent); padding: 2px 0 2px 14px; }
+.def b { font-weight: 600; }
+
+/* flow diagram: boxes and arrows, wraps on narrow screens */
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; max-width: 100%; }
+.flow .box {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 10px 12px; display: grid; gap: 4px; align-content: start; flex: 1 1 150px; min-width: 0;
+}
+.flow .box b { font: 500 0.72rem/1.2 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.flow .box span { font-size: 0.9rem; }
+.flow .box.result { border-color: var(--accent); background: var(--accent-soft); }
+.flow .arrow { align-self: center; color: var(--muted); font: 500 1.1rem/1 var(--mono); flex: 0 0 auto; }
+@media (max-width: 620px) { .flow .arrow { display: none; } .flow .box { flex-basis: 100%; } }
+
+td.shuf { color: var(--warn); font-family: var(--mono); font-size: 0.88rem; }
+td.true { color: var(--accent); font-family: var(--mono); font-size: 0.88rem; }
+
+/* keep wide children (tables, token strips) from widening the page on narrow screens */
+.page, section.finding, .primer, figure { grid-template-columns: minmax(0, 1fr); }
+.page > *, section.finding > *, .primer > * { min-width: 0; }
+</style>
+</head>
+<body>
+<main class="page">
+
+<header class="intro">
+  <p class="eyebrow">SPAR · Planning Temporal Manifolds · multi-turn planning</p>
+  <h1>Does the horizon geometry survive a multi-step plan?</h1>
+  <p class="lede">For single decisions, the time horizon a model plans for can be read from its activations at turn boundaries. Here Qwen3-14B writes a five-step plan over seven chat turns. We ask whether the horizon is still readable, and whether the boundary activations know something about the plan that the conversation's text doesn't already say.</p>
+  <p class="meta">Run <code>qwen3-14b_mtp_s0</code>, 2026-09-29 · code <code>multiturn_planning/</code>, branch <code>multiturn-planning</code>, capture commit <code>a13c941</code> · <code>Qwen/Qwen3-14B</code>, thinking off · 480 conversations × 7 turns · one run, exploratory (no pre-registered thresholds).</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#background"><span class="toc-n">0</span><span><span class="toc-q">Background.</span> <span class="toc-a">The question, and why a plan needs a different design.</span></span></a>
+    <a href="#setup"><span class="toc-n">1</span><span><span class="toc-q">The setup.</span> <span class="toc-a">The "Continue" protocol, the conversations, where we read.</span></span></a>
+    <a href="#methods"><span class="toc-n">2</span><span><span class="toc-q">Methods primer.</span> <span class="toc-a">Probes, held-out goals, metrics, the text baseline, the shuffled control.</span></span></a>
+    <a href="#behavior"><span class="toc-n">3</span><span><span class="toc-q">Do the plans follow the target?</span> <span class="toc-a">Yes, but the early steps barely do.</span></span></a>
+    <a href="#persistence"><span class="toc-n">4</span><span><span class="toc-q">Is the target still readable later in the chat?</span> <span class="toc-a">Yes, along a different direction.</span></span></a>
+    <a href="#nextstep"><span class="toc-n">5</span><span><span class="toc-q">Can we read the next step before it is written?</span> <span class="toc-a">A little beyond the text.</span></span></a>
+    <a href="#firstturn"><span class="toc-n">6</span><span><span class="toc-q">Is the whole plan already there at turn 1?</span> <span class="toc-a">Some of the early steps, maybe.</span></span></a>
+    <a href="#nohorizon"><span class="toc-n">7</span><span><span class="toc-q">And when no target is given?</span> <span class="toc-a">The order is readable (ρ ≈ 0.85); not tested against text.</span></span></a>
+    <a href="#pilot"><span class="toc-n">8</span><span><span class="toc-q">What the pilots changed.</span> <span class="toc-a">System prompt, a step prefill, step-level exclusion.</span></span></a>
+    <a href="#summary"><span class="toc-n">9</span><span><span class="toc-q">Summary and next steps.</span></span></a>
+    <a href="#reproduce"><span class="toc-n">10</span><span><span class="toc-q">Reproduce.</span> <span class="toc-a">Code, model revision, data on Hugging Face.</span></span></a>
+  </nav>
+</header>
+
+<hr>
+
+<!-- 0 -->
+<section class="finding" id="background">
+  <div class="finding-head">
+    <p class="eyebrow">0 · Background</p>
+    <h2>The question, and why a plan needs a different design</h2>
+  </div>
+  <div class="col stack">
+    <p>PTM asks whether the time horizon a model is planning over can be read from its residual stream at <strong>turn-boundary tokens</strong>: the few template tokens between the end of the user's message and the start of the model's reply. For single decisions with a stated horizon, the preprint we extend (arXiv:2606.05194) found the horizon laid out along an ordered one-dimensional curve: the first principal component of the activations orders prompts by log horizon at |ρ| ≈ 0.95. Alan (Qwen3-14B) and Jared (Qwen3-8B) replicated this.</p>
+    <p>The proposal's next step is <strong>multi-step planning</strong>: does that geometry survive when the model builds a plan over several turns, and can each turn's horizon be read?</p>
+    <p>One lesson from earlier work shapes the design. Alan's experiments and the relevance-aware decoder run both found that when a horizon is written in the prompt, <strong>a regex on the text beats any activation decoder</strong>. The model can simply carry the written number forward. In a chat, the target stated in the first message is visible (through attention) from every later token. So "the target is readable at turn 5" could be plain copying, and would tell us nothing about planning.</p>
+  </div>
+  <div class="for-us"><p class="eyebrow">The design principle</p><p>Read horizons that are <strong>not yet in the text</strong> at the moment we read the activations: the horizon of the step the model is about to write (section 5), later steps from the very first turn (section 6), and horizons nobody stated (section 7). And compare every activation result with a <strong>text-only baseline</strong> that sees everything written so far (section 2 explains how).</p></div>
+</section>
+
+<!-- 1 -->
+<section class="finding" id="setup">
+  <div class="finding-head">
+    <p class="eyebrow">1 · Setup</p>
+    <h2>The "Continue" protocol, made concrete</h2>
+  </div>
+  <div class="col stack">
+    <p>A fixed <strong>system prompt</strong>, identical in every conversation, sets the format: first an outline of exactly five step titles with no timings; then, each time the user says <code>Continue</code>, one step in the form <code>Step &lt;n&gt;: &lt;title&gt;</code> / <code>Time horizon: &lt;how far from today this step will be complete&gt;</code> / <code>Details: …</code>; after step 5, <code>Plan Completed</code>. The first user message gives a goal and, in most conversations, a target horizon:</p>
+  </div>
+  <div class="prompt">Our company wants to cut its carbon emissions. Help me make a plan. <mark>The time horizon for this plan is 25 years.</mark></div>
+  <div class="col stack">
+    <p>That makes seven assistant turns. A real conversation from this run:</p>
+  </div>
+  <div class="prompt"><span class="label">turn 1</span>  1. Assess Current Carbon Footprint · 2. Set Clear Carbon Reduction Targets · 3. Implement Energy Efficiency Measures · 4. Transition to Renewable Energy Sources · 5. Monitor and Report Progress
+<span class="label">turn 2</span>  Step 1: Assess Current Carbon Footprint / Time horizon: <mark>6 months</mark> / Details: …
+<span class="label">turn 3</span>  Step 2: Set Clear Carbon Reduction Targets / Time horizon: <mark>12 months</mark> / …
+<span class="label">turn 4</span>  Step 3: Implement Energy Efficiency Measures / Time horizon: <mark>18 months</mark> / …
+<span class="label">turn 5</span>  Step 4: Transition to Renewable Energy Sources / Time horizon: <mark>5 years</mark> / …
+<span class="label">turn 6</span>  Step 5: Monitor and Report Progress / Time horizon: <mark>Ongoing</mark> / …
+<span class="label">turn 7</span>  Plan Completed.</div>
+  <div class="metrics">
+    <div class="metric"><span class="name">288 with a target</span><span class="desc">12 goals (bakery, piano, school reading, flood readiness…), each at 8 targets from 1 week to 50 years, in 3 wordings of the horizon sentence ("should achieve this within…", "the time horizon for this plan is…", "…within … from today"). Greedy decoding, so each prompt has one plan.</span></div>
+    <div class="metric"><span class="name">192 without a target</span><span class="desc">The same 12 goals with no horizon sentence: the model picks every horizon itself. Sampled (Qwen3's recommended settings), 16 plans per goal.</span></div>
+    <div class="metric"><span class="name">13 positions per turn</span><span class="desc">Mainly the 9-token boundary window before each reply, where the reply is not yet written; plus the user's last token, and three positions inside the step as references.</span></div>
+  </div>
+  <div class="stack">
+    <p class="meta">The positions read at each turn, shown for the turn that writes step 3</p>
+    <div class="tokens">
+      <div class="tok"><b>U</b><span>Continue</span></div>
+      <div class="tok hot"><b>P0</b><span>&lt;|im_end|&gt;</span></div><div class="tok hot"><b>P1</b><span>\n</span></div><div class="tok hot"><b>P2</b><span>&lt;|im_start|&gt;</span></div><div class="tok hot"><b>P3</b><span>assistant</span></div><div class="tok hot"><b>P4</b><span>\n</span></div><div class="tok hot"><b>P5</b><span>&lt;think&gt;</span></div><div class="tok hot"><b>P6</b><span>\n\n</span></div><div class="tok hot"><b>P7</b><span>&lt;/think&gt;</span></div><div class="tok hot"><b>P8</b><span>\n\n</span></div>
+      <div class="tok resp"><b>…</b><span>Step 3: …</span></div><div class="tok resp"><b>H</b><span>Time horizon:</span></div><div class="tok resp"><b>V</b><span>18 months</span></div><div class="tok resp"><b>E</b><span>&lt;|im_end|&gt;</span></div>
+    </div>
+    <p class="muted" style="font-size:0.9rem;max-width:80ch">Solid boxes: the <strong>boundary window</strong> P0–P8 (plus U), before the reply. Dashed: positions inside the reply, which already see the written text. H is the <code>Time horizon:</code> header (the step's title is written), V is the horizon value itself (a positive control: it <em>must</em> be readable there), E closes the reply. Activations are captured at 11 layers (0, 4, 8, …, 40 of 40), on exactly the token sequence the model generated from.</p>
+  </div>
+
+  <div class="stack">
+    <h3>What is already in the text at each boundary</h3>
+    <div class="col"><p>Because a boundary is read <em>before</em> its reply, the reply's own horizon is never in the text there. But the earlier steps are. This table is the key to several caveats below:</p></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Turn</th><th>Reply about to be written</th><th>Text before the boundary</th><th>Step horizons already written</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>outline</td><td>system prompt + user message (goal, target)</td><td>none</td></tr>
+          <tr><td class="num">2</td><td>step 1</td><td>+ outline (titles only, no timings)</td><td>none</td></tr>
+          <tr class="em"><td class="num">3</td><td>step 2</td><td>+ step 1</td><td>step 1's (e.g. "6 months")</td></tr>
+          <tr><td class="num">4</td><td>step 3</td><td>+ step 2</td><td>steps 1–2</td></tr>
+          <tr><td class="num">5</td><td>step 4</td><td>+ step 3</td><td>steps 1–3</td></tr>
+          <tr><td class="num">6</td><td>step 5</td><td>+ step 4</td><td>steps 1–4</td></tr>
+          <tr><td class="num">7</td><td><code>Plan Completed</code></td><td>+ step 5</td><td>steps 1–5</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="col"><p>So <strong>turn 3 is the first boundary where a horizon the model wrote itself is in the context</strong>. The outline doesn't leak one: the rules forbid timings there, and none of the 480 outlines mentions a duration. From turn 3 on, anything readable might partly come from those written step horizons, which correlate with the target.</p></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="finding" id="methods">
+  <div class="finding-head">
+    <p class="eyebrow">2 · Methods primer</p>
+    <h2>How the numbers on this page are made</h2>
+    <p class="question">Every result below comes from the same few ingredients. If you know linear probing, skim the definitions in bold and read the last two parts (the text baseline and the shuffled control), which are specific to this experiment.</p>
+  </div>
+
+  <div class="primer">
+    <div class="concept">
+      <h3>Activations and cells</h3>
+      <p>At every turn we store the <strong>residual stream</strong>: the 5,120-number vector the model carries at each token, after a given layer. Layer 0 is the token embedding; layer <em>l</em> is the stream after the <em>l</em>-th transformer block.</p>
+      <p class="def">A <b>cell</b> is one (layer, position) pair, e.g. layer 28 at token P7. Each analysis is run separately in every cell. The boundary analyses use 11 layers × 10 positions (P0–P8 and U) = <b>110 cells</b>.</p>
+      <p>At layer 0 the boundary tokens are the same template tokens in every conversation, so their activations are identical. Any probe there must fail, and does: a built-in sanity check.</p>
+    </div>
+
+    <div class="concept">
+      <h3>The target: log years</h3>
+      <p>Every horizon is converted to years and then to <strong>log10(years)</strong>: 1 week ≈ −1.72, 1 year = 0, 50 years ≈ 1.70. On this scale, being off by a factor of 2 costs the same (0.30) whether the truth is a week or a decade. That matches how horizons behave: "2 weeks instead of 1" is as wrong as "20 years instead of 10".</p>
+    </div>
+
+    <div class="concept">
+      <h3>A probe: ridge regression</h3>
+      <p class="def">A <b>probe</b> is a linear formula, prediction = w · activation + b, fitted to predict the log horizon from the 5,120 numbers in one cell.</p>
+      <p>With 5,120 inputs and only 288 to 1,411 examples, an unconstrained fit would memorise the training data. <strong>Ridge regression</strong> adds a penalty on the size of the weights w. The penalty's strength is picked from 17 values (0.01 to 10⁶) using the training data only, by leave-one-out cross-validation. The probe is <em>linear</em> on purpose: "readable by a linear probe" is the standard sense of "the model represents this".</p>
+    </div>
+
+    <div class="concept">
+      <h3>Held-out goals (grouped cross-validation)</h3>
+      <p>Plans for the same goal share vocabulary, structure and step titles. A probe tested on a goal it was trained on could score well by recognising the goal rather than reading the horizon. So:</p>
+      <ol>
+        <li>The 12 goals are split into 6 folds of 2.</li>
+        <li>The probe is trained on 10 goals and predicts the 2 held out.</li>
+        <li>Repeat for all 6 folds. Every conversation gets exactly one prediction, from a probe that <strong>never saw its goal</strong>.</li>
+        <li>The metrics below are computed once on these pooled out-of-sample predictions.</li>
+      </ol>
+    </div>
+
+    <div class="concept">
+      <h3>Four metrics</h3>
+      <p class="def"><b>R²</b> = 1 − (squared prediction error) / (variance of the truth). 1 means perfect; 0 means no better than always predicting the average horizon. It <b>can be negative</b>: a probe that is worse than the average, e.g. a probe applied where it doesn't fit (section 4) or one that fits noise.</p>
+      <p class="def"><b>Spearman ρ</b>: do predictions put the horizons in the right <em>order</em>? It ignores scale and offset, so a probe can have a high ρ with a poor R² if its values are compressed or shifted (section 7).</p>
+      <p class="def"><b>Within 2×</b>: the share of predictions within a factor of 2 of the truth (|log error| ≤ 0.30). The most intuitive of the four.</p>
+      <p class="def"><b>PC1 |ρ|</b>: no training at all. Take the activations of all conversations in a cell, find their main direction of variation (the first principal component), and ask how well position along it orders the horizons. This is the preprint's "manifold" measure (≈ 0.95 for single decisions).</p>
+    </div>
+
+    <div class="concept">
+      <h3>"Best cell" and why it flatters</h3>
+      <p>Figures usually show the <strong>best cell</strong> (per layer, per turn or per step). Picking the maximum of 110 noisy scores is optimistic: some cell will look good by luck. That's why every best-cell number that matters is compared with the best cell of a <strong>shuffled control</strong> (below), which goes through the same maximum.</p>
+    </div>
+
+    <div class="concept">
+      <h3>The text baseline</h3>
+      <p class="def">The <b>text baseline</b> is a simple predictor that never looks inside the model. It predicts a step's horizon from facts anyone could read off the conversation so far.</p>
+      <p>For the next step (section 5), it uses four facts:</p>
+      <ol>
+        <li><strong>the target</strong> from the user's message (log years),</li>
+        <li><strong>which step comes next</strong> (1–5),</li>
+        <li><strong>the previous step's horizon</strong>, if there is one,</li>
+        <li><strong>how the request worded the horizon</strong> (one of three sentences).</li>
+      </ol>
+      <p>It combines them with ordinary least squares, the same line-fitting you'd do in a spreadsheet, and it is scored with the same held-out goals as the probes. Without a target (sections 5 and 7) it has only facts 2 and 3. For turn 1 (section 6) it has facts 1 and 4.</p>
+      <p>The plans are stereotyped: a 5-year plan whose step 1 is "6 months" will probably say "12 months" for step 2. So the baseline is strong: R² 0.86 for the next step. <strong>An activation result only counts as new information if it beats this baseline.</strong> What it doesn't know is the <em>goal</em> ("piano" vs "flood readiness"), which is text too; see the caveat in section 6.</p>
+    </div>
+
+    <div class="concept">
+      <h3>Text + activations, and ΔR²</h3>
+      <p>To measure what the activations add on top of the text, the analysis gives them only what the text got wrong:</p>
+    </div>
+    <div class="flow" role="img" aria-label="Four steps: the text baseline predicts; the residual is truth minus that prediction; a ridge probe on activations predicts the residual; the combined prediction is the baseline plus the predicted residual, and delta R-squared is its R-squared minus the baseline's.">
+      <div class="box"><b>1 · text baseline</b><span>predicts the horizon from the four facts → <em>b</em></span></div>
+      <div class="arrow">→</div>
+      <div class="box"><b>2 · residual</b><span><em>r</em> = truth − <em>b</em>: what the text got wrong (e.g. the model wrote a longer horizon than the text suggests)</span></div>
+      <div class="arrow">→</div>
+      <div class="box"><b>3 · activation probe</b><span>a ridge probe on one cell predicts <em>r</em> → <em>r</em><sub>pred</sub></span></div>
+      <div class="arrow">→</div>
+      <div class="box result"><b>4 · combined</b><span>prediction = <em>b</em> + <em>r</em><sub>pred</sub><br>ΔR² = R²(<em>b</em> + <em>r</em><sub>pred</sub>) − R²(<em>b</em>)</span></div>
+    </div>
+    <div class="concept">
+      <p>All four steps use the same held-out-goal folds, so the baseline's predictions, the residuals and the probe are all out-of-sample. If the activations only repeat what the text says, <em>r</em><sub>pred</sub> is noise and ΔR² is zero or slightly negative (fitting 5,120 weights to noise costs a little). A positive ΔR² means the activations predict <strong>part of what the text could not</strong>.</p>
+    </div>
+
+    <div class="concept">
+      <h3>The shuffled control</h3>
+      <p class="def">The <b>shuffled control</b> is the chance level for ΔR². It answers: how big can ΔR² get when there is, by construction, nothing to find?</p>
+      <ol>
+        <li>Take the residuals <em>r</em> (the "labels" the activation probe is trained on).</li>
+        <li><strong>Shuffle them among the conversations of the same goal.</strong> Each conversation's activations are now paired with another conversation's residual.</li>
+        <li>Rerun steps 3–4 unchanged, in every cell, and keep the best cell, exactly as for the real labels.</li>
+      </ol>
+      <p>An illustration with made-up numbers, four plans for the same goal:</p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Plan (goal: piano)</th><th>Activations</th><th>True residual</th><th>Shuffled residual</th></tr></thead>
+        <tbody>
+          <tr><td>target 1 year, wording A</td><td class="num">vector a₁</td><td class="true">+0.20</td><td class="shuf">−0.10</td></tr>
+          <tr><td>target 3 years, wording B</td><td class="num">vector a₂</td><td class="true">−0.10</td><td class="shuf">0.00</td></tr>
+          <tr><td>target 10 years, wording A</td><td class="num">vector a₃</td><td class="true">+0.05</td><td class="shuf">+0.20</td></tr>
+          <tr><td>target 25 years, wording C</td><td class="num">vector a₄</td><td class="true">0.00</td><td class="shuf">+0.05</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="concept">
+      <p><strong>Why only within the same goal?</strong> It keeps the shuffled data as close to the real data as possible: every goal keeps exactly its own set of residual values, so anything that differs between goals survives the shuffle. Only the link between <em>this</em> conversation's activations and <em>this</em> conversation's residual is broken. That's the stricter control: shuffling across goals would also destroy goal-level differences and make the chance level look lower than it is.</p>
+      <p><strong>How to read it.</strong> In the figures, the shuffled result is a shaded band (section 5) or hollow dots (section 6). A real result counts only where it is clearly above it. The main limitation: <strong>one shuffle</strong> per analysis. Another shuffle would give a somewhat different chance level; many shuffles (a permutation test) would show its full range. That is the first item under next steps.</p>
+    </div>
+
+    <div class="concept">
+      <h3>Transfer</h3>
+      <p class="def"><b>Transfer</b> means training a probe in one situation and applying it, unchanged, in another. If it still works, the information sits along the same direction in both. Section 4 trains at turn 1 and applies the probe at later turns (still on held-out goals). Section 7 trains on plans with a target and applies the probe to plans without one.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="finding" id="behavior">
+  <div class="finding-head">
+    <p class="eyebrow">3 · Behavior</p>
+    <h2>Do the plans follow the target?</h2>
+    <p class="question">Before reading activations: does the model's plan respond to the target at all? If it didn't, there'd be no planning horizon to read.</p>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/behavior.png" alt="Median step horizon for steps 1 to 5, one line per target. For targets of a week to three months the lines are ordered by target. For targets of one year and more the lines nearly overlap: step 1 is one month, steps 2 to 4 stay between two months and a year, and only step 5 spreads out, reaching two to five years. The one-week target stays at one day for all steps. Plans without a target sit between one week and one month." loading="lazy"></div>
+    <figcaption>Median over conversations of the horizon the model wrote for each step, one line per target (blue ramp, darker = longer target). Orange dashed: plans with no target. Steps whose horizon couldn't be parsed ("Ongoing") are left out.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>The plans respond to the target: every step stays within it (allowing 10%), and the last step tracks it (slope 0.93 on the log–log scale, ρ 0.89; a slope of 1 would mean "last step = target").</p><p>But from one year up, the <strong>early steps barely depend on the target</strong>. Step 1 is 1 month for every target of a year or more, and steps 2–4 stay between 2 months and a year. Only step 5 stretches out, to 2–5 years. The first four steps of a 50-year plan fit inside a year.</p></div>
+    <div class="reading"><h3>Also</h3><p>With no target, the model plans short: a median last step of about <strong>5 weeks</strong>.</p><p>The last step is often open-ended ("Time horizon: Ongoing": 75 of 480 step-5s). Those steps are dropped from the analyses, not their conversations: 2,323 of 2,400 steps are used.</p><p>"Time horizon" is not always read as "from today": only 64% of plans have non-decreasing horizons, so some steps give a duration instead.</p></div>
+  </div>
+  <div class="for-us"><p class="eyebrow">What it means</p><p>Two things. The plans are <strong>stereotyped</strong> (counting up, or jumping to the target at the end), so a text baseline that knows the target, the step number and the previous step will predict a lot. And the early steps being target-blind is a small <strong>myopia</strong> finding in its own right: the proposal's failure mode, visible in behavior.</p></div>
+</section>
+
+<!-- 4 -->
+<section class="finding" id="persistence">
+  <div class="finding-head">
+    <p class="eyebrow">4 · A · Persistence</p>
+    <h2>Is the target still readable later in the chat?</h2>
+    <p class="question">At each turn's boundary, predict the target stated in the first message (288 conversations with a target).</p>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/A_persistence.png" alt="R-squared for log target per turn. A probe refit at each turn stays between 0.94 and 0.98 across all seven turns. A probe trained at turn 1 and applied later drops from 0.98 at turn 1 to between 0.56 and 0.73 from turn 2 on." loading="lazy"></div>
+    <figcaption>Best boundary cell (P0–P8, any layer) per turn, held-out goals. U is left out here: at turn 1 it is the full stop right after the horizon sentence, so it reads the stated value directly.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>How to read it</h3><p>Blue: a probe trained and tested at the <strong>same</strong> turn (on different goals). Orange: the probe trained at <strong>turn 1</strong>, applied unchanged at a later turn (transfer, section 2).</p></div>
+    <div class="reading"><h3>What it shows</h3><p><strong>Turn 1 replicates the single-turn result</strong>: R² 0.98, within 2× on 95% of conversations, and PC1 alone orders the targets at |ρ| 0.88.</p><p>Later, the target is <strong>still there</strong> (refit R² 0.94–0.97), but the turn-1 probe reads it poorly (R² 0.56–0.73, within 2× only 27–40%). The information persists; its <strong>direction changes</strong> after turn 1.</p></div>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/A_pca.png" alt="Two PCA scatter plots of the same boundary cell, coloured by target. At turn 1, before the outline, the points form an ordered band from short to long targets along PC1. At turn 4, before step 3, the ordering along PC1 is much weaker." loading="lazy"></div>
+    <figcaption>The same layer and boundary token at turn 1 and at turn 4, 288 conversations, coloured by target. The cell is the one where PC1 orders the targets best at turn 1. PCA is unsupervised: the colours are added afterwards.</figcaption>
+  </figure>
+  <div class="caveat"><p class="eyebrow">Caveat</p><p>The target is written in the first message and visible from every later token, so "still readable" is expected and says little about planning on its own. And from <strong>turn 3</strong> on, the model's own earlier step horizons are in the text too (table in section 1), and they correlate with the target. So "readable at turn t" may partly be reading those. Sections 5 and 6 are built to separate that out.</p></div>
+</section>
+
+<!-- 5 -->
+<section class="finding" id="nextstep">
+  <div class="finding-head">
+    <p class="eyebrow">5 · B · The next step</p>
+    <h2>Can we read the next step before it is written?</h2>
+    <p class="question">At the boundary before each step, predict the horizon the model is about to write. That horizon is not in the text yet, but a lot of it is predictable from the text. So the question is whether the activations add anything <em>beyond</em> the text baseline.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/B_delta.png" alt="Gain in R-squared from adding boundary activations to a text baseline, by layer. With a target stated the text alone reaches 0.86 and activations add up to 0.028 at layers 24 to 32, above a shuffled-label band that stays at or below zero. Without a target the text alone reaches 0.44; the gain is positive in only one or two cells and mostly negative." loading="lazy"></div>
+    <figcaption>ΔR² = R²(text + activations) − R²(text), best boundary cell per layer (P0–P8 or U). Shaded band: the same with the labels shuffled within goal (chance level). Held-out goals throughout. Right panel: values below −0.16 clipped.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>How to read it</h3><p>The zero line is "activations add nothing to the text". The blue line is what they add in the best cell of each layer. The shaded band is the best the same procedure achieves on shuffled labels, i.e. by luck. <strong>Only blue above the band counts.</strong></p><p>The panel titles give the text baseline's own R²: how much is predictable from the text alone.</p></div>
+    <div class="reading"><h3>What it shows</h3><p><strong>With a target</strong> (1,411 steps): the text alone reaches R² 0.86. The boundary activations add a <strong>small but real</strong> amount: R² 0.86 → 0.89 and within 2× 67% → 72% (layer 28, P7). The band stays at about zero or below (at most +0.0004), and 50 of the 110 cells beat its best. The gain sits at layers 24–32 and at the end of the window (P6–P8, U).</p><p><strong>Without a target</strong> (912 steps): inconclusive. The text alone reaches only 0.44. One cell gains 0.05 and pokes above the band at layer 28, but only 3 of 110 cells gain at all, the median cell loses 0.14, and within 2× gets worse.</p></div>
+  </div>
+  <div class="vs">
+    <div class="vs-card"><span class="who">text only</span><span class="big">0.86</span><span>R² · within 2× 67%</span></div>
+    <div class="vs-card"><span class="who">text + boundary activations</span><span class="big">0.89</span><span>R² · within 2× 72%</span></div>
+  </div>
+  <div class="col stack">
+    <p class="muted">For scale: in the same cell, the activations <em>alone</em> (no text features) reach R² 0.84, almost as much as the text. Most of what they know about the next step is what the text says too; the ΔR² isolates the part it doesn't.</p>
+  </div>
+  <div class="for-us"><p class="eyebrow">What it means</p><p>This is the core test. Before writing a step, the boundary tokens know <em>a little</em> about that step's horizon that the conversation so far doesn't reveal to a simple text model. Most of what's predictable, though, is the plan's simple structure, and the text shows that plainly.</p></div>
+</section>
+
+<!-- 6 -->
+<section class="finding" id="firstturn">
+  <div class="finding-head">
+    <p class="eyebrow">6 · C · The first turn</p>
+    <h2>Is the whole plan already there at turn 1?</h2>
+    <p class="question">At the boundary before the outline, nothing of the plan is written. Can the activations there predict the horizon of step 1, 2, … 5, beyond what the target and its wording predict?</p>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/C_first_turn.png" alt="For each of steps 1 to 5, the best gain in R-squared from turn-1 boundary activations over a baseline of target and wording, with the best shuffled-label gain below it. Steps 1 to 4: real 0.08 to 0.11, shuffled 0.03 to 0.05 (step 4: 0.00). Step 5: real 0.03, shuffled 0.01." loading="lazy"></div>
+    <figcaption>ΔR² over a text baseline of target + wording, best of the 110 turn-1 cells, per step. Filled dot: real labels. Hollow dot: the best of the same 110 cells with the labels shuffled within goal (one shuffle per step). The gap between them is roughly the real signal.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>For steps 1–4, the best turn-1 cell adds <strong>0.08–0.11</strong> R² over target + wording, above the best shuffled cell (0.03–0.05; step 4: 0.00). Step 1's within-2× rises from 51% to 69%. For step 5 there is essentially nothing (0.03 vs 0.01).</p><p>So before the model has written a word of its plan, its boundary activations carry some information about the early steps' horizons beyond the target.</p></div>
+    <div class="reading"><h3>Why only "some"</h3><p>The best cell is a maximum over 110, and the typical cell does worse than the baseline: the median cell <em>loses</em> 0.02–0.07, like the shuffled median (the cost of fitting 5,120 weights on 288 conversations). Only 10–37% of cells beat the best shuffled one. And the control is a single shuffle, not a full null distribution.</p></div>
+  </div>
+  <div class="caveat"><p class="eyebrow">What else it could be</p><p>The baseline knows the target and the wording but not the <em>goal</em>. If the model treats "learn the piano" as fast-paced and "prepare a town for floods" as slow, turn-1 activations predict step horizons through the goal. That's text too, just harder to encode than a number. Held-out goals force the probe to generalise across goals, which makes this less likely but can't rule it out. A baseline that includes a sentence embedding of the goal would.</p></div>
+</section>
+
+<!-- 7 -->
+<section class="finding" id="nohorizon">
+  <div class="finding-head">
+    <p class="eyebrow">7 · D · No target stated</p>
+    <h2>And when no target is given?</h2>
+    <p class="question">In the 192 plans without a target, every horizon is the model's own choice and no horizon phrase appears in the prompt. Does a probe from the plans with a target read these too?</p>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/D_transfer.png" alt="Spearman correlation between predicted and chosen step horizons in plans without a target, by layer. At the boundary window it rises with depth from 0.78 at layer 4 to 0.86 at layer 32. At the Time horizon header inside the reply it rises from 0.81 to 0.94 at layers 36 to 40." loading="lazy"></div>
+    <figcaption>A probe for the upcoming step's horizon, trained on all 288 conversations with a target and applied unchanged to the 192 without (912 steps). Spearman ρ, best position per layer. Layer 0 is missing because its boundary activations are identical across conversations (section 2).</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>Before a step is written, the boundary window orders the horizons the model is about to <em>choose</em> at ρ 0.78–0.86 (rising with depth, best at layer 32). The values are much rougher: where the order is best (layer 32) they are off in scale (R² 0.09, within 2× 36%); the best-calibrated cell (layer 8) reaches R² 0.52, within 2× 62%. High ρ with low R² means right order, wrong numbers, the same gap Jared found for new horizon spellings on Qwen3-8B. At the <code>Time horizon:</code> header, where the step's title is already written, ρ reaches 0.94.</p></div>
+    <div class="reading"><h3>What it doesn't show</h3><p>This number isn't compared with a text baseline, and the text does carry information here: the previous step's horizon and the step number alone predict these steps at R² 0.44 (section 5). Within these conversations the comparison with text (section 5, right panel) was inconclusive: the self-chosen horizons are hard to predict from either source.</p></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="finding" id="pilot">
+  <div class="finding-head">
+    <p class="eyebrow">8 · Method notes</p>
+    <h2>What the pilots changed</h2>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Found in</th><th>Problem</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td>Qwen3-1.7B (local)</td><td>writes the whole plan in the outline</td><td>too small; not used</td></tr>
+        <tr><td>Qwen3-4B (local)</td><td>format rules in the user turn were ignored; the first <code>Continue</code> was answered with "Step 2"</td><td>rules moved to a fixed system prompt; "the first Continue gets step 1"</td></tr>
+        <tr><td>Qwen3-14B smoke test</td><td>step 5 skipped ("Plan Completed" one turn early) in 8 of 15 conversations</td><td>step replies prefilled with <code>Step &lt;n&gt;:</code>. The prefill comes after P8, so the boundary window is unchanged</td></tr>
+        <tr><td>Qwen3-14B smoke test</td><td>step 5 "Time horizon: Ongoing"</td><td>drop that step, keep the conversation</td></tr>
+        <tr><td>local dry run</td><td>analysis crashed on tiny runs; no checksums after a late failure</td><td>guards; checksums written whenever the capture finished</td></tr>
+        <tr><td>the rented machine</td><td>analysis about 10× slower than locally (CPU thread oversubscription)</td><td>analysis run locally; the pipeline now pins threads to the container's CPU quota</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col"><p>Final adherence on the full run: outlines titles-only 100%, step numbering 100% (thanks to the prefill), "Plan Completed" 100%, step horizons parsed 97%.</p></div>
+</section>
+
+<!-- 9 -->
+<section class="finding" id="summary">
+  <div class="finding-head">
+    <p class="eyebrow">9 · Summary</p>
+    <h2>Summary and next steps</h2>
+  </div>
+  <div class="summary">
+    <div class="stack">
+      <h3>Established (Qwen3-14B, one run, thinking off)</h3>
+      <ul>
+        <li>The protocol works at this scale: 480 conversations, outlines and numbering 100%, 97% of step horizons parsed.</li>
+        <li>Plans follow the target, but early steps are nearly target-blind above a year (myopic starts).</li>
+        <li>Turn 1 replicates the single-turn geometry (R² 0.98, PC1 |ρ| 0.88).</li>
+        <li>The target stays readable at every turn, but along a direction that changes after turn 1.</li>
+        <li>Before a step is written, boundary activations add a small, real amount over the text (R² 0.86 → 0.89, above the shuffled control).</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Suggestive, not established</h3>
+      <ul>
+        <li>Turn 1 carries some information about steps 1–4 beyond target + wording (ΔR² up to 0.11); the goal text may explain it.</li>
+        <li>Self-chosen horizons are ordered at ρ ≈ 0.85 by a probe from the stated-target plans, but badly scaled, and not tested against text.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Next (cheap, on the existing data)</h3>
+      <ul>
+        <li>Many shuffles instead of one, for a real null distribution (a permutation test) in sections 5 and 6.</li>
+        <li>A goal-aware text baseline (a sentence embedding of the goal) for sections 5 and 6.</li>
+        <li>Transfer between later turns: does the direction settle after turn 1?</li>
+        <li>Steering or erasure at layers 24–32, to test whether the model <em>uses</em> this (needs a GPU).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="finding" id="reproduce">
+  <div class="finding-head">
+    <p class="eyebrow">10 · Reproduce</p>
+    <h2>Code, model and data</h2>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <tbody>
+        <tr><th>Code</th><td><code>multiturn_planning/</code> on branch <code>multiturn-planning</code>: capture at commit <code>a13c941</code>, analysis at <code>54d15a4</code>. Self-contained package <code>mtp</code> (prompts, chat positions, capture, analyses A–D). Design and pilot history: <code>README.md</code>.</td></tr>
+        <tr><th>Run</th><td><code>bash multiturn_planning/scripts/run_pipeline.sh</code> on one GPU with ≥ 40 GB: tests → capture → adherence report → quick sanity evaluation → checksums. The full analysis, <code>python multiturn_planning/scripts/evaluate.py runs/qwen3-14b_mtp_s0</code>, runs on CPU (about 13 min on 12 cores).</td></tr>
+        <tr><th>Model</th><td><code>Qwen/Qwen3-14B</code>, revision <code>40c069824f4251a91eefaf281ebe4c544efd3e18</code>, bf16, thinking off.</td></tr>
+        <tr><th>Hardware</th><td>1× RTX PRO 5000 Blackwell (48 GB) on vast.ai, torch 2.11 + CUDA 12.8, transformers 5.17. Capture 19 min; rental ≈ 1.4 h, ≈ $1.15 including data transfer.</td></tr>
+        <tr><th>Results</th><td><code>results/qwen3-14b_mtp_s0/</code> (in git): <code>A_persistence.csv</code>, <code>B_next_step.csv</code>, <code>C_first_turn.csv</code>, <code>D_transfer.csv</code> (every cell), <code>behavior.json</code>, <code>summary.md</code>.</td></tr>
+        <tr><th>Data</th><td>Not in git. The whole capture (≈ 4.9 GB: activations of all 3,360 turns at 11 layers × 13 positions, the per-turn table with every reply, metadata, logs, checksums) is prepared for Hugging Face as <code>anicola/ptm-multiturn-planning-qwen3-14b</code>, with the card in <code>hf/README.md</code> and the upload script <code>scripts/upload_hf.py</code>.</td></tr>
+        <tr><th>Figures</th><td><code>explainer/make_figs.py</code> regenerates every figure on this page from <code>results/</code> and the capture in <code>runs/qwen3-14b_mtp_s0/</code>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>All numbers are from <code>results/qwen3-14b_mtp_s0/</code> (the CSVs above and <code>behavior.json</code>) and, for the behavior figure and PCA, from the capture's <code>index.parquet</code> and activations. Probes: ridge regression to log10 years, 6-fold cross-validation with whole goals held out. Author: Augusto Nicola, SPAR fall 2026, project <em>Planning Temporal Manifolds</em> (mentors: Ian Rios-Sialer, Shantanu Darveshi, Justin Shenk).</p>
+</footer>
+
+</main>
+</body>
+</html>

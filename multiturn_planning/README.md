@@ -4,6 +4,11 @@ Exploratory experiment for the project's core question (proposal: *Planning Temp
 when a model builds a plan over several turns, can the horizon it is planning over be read from its
 activations at turn boundaries? Author: Augusto Nicola. Status: **first full run done** (Qwen3-14B, `qwen3-14b_mtp_s0`, 2026-09-29).
 
+**Results: start with the explainer, [`explainer/index.html`](explainer/index.html)** (open it in a browser). It
+explains the setup, the methods (probes, held-out goals, the text baseline, the shuffled control) and each result.
+Raw outputs: `results/qwen3-14b_mtp_s0/`. The capture (≈ 4.9 GB) is prepared for Hugging Face as
+`anicola/ptm-multiturn-planning-qwen3-14b` (card: `hf/README.md`; upload: `scripts/upload_hf.py`).
+
 ## Why the design looks like this
 
 Alan's experiments and our relevance-aware decoder run both showed that when the horizon is written in the
@@ -85,6 +90,9 @@ scripts/run_pipeline.sh  tests -> capture -> adherence -> quick evaluate -> chec
                       analysis on the box; by default it runs locally after copy-back, so no GPU idles on CPU work)
 requirements.txt   pinned stack (same as relevance_aware_decoder)
 tests/             prompts/parsing/positions on the Qwen3 tokenizer; synthetic end-to-end check of A-D
+scripts/upload_hf.py  run data -> Hugging Face dataset (dry run by default; card in hf/README.md)
+explainer/         results explainer (index.html) and the script that makes its figures (make_figs.py)
+hf/                Hugging Face dataset card for the run data
 ```
 
 ## Pilots (local RTX 5060 Ti, 8 GB; 15-conversation `--smoke` slice)
@@ -132,4 +140,4 @@ rule (403/480 usable); the analysis uses the step-level rule (all 480 usable, 2,
 - **D**: probe from stated-target plans orders self-chosen horizons at rho 0.78-0.86 (boundary window), but
   badly scaled (R2 <= 0.52).
 
-Results explainer (workspace): `our_work/mtp-explainer/index.html`.
+Results explainer: [`explainer/index.html`](explainer/index.html) (figures: `explainer/make_figs.py`).
