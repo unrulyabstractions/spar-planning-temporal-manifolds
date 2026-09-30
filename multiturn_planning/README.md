@@ -6,8 +6,8 @@ activations at turn boundaries? Author: Augusto Nicola. Status: **first full run
 
 **Results: start with the explainer, [`explainer/index.html`](explainer/index.html)** (open it in a browser). It
 explains the setup, the methods (probes, held-out goals, the text baseline, the shuffled control) and each result.
-Raw outputs: `results/qwen3-14b_mtp_s0/`. The capture (≈ 4.9 GB) is prepared for Hugging Face as
-`anicola/ptm-multiturn-planning-qwen3-14b` (card: `hf/README.md`; upload: `scripts/upload_hf.py`).
+Raw outputs: `results/qwen3-14b_mtp_s0/`. The whole capture (≈ 4.9 GB) on Hugging Face:
+[`anicola/ptm-multiturn-planning-qwen3-14b`](https://huggingface.co/datasets/anicola/ptm-multiturn-planning-qwen3-14b) (card: `hf/README.md`; uploaded with `scripts/upload_hf.py`).
 
 ## Why the design looks like this
 
