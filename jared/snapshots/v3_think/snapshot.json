@@ -1,0 +1,177 @@
+{
+ "name": "v3_think",
+ "note": "mid-thinking positions: 4 think fractions, dense track, label probe; prefill, 3072 budget; behavior with thinking",
+ "source": "/home/Jared/SPAR/results/horizon_v3_think",
+ "taken": "2026-10-01T00:06:32",
+ "analysis_git": "24236a8",
+ "derived": [
+  "pca3.json.gz",
+  "feature_dimensionality.json.gz",
+  "cross_mode_transfer.json",
+  "cross_mode_transfer.png",
+  "feature_dimensionality.png"
+ ],
+ "runs": {
+  "exp0_Qwen3-8B_think-off": {
+   "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "off",
+    "n_response": 6,
+    "max_think_tokens": 3072,
+    "batch_size": 8,
+    "prefill": "I choose:",
+    "limit": null,
+    "seed": 0,
+    "think_fractions": [
+     0.25,
+     0.5,
+     0.75,
+     1.0
+    ],
+    "cache_dir": "/workspace/results/horizon/gen_cache",
+    "attn": null
+   },
+   "git": null,
+   "started": "2026-10-01T02:16:28",
+   "wall_seconds": 49.6
+  },
+  "exp0_Qwen3-8B_think-on": {
+   "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "on",
+    "n_response": 6,
+    "max_think_tokens": 3072,
+    "batch_size": 8,
+    "prefill": "I choose:",
+    "limit": null,
+    "seed": 0,
+    "think_fractions": [
+     0.25,
+     0.5,
+     0.75,
+     1.0
+    ],
+    "cache_dir": "/workspace/results/horizon/gen_cache",
+    "attn": null
+   },
+   "git": null,
+   "started": "2026-10-01T02:20:57",
+   "wall_seconds": 3955.8
+  },
+  "exp1_Qwen3-8B_think-off": {
+   "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "off",
+    "n_response": 6,
+    "max_think_tokens": 3072,
+    "batch_size": 8,
+    "prefill": "I choose:",
+    "limit": null,
+    "seed": 0,
+    "think_fractions": [
+     0.25,
+     0.5,
+     0.75,
+     1.0
+    ],
+    "cache_dir": "/workspace/results/horizon/gen_cache",
+    "attn": null
+   },
+   "git": null,
+   "started": "2026-10-01T02:17:24",
+   "wall_seconds": 21.0
+  },
+  "exp2_Qwen3-8B_think-off": {
+   "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "off",
+    "n_response": 6,
+    "max_think_tokens": 3072,
+    "batch_size": 8,
+    "prefill": "I choose:",
+    "limit": null,
+    "seed": 0,
+    "think_fractions": [
+     0.25,
+     0.5,
+     0.75,
+     1.0
+    ],
+    "cache_dir": "/workspace/results/horizon/gen_cache",
+    "attn": null
+   },
+   "git": null,
+   "started": "2026-10-01T02:17:51",
+   "wall_seconds": 55.7
+  },
+  "exp3_Qwen3-8B_think-off": {
+   "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "off",
+    "n_response": 6,
+    "max_think_tokens": 3072,
+    "batch_size": 8,
+    "prefill": "I choose:",
+    "limit": null,
+    "seed": 0,
+    "think_fractions": [
+     0.25,
+     0.5,
+     0.75,
+     1.0
+    ],
+    "cache_dir": "/workspace/results/horizon/gen_cache",
+    "attn": null
+   },
+   "git": null,
+   "started": "2026-10-01T02:18:53",
+   "wall_seconds": 15.9
+  },
+  "exp4_Qwen3-8B_think-off": {
+   "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "off",
+    "n_response": 6,
+    "max_think_tokens": 3072,
+    "batch_size": 8,
+    "prefill": "I choose:",
+    "limit": null,
+    "seed": 0,
+    "think_fractions": [
+     0.25,
+     0.5,
+     0.75,
+     1.0
+    ],
+    "cache_dir": "/workspace/results/horizon/gen_cache",
+    "attn": null
+   },
+   "git": null,
+   "started": "2026-10-01T02:19:14",
+   "wall_seconds": 59.9
+  },
+  "exp5_Qwen3-8B_think-off": {
+   "settings": {
+    "model": "Qwen/Qwen3-8B",
+    "thinking": "off",
+    "n_response": 6,
+    "max_think_tokens": 3072,
+    "batch_size": 8,
+    "prefill": "I choose:",
+    "limit": null,
+    "seed": 0,
+    "think_fractions": [
+     0.25,
+     0.5,
+     0.75,
+     1.0
+    ],
+    "cache_dir": "/workspace/results/horizon/gen_cache",
+    "attn": null
+   },
+   "git": null,
+   "started": "2026-10-01T02:20:20",
+   "wall_seconds": 30.9
+  }
+ }
+}

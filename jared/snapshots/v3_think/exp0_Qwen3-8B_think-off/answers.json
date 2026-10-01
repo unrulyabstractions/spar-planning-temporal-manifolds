@@ -1,0 +1,1046 @@
+[
+ {
+  "horizon": 9.506426344208685e-07,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 30 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reason:** In just",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208685e-07,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 30 seconds.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208685e-07,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 30 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reason:**  \nIn",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208685e-07,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 30 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reason:**  \nWith",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208685e-07,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 30 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reason:** In just",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208685e-07,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 30 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reason:**  \nWith",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208684e-06,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 300 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208684e-06,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 300 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208684e-06,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 300 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208684e-06,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 300 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208684e-06,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 300 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 9.506426344208684e-06,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 300 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.00011407711613050422,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 3600 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.00011407711613050422,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 3600 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.00011407711613050422,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 3600 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.00011407711613050422,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 3600 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.00011407711613050422,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 3600 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.00011407711613050422,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 3600 seconds.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.0027397260273972603,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 1 days.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.0027397260273972603,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 1 days.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.0027397260273972603,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 1 days.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.0027397260273972603,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 1 days.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.0027397260273972603,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 1 days.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.0027397260273972603,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 1 days.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.019230769230769232,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 7 days.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.019230769230769232,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 7 days.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.019230769230769232,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 7 days.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.019230769230769232,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 7 days.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.019230769230769232,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 7 days.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.019230769230769232,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 7 days.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.08333333333333333,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 1 months.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.08333333333333333,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 1 months.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**  \nSince",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.08333333333333333,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 1 months.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.08333333333333333,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 1 months.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.08333333333333333,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 1 months.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.08333333333333333,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 1 months.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.25,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 3 months.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.25,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 3 months.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.25,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 3 months.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.25,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 3 months.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.25,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 3 months.\nAnswer with a) or b).",
+  "answer": "a) 20,00",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.25,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 3 months.\nAnswer with a) or b).",
+  "answer": "a) 20,00",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.5,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 6 months.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**  \nSince",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.5,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 6 months.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.5,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 6 months.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**  \nSince",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.5,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 6 months.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.5,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 6 months.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**  \nSince",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 0.5,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 6 months.\nAnswer with a) or b).",
+  "answer": "a) 20,00",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 1,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 1 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**\n\n-",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 1,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 1 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 1,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 1 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 1,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 1 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 1,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 1 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 1,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 1 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 2,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 2 years.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 2,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 2 years.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 2,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 2 years.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 2,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 2 years.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 2,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 2 years.\nAnswer with a) or b).",
+  "answer": "a) 20,00",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 2,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 2 years.\nAnswer with a) or b).",
+  "answer": "a) 20,00",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 5,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 5 years.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 5,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 5 years.\nAnswer with a) or b).",
+  "answer": "b) 50,00",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 5,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 5 years.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 5,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 5 years.\nAnswer with a) or b).",
+  "answer": "b) 200,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 5,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 5 years.\nAnswer with a) or b).",
+  "answer": "a) 20,00",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 5,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 5 years.\nAnswer with a) or b).",
+  "answer": "b) 500,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 10,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 10 years.\nAnswer with a) or b).",
+  "answer": "b) 50,00",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 10,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 10 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**\n\nThe",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 10,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 10 years.\nAnswer with a) or b).",
+  "answer": "b) 200,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 10,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 10 years.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 10,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 10 years.\nAnswer with a) or b).",
+  "answer": "b) 500,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 10,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 10 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**\n\nTo",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 25,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 25 years.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 25,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 25 years.\nAnswer with a) or b).",
+  "answer": "b) 50,00",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 25,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 25 years.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 25,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 25 years.\nAnswer with a) or b).",
+  "answer": "b) 200,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 25,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 25 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**\n\nTo",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 25,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 25 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**\n\n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 50,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 50 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**\n\nEven",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 50,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 50 years.\nAnswer with a) or b).",
+  "answer": "b) 50,00",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 50,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 50 years.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 50,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 50 years.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 50,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 50 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**\n\nTo",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 50,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 50 years.\nAnswer with a) or b).",
+  "answer": "b) 500,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 100,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 100 years.\nAnswer with a) or b).",
+  "answer": "b) 50,00",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 100,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 100 years.\nAnswer with a) or b).",
+  "answer": "b) 50,00",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 100,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 100 years.\nAnswer with a) or b).",
+  "answer": "b) 200,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 100,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 100 years.\nAnswer with a) or b).",
+  "answer": "b) 200,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 100,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 100 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**\n\nTo",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 100,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 100 years.\nAnswer with a) or b).",
+  "answer": "b) 500,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 500,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 500 years.\nAnswer with a) or b).",
+  "answer": "a) 1,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 500,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 500 years.\nAnswer with a) or b).",
+  "answer": "b) 50,00",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 500,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 500 years.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 500,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 500 years.\nAnswer with a) or b).",
+  "answer": "a) 5,000",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 500,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit for this time horizon: 500 years.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Explanation:**\n\nEven",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": 500,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit for this time horizon: 500 years.\nAnswer with a) or b).",
+  "answer": "b) 500,0",
+  "label": "b",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 6 months.\nb) 500,000 dollars in 10 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 6 months.\nb) 200,000 dollars in 10 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 20,000 dollars in 1 month.\nb) 500,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 5,000 dollars in 1 month.\nb) 200,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 6 months.\nb) 50,000 dollars in 10 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ },
+ {
+  "horizon": null,
+  "prompt": "You must choose the best investment:\na) 1,000 dollars in 1 month.\nb) 50,000 dollars in 5 years.\nSelect the option with the greatest benefit.\nAnswer with a) or b).",
+  "answer": "a)**\n\n**Reasoning:**  \n",
+  "label": "a",
+  "forced": false,
+  "think_len": 0,
+  "think_text": ""
+ }
+]

@@ -21,9 +21,10 @@ def export(root):
     root = Path(root)
     out = {"modes": {}}
     for mode in ("off", "on"):
-        d = root / f"exp0_Qwen3-8B_think-{mode}"
-        if not (d / "activations.npz").exists():
+        runs = sorted(root.glob(f"exp0_*_think-{mode}"))
+        if not runs or not (runs[-1] / "activations.npz").exists():
             continue
+        d = runs[-1]
         z = load_activations(d / "activations.npz")
         manifest = json.loads((d / "manifest.json").read_text())
         answers = {}
@@ -57,7 +58,9 @@ def export(root):
                                 "rho": [round(r, 3) for r in rho]})
             layers.append(per_pos)
             print(f"{mode} L{l} done")
-        out["modes"][mode] = {"tokens": z["tokens"], "n_suffix": z["n_suffix"], "points": points,
+        out["modes"][mode] = {"tokens": z["tokens"], "n_suffix": z["n_suffix"],
+                              "regions": {k: list(v) for k, v in z["regions"].items()},
+                              "think_fractions": z["think_fractions"].tolist(), "points": points,
                               "layers": layers,
                               "meta": {k: manifest.get(k) for k in
                                        ("probe_layer", "probe_pos", "probe_r2", "peak_layer", "peak_rho",

@@ -12,25 +12,43 @@ the think block is force-closed at `cfg.max_think_tokens` if needed, then
 block was force-closed are marked `forced`.
 
 Generation is batched (left-padded, greedy) and verified token-identical to
-single-prompt generation.
+single-prompt generation. With `cfg.cache_dir` set, every prompt's
+`Generation` is stored under a key of the settings and its input ids, so a
+re-run skips generation; greedy decoding makes this exact.
 """
 
-from dataclasses import dataclass, field
+import hashlib
+from dataclasses import dataclass, fields
+from pathlib import Path
 
+import numpy as np
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from tqdm import tqdm
+from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria, StoppingCriteriaList
 
 CLOSE_TEXT = "\n</think>\n\n"
 
 
+def pick_device():
+    """cuda, then Intel xpu, then Apple mps, else cpu."""
+    if torch.cuda.is_available():
+        return "cuda"
+    if hasattr(torch, "xpu") and torch.xpu.is_available():
+        return "xpu"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
 def load_model(cfg):
-    device = "cuda" if torch.cuda.is_available() else (
-        "mps" if torch.backends.mps.is_available() else "cpu")
+    device = pick_device()
+    print(f"device: {device}")
     tokenizer = AutoTokenizer.from_pretrained(cfg.model)
     tokenizer.padding_side = "left"
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(cfg.model, dtype=cfg.dtype)
+    kwargs = {"attn_implementation": cfg.attn} if cfg.attn else {}
+    model = AutoModelForCausalLM.from_pretrained(cfg.model, dtype=cfg.dtype, **kwargs)
     model.to(device).eval()
     return tokenizer, model, device
 
@@ -97,19 +115,71 @@ class Generation:
     forced: bool
     pre_len: int = 0           # tokens between prompt_len (off) or the think close (on) and the label:
                                # '</think>\n\n' + prefill (on only) + any leading formatting like ' **'
-    regions: dict = field(default_factory=dict)
+    lead: int = 0              # leading formatting tokens before the label, e.g. ' **'
 
     def answer_text(self, tokenizer):
         return tokenizer.decode(self.ids[self.answer_start:])
+
+    def think_text(self, tokenizer):
+        return tokenizer.decode(self.ids[self.prompt_len:self.prompt_len + self.think_len])
+
+
+_INT_FIELDS = ("prompt_len", "answer_start", "think_len", "pre_len", "lead")
+
+
+def cache_key(cfg, ids, system):
+    """sha256 of everything that determines a greedy generation."""
+    h = hashlib.sha256()
+    h.update(repr((cfg.model, cfg.thinking, cfg.max_think_tokens, cfg.prefill, cfg.n_response,
+                   system)).encode())
+    h.update(np.asarray(ids, dtype=np.int64).tobytes())
+    return h.hexdigest()
+
+
+def cache_load(cfg, ids, system, device):
+    """The cached Generation for these input ids, or None."""
+    if not cfg.cache_dir:
+        return None
+    p = Path(cfg.cache_dir) / f"{cache_key(cfg, ids, system)}.npz"
+    if not p.exists():
+        return None
+    z = np.load(p)
+    return Generation(torch.tensor(z["ids"], device=device), int(z["prompt_len"]), int(z["answer_start"]),
+                      int(z["think_len"]), bool(z["forced"]), int(z["pre_len"]), int(z["lead"]))
+
+
+def cache_store(cfg, ids, system, gen):
+    if not cfg.cache_dir:
+        return
+    d = Path(cfg.cache_dir)
+    d.mkdir(parents=True, exist_ok=True)
+    np.savez(d / f"{cache_key(cfg, ids, system)}.npz", ids=gen.ids.cpu().numpy(), forced=gen.forced,
+             **{f: getattr(gen, f) for f in _INT_FIELDS})
+
+
+class _StepBar(StoppingCriteria):
+    """Never stops; ticks a tqdm bar once per decode step so long batches show
+    progress. Hidden for short answer generations."""
+
+    def __init__(self, total, show):
+        self.bar = tqdm(total=total, desc="decode", unit="tok", leave=False, mininterval=2,
+                        dynamic_ncols=True, disable=not show)
+
+    def __call__(self, input_ids, scores, **kwargs):
+        self.bar.update(1)
+        return torch.zeros(input_ids.shape[0], dtype=torch.bool, device=input_ids.device)
 
 
 def _greedy(model, tokenizer, device, id_lists, max_new, min_new):
     """Left-padded greedy generation. Returns unpadded [prompt+generated] per row."""
     tokenizer.padding_side = "left"
     batch = tokenizer.pad({"input_ids": id_lists}, return_tensors="pt").to(device)
+    step_bar = _StepBar(max_new, show=max_new > 64)
     with torch.no_grad():
         out = model.generate(**batch, max_new_tokens=max_new, min_new_tokens=min_new,
-                             do_sample=False, pad_token_id=tokenizer.pad_token_id)
+                             do_sample=False, pad_token_id=tokenizer.pad_token_id,
+                             stopping_criteria=StoppingCriteriaList([step_bar]))
+    step_bar.bar.close()
     width = batch["input_ids"].shape[1]
     return [torch.cat([torch.tensor(ids, device=device), out[i, width:]])
             for i, ids in enumerate(id_lists)]
@@ -133,22 +203,27 @@ def _is_whitespace_token(tokenizer, tok_id):
     return tokenizer.decode([int(tok_id)]).strip() == ""
 
 
-def generate_batch(tokenizer, model, device, prompts, cfg, system=None, log_every=None):
-    """Greedy answers for a list of prompts, in batches of cfg.batch_size."""
+def generate_batch(tokenizer, model, device, prompts, cfg, system=None):
+    """Greedy answers for a list of prompts, in batches of cfg.batch_size.
+    Returns one Generation per prompt; cached prompts are not regenerated."""
     texts = [chat_text(tokenizer, p, cfg, system) for p in prompts]
     id_lists = [tokenizer.encode(t, add_special_tokens=False) for t in texts]
-    results = [None] * len(prompts)
+    results = [cache_load(cfg, ids, system, device) for ids in id_lists]
+    todo = [i for i, r in enumerate(results) if r is None]
+    if len(todo) < len(prompts):
+        print(f"generation cache: {len(prompts) - len(todo)}/{len(prompts)} prompts cached")
     if cfg.thinking == "on":
         tid, closer, pre = think_end_id(tokenizer), close_ids(tokenizer), prefill_ids(tokenizer, cfg)
-    for b in range(0, len(prompts), cfg.batch_size):
-        idx = list(range(b, min(b + cfg.batch_size, len(prompts))))
+    batches = [todo[b:b + cfg.batch_size] for b in range(0, len(todo), cfg.batch_size)]
+    for idx in tqdm(batches, desc="generate", unit="batch", mininterval=2, dynamic_ncols=True,
+                    disable=not batches):
         if cfg.thinking == "off":
             rows = _greedy(model, tokenizer, device, [id_lists[i] for i in idx],
                            cfg.n_response + MAX_LEAD, cfg.n_response + MAX_LEAD)
             for i, row in zip(idx, rows):
                 plen = len(id_lists[i])
                 lead = lead_length(tokenizer, row, plen)
-                results[i] = Generation(row, plen, plen + lead, 0, False, lead)
+                results[i] = Generation(row, plen, plen + lead, 0, False, lead, lead)
         else:
             rows = _greedy(model, tokenizer, device, [id_lists[i] for i in idx],
                            cfg.max_think_tokens, 0)
@@ -180,9 +255,13 @@ def generate_batch(tokenizer, model, device, prompts, cfg, system=None, log_ever
             for j, ((i, plen, k, forced, pre_len), row) in enumerate(zip(meta, rows2)):
                 start = len(second[j])
                 lead = lead_length(tokenizer, row, start)
-                results[i] = Generation(row, plen, start + lead, k, forced, pre_len + lead)
-        if log_every and (b // cfg.batch_size + 1) % log_every == 0:
-            print(f"  {min(b + cfg.batch_size, len(prompts))}/{len(prompts)} generated")
+                results[i] = Generation(row, plen, start + lead, k, forced, pre_len + lead, lead)
+        for i in idx:
+            g = results[i]
+            # a label token with no letter or digit means the logits were garbage (e.g. NaN -> '!'):
+            # keep the result for this run but never cache it
+            if any(ch.isalnum() for ch in tokenizer.decode([int(g.ids[g.answer_start])])):
+                cache_store(cfg, id_lists[i], system, g)
     return results
 
 

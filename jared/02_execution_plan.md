@@ -180,6 +180,25 @@ Revision 2026-09-23: add prompt perturbation (E4), attribution patching
   prefill (`I choose:`) over regex localization. Leading formatting tokens
   before the label are skipped. The thinking-off half must be rerun; the
   suffix-position findings from the first run stand and are archived.
+- **Mid-thinking positions (2026-09-30, spec in `06_spec_think_geometry.md`):**
+  the kept layout is now `suffix | think | pre | pre-label | answer` with
+  explicit `regions` in `Extraction`, the npz and the manifest; four think
+  positions at fractions 0.25/0.5/0.75/1.0 of each prompt's own think span.
+  The suffix stays whole because the probe sits on the newline after
+  `<|im_end|>` (R² 0.9996 in both modes on the 8B). The first prefill
+  thinking-on run had skipped 55/116 prompts on pre-length mismatch
+  (forced vs natural close, markdown leads); the fixed-width layout anchors
+  `pre` on `</think>` and keeps the single token before the label as
+  `pre-label`, so nothing is skipped and forced prompts are flagged
+  (`forced_mask`) instead. New per prompt: `think_len`, `lead`, `keep_idx`,
+  `keep_ids`, `label_logits`, and the think text in `answers.json`. New
+  derived: `probe_coef`/`probe_intercept` per layer, `probe_track`
+  `[L, n, pos]`, `dense_track` `[n, max_think]` from a second forward pass
+  at the probe layer, `rho_nf`/`r2_nf` (non-forced), `label_acc` (logistic
+  probe for a vs b at the suffix probe position, think@1, pre-label, and
+  the answer token as a ceiling). Generation cache under
+  `<out>/gen_cache/`, tqdm everywhere, timestamped phases in the manifest,
+  `code_hash` for the box. `run_all.sh` skips behavior for thinking on.
 
 ## 6. What I will not do without asking
 

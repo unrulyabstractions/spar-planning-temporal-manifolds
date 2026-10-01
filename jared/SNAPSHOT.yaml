@@ -13,3 +13,21 @@ runs:
   - exp5_Qwen3-8B_think-off: 48 clean/corrupt pairs; 2026-09-24T03:06:45; 33 s
 activations: NOT in this repo. Full run archive (npz activations, 1.7 GB) is local only at ~/SPAR/results/horizon_v1_noprefill on Jared's machine.
 tests: 48 passed (2026-09-26, ~/miniconda3/envs/mp, tokenizer-only, no GPU)
+
+---
+snapshot_date: 2026-10-01
+code_state: the commit that added snapshots/v3_think (E6 think PCA, think_budget, think_probe, mid-thinking positions in E0)
+model: Qwen/Qwen3-8B, bf16, one RTX 4090 (vast.ai)
+prompt_bank: unchanged (116 prompts; generator in spar_horizon/prompts.py, full prompt text per record in exp0 answers.json)
+settings: prefill "I choose:", max_think_tokens 3072, think_fractions [0.25, 0.5, 0.75, 1.0], seed 0
+snapshot: snapshots/v3_think  (derived data only: manifests, PCA coords, probe/transfer tables, figures, think_probe.json, exp0 answers.json with full think text; ~10 MB)
+runs:
+  - exp0_Qwen3-8B_think-off: 116 prompts; 2026-10-01T02:16:28; 50 s;   0 force-closed
+  - exp0_Qwen3-8B_think-on:  116 prompts; 2026-10-01T02:20:57; 3956 s; 48 think blocks force-closed at 3072 tokens
+  - exp1_Qwen3-8B_think-off: 116 prompts; 2026-10-01T02:17:24; 21 s
+  - exp2_Qwen3-8B_think-off: 6 templates x 96 prompts; 2026-10-01T02:17:51; 56 s
+  - exp3_Qwen3-8B_think-off: 108 prompts; 2026-10-01T02:18:53; 16 s
+  - exp4_Qwen3-8B_think-off: 4 variants x 116 prompts; 2026-10-01T02:19:14; 60 s
+  - exp5_Qwen3-8B_think-off: 48 clean/corrupt pairs; 2026-10-01T02:20:20; 31 s
+not_in_repo: activations (npz), the generation cache, and E6 per-token npz files. Full run archive (2.7 GB) is local only at ~/SPAR/results/horizon_v3_think on Jared's machine. No E6 results yet (code only).
+tests: 70 passed (2026-10-01, ~/miniconda3/envs/mp, tokenizer-only, no GPU)

@@ -27,7 +27,8 @@ run() {
 
 for mode in $MODES; do
   for exp in exp0_baseline exp1_nuisance exp2_paraphrase exp3_units exp4_perturb; do
-    run "experiments/$exp.py" --model "$MODEL" --thinking "$mode"
+    skip=(); [ "$exp" = exp0_baseline ] && [ "$mode" = on ] && skip=(--skip-behavior)
+    run "experiments/$exp.py" --model "$MODEL" --thinking "$mode" "${skip[@]}"
   done
   if [ "$mode" = off ]; then
     run experiments/exp5_attribution.py --model "$MODEL" --thinking off
