@@ -108,7 +108,28 @@
 <script id="data" type="application/json">__DATA__</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"></script>
 <script>
-(function () {
+(const REGION_NAMES = {suffix: "turn suffix", think: "think", pre: "pre", prelabel: "pre-label", answer: "answer"};
+function regionsOf(m) {
+  // Files exported before think positions carry only n_suffix.
+  return m.regions || {suffix: [0, m.n_suffix], answer: [m.n_suffix, m.tokens.length]};
+}
+function regionOf(m, pos) {
+  for (const [name, [a, b]] of Object.entries(regionsOf(m))) {
+    if (pos >= a && pos < b) {
+      if (name === "think") return "think " + m.tokens[pos].split("@")[1].replace("*", "");
+      if (name === "answer" && pos > a) return "response";
+      return REGION_NAMES[name];
+    }
+  }
+  return "response";
+}
+function regionHeading(m, pos) {
+  for (const [name, [a, b]] of Object.entries(regionsOf(m))) {
+    if (pos === a && b > a) return name === "answer" ? "response (answer first)" : REGION_NAMES[name];
+  }
+  return null;
+}
+function () {
   const DATA = JSON.parse(document.getElementById("data").textContent);
   const modes = Object.keys(DATA.modes);
   const state = { mode: modes[0], layer: 11, pos: 1, color: "horizon", keep: true, ctrl: true };
@@ -184,7 +205,7 @@
   function renderStats(m, cell, pos) {
     const rows = [];
     const tok = JSON.stringify(m.tokens[pos]);
-    rows.push(["token", tok], ["region", pos < m.n_suffix ? "turn suffix" : pos === m.n_suffix ? "answer" : "response"]);
+    rows.push(["token", tok], ["region", regionOf(m, pos)]);
     if (cell) {
       rows.push(["PC1 evr · rho", `${cell.evr[0].toFixed(2)} · ${cell.rho[0].toFixed(2)}`]);
       rows.push(["PC2 evr · rho", `${cell.evr[1].toFixed(2)} · ${cell.rho[1].toFixed(2)}`]);
@@ -203,8 +224,8 @@
     const box = document.getElementById("chips");
     box.innerHTML = "";
     m.tokens.forEach((t, i) => {
-      if (i === 0) box.insertAdjacentHTML("beforeend", `<span class="region">turn suffix</span>`);
-      if (i === m.n_suffix) box.insertAdjacentHTML("beforeend", `<span class="sep"></span><span class="region">response (answer first)</span>`);
+      const head = regionHeading(m, i);
+      if (head) box.insertAdjacentHTML("beforeend", (i ? `<span class="sep"></span>` : "") + `<span class="region">${head}</span>`);
       const b = document.createElement("button");
       b.dataset.p = i; b.textContent = JSON.stringify(t).slice(1, -1) || "␣";
       b.setAttribute("aria-pressed", String(i === state.pos));

@@ -77,10 +77,27 @@ def captured(mode, layer, pos, k=3):
     return cell["ratio"][cell["k"].index(k)], cell["full_r2"]
 
 
+REGION_NAMES = {"suffix": "turn suffix", "think": "think", "pre": "pre", "prelabel": "pre-label",
+                "answer": "answer"}
+
+
+def region_of(m, pos):
+    """Region label of a kept position; think positions carry their fraction,
+    response tokens after the label read 'response'."""
+    for name, (a, b) in m["regions"].items():
+        if a <= pos < b:
+            if name == "think":
+                return "think " + m["tokens"][pos].split("@")[1].rstrip("*")
+            if name == "answer" and pos > a:
+                return "response"
+            return REGION_NAMES[name]
+    return "response"
+
+
 def title(mode, layer, pos, cell):
     m = DATA["modes"][mode]
     tok = m["tokens"][pos]
-    region = "turn suffix" if pos < m["n_suffix"] else ("answer" if pos == m["n_suffix"] else "response")
+    region = region_of(m, pos)
     if cell is None:
         return f"thinking {mode} · L{layer} · {tok!r} ({region}) · constant column"
     e, r = cell["evr"], cell["rho"]
@@ -106,8 +123,7 @@ ctrl_w = W.Checkbox(value=True, description="show no-horizon controls")
 
 def fill_positions(*_):
     m = DATA["modes"][mode_w.value]
-    opts = [(f"{i:>2}  {t!r}  ({'suffix' if i < m['n_suffix'] else 'answer' if i == m['n_suffix'] else 'resp'})", i)
-            for i, t in enumerate(m["tokens"])]
+    opts = [(f"{i:>2}  {t!r}  ({region_of(m, i)})", i) for i, t in enumerate(m["tokens"])]
     keep = min(pos_w.value if pos_w.value is not None else (m["meta"].get("probe_pos") or 1), len(opts) - 1)
     pos_w.options = opts
     pos_w.value = keep

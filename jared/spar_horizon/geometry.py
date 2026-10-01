@@ -3,8 +3,11 @@
 import numpy as np
 from scipy.stats import spearmanr
 from sklearn.decomposition import PCA
-from sklearn.linear_model import RidgeCV
-from sklearn.model_selection import KFold
+from sklearn.linear_model import LogisticRegression, RidgeCV
+from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from tqdm import tqdm
 
 
 def sweep(activations, tokens, has_horizon, log_horizons, n_components=2, verbose=True):
@@ -15,7 +18,8 @@ def sweep(activations, tokens, has_horizon, log_horizons, n_components=2, verbos
     Z_all = [[None] * n_positions for _ in activations]
     if verbose:
         print("\nlayer  " + "  ".join(f"{t!r:>10}" for t in tokens))
-    for layer, X in enumerate(activations):
+    for layer, X in enumerate(tqdm(activations, desc="pc1 sweep", unit="layer", mininterval=2,
+                                   dynamic_ncols=True, disable=verbose)):
         row = []
         for pos in range(n_positions):
             X_pos = X[:, pos] - X[:, pos].mean(0)
@@ -69,7 +73,8 @@ def probe_sweep(activations, has_horizon, log_horizons, positions=None):
     n_positions = activations[0].shape[1]
     positions = range(n_positions) if positions is None else positions
     r2 = np.full((len(activations), n_positions), np.nan)
-    for layer, X in enumerate(activations):
+    for layer, X in enumerate(tqdm(activations, desc="probe sweep", unit="layer", mininterval=2,
+                                   dynamic_ncols=True)):
         for pos in positions:
             X_pos = X[has_horizon, pos]
             if np.allclose(X_pos - X_pos.mean(0), 0):
@@ -89,3 +94,47 @@ def transfer_matrix(banks, log_hs):
             pred = model.predict(banks[j])
             M[i, j] = abs(spearmanr(pred, log_hs[j])[0])
     return M
+
+
+def probe_directions(activations, has_horizon, log_horizons, pos):
+    """One horizon probe per layer, fit on all horizon prompts at `pos`.
+    Returns (coef [n_layers, d_model], intercept [n_layers]); a projection
+    `X @ coef[l] + intercept[l]` is the layer's predicted log10 horizon."""
+    coef = np.stack([_fit(X[has_horizon, pos], log_horizons).coef_ for X in activations])
+    intercept = np.array([_fit(X[has_horizon, pos], log_horizons).intercept_ for X in activations])
+    return coef, intercept
+
+
+def probe_track(activations, coef, intercept):
+    """Predicted log10 horizon at every kept position: [n_layers, n, n_positions]."""
+    return np.stack([X @ c + b for X, c, b in zip(activations, coef, intercept)])
+
+
+def _label_clf():
+    return make_pipeline(StandardScaler(), LogisticRegression(C=1.0, max_iter=2000))
+
+
+def label_probe(X, y, folds=5, seed=0):
+    """Stratified `folds`-fold CV accuracy of a logistic probe from activations
+    [n, d] to the binary label y [n]. Returns (accuracy, majority baseline);
+    accuracy is nan when a class has fewer than `folds` members."""
+    y = np.asarray(y)
+    counts = np.bincount(y, minlength=2)
+    baseline = counts.max() / len(y)
+    if counts.min() < folds:
+        return np.nan, baseline
+    skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
+    hits = 0
+    for tr, te in skf.split(X, y):
+        hits += (_label_clf().fit(X[tr], y[tr]).predict(X[te]) == y[te]).sum()
+    return hits / len(y), baseline
+
+
+def label_probe_sweep(activations, y, positions):
+    """Label-probe accuracy per (layer, position in `positions`): [n_layers, len(positions)]."""
+    acc = np.full((len(activations), len(positions)), np.nan)
+    for layer, X in enumerate(tqdm(activations, desc="label probe", unit="layer", mininterval=2,
+                                   dynamic_ncols=True)):
+        for j, pos in enumerate(positions):
+            acc[layer, j] = label_probe(X[:, pos], y)[0]
+    return acc

@@ -26,7 +26,7 @@ def default_prompt(rec, **kw):
 
 
 def behavior(tokenizer, model, device, records, base_answers, cfg, prompt_fn=default_prompt,
-             system=None, log_every=20):
+             system=None):
     """Temporal reasoning, order stability, label stability. Returns a dict of
     (hits, n) and prints the three lines. `prompt_fn(rec, swap=, labels=)`
     builds the variant prompts, so perturbed banks can reuse the tests.

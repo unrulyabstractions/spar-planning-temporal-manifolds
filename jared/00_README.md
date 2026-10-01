@@ -83,6 +83,10 @@ runs first (`run_all.sh` enforces this). E5 is thinking-off only.
 # local smoke: every experiment on the 0.8B, 6 prompts, thinking off (~8 min CPU)
 MODEL=Qwen/Qwen3.5-0.8B LIMIT=6 MODES=off PY=~/miniconda3/envs/mp/bin/python bash experiments/run_all.sh
 
+# local GPU: the intel_ai env has torch+xpu for the Intel Arc iGPU (device: xpu,
+# bfloat16, ~7x faster than CPU on the 0.8B); load_model picks cuda > xpu > mps > cpu
+PY=~/miniconda3/envs/intel_ai/bin/python bash experiments/run_all.sh   # same flags
+
 # one experiment
 python experiments/exp0_baseline.py --model Qwen/Qwen3-8B --thinking on --limit 12
 
@@ -116,11 +120,44 @@ disables). With thinking off the prefill is part of the prompt, so the turn
 suffix runs from `<|im_end|>` through the prefill. With thinking on the
 prefill is appended after the (possibly force-closed) `</think>`. Any
 formatting the model emits before the label, such as a markdown ` **`, is
-counted as pre-answer tokens and skipped, so the "answer" position is the
-label itself. E5 teacher-forces the clean run's lead tokens onto both
-sequences so its metric is read at the position that predicts the label.
-Each extraction prints the token distribution at the answer position; a
-WARNING appears if it is not a label.
+skipped, so the "answer" position is the label itself. E5 teacher-forces the
+clean run's lead tokens onto both sequences so its metric is read at the
+position that predicts the label. Each extraction prints the token
+distribution at the answer position; a WARNING appears if it is not a label.
+
+## Kept positions
+
+Every prompt keeps the same fixed-width layout, so no prompt is skipped for
+its answer formatting or for a force-closed think block:
+
+```
+thinking on   (Qwen3-8B, prefill on; S = 5 suffix tokens on the 8B, 7 on the 0.8B)
+[ suffix:    <|im_end|> \n <|im_start|> assistant \n (<think> \n) ]   region suffix   (0, S)
+[ think:     think@0.25  think@0.5  think@0.75  think@1 ]              region think    (S, S+4)
+[ pre:       </think>  \n\n  I  choose  : ]                             region pre      (S+4, S+9)
+[ pre-label: the token right before the label (':' or a lead like ' **') ] region prelabel (S+9, S+10)
+[ answer:    a  )  ... n_response tokens ]                               region answer   (S+10, S+16)
+
+thinking off  (suffix runs through the prefill; think and pre are empty)
+[ suffix ... I choose : ] [ pre-label ] [ answer ... ]
+```
+
+Think positions sit at `think_fractions` (default 0.25, 0.5, 0.75, 1.0) of
+each prompt's own think span; f = 1 is the last token before `</think>`.
+Their token differs per prompt, so they are labelled `think@0.25*`. The
+regions are stored in `activations.npz` and the manifest; `n_suffix` is
+kept as the index of the answer token for E1-E5. Thinking-on E0 also writes
+`probe_track.png` (probe reading at every kept position), `dense_track.png`
+(at every think token, from a second forward pass), and `label_probe.png`
+(can the chosen label be read out before it is written?).
+
+## Generation cache and progress
+
+Every prompt's greedy generation is cached under `<out base>/gen_cache/`
+keyed by the settings and input ids, so a rerun of E0 after an analysis
+change skips the 20-minute thinking-on generation; `--no-cache` disables
+it. Every loop shows a tqdm bar and each phase prints a timestamped line;
+the manifest records `phases` (seconds per phase) and `code_hash`.
 
 ## Thinking mode on the 8B
 
@@ -128,9 +165,12 @@ Qwen3-8B reasons for 1.5k to 3k tokens on a normal prompt and loops without
 end on absurd horizons (seconds, minutes), where it decides neither option
 is feasible. The think block is therefore force-closed at
 `max_think_tokens` (default 3072) and the run reports how many prompts were
-forced. Expect the forced ones to be the short horizons. Generation is
-batched so a thinking-on E0 takes about an hour on the 4090 rather than
-eight.
+forced, per prompt in `forced_mask`. Forced prompts are kept and flagged;
+the manifest reports every think-position number for all prompts and for
+the non-forced subset. Generation is batched; a thinking-on E0 takes about
+35 minutes on the 4090 with `--skip-behavior` (which `run_all.sh` passes
+for thinking on, since the behavior check regenerates the bank twice more
+and its numbers are deterministic for a fixed bank and model).
 
 ## Snapshots: keeping runs comparable
 
@@ -150,6 +190,7 @@ the activation files are not copied and stay under `results/`.
 
 ## Smoke-test log
 
+- 2026-09-30, mid-thinking positions: 63 tests green; 0.8B thinking-on E0 smoke (6 prompts, 32-token budget) writes 4 think columns, probe_track, dense_track, label_probe and a manifest with per-fraction numbers; thinking-off run_all smoke passes all six experiments; explorer export carries regions.
 - 2026-09-21, 0.8B, thinking off, 6 prompts: suffix derived as 9 tokens
   (matches the starter), behavior reproduces the position bias.
 - 2026-09-21, 0.8B, thinking on, 384 and 1024-token budgets: the think block

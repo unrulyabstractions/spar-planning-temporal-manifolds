@@ -28,10 +28,10 @@ def load_or_extract_base(tokenizer, model, device, records, cfg, out):
     if e0.exists():
         print(f"using E0 activations from {e0}")
         z = load_activations(e0)
-        return z["activations"], z["tokens"], z["kept"], z["n_suffix"], int(json.loads(
+        return z["activations"], z["tokens"], z["kept"], z["regions"], int(json.loads(
             (e0.parent / "manifest.json").read_text())["display_layer"])
     ext = extract(tokenizer, model, device, [r["prompt"] for r in records], cfg)
-    return ext.activations, ext.tokens, ext.kept, ext.n_suffix, None
+    return ext.activations, ext.tokens, ext.kept, ext.regions, None
 
 
 def run(cfg, out=None):
@@ -39,7 +39,7 @@ def run(cfg, out=None):
     manifest = Manifest(EXP, cfg, out_dir)
     records = build_prompts(seed=cfg.seed, limit=cfg.limit)
     tokenizer, model, device = load_model(cfg)
-    acts, tokens, kept, n_suffix, layer = load_or_extract_base(tokenizer, model, device, records, cfg, out)
+    acts, tokens, kept, regions, layer = load_or_extract_base(tokenizer, model, device, records, cfg, out)
     recs = [r for r, k in zip(records, kept) if k]
     has_h = np.array([r["horizon"] is not None for r in recs])
     log_h = np.log10([r["horizon"] for r in recs if r["horizon"] is not None])
@@ -60,7 +60,7 @@ def run(cfg, out=None):
         nuis[2, pos] = abs(spearmanr(Z[:, 0], delay_flag)[0]) if delay_flag.std() > 0 else np.nan
     heatmap(nuis, ["horizon", "near reward", "delay pair"], [repr(t) for t in tokens],
             out_dir / "pc1_specificity.png", f"|rho| of PC1 at layer {layer} with each factor")
-    pca_panels(layer, rho, Z_all, tokens, np.ones(len(recs), bool), log_reward, n_suffix,
+    pca_panels(layer, rho, Z_all, tokens, np.ones(len(recs), bool), log_reward, regions,
                out_dir / "geometry_2d_by_reward.png",
                f"{cfg.model}, thinking {cfg.thinking}, layer {layer}: colored by near reward")
 
