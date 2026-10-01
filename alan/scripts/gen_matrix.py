@@ -4,7 +4,7 @@ Usage: gen_matrix.py OUT_DIR [--seed 0] [--n-configs 30]   -> OUT_DIR/matrix_s{s
 import argparse, json
 from pathlib import Path
 import pandas as pd
-from ptm.matrix import MatrixConfig, build_matrix, build_controls, MATRIX_HORIZONS, HELDOUT_HORIZONS
+from ptm.matrix import MatrixConfig, build_matrix, build_controls, build_distractor_families, MATRIX_HORIZONS, HELDOUT_HORIZONS
 from ptm.prompts import to_frame
 
 ap = argparse.ArgumentParser(); ap.add_argument("out_dir", type=Path); ap.add_argument("--seed", type=int, default=0); ap.add_argument("--n-configs", type=int, default=30)
@@ -12,6 +12,8 @@ a = ap.parse_args(); a.out_dir.mkdir(parents=True, exist_ok=True)
 cfg = MatrixConfig(seed=a.seed, n_configs=a.n_configs)
 m = to_frame(build_matrix(cfg)); k = to_frame(build_controls(cfg))
 m.to_parquet(a.out_dir / f"matrix_s{a.seed}.parquet", index=False); k.to_parquet(a.out_dir / f"controls_s{a.seed}.parquet", index=False)
+g = to_frame(build_distractor_families(cfg)); g.to_parquet(a.out_dir / f"families_s{a.seed}.parquet", index=False)
+print(f"held-out distractor families: {len(g)} prompts; {g.condition.value_counts().to_dict()}")
 (a.out_dir / f"matrix_s{a.seed}.config.json").write_text(json.dumps({**cfg.__dict__, "horizons": [str(h) for h in MATRIX_HORIZONS], "heldout": [str(h) for h in HELDOUT_HORIZONS]}, indent=2, default=str))
 print(f"matrix: {len(m)} prompts; configs {m.config_id.nunique()}, scenarios {m.scenario_id.nunique()}, horizons {m.horizon_text.nunique()}, renderings {m.rendering.value_counts().to_dict()}")
 print("split by config:", m.groupby('split').config_id.nunique().to_dict(), " rows:", m.split.value_counts().to_dict(), " heldout-horizon rows:", int(m.horizon_heldout.sum()))

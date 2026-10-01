@@ -1,0 +1,153 @@
+=== analyze_run: runs/qwen3.5-27b_matrix_s0_long -> figures/qwen3.5-27b_matrix_s0_long (L=64, cells 35:R0,46:R0,59:T3,35:T3) ===
+=== sweep ===
+run: Qwen/Qwen3.5-27B  n=3240  layers=64  positions=['T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'R0', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'M0', 'E0', 'MEAN']
+format adherence: 0.925   chose_short overall: 0.802
+horizon_bin  horizon_years   n  n_format_ok  frac_short  p_short_mean
+   17 hours       0.001939  20           20    0.950000      0.813108
+      1 day       0.002738 240          220    0.995455      0.865520
+     3 days       0.008214  20           20    0.950000      0.862180
+     1 week       0.019165 260          240    1.000000      0.923960
+    2 weeks       0.038330 240          220    0.995455      0.926906
+    18 days       0.049281  20           20    1.000000      0.913445
+    1 month       0.083333 260          240    1.000000      0.950858
+   10 weeks       0.191650  40           40    1.000000      0.920741
+   3 months       0.250000 240          219    1.000000      0.969150
+   6 months       0.500000 260          240    1.000000      0.966275
+  10 months       0.833333  20           20    1.000000      0.963439
+     1 year       1.000000  20           20    0.700000      0.631177
+    2 years       2.000000 260          240    0.904167      0.896068
+    3 years       3.000000  20           20    0.100000      0.167312
+    5 years       5.000000 260          239    0.861925      0.833234
+   10 years      10.000000 260          240    0.691667      0.668178
+   20 years      20.000000 260          240    0.587500      0.560912
+   30 years      30.000000 260          240    0.337500      0.401749
+  100 years     100.000000 260          240    0.316667      0.400604
+  300 years     300.000000  20           20    0.300000      0.422151
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+
+top cells by |rho_pc1_horizon|:
+ layer position  rho_pc1_horizon  rho_pc1_reward_ratio  evr_pc1  silhouette_choice_pc3  rho_pc1_p_short
+    36     MEAN        -0.777639              0.014627 0.253113               0.320001         0.578648
+    35     MEAN        -0.770284              0.017006 0.263101               0.320374         0.580891
+    49       T4         0.753185             -0.010067 0.196766               0.220320        -0.395648
+    34     MEAN        -0.752530              0.011374 0.247989               0.316843         0.584214
+
+sample-level PCA spectrum at the top cells (explained variance ratio; |rho| of each PC with log horizon):
+  L36 MEAN: evr 0.253 0.213 0.054 0.051 0.036 0.030 0.027 0.021 0.016 0.013  (cum2 0.47 cum5 0.61 cum10 0.71; components for 90% / 95% of variance: 69 / 177)
+            |rho| 0.78 0.14 0.24 0.25 0.34 0.05 0.16 0.11 0.11 0.07
+  L35 MEAN: evr 0.263 0.158 0.052 0.050 0.038 0.033 0.029 0.021 0.016 0.014  (cum2 0.42 cum5 0.56 cum10 0.67; components for 90% / 95% of variance: 92 / 226)
+            |rho| 0.77 0.24 0.18 0.10 0.29 0.11 0.18 0.13 0.05 0.02
+  L49 T4: evr 0.197 0.180 0.099 0.065 0.048 0.032 0.030 0.024 0.023 0.019  (cum2 0.38 cum5 0.59 cum10 0.72; components for 90% / 95% of variance: 49 / 120)
+            |rho| 0.75 0.20 0.26 0.21 0.20 0.11 0.12 0.10 0.15 0.06
+  L34 MEAN: evr 0.248 0.167 0.050 0.048 0.035 0.034 0.030 0.021 0.016 0.014  (cum2 0.41 cum5 0.55 cum10 0.66; components for 90% / 95% of variance: 100 / 244)
+            |rho| 0.75 0.28 0.13 0.20 0.07 0.27 0.28 0.13 0.05 0.00
+
+wrote figures/qwen3.5-27b_matrix_s0_long
+=== path geometry ===
+=== L35 R0 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.8240000009536743, 0.10100000351667404, 0.026000000536441803]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.824 0.101 0.026 0.019 0.011 0.006 0.003 0.002
+  split-half noise scree at the same ranks:              0.606 0.034 0.024 0.007 0.004 0.002 0.001 0.001
+  cumulative: beyond PC2 0.075, beyond PC3 0.049; components for 90% / 95% / 99% of centroid variance: 2 / 3 / 7; above 2x noise: 14 of 16
+  in centroid top-3 PC space: path length 67.9, tortuosity 29.49 (full-space 26.17); turning angles median 122 deg, max 176
+  split-half: centroid-plane correlation r = 0.196; median odd/even centroid gap / median segment = 0.15
+  spacing per decade of horizon: first 37.7, last 10.6, middle median 17.2  (ends/middle 1.40)
+=== L46 R0 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.7409999966621399, 0.14900000393390656, 0.05900000035762787]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.741 0.149 0.059 0.017 0.013 0.006 0.003 0.003
+  split-half noise scree at the same ranks:              0.590 0.038 0.029 0.005 0.004 0.002 0.002 0.001
+  cumulative: beyond PC2 0.109, beyond PC3 0.050; components for 90% / 95% / 99% of centroid variance: 3 / 4 / 8; above 2x noise: 14 of 16
+  in centroid top-3 PC space: path length 100.7, tortuosity 18.22 (full-space 17.97); turning angles median 123 deg, max 178
+  split-half: centroid-plane correlation r = 0.212; median odd/even centroid gap / median segment = 0.28
+  spacing per decade of horizon: first 56.0, last 15.0, middle median 25.3  (ends/middle 1.41)
+=== L59 T3 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.6740000247955322, 0.1889999955892563, 0.07100000232458115]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.674 0.189 0.071 0.032 0.010 0.007 0.005 0.004
+  split-half noise scree at the same ranks:              0.296 0.114 0.022 0.012 0.007 0.006 0.004 0.003
+  cumulative: beyond PC2 0.137, beyond PC3 0.067; components for 90% / 95% / 99% of centroid variance: 3 / 4 / 8; above 2x noise: 6 of 16
+  in centroid top-3 PC space: path length 344.8, tortuosity 10.03 (full-space 10.28); turning angles median 147 deg, max 177
+  split-half: centroid-plane correlation r = 0.599; median odd/even centroid gap / median segment = 0.90
+  spacing per decade of horizon: first 148.5, last 104.5, middle median 100.0  (ends/middle 1.26)
+=== L35 T3 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.5540000200271606, 0.23499999940395355, 0.09399999678134918]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.554 0.235 0.094 0.055 0.019 0.014 0.007 0.005
+  split-half noise scree at the same ranks:              0.382 0.072 0.025 0.016 0.008 0.006 0.003 0.002
+  cumulative: beyond PC2 0.211, beyond PC3 0.117; components for 90% / 95% / 99% of centroid variance: 4 / 5 / 10; above 2x noise: 15 of 16
+  in centroid top-3 PC space: path length 78.4, tortuosity 13.08 (full-space 12.71); turning angles median 112 deg, max 179
+  split-half: centroid-plane correlation r = 0.795; median odd/even centroid gap / median segment = 0.46
+  spacing per decade of horizon: first 45.8, last 13.0, middle median 23.8  (ends/middle 1.23)
+per-layer components for 95% of centroid variance (layers 1..L):
+  T3: 3 1 1 2 1 2 2 1 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 5 5 5 5 5 5 4 4 4 4 4 4 5 5 5 5 5 5 5 5 5 5 5 5 5 4 5 6 6 6 7
+  R0: 2 2 2 2 2 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 4 3 4 4 4 3 3 4 4 3 3 3 4 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4
+per-layer fraction of centroid variance beyond PC2:
+  T3: 0.06 0.03 0.03 0.03 0.03 0.03 0.04 0.03 0.04 0.04 0.03 0.03 0.03 0.03 0.03 0.04 0.04 0.07 0.07 0.07 0.07 0.08 0.08 0.08 0.09 0.10 0.11 0.11 0.12 0.14 0.14 0.14 0.15 0.20 0.21 0.20 0.19 0.19 0.19 0.20 0.20 0.20 0.20 0.20 0.20 0.21 0.20 0.20 0.21 0.22 0.23 0.23 0.24 0.24 0.22 0.25 0.26 0.25 0.14 0.23 0.25 0.26 0.27 0.28
+  R0: 0.00 0.00 0.01 0.01 0.01 0.01 0.01 0.01 0.02 0.02 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.05 0.04 0.05 0.05 0.05 0.04 0.06 0.07 0.08 0.08 0.09 0.09 0.09 0.09 0.10 0.10 0.09 0.09 0.10 0.11 0.11 0.12 0.14 0.18 0.18 0.17 0.17 0.16 0.16 0.16 0.15 0.15 0.15 0.15 0.15 0.15 0.16 0.15
+wrote figures/qwen3.5-27b_matrix_s0_long
+=== hypothesis checks ===
+run Qwen/Qwen3.5-27B n=3240
+=== H(sink) at T4: |rho| of the k-th PC with log horizon (same PCA fit); evr_top1; top/median PC std ===
+layer  evr_top1  k=0     k=1     k=2     k=5    top/median
+L35    0.284    0.611  0.795  0.137  0.088   9x
+L46    0.204    0.653  0.735  0.129  0.138   7x
+L59    0.238    0.192  0.447  0.545  0.130   8x
+
+=== H(U-shape): 17 canonical centroids in their own PC plane; polynomial fits vs log10 horizon ===
+cell     PC2: R2 quad  vertex(years)  R2 linear | PC1: R2 linear  R2 quad
+(U-shape fit restricted to 18 bins in [0.0027, 100.0] years)
+L35 R0   0.914           0.00         0.890     | 0.021           0.114
+L35 T3   0.741           0.00         0.741     | 0.080           0.189
+L46 R0   0.923           0.00         0.891     | 0.015           0.102
+L59 T3   0.709         555.65         0.677     | 0.211           0.482
+
+=== H(variants) by horizon_unit (['days', 'hours', 'months', 'weeks', 'years']) ===
+cell     pooled|rho_pc1|  per-variant|rho_pc1|  silhouette(variant,PC1-3)  |rho(PC1,variant-mean)|
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L22 R0   0.135            0.05/nan/0.02/0.06/0.07       -0.647                    0.105
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L35 T3   0.029            0.01/nan/0.06/0.11/0.11       -0.366                    0.073
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L35 R0   0.179            0.32/nan/0.10/0.11/0.06       -0.678                    0.124
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L46 R0   0.109            0.10/nan/0.00/0.02/0.15       -0.701                    0.128
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L59 T3   0.047            0.11/nan/0.07/0.05/0.03       -0.255                    0.082
+=== 3-D views ===
+wrote figures/qwen3.5-27b_matrix_s0_long/view3d_centroid_L35_R0.html  (691 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0_long)
+wrote figures/qwen3.5-27b_matrix_s0_long/view3d_centroid_L46_R0.html  (692 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0_long)
+wrote figures/qwen3.5-27b_matrix_s0_long/view3d_centroid_L59_T3.html  (687 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0_long)
+wrote figures/qwen3.5-27b_matrix_s0_long/view3d_centroid_L35_T3.html  (693 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0_long)
+wrote figures/qwen3.5-27b_matrix_s0_long/view3d_sample_L35_R0.html  (692 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0_long)
+ANALYZE_RUN DONE

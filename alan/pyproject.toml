@@ -16,6 +16,7 @@ dependencies = [
     "matplotlib>=3.9",
     "tqdm>=4.66",
     "plotly>=7.1.0",
+    "flash-linear-attention>=0.5.2",
 ]
 
 [project.optional-dependencies]

@@ -10,7 +10,7 @@ Metrics (log10 years): RMSE, median |err|, Spearman rho, within factor 2 (|err| 
 Baselines: regex-first (first duration in the text), regex-horizon (duration in the sentence containing
 "horizon"), text-ridge (TF-IDF 1-2grams -> ridge, trained on the same rows).
 
-Usage: transfer_eval.py RUN_DIR OUT_DIR [--layers 14,18,22,26,29,33,37] [--positions T0,T1,T3,T5,T8,R0]
+Usage: transfer_eval.py RUN_DIR OUT_DIR [--layers 0.35L,0.45L,0.55L,0.65L,0.72L,0.825L,0.92L] [--positions T0,T1,T3,T5,T8,R0]
                         [--train-renderings structured | structured,plain,varied] [--train-domains investment,climate]
 """
 import argparse, json, re, sys
@@ -22,10 +22,11 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from ptm.horizons import Horizon
 from ptm.store import RunData
+from ptm.depth import resolve_cell, parse_layers
 
 ap = argparse.ArgumentParser()
 ap.add_argument("run_dir"); ap.add_argument("out_dir")
-ap.add_argument("--layers", default="14,18,22,26,29,33,37"); ap.add_argument("--positions", default="T0,T1,T3,T5,T8,R0")
+ap.add_argument("--layers", default="0.35L,0.45L,0.55L,0.65L,0.72L,0.825L,0.92L"); ap.add_argument("--positions", default="T0,T1,T3,T5,T8,R0")
 ap.add_argument("--alphas", default="1,10,100,1000,10000")
 ap.add_argument("--train-renderings", default="structured"); ap.add_argument("--train-domains", default="investment,climate")
 ap.add_argument("--tag", default=None)
@@ -35,7 +36,7 @@ ap.add_argument("--sweep-positions", default="T0,T1,T2,T3,T4,T5,T6,T7,T8,R0")
 a = ap.parse_args()
 run = RunData(a.run_dir); df = run.index.reset_index(drop=True); out = Path(a.out_dir); out.mkdir(parents=True, exist_ok=True)
 tag = a.tag or f"train-{a.train_renderings.replace(',', '+')}-{a.train_domains.replace(',', '+')}"
-layers = [int(x) for x in a.layers.split(",")]; positions = a.positions.split(","); alphas = [float(x) for x in a.alphas.split(",")]
+layers = parse_layers(a.layers, run); positions = a.positions.split(","); alphas = [float(x) for x in a.alphas.split(",")]
 train_r = a.train_renderings.split(","); train_d = a.train_domains.split(",")
 LOG2 = np.log10(2)
 

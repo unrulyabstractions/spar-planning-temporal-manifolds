@@ -10,6 +10,7 @@ import numpy as np
 
 from ptm.analysis import behavior_by_horizon, plot_behavior, plot_cell, plot_sweep, sweep
 from ptm.store import RunData
+from ptm.depth import resolve_cell, parse_layers
 
 
 def main():
@@ -34,7 +35,7 @@ def main():
         for _, r in t.sort_values("abs_rho", ascending=False).head(a.top).iterrows():
             plot_cell(run, int(r["layer"]), r["position"], a.out_dir / f"cell_L{int(r['layer']):02d}_{r['position']}.png")
         print("replotted", a.out_dir); return
-    layers = [int(x) for x in a.layers.split(",")] if a.layers else None
+    layers = parse_layers(a.layers, run) if a.layers else None
     positions = a.positions.split(",") if a.positions else None
     a.out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,7 +60,7 @@ def main():
     print("\nsample-level PCA spectrum at the top cells (explained variance ratio; |rho| of each PC with log horizon):")
     for _, r in top.iterrows():
         ev = json.loads(r["evr_top10"]); rh = json.loads(r["rho_top10"])
-        print(f"  L{int(r['layer'])} {r['position']}: evr " + " ".join(f"{v:.3f}" for v in ev) + f"  (cum2 {r['cum_evr_2']:.2f} cum5 {r['cum_evr_5']:.2f} cum10 {r['cum_evr_10']:.2f})")
+        print(f"  L{int(r['layer'])} {r['position']}: evr " + " ".join(f"{v:.3f}" for v in ev) + f"  (cum2 {r['cum_evr_2']:.2f} cum5 {r['cum_evr_5']:.2f} cum10 {r['cum_evr_10']:.2f}; components for 90% / 95% of variance: {int(r['n_pc_90'])} / {int(r['n_pc_95'])})")
         print(f"            |rho| " + " ".join(f"{v:.2f}" if v is not None else " nan" for v in rh))
     for _, r in top.iterrows():
         plot_cell(run, int(r["layer"]), r["position"], a.out_dir / f"cell_L{int(r['layer']):02d}_{r['position']}.png")

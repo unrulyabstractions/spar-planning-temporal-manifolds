@@ -1,0 +1,45 @@
+n=1890  PCA fit inside each training fold  mixed bins = stated horizons with 10-90% short
+prompt parameters, linear      : logloss 0.181  AUC 0.976
+prompt parameters + interactions: logloss 0.158  AUC 0.981
+
+=== L23 T3 ===
+PC1-3 alone                     : logloss 0.253  AUC 0.942
+params + PC1-3, linear          : logloss 0.144  AUC 0.983   (Δ vs params-linear +0.037)
+params + PC1-3 + interactions   : logloss 0.108  AUC 0.990   (Δ vs params-interactions +0.050)
+per mixed bin: horizon, n, logloss params+inter -> params+inter+PC (Δ), AUC
+     2 years  n=106  0.208 -> 0.072 (+0.137)  AUC 0.99 -> 1.00
+     3 years  n=106  0.223 -> 0.146 (+0.077)  AUC 0.95 -> 0.98
+     5 years  n=113  0.231 -> 0.138 (+0.093)  AUC 0.98 -> 0.99
+    10 years  n=112  0.370 -> 0.236 (+0.134)  AUC 0.92 -> 0.97
+    20 years  n=107  0.306 -> 0.264 (+0.042)  AUC 0.95 -> 0.97
+    30 years  n= 94  0.326 -> 0.247 (+0.078)  AUC 0.94 -> 0.95
+    50 years  n=111  0.405 -> 0.385 (+0.019)  AUC 0.87 -> 0.86
+   100 years  n=118  0.491 -> 0.325 (+0.165)  AUC 0.87 -> 0.93
+
+=== L20 R0 ===
+PC1-3 alone                     : logloss 0.230  AUC 0.947
+params + PC1-3, linear          : logloss 0.138  AUC 0.985   (Δ vs params-linear +0.043)
+params + PC1-3 + interactions   : logloss 0.103  AUC 0.991   (Δ vs params-interactions +0.055)
+per mixed bin: horizon, n, logloss params+inter -> params+inter+PC (Δ), AUC
+     2 years  n=106  0.208 -> 0.075 (+0.133)  AUC 0.99 -> 1.00
+     3 years  n=106  0.223 -> 0.139 (+0.084)  AUC 0.95 -> 0.98
+     5 years  n=113  0.231 -> 0.109 (+0.122)  AUC 0.98 -> 0.99
+    10 years  n=112  0.370 -> 0.199 (+0.171)  AUC 0.92 -> 0.98
+    20 years  n=107  0.306 -> 0.244 (+0.061)  AUC 0.95 -> 0.97
+    30 years  n= 94  0.326 -> 0.255 (+0.071)  AUC 0.94 -> 0.95
+    50 years  n=111  0.405 -> 0.345 (+0.059)  AUC 0.87 -> 0.90
+   100 years  n=118  0.491 -> 0.340 (+0.151)  AUC 0.87 -> 0.92
+
+=== L31 T6 ===
+PC1-3 alone                     : logloss 0.280  AUC 0.925
+params + PC1-3, linear          : logloss 0.149  AUC 0.983   (Δ vs params-linear +0.032)
+params + PC1-3 + interactions   : logloss 0.119  AUC 0.988   (Δ vs params-interactions +0.038)
+per mixed bin: horizon, n, logloss params+inter -> params+inter+PC (Δ), AUC
+     2 years  n=106  0.208 -> 0.133 (+0.076)  AUC 0.99 -> 1.00
+     3 years  n=106  0.223 -> 0.140 (+0.083)  AUC 0.95 -> 0.98
+     5 years  n=113  0.231 -> 0.147 (+0.084)  AUC 0.98 -> 0.99
+    10 years  n=112  0.370 -> 0.313 (+0.057)  AUC 0.92 -> 0.94
+    20 years  n=107  0.306 -> 0.279 (+0.027)  AUC 0.95 -> 0.96
+    30 years  n= 94  0.326 -> 0.262 (+0.064)  AUC 0.94 -> 0.94
+    50 years  n=111  0.405 -> 0.401 (+0.004)  AUC 0.87 -> 0.86
+   100 years  n=118  0.491 -> 0.326 (+0.165)  AUC 0.87 -> 0.93

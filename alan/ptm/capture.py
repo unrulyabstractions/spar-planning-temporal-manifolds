@@ -19,7 +19,7 @@ from typing import Optional
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .chat import ChatEncoding, encode_user_turn, find_choice, label_first_token_id, position_labels
+from .chat import ANCHOR_LABELS, ChatEncoding, encode_user_turn, find_anchor, find_choice, label_first_token_id, position_labels
 from .prompts import PromptSample
 
 
@@ -29,6 +29,8 @@ class CaptureConfig:
     enable_thinking: bool = False
     max_new_tokens: int = 48
     n_response: int = 8            # response positions R0..R{n-1} to store
+    anchors: bool = False          # also store M0 (first token after "My reasoning:"), E0 (last generated token), MEAN over M0..E0
+    reasoning_prefix: str = "My reasoning:"
     batch_size: int = 4
     dtype: str = "bfloat16"
     max_memory_gib: Optional[object] = None  # per-GPU cap in GiB: a number, or a list per GPU; None = accelerate decides
@@ -49,6 +51,7 @@ class SampleResult:
     response_tokens: list[str] = field(default_factory=list)
     choice: Optional[str] = None            # 'a' | 'b' | None
     choice_gen_index: Optional[int] = None  # index into gen_ids
+    anchor_index: Optional[dict] = None     # {"M0": index into gen_ids of the first reasoning token, "E0": last index} when anchors are stored
     logit_a: float = math.nan               # float32 two-row logits from the normed residual
     logit_b: float = math.nan
     p_a: float = math.nan                   # full-vocab softmax mass on the label token (model dtype)
@@ -65,7 +68,8 @@ class ResidualHooks:
         self.modules = [base.embed_tokens] + list(base.layers)
         self.n_layers = len(base.layers)
         self.positions: Optional[torch.Tensor] = None   # [B, n_pos] long, on CPU
-        self.out: Optional[torch.Tensor] = None         # [B, L+1, n_pos, d]
+        self.mean_range: Optional[list] = None          # per batch row: (start, end) or None -> one extra MEAN slot
+        self.out: Optional[torch.Tensor] = None         # [B, L+1, n_pos (+1 if mean), d]
         self._handles = [m.register_forward_hook(self._make_hook(i)) for i, m in enumerate(self.modules)]
 
     def _make_hook(self, layer_index: int):
@@ -76,17 +80,25 @@ class ResidualHooks:
             B = h.shape[0]
             idx = self.positions.to(h.device)
             gathered = h[torch.arange(B, device=h.device)[:, None], idx]     # [B, n_pos, d]
+            extra = 1 if self.mean_range is not None else 0
             if self.out is None:
-                self.out = torch.zeros((B, self.n_layers + 1, idx.shape[1], h.shape[-1]), dtype=h.dtype)
-            self.out[:, layer_index] = gathered.to("cpu")
+                self.out = torch.zeros((B, self.n_layers + 1, idx.shape[1] + extra, h.shape[-1]), dtype=h.dtype)
+            self.out[:, layer_index, : idx.shape[1]] = gathered.to("cpu")
+            if extra:
+                for b in range(B):
+                    rng = self.mean_range[b]
+                    if rng is not None:
+                        self.out[b, layer_index, -1] = h[b, rng[0] : rng[1] + 1].float().mean(0).to(h.dtype).to("cpu")
         return hook
 
-    def arm(self, positions: torch.Tensor) -> None:
+    def arm(self, positions: torch.Tensor, mean_range: Optional[list] = None) -> None:
         self.positions = positions
+        self.mean_range = mean_range
         self.out = None
 
     def disarm(self) -> None:
         self.positions = None
+        self.mean_range = None
 
     def remove(self) -> None:
         for h in self._handles:
@@ -96,7 +108,8 @@ class ResidualHooks:
 def explicit_device_map(model_name: str, split_layers: int) -> dict:
     """Embeddings and decoder layers [0, split) on cuda:0; the rest, final norm and lm_head on cuda:1."""
     from transformers import AutoConfig
-    n = AutoConfig.from_pretrained(model_name).num_hidden_layers
+    cfg = AutoConfig.from_pretrained(model_name)
+    n = getattr(cfg, "text_config", cfg).num_hidden_layers     # multimodal wrappers (Qwen3.5) keep the depth in text_config
     if not (0 < split_layers < n):
         raise ValueError(f"split_layers must be in (0, {n}), got {split_layers}")
     dm = {"model.embed_tokens": 0, "model.rotary_emb": 0, "model.norm": 1, "lm_head": 1}
@@ -173,12 +186,14 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
     # 2) teacher-forced pass over prompt + generation, one unpadded sequence at a time.
     #    Unpadded single-sequence passes reproduce the library's own hidden states bit-exactly;
     #    padded batches differ by up to ~8% relative L2 at deep layers (bf16 kernel noise).
-    n_pos = n_trans + cfg.n_response
-    acts_list, pos_valid, last_raw_list = [], [], []
+    n_fixed = n_trans + cfg.n_response
+    n_pos = n_fixed + (len(ANCHOR_LABELS) if cfg.anchors else 0)
+    acts_list, pos_valid, last_raw_list, positions_list = [], [], [], []
     for e, g in zip(encs, gen_ids):
-        positions = torch.zeros((1, n_pos), dtype=torch.long)
+        n_gather = n_fixed + (2 if cfg.anchors else 0)          # M0 and E0 are gathered; MEAN is computed in the hook
+        positions = torch.zeros((1, n_gather), dtype=torch.long)
         valid = []
-        for k in range(n_pos):
+        for k in range(n_fixed):
             if k < n_trans:
                 positions[0, k] = e.transition_start + k
                 valid.append(True)
@@ -188,7 +203,16 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
             else:
                 positions[0, k] = 0   # gathered then zeroed
                 valid.append(False)
-        hooks.arm(positions)
+        mean_range = None
+        if cfg.anchors:
+            j = find_anchor(tok, g, cfg.reasoning_prefix)
+            m0 = (e.prompt_len + j) if (j is not None and j < len(g)) else None
+            e0 = (e.prompt_len + len(g) - 1) if len(g) > 0 else None
+            positions[0, n_fixed] = m0 if m0 is not None else 0; valid.append(m0 is not None)
+            positions[0, n_fixed + 1] = e0 if e0 is not None else 0; valid.append(e0 is not None)
+            ok = m0 is not None and e0 is not None and e0 >= m0
+            mean_range = [(m0, e0) if ok else None]; valid.append(ok)
+        hooks.arm(positions, mean_range if cfg.anchors else None)
         last_raw: dict = {}
         hh = model.model.layers[-1].register_forward_hook(
             lambda m, i, o: last_raw.setdefault("x", (o[0] if isinstance(o, (tuple, list)) else o)))
@@ -203,6 +227,7 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
                 a[:, k] = 0
         acts_list.append(a)
         pos_valid.append(valid)
+        positions_list.append(positions)
         last_raw_list.append(last_raw["x"][0])   # [S, d] raw residual after the last layer (pre-norm)
 
     # 3) behavior readout: logits over the two labels at the position predicting the choice token
@@ -216,6 +241,8 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
             n_transition=n_trans,
             transition_tokens=e.transition_tokens,
             response_tokens=[tok.decode([t]) for t in g[: cfg.n_response]],
+            anchor_index={"M0": int(positions_list[b][0, n_fixed]) - e.prompt_len if cfg.anchors and pos_valid[b][n_fixed] else None,
+                          "E0": len(g) - 1 if cfg.anchors and len(g) > 0 else None} if cfg.anchors else None,
             acts=acts_list[b],
             pos_valid=pos_valid[b],
         )

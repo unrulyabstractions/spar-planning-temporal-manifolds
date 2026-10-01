@@ -54,6 +54,7 @@ class RunWriter:
                 pos_valid=json.dumps(r.pos_valid),
                 choice=r.choice,
                 choice_gen_index=r.choice_gen_index,
+                anchor_index=json.dumps(r.anchor_index) if r.anchor_index is not None else None,
                 logit_a=r.logit_a, logit_b=r.logit_b, p_a=r.p_a, p_b=r.p_b,
                 shard=self._shard, row=len(self._buf),
             )

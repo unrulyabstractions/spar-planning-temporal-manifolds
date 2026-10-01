@@ -58,3 +58,17 @@ def test_sweep_and_plots(tmp_path):
     assert plot_cell(run, 1, "T0", tmp_path / "f" / "cell.png").exists()
     assert plot_sweep(t, run, tmp_path / "f" / "sweep.png").exists()
     assert plot_behavior(run, tmp_path / "f" / "beh.png").exists()
+
+
+def test_spectrum_counts_matches_svd_both_shapes():
+    """Gram-eigenvalue spectrum equals the SVD spectrum for n < d and n > d, on data with a planted decay."""
+    import numpy as np
+    from ptm.analysis import spectrum_counts
+    rng = np.random.default_rng(0)
+    for n, d in [(300, 800), (800, 300)]:
+        X = (rng.normal(size=(n, 50)) * np.exp(-np.arange(50) / 8)) @ rng.normal(size=(50, d)) + 0.05 * rng.normal(size=(n, d))
+        Xc = X - X.mean(0); sv = np.linalg.svd(Xc, compute_uv=False); var = sv ** 2; cum = np.cumsum(var) / var.sum()
+        ref = tuple(int(np.searchsorted(cum, q) + 1) for q in (0.90, 0.95))
+        got = spectrum_counts(X)
+        print(f"\nn={n} d={d}: svd n90/n95 {ref}  gram {got}")
+        assert got == ref

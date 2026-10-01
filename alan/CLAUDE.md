@@ -260,9 +260,28 @@ education; the target model also ran on a startup domain). Findings this project
 
 ## Compute
 
-**Vast.ai is the program-provided compute** (per the kickoff deck); account and instance details are
-not yet recorded here. Use it for anything that needs more than the local machine, and record the
-instance type, image, and cost per run in the progress log.
+**Vast.ai is the program-provided compute** (per the kickoff deck), and budget is available (Alan,
+2026-09-29). Use it for anything that needs more than the local machine, and record the instance type,
+image, and cost per run in the progress log. Augusto's `relevance_aware_decoder/COST.md` in the shared repo
+documents a working procedure (48 GB card, ~$1 for a 5,520-prompt Qwen3-14B run).
+
+**Done 2026-09-30: `Qwen/Qwen3.5-27B` captured and analysed on a Vast.ai A100 80 GB** (results in
+`figures/qwen3.5-27b_*`, tier-1 activation subsets in `runs/qwen3.5-27b_*`, checksums in `snapshot/`; log in
+`progress-20260930.md`). On Qwen3.5 the single-scenario PC1 ordinality peaks at 0.3–0.5 L (`scripts/peak_cells.sh`
+picks such cells from the sweep), while rendering-invariance appears at ≈0.55–0.7 L. Facts established: Qwen3.5-27B is 64 layers × 5120, hybrid (48 gated-DeltaNet linear-attention +
+16 full-attention layers), 55.6 GB bf16, not MoE. `AutoModelForCausalLM` loads the text-only
+`Qwen3_5ForCausalLM` with the standard `model.embed_tokens/layers/norm` layout, and raw per-layer hooks are
+bit-exact against `output_hidden_states` (verified on the cached Qwen3.5-9B: `VERIFY OK`, all 32 layers). The
+no-think transition window is the same 9 tokens as Qwen3; the thinking-mode window is 7 tokens (Qwen3: 5) and
+capture derives it from the tokenizer. `flash-linear-attention` is a project dependency: on Qwen3.5-9B it is ~12% faster than the
+reference fallback and each path is deterministic, but the two paths are not bit-identical (some generations
+differ), so the kernel versions are recorded in every run's `meta.json` under `software`. Layer specs everywhere accept fractional depth (`0.55L`), see `ptm/depth.py`.
+Runbook: `scripts/vast_full_chain.sh` on the instance (inside tmux; `MODEL=... TAG=...`), then
+`scripts/vast_fetch.sh HOST PORT` locally; destroy the instance only after the fetch script prints
+"ALL TIER-1 FILES OK". Rent ≥ 300 GB disk (full shards ≈ 185 GB stay on the instance, hashed).
+**Vast containers have a cgroup CPU quota far below `nproc`** (7.68 cores vs 24 on the 2026-09-29 A100): cap
+BLAS/OpenMP threads (the runbook exports `OMP_NUM_THREADS=4` etc.) and never let a 24-thread analysis run beside
+a capture there, or the kernel-launching thread starves and the GPU idles.
 
 ### Local hardware (scanned 2026-09-13), for prototyping
 

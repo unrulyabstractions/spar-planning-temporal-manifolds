@@ -76,3 +76,15 @@ def find_choice(tok, gen_ids: list[int], label_a: str, label_b: str, prefix: str
             if before.endswith(prefix):
                 return j, ("a" if gen_ids[j] in ia else "b")
     return None, None
+
+
+def find_anchor(tok, gen_ids: list[int], prefix: str) -> Optional[int]:
+    """Index into gen_ids of the first token AFTER the generated text ends with `prefix` (e.g. "My reasoning:"),
+    or None if the prefix never occurs (or nothing follows it)."""
+    for j in range(1, len(gen_ids)):
+        if tok.decode(gen_ids[:j]).rstrip().endswith(prefix):
+            return j
+    return None
+
+
+ANCHOR_LABELS = ["M0", "E0", "MEAN"]   # first reasoning token, last generated token, mean over M0..E0

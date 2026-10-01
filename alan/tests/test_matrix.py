@@ -72,3 +72,18 @@ def test_frame_roundtrip_keeps_matrix_columns():
     s = build_matrix(MatrixConfig(n_configs=2, n_test_configs=1, n_dev_configs=0, seed=6))
     back = from_frame(to_frame(s))
     assert [(x.text, x.scenario_id, x.rendering, x.split, x.horizon_heldout) for x in back] == [(x.text, x.scenario_id, x.rendering, x.split, x.horizon_heldout) for x in s]
+
+
+def test_distractor_families_are_matched_and_distinct():
+    from ptm.matrix import DISTRACTOR_FAMILIES, build_distractor_families
+    cfg = MatrixConfig(n_configs=8, n_test_configs=2, n_dev_configs=1, seed=5, n_control_configs=3)
+    g = to_frame(build_distractor_families(cfg)); k = to_frame(build_controls(cfg)); m = to_frame(build_matrix(cfg))
+    assert set(g.condition) == set(DISTRACTOR_FAMILIES) and (g.split == "control").all() and g.sample_uid.str.startswith("g").all()
+    assert (g.distractor_years != g.horizon_years).all()
+    for r in g.itertuples():
+        assert r.horizon_text in r.text and r.distractor_text in r.text and "Two options are available" in r.text
+    # every family row has a distractor-free partner in the plain main matrix and shares configs with the old controls
+    keys = set(zip(m[m.rendering == "plain"].config_id, m[m.rendering == "plain"].domain, m[m.rendering == "plain"].horizon_text))
+    assert all((a, b, c) in keys for a, b, c in zip(g.config_id, g.domain, g.horizon_text))
+    assert set(g.config_id) == set(k.config_id)
+    assert g.prompt_id.nunique() == len(g) and not set(g.prompt_id) & set(k.prompt_id)

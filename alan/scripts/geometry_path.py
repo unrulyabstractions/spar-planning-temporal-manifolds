@@ -9,7 +9,7 @@ Per (layer, position) cell, using the 17 canonical-horizon bin centroids in the 
   - within-bin participation ratio (local dimensionality).
 Also a per-layer sweep of these at chosen positions, and figures.
 
-Usage: geometry_path.py RUN_DIR OUT_DIR [--cells 22:R0,37:T3] [--sweep-positions T3,R0]
+Usage: geometry_path.py RUN_DIR OUT_DIR [--cells 0.55L:R0,0.92L:T3] [--sweep-positions T3,R0]
 """
 import argparse, sys
 from pathlib import Path
@@ -17,17 +17,19 @@ import numpy as np, pandas as pd
 from sklearn.decomposition import PCA
 from ptm.analysis import _import_plt, COLOR_NULL, HORIZON_CMAP, cell_name
 from ptm.store import RunData
+from ptm.depth import resolve_cell, parse_layers
 
 ap = argparse.ArgumentParser()
 ap.add_argument("run_dir"); ap.add_argument("out_dir")
-ap.add_argument("--cells", default="22:R0,37:T3,22:T3,29:R0")
+ap.add_argument("--cells", default="0.55L:R0,0.92L:T3,0.55L:T3,0.72L:R0")
 ap.add_argument("--sweep-positions", default="T3,R0")
 ap.add_argument("--no-sweep", action="store_true")
 a = ap.parse_args()
 run = RunData(a.run_dir); df = run.index; out = Path(a.out_dir); out.mkdir(parents=True, exist_ok=True)
 has_h = df["horizon_years"].notna().to_numpy()
 bins = df.loc[has_h].groupby("horizon_text")["horizon_years"].first().sort_values()
-labels, years = bins.index.tolist(), bins.to_numpy()
+labels_all, years_all = bins.index.tolist(), bins.to_numpy(); labels, years = labels_all, years_all
+MIN_BIN = 10
 
 
 def _path_geom(C):
@@ -37,34 +39,37 @@ def _path_geom(C):
     return seglen, float(tort), np.degrees(np.arccos(np.clip(cosang, -1, 1)))
 
 
-def path_stats(X):
-    """X: [n, d] for horizon rows only (aligned with df[has_h]).
+def path_stats(X, ht=None):
+    """X: [n, d] for horizon rows only (aligned with df[has_h], or with the `ht` labels passed in).
 
     Curvature quantities are computed in the top-3 PC space *of the 17 centroids* (where their
     variance lives), because in the full space centroid noise is comparable to segment length.
     Split-half reliability: centroids from odd vs even samples, projected on the same plane.
     """
-    ht = df.loc[has_h, "horizon_text"].to_numpy()
-    C = np.stack([X[ht == h].mean(0) for h in labels])                      # [17, d]
+    ht = df.loc[has_h, "horizon_text"].to_numpy() if ht is None else np.asarray(ht)
+    # bins used for this cell: at least MIN_BIN valid rows (so both split halves are non-empty and centroids are stable)
+    labels_c = [h for h in labels_all if (ht == h).sum() >= MIN_BIN]; years_c = np.array([years_all[labels_all.index(h)] for h in labels_c])
+    global labels, years
+    labels, years = labels_c, years_c
+    C = np.stack([X[ht == h].mean(0) for h in labels])                      # [n_bins, d]
     pc = PCA(3).fit(C); ev = pc.explained_variance_ratio_
     # centroid scree (all 16 non-zero components) vs a split-half noise scree:
     # noise centroids = (C_odd - C_even)/2 have the same sampling variance as C's estimation error
-    idx_all = np.arange(len(ht)); odd_m, even_m = idx_all % 2 == 1, idx_all % 2 == 0
-    Co_full = np.stack([X[(ht == h) & odd_m].mean(0) for h in labels]); Ce_full = np.stack([X[(ht == h) & even_m].mean(0) for h in labels])
+    # split halves by rank WITHIN each bin (row-index parity can leave a half empty on filtered runs)
+    halves = {h: (np.flatnonzero(ht == h)[0::2], np.flatnonzero(ht == h)[1::2]) for h in labels}
+    Co_full = np.stack([X[halves[h][0]].mean(0) for h in labels]); Ce_full = np.stack([X[halves[h][1]].mean(0) for h in labels])
     full_eig = np.sort(np.linalg.svd(C - C.mean(0), compute_uv=False) ** 2)[::-1] / (len(C) - 1)
     noise_eig = np.sort(np.linalg.svd((Co_full - Ce_full) / 2 - ((Co_full - Ce_full) / 2).mean(0), compute_uv=False) ** 2)[::-1] / (len(C) - 1)
-    n_above = int(np.sum(full_eig[:16] > 2 * noise_eig[:16]))   # component k is real if it beats 2x the noise at the same rank (max 16)
+    nb = min(16, len(C) - 1); n_above = int(np.sum(full_eig[:nb] > 2 * noise_eig[:nb]))   # component k is real if it beats 2x the noise at the same rank
     scree = full_eig / full_eig.sum(); noise_scree = noise_eig / full_eig.sum()
-    cum = np.cumsum(scree); n95 = int(np.searchsorted(cum, 0.95) + 1); n99 = int(np.searchsorted(cum, 0.99) + 1)
+    cum = np.cumsum(scree); n90 = int(np.searchsorted(cum, 0.90) + 1); n95 = int(np.searchsorted(cum, 0.95) + 1); n99 = int(np.searchsorted(cum, 0.99) + 1)
     C3 = pc.transform(C)
     seglen3, tort3, angles3 = _path_geom(C3)
     seglen_full, tort_full, _ = _path_geom(C)
     arclen = np.concatenate([[0], np.cumsum(seglen3)])
     decades = np.diff(np.log10(years))
     spacing_per_decade = seglen3 / decades
-    idx = np.arange(len(ht)); odd, even = idx % 2 == 1, idx % 2 == 0
-    Co = pc.transform(np.stack([X[(ht == h) & odd].mean(0) for h in labels]))
-    Ce = pc.transform(np.stack([X[(ht == h) & even].mean(0) for h in labels]))
+    Co = pc.transform(Co_full); Ce = pc.transform(Ce_full)
     half_r = float(np.corrcoef(Co[:, :2].ravel(), Ce[:, :2].ravel())[0, 1])
     half_seg_noise = float(np.median(np.linalg.norm(Co - Ce, axis=1)) / np.median(seglen3))
     within = np.array([np.linalg.norm(X[ht == h] - C[i], axis=1).mean() for i, h in enumerate(labels)])
@@ -73,7 +78,7 @@ def path_stats(X):
         Xb = X[ht == h]; Xb = Xb - Xb.mean(0)
         lam = np.linalg.svd(Xb, compute_uv=False) ** 2 / max(len(Xb) - 1, 1)
         pr.append(float(lam.sum() ** 2 / (lam ** 2).sum()))
-    return dict(C=C, scree=scree, noise_scree=noise_scree, n_dims_above_noise=n_above, n95=n95, n99=n99,
+    return dict(C=C, scree=scree, noise_scree=noise_scree, n_dims_above_noise=n_above, n90=n90, n95=n95, n99=n99,
                 arclen=arclen, seglen=seglen3, seglen_full=seglen_full, tortuosity=tort3, tortuosity_full=tort_full,
                 angles=angles3, planarity=ev, spacing_per_decade=spacing_per_decade, half_r=half_r, half_seg_noise=half_seg_noise,
                 within=within, snr=float(np.median(seglen3) / np.median(within)), pr=np.array(pr), pc=pc)
@@ -82,15 +87,16 @@ def path_stats(X):
 plt = _import_plt()
 rows = []
 for cell in a.cells.split(","):
-    layer, pos = cell.split(":"); layer = int(layer)
-    X = run.get(layer, pos)[has_h]
-    st = path_stats(X)
+    layer, pos = resolve_cell(cell, run)
+    vmask = has_h & run.valid_mask(pos)
+    X = run.get(layer, pos)[vmask]
+    st = path_stats(X, df.loc[vmask, "horizon_text"].to_numpy())
     spd = st["spacing_per_decade"]; ends_vs_mid = float(np.mean([spd[0], spd[-1]]) / np.median(spd[3:-3]))
     print(f"=== L{layer} {pos} ===")
     print(f"  centroid planarity: top-1/2/3 PCs of the 17 centroids explain {st['planarity'].round(3).tolist()}")
     print(f"  centroid scree (fraction of centroid variance), ranks 1-8: {' '.join(f'{v:.3f}' for v in st['scree'][:8])}")
     print(f"  split-half noise scree at the same ranks:              {' '.join(f'{v:.3f}' for v in st['noise_scree'][:8])}")
-    print(f"  cumulative: beyond PC2 {1 - st['scree'][:2].sum():.3f}, beyond PC3 {1 - st['scree'][:3].sum():.3f}; components for 95% / 99% of centroid variance: {st['n95']} / {st['n99']}; above 2x noise: {st['n_dims_above_noise']} of 16")
+    print(f"  cumulative: beyond PC2 {1 - st['scree'][:2].sum():.3f}, beyond PC3 {1 - st['scree'][:3].sum():.3f}; components for 90% / 95% / 99% of centroid variance: {st['n90']} / {st['n95']} / {st['n99']}; above 2x noise: {st['n_dims_above_noise']} of 16")
     print(f"  in centroid top-3 PC space: path length {st['arclen'][-1]:.1f}, tortuosity {st['tortuosity']:.2f} (full-space {st['tortuosity_full']:.2f}); turning angles median {np.median(st['angles']):.0f} deg, max {st['angles'].max():.0f}")
     print(f"  split-half: centroid-plane correlation r = {st['half_r']:.3f}; median odd/even centroid gap / median segment = {st['half_seg_noise']:.2f}")
     print(f"  spacing per decade of horizon: first {spd[0]:.1f}, last {spd[-1]:.1f}, middle median {np.median(spd[3:-3]):.1f}  (ends/middle {ends_vs_mid:.2f})")
@@ -101,7 +107,7 @@ for cell in a.cells.split(","):
         spdi = f"{spd[i]:.1f}" if i < len(labels) - 1 else "  -"
         print(f"    {h:>9}  {years[i]:9.4f}  {st['arclen'][i]:7.1f}  {nxt:>6}  {spdi:>6}  {st['within'][i]:6.1f}  {st['pr'][i]:6.1f}")
     sys.stdout.flush()
-    rows.append(dict(layer=layer, position=pos, n95=st["n95"], n99=st["n99"], n_dims_above_noise=st["n_dims_above_noise"], scree=list(np.round(st["scree"][:8], 4)), noise_scree=list(np.round(st["noise_scree"][:8], 4)),
+    rows.append(dict(layer=layer, position=pos, n90=st["n90"], n95=st["n95"], n99=st["n99"], n_dims_above_noise=st["n_dims_above_noise"], scree=list(np.round(st["scree"][:8], 4)), noise_scree=list(np.round(st["noise_scree"][:8], 4)),
                      tortuosity3=st["tortuosity"], tortuosity_full=st["tortuosity_full"], planarity2=float(st["planarity"][:2].sum()),
                      split_half_r=st["half_r"], ends_over_middle_spacing=ends_vs_mid, snr=st["snr"], mean_pr=float(st["pr"].mean())))
     # figure: centroid path in centroid-PC space with all points projected, plus arc length vs log horizon
@@ -115,7 +121,7 @@ for cell in a.cells.split(","):
     ax.set_yscale("log"); ax.set_xlabel("centroid PC rank"); ax.set_ylabel("fraction of centroid variance")
     ax.set_title(f"centroid scree   dims above 2x noise: {st['n_dims_above_noise']}", fontsize=9); ax.legend(frameon=False, fontsize=8)
     ax = axes[0]
-    ax.scatter(P[:, 0], P[:, 1], s=6, c=np.log10(df.loc[has_h, "horizon_years"]), cmap=HORIZON_CMAP, alpha=0.35, linewidths=0)
+    ax.scatter(P[:, 0], P[:, 1], s=6, c=np.log10(df.loc[vmask, "horizon_years"]), cmap=HORIZON_CMAP, alpha=0.35, linewidths=0)
     ax.plot(Cp[:, 0], Cp[:, 1], "-", color="black", lw=1.2)
     sc = ax.scatter(Cp[:, 0], Cp[:, 1], s=60, c=np.log10(years), cmap=HORIZON_CMAP, edgecolors="black", linewidths=0.8, zorder=3)
     for i in [0, len(labels) // 2, len(labels) - 1]:
@@ -140,8 +146,9 @@ sweep_pos = a.sweep_positions.split(",")
 for layer in range(1, run.n_layers + 1):
     XL = run.get_layer(layer)
     for pos in sweep_pos:
-        st = path_stats(XL[has_h, run.pos_index(pos)])
-        sw.append(dict(position=pos, layer=layer, n95=st["n95"], n99=st["n99"], n_dims_above_noise=st["n_dims_above_noise"], scree3=float(st["scree"][2]), noise3=float(st["noise_scree"][2]),
+        vm = has_h & run.valid_mask(pos)
+        st = path_stats(XL[vm, run.pos_index(pos)], df.loc[vm, "horizon_text"].to_numpy())
+        sw.append(dict(position=pos, layer=layer, n90=st["n90"], n95=st["n95"], n99=st["n99"], n_dims_above_noise=st["n_dims_above_noise"], scree3=float(st["scree"][2]), noise3=float(st["noise_scree"][2]),
                        tortuosity=st["tortuosity"], planarity2=float(st["planarity"][:2].sum()),
                        split_half_r=st["half_r"], snr=st["snr"], mean_pr=float(st["pr"].mean())))
     if layer % 10 == 0:

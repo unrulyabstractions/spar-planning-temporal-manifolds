@@ -14,8 +14,9 @@ from ptm.chat import encode_user_turn
 from ptm.prompts import from_frame
 
 ap = argparse.ArgumentParser(); ap.add_argument("--model", default="Qwen/Qwen3-8B"); ap.add_argument("--n", type=int, default=4)
+ap.add_argument("--anchors", action="store_true"); ap.add_argument("--max-new-tokens", type=int, default=40)
 a = ap.parse_args()
-cfg = CaptureConfig(model_name=a.model, batch_size=a.n, max_new_tokens=40, n_response=8)
+cfg = CaptureConfig(model_name=a.model, batch_size=a.n, max_new_tokens=a.max_new_tokens, n_response=8, anchors=a.anchors)
 model, tok = load_model(cfg)
 hooks = ResidualHooks(model)
 samples = from_frame(pd.read_parquet("data/prompts/investment_n16_s1.parquet"))[: a.n]
@@ -65,6 +66,21 @@ for s, r in zip(samples, res):
     toks_at = [tok.decode([full[0, p].item()]) for p in positions]
     assert toks_at[:n_trans] == enc.transition_tokens == r.transition_tokens, toks_at
     assert toks_at[n_trans:] == r.response_tokens[: len(toks_at) - n_trans], (toks_at[n_trans:], r.response_tokens)
+    if a.anchors:
+        n_fixed = n_trans + cfg.n_response; ai = r.anchor_index; valid = r.pos_valid
+        if ai and ai["M0"] is not None and valid[n_fixed]:
+            m0 = enc.prompt_len + ai["M0"]; e0 = enc.prompt_len + ai["E0"]
+            assert tok.decode(full[0, :m0].tolist()[enc.prompt_len:]).rstrip().endswith("My reasoning:")
+            assert e0 == full.shape[1] - 1
+            for l in [0, 1, L // 2, L - 1]:
+                assert float((hs[l][0, m0].float().cpu() - r.acts[l, n_fixed].float()).abs().max()) == 0.0, ("M0 mismatch", l)
+                assert float((hs[l][0, e0].float().cpu() - r.acts[l, n_fixed + 1].float()).abs().max()) == 0.0, ("E0 mismatch", l)
+                ref_mean = hs[l][0, m0 : e0 + 1].float().mean(0).to(torch.bfloat16).float().cpu()
+                d_mean = float((ref_mean - r.acts[l, n_fixed + 2].float()).abs().max()); rel = d_mean / float(ref_mean.abs().max())
+                assert rel < 1e-2, ("MEAN mismatch", l, rel)
+            line += f" | anchors OK: M0=gen[{ai['M0']}] {tok.decode([full[0, m0].item()])!r}, E0=gen[{ai['E0']}] {tok.decode([full[0, e0].item()])!r}, MEAN over {e0 - m0 + 1} tokens"
+        else:
+            line += " | anchors: no reasoning prefix in this response"
     ok &= worst_rel < 2e-2 and worst_cos > 0.999 and rel_last < 2e-2 and shifted_cos < 0.98
     print(line); sys.stdout.flush()
 print("mem per gpu (GiB):", [round(torch.cuda.max_memory_allocated(i) / 2**30, 2) for i in range(torch.cuda.device_count())])

@@ -271,3 +271,36 @@ def build_controls(cfg: MatrixConfig, fmt: Optional[PromptFormat] = None) -> lis
                     s.scale = f; s.scale_base_horizon = ht
                     out.append(_finish(s, render_plain(s), "plain", "scaling", "control"))
     return out
+
+
+# ------------------------------------------------------------------ held-out distractor families (generalization test)
+
+DISTRACTOR_FAMILIES: dict[str, dict[str, str]] = {
+    # family -> per-domain sentence with {D}; inserted after the situation sentence (like `mention`)
+    "option_age": {"investment": "The fund has been open for {D}.", "climate": "The program has been running for {D}."},
+    "future_event": {"investment": "The household's lease renews in {D}.", "climate": "The city's next election is in {D}."},
+    "frequency": {"investment": "Account statements are issued every {D}.", "climate": "Emissions reports are issued every {D}."},
+    "elapsed_planning": {"investment": "You have been planning this for {D}.", "climate": "You have been planning this for {D}."},
+}
+
+
+def build_distractor_families(cfg: MatrixConfig, fmt: Optional[PromptFormat] = None, families=None) -> list[PromptSample]:
+    """Same configurations, domains, horizons and insertion point as the `mention` control; D drawn from the
+    matrix grid, D != H. Sample uids start with 'g'; condition = family name; split = 'control'."""
+    fmt = fmt or PromptFormat(); families = families or list(DISTRACTOR_FAMILIES)
+    configs = sample_configs(cfg.n_configs, cfg.seed)
+    split = assign_splits(configs, cfg.n_test_configs, cfg.n_dev_configs, cfg.seed)
+    train_cfgs = [c for c in configs if split[c.config_id] == "train"][: cfg.n_control_configs]
+    rng = random.Random(cfg.seed + 11)
+    out: list[PromptSample] = []
+    for fam in families:
+        for c in train_cfgs:
+            for domain in cfg.domains:
+                for hi, h in enumerate(MATRIX_HORIZONS):
+                    d = rng.choice([x for x in MENTION_DURATIONS if x != h])
+                    s = _base_sample(f"g{cfg.seed}_{c.config_id}_{domain}_h{hi:02d}_{fam}", domain, c, h, fmt)
+                    s.distractor_text, s.distractor_years = str(d), d.years
+                    sent = DISTRACTOR_FAMILIES[fam][domain].format(D=d)
+                    text = render_plain(s).replace(" Two options are available:", f" {sent} Two options are available:")
+                    out.append(_finish(s, text, "plain", fam, "control"))
+    return out

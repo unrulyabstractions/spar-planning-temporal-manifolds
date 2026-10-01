@@ -4,7 +4,10 @@
 # committed tree (git archive HEAD), never from the working tree, and refuses to run on a dirty tree.
 # Full activations (runs/*/acts_????.safetensors, ~14 GB per run) are NOT copied unless --with-acts RUN is
 # given; compact subsets written by scripts/export_subset.py (subset.json + acts_subset_*) ARE copied.
-# Usage: scripts/make_snapshot.sh DEST [--with-acts RUN_NAME ...]
+# Activation SUBSETS are not copied either (they go to the Hugging Face dataset, see snapshot/README-shared.md) unless
+# --with-subsets is given. Files Alan excluded from the shared snapshot (reference PDFs, the Astra review, the 09-24
+# update draft) are removed after the archive step. snapshot/README-shared.md becomes DEST/README.md.
+# Usage: scripts/make_snapshot.sh DEST [--with-acts RUN_NAME ...] [--with-subsets]
 set -eu
 cd "$(dirname "$0")/.."
 DEST=${1:?DEST}; shift || true
@@ -15,6 +18,9 @@ echo "snapshot of CodeReclaimers/SPAR-2026 @ $HASH -> $DEST"
 # 1. committed code and docs — but NOT this repo's .gitignore, which ignores data/, runs/ and figures/
 #    (the snapshot must carry them); write a snapshot-appropriate one instead
 git archive HEAD | tar -x -C "$DEST"
+rm -f "$DEST"/*.pdf "$DEST"/astra-recommendations-*.md "$DEST"/update-20260924.md
+cp snapshot/README-shared.md "$DEST/README.md"
+WITH_SUBSETS=0; for a in "$@"; do [ "$a" = --with-subsets ] && WITH_SUBSETS=1; done
 printf '.venv/\n__pycache__/\n*.pyc\n*.egg-info/\n.pytest_cache/\n.idea/\n' > "$DEST/.gitignore"
 # 2. regenerable prompt datasets (small) and run indices / metadata (small), figures and tables
 mkdir -p "$DEST/data/prompts" "$DEST/runs" "$DEST/figures"
@@ -23,11 +29,11 @@ for r in runs/*/; do
   n=$(basename "$r"); mkdir -p "$DEST/runs/$n"
   cp "$r/index.parquet" "$r/meta.json" "$DEST/runs/$n/"
   # shareable activation subsets (scripts/export_subset.py), if present
-  [ -f "$r/subset.json" ] && cp "$r/subset.json" "$r"/acts_subset_*.safetensors "$DEST/runs/$n/"
-  [ -f "runs/$n.log" ] && cp "runs/$n.log" "$DEST/runs/"
-  [ -f "runs/$n.analysis.log" ] && cp "runs/$n.analysis.log" "$DEST/runs/"
+  [ -f "$r/subset.json" ] && cp "$r/subset.json" "$DEST/runs/$n/"
+  [ -f "$r/subset.json" ] && [ $WITH_SUBSETS = 1 ] && cp "$r"/acts_subset_*.safetensors "$DEST/runs/$n/"
+  for f in "$r"/SHA256SUMS.*; do [ -f "$f" ] && cp "$f" "$DEST/runs/$n/"; done
 done
-cp runs/reproduce_all.log "$DEST/runs/" 2>/dev/null || true
+cp runs/*.log "$DEST/runs/" 2>/dev/null || true          # capture, analysis, chain, verify and test logs
 cp -r figures/. "$DEST/figures/"
 # share one plotly.min.js instead of one per figure directory
 first=$(ls "$DEST"/figures/*/plotly.min.js 2>/dev/null | head -1)
@@ -38,7 +44,7 @@ if [ -n "$first" ]; then
 fi
 # 3. optional activations
 while [ $# -gt 0 ]; do
-  case "$1" in --with-acts) shift; cp runs/"$1"/acts_*.safetensors "$DEST/runs/$1/"; echo "copied activations for $1";; esac; shift
+  case "$1" in --with-acts) shift; cp runs/"$1"/acts_*.safetensors "$DEST/runs/$1/"; echo "copied activations for $1";; --with-subsets) ;; esac; shift
 done
 # 4. manifest
 {

@@ -7,7 +7,7 @@ Writes one standalone HTML per cell (open in a browser; drag to rotate, scroll t
   --basis sample    PCA fit on all horizon samples — the basis of analyze.py's cell scatters
 Buttons switch the point coloring between log horizon and the model's choice.
 
-Usage: plot3d.py RUN_DIR OUT_DIR [--cells 22:R0,37:T3] [--basis centroid|sample] [--max-points 4000]
+Usage: plot3d.py RUN_DIR OUT_DIR [--cells 0.55L:R0,0.92L:T3] [--basis centroid|sample] [--max-points 4000]
 """
 import argparse
 from pathlib import Path
@@ -16,10 +16,11 @@ import plotly.graph_objects as go
 from sklearn.decomposition import PCA
 from ptm.analysis import cell_name, COLOR_SHORT, COLOR_LONG, COLOR_NULL
 from ptm.store import RunData
+from ptm.depth import resolve_cell, parse_layers
 
 ap = argparse.ArgumentParser()
 ap.add_argument("run_dir"); ap.add_argument("out_dir")
-ap.add_argument("--cells", default="22:R0,37:T3")
+ap.add_argument("--cells", default="0.55L:R0,0.92L:T3")
 ap.add_argument("--basis", choices=["centroid", "sample"], default="centroid")
 ap.add_argument("--max-points", type=int, default=4000)
 a = ap.parse_args()
@@ -30,7 +31,7 @@ labels, years = bins.index.tolist(), bins.to_numpy()
 ht = df["horizon_text"].to_numpy()
 
 for cell in a.cells.split(","):
-    layer, pos = cell.split(":"); layer = int(layer)
+    layer, pos = resolve_cell(cell, run)
     X = run.get(layer, pos); valid = run.valid_mask(pos)
     C = np.stack([X[valid & has_h & (ht == h)].mean(0) for h in labels])
     pca = PCA(3, random_state=0).fit(C if a.basis == "centroid" else X[valid & has_h])

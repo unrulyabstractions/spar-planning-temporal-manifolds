@@ -9,9 +9,11 @@ from ptm.chat import encode_user_turn, find_choice, label_first_token_id, positi
 
 QWEN3_NOTHINK_WINDOW = ["<|im_end|>", "\n", "<|im_start|>", "assistant", "\n", "<think>", "\n\n", "</think>", "\n\n"]
 QWEN3_THINK_WINDOW = ["<|im_end|>", "\n", "<|im_start|>", "assistant", "\n"]
+# Qwen3.5 opens the think block in the template itself when thinking is enabled (7 tokens); the no-think window is identical to Qwen3.
+QWEN35_THINK_WINDOW = QWEN3_THINK_WINDOW + ["<think>", "\n"]
 
 
-@pytest.fixture(scope="module", params=["Qwen/Qwen3-14B", "Qwen/Qwen3-8B"])
+@pytest.fixture(scope="module", params=["Qwen/Qwen3-14B", "Qwen/Qwen3-8B", "Qwen/Qwen3.5-9B", "Qwen/Qwen3.5-27B"])
 def tok(request):
     try:
         return AutoTokenizer.from_pretrained(request.param)
@@ -29,7 +31,9 @@ def test_transition_window_nothink(tok):
 
 def test_transition_window_think(tok):
     enc = encode_user_turn(tok, "hello", enable_thinking=True)
-    assert enc.transition_tokens == QWEN3_THINK_WINDOW
+    expected = QWEN35_THINK_WINDOW if "Qwen3.5" in tok.name_or_path else QWEN3_THINK_WINDOW
+    print("thinking-mode transition tokens:", enc.transition_tokens)
+    assert enc.transition_tokens == expected
 
 
 def test_user_text_with_im_end_lookalike_is_not_confused(tok):
@@ -58,3 +62,12 @@ def test_choice_readout(tok):
     j3, c3 = find_choice(tok, resp3, "a)", "b)")
     assert c3 == "a" and tok.decode([resp3[j3]]) == "a", [tok.decode([t]) for t in resp3[:8]]
     print("bold-label tokens:", [tok.decode([t]) for t in resp3[:8]], "choice index", j3)
+
+
+def test_find_anchor_first_reasoning_token(tok):
+    from ptm.chat import find_anchor
+    ids = tok("I choose: a). My reasoning: Over a 10-year horizon the larger sum wins.", add_special_tokens=False)["input_ids"]
+    j = find_anchor(tok, ids, "My reasoning:")
+    assert j is not None and tok.decode(ids[:j]).rstrip().endswith("My reasoning:") and tok.decode([ids[j]]).strip() == "Over"
+    assert find_anchor(tok, tok("I choose: a). No explanation.", add_special_tokens=False)["input_ids"], "My reasoning:") is None
+    assert find_anchor(tok, tok("I choose: a). My reasoning:", add_special_tokens=False)["input_ids"], "My reasoning:") is None   # nothing follows
