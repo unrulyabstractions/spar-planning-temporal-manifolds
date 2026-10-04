@@ -1,0 +1,27 @@
+run runs/qwen3-14b_matched_months_years_dec2_n1200 (Qwen3-14B, matched months as decimal years, L=40); activations from shards; k1..k2 = 10..20
+L22 R0 (0.55 L) n=1200 (dropped 0 duplicates): m = 19.95 [k-2 form 18.42]  Gaussian, same covariance 25.98
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 55.15 34.09 29.94 25.78 22.29 19.71 18.32 16.48 14.35 12.75 11.69 10.28 9.31 7.96
+   1-D reference (log10 horizon_years, same sampling) 1.22; mean |rank gap| to 20-NN 50.0 (1-D reference 5.5); local estimate vs log horizon_years: Spearman +0.33, by decade (log10 horizon_years) {"-2": 8.31, "-1": 5.07, "0": 11.58, "1": 20.93, "2": 30.06}
+   spline in log horizon_years (quantile knots): held-out R² 0.557 (interpolation only 0.561) [value 1-9 0.81, 10-99 0.45, >=100 -0.28; line 0.394]; estimate on the residual 33.39; residual variance share by last digit 0.040 (permuted 0.006), by digit count 0.005
+   as rendered: last digit 0.265 (permuted 0.004), digit count 0.005
+   mean |Δ log10 H| to the 20-NN: 0.05 decades
+L29 R0 (0.72 L) n=1200 (dropped 0 duplicates): m = 13.12 [k-2 form 12.11]  Gaussian, same covariance 17.41
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 32.10 23.76 19.45 16.44 14.66 12.94 12.03 10.93 9.69 8.78 8.11 7.15 6.58 5.67
+   1-D reference (log10 horizon_years, same sampling) 1.22; mean |rank gap| to 20-NN 41.5 (1-D reference 5.5); local estimate vs log horizon_years: Spearman +0.43, by decade (log10 horizon_years) {"-2": 8.12, "-1": 3.81, "0": 6.05, "1": 13.91, "2": 16.43}
+   spline in log horizon_years (quantile knots): held-out R² 0.766 (interpolation only 0.770) [value 1-9 0.89, 10-99 0.65, >=100 -0.16; line 0.539]; estimate on the residual 22.20; residual variance share by last digit 0.046 (permuted 0.007), by digit count 0.008
+   as rendered: last digit 0.198 (permuted 0.003), digit count 0.008
+   mean |Δ log10 H| to the 20-NN: 0.05 decades
+L37 T3 (0.93 L) n=1200 (dropped 0 duplicates): m = 23.81 [k-2 form 21.98]  Gaussian, same covariance 29.77
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 64.28 43.00 36.95 30.87 27.03 23.54 21.65 19.23 16.89 15.16 13.93 12.28 11.13 9.48
+   1-D reference (log10 horizon_years, same sampling) 1.22; mean |rank gap| to 20-NN 58.2 (1-D reference 5.5); local estimate vs log horizon_years: Spearman +0.31, by decade (log10 horizon_years) {"-2": 7.61, "-1": 6.63, "0": 15.3, "1": 24.84, "2": 19.69}
+   spline in log horizon_years (quantile knots): held-out R² 0.476 (interpolation only 0.478) [value 1-9 0.77, 10-99 0.38, >=100 -0.07; line 0.310]; estimate on the residual 37.08; residual variance share by last digit 0.037 (permuted 0.007), by digit count 0.004
+   as rendered: last digit 0.204 (permuted 0.004), digit count 0.004
+   mean |Δ log10 H| to the 20-NN: 0.06 decades
+L22 T3 (0.55 L) n=1200 (dropped 0 duplicates): m = 20.31 [k-2 form 18.75]  Gaussian, same covariance 28.78
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 52.61 38.91 30.76 26.29 22.83 20.10 18.54 16.60 14.70 13.33 12.39 11.06 10.07 8.58
+   1-D reference (log10 horizon_years, same sampling) 1.22; mean |rank gap| to 20-NN 54.5 (1-D reference 5.5); local estimate vs log horizon_years: Spearman +0.31, by decade (log10 horizon_years) {"-2": 6.99, "-1": 5.93, "0": 12.22, "1": 21.27, "2": 17.99}
+   spline in log horizon_years (quantile knots): held-out R² 0.455 (interpolation only 0.457) [value 1-9 0.73, 10-99 0.36, >=100 -0.03; line 0.284]; estimate on the residual 33.21; residual variance share by last digit 0.041 (permuted 0.008), by digit count 0.004
+   as rendered: last digit 0.254 (permuted 0.004), digit count 0.004
+   mean |Δ log10 H| to the 20-NN: 0.06 decades
+calibration N_m(0, I), n=1200, eq. (9) k=10..20: m=1: 1.09  m=2: 2.21  m=3: 3.32  m=5: 5.39  m=8: 8.37  m=10: 9.88  m=12: 11.31  m=15: 13.43  m=20: 16.37  m=30: 21.20
+wrote figures/qwen3-14b_matched_months_years_dec2_n1200/intrinsic_dim.csv, figures/qwen3-14b_matched_months_years_dec2_n1200/intrinsic_dim_kcurve.csv, figures/qwen3-14b_matched_months_years_dec2_n1200/intrinsic_dim_kcurve.png

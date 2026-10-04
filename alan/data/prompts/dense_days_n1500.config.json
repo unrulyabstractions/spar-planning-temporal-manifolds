@@ -1,0 +1,12 @@
+{
+  "out": "data/prompts/dense_days_n1500.parquet",
+  "n": 1500,
+  "unit": "days",
+  "max": 36525,
+  "short_reward": 10000,
+  "short_delay": "1 year",
+  "long_reward": 50000,
+  "long_delay": "10 years",
+  "long_first": false,
+  "n_values": 1500
+}

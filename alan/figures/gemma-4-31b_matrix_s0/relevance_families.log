@@ -1,0 +1,90 @@
+control configs: 10 (nuisance fit on 6, pull measured on 4); pairs mention 240, role 240
+
+=== L33 T3 ===
+decoder                             A w2x  A rmse  mention pull  slope   w2x  role pull  slope   w2x
+ridge                                0.69   0.343        +0.542  +0.11  0.51     -0.042  -0.00  0.51
+ridge − N(mention,k=1)               0.69   0.344        +0.601  +0.12  0.51     -0.031  -0.00  0.53
+ridge − N(mention,k=2)               0.69   0.344        +0.594  +0.11  0.53     -0.036  -0.00  0.51
+ridge − N(mention,k=3)               0.69   0.344        +0.559  +0.11  0.52     -0.034  -0.00  0.51
+ridge − N(mention,k=5)               0.70   0.344        +0.581  +0.11  0.51     -0.029  -0.00  0.53
+ridge − N(role,k=1)                  0.69   0.343        +0.540  +0.11  0.52     -0.047  -0.00  0.50
+ridge − N(role,k=2)                  0.68   0.343        +0.544  +0.11  0.53     -0.004  +0.01  0.47
+ridge − N(role,k=3)                  0.68   0.343        +0.545  +0.11  0.53     +0.058  +0.02  0.49
+ridge − N(role,k=5)                  0.69   0.344        +0.553  +0.11  0.54     +0.083  +0.03  0.55
+ridge − N(both,k=1)                  0.68   0.343        +0.545  +0.11  0.52     -0.038  -0.00  0.50
+ridge − N(both,k=2)                  0.69   0.344        +0.596  +0.11  0.55     -0.024  +0.00  0.52
+ridge − N(both,k=3)                  0.69   0.344        +0.599  +0.12  0.50     -0.014  +0.00  0.53
+ridge − N(both,k=5)                  0.68   0.344        +0.535  +0.11  0.50     +0.026  +0.01  0.52
+ridge + control prompts in training   0.67   0.333        +0.365  +0.05  0.71     +0.049  +0.01  0.73
+nuisance(mention) v1: energy k=1 0.28, k=3 0.49; angle to ridge weight 90°, to curve plane 65°
+nuisance(role) v1: energy k=1 0.37, k=3 0.53; angle to ridge weight 90°, to curve plane 69°
+bootstrap (30): ridge A w2x [+0.61, +0.72] mention pull [+0.32, +0.51] role pull [-0.13, +0.23] | ridge − N(both,3): A w2x [+0.62, +0.72] mention pull [+0.33, +0.53] role pull [-0.10, +0.23]
+
+=== L39 T1 ===
+decoder                             A w2x  A rmse  mention pull  slope   w2x  role pull  slope   w2x
+ridge                                0.64   0.388        +0.541  +0.21  0.29     +0.456  +0.17  0.46
+ridge − N(mention,k=1)               0.64   0.384        +0.583  +0.21  0.34     +0.450  +0.17  0.45
+ridge − N(mention,k=2)               0.64   0.384        +0.575  +0.21  0.32     +0.457  +0.17  0.46
+ridge − N(mention,k=3)               0.64   0.384        +0.556  +0.21  0.33     +0.457  +0.17  0.46
+ridge − N(mention,k=5)               0.65   0.384        +0.535  +0.21  0.30     +0.456  +0.16  0.45
+ridge − N(role,k=1)                  0.64   0.388        +0.549  +0.21  0.29     +0.459  +0.17  0.47
+ridge − N(role,k=2)                  0.64   0.388        +0.551  +0.21  0.31     +0.464  +0.17  0.46
+ridge − N(role,k=3)                  0.64   0.388        +0.535  +0.21  0.30     +0.449  +0.16  0.46
+ridge − N(role,k=5)                  0.62   0.386        +0.531  +0.20  0.31     +0.450  +0.15  0.50
+ridge − N(both,k=1)                  0.64   0.386        +0.575  +0.21  0.32     +0.450  +0.16  0.46
+ridge − N(both,k=2)                  0.64   0.386        +0.573  +0.21  0.33     +0.452  +0.16  0.47
+ridge − N(both,k=3)                  0.64   0.386        +0.529  +0.20  0.30     +0.445  +0.16  0.44
+ridge − N(both,k=5)                  0.64   0.386        +0.545  +0.21  0.32     +0.447  +0.16  0.46
+ridge + control prompts in training   0.63   0.359        +0.394  +0.11  0.48     +0.351  +0.11  0.50
+nuisance(mention) v1: energy k=1 0.22, k=3 0.52; angle to ridge weight 90°, to curve plane 83°
+nuisance(role) v1: energy k=1 0.20, k=3 0.48; angle to ridge weight 90°, to curve plane 73°
+bootstrap (30): ridge A w2x [+0.57, +0.65] mention pull [+0.44, +0.65] role pull [+0.42, +0.51] | ridge − N(both,3): A w2x [+0.57, +0.66] mention pull [+0.45, +0.67] role pull [+0.42, +0.50]
+
+=== L33 R0 ===
+decoder                             A w2x  A rmse  mention pull  slope   w2x  role pull  slope   w2x
+ridge                                0.93   0.163        +0.560  +0.07  0.78     +0.447  +0.11  0.50
+ridge − N(mention,k=1)               0.93   0.163        +0.556  +0.07  0.78     +0.454  +0.11  0.51
+ridge − N(mention,k=2)               0.93   0.162        +0.591  +0.06  0.86     +0.455  +0.11  0.50
+ridge − N(mention,k=3)               0.93   0.162        +0.350  +0.03  0.92     +0.450  +0.11  0.50
+ridge − N(mention,k=5)               0.92   0.163        +0.234  +0.02  0.94     +0.433  +0.10  0.51
+ridge − N(role,k=1)                  0.93   0.163        +0.561  +0.07  0.77     +0.466  +0.12  0.52
+ridge − N(role,k=2)                  0.93   0.163        +0.564  +0.07  0.77     +0.227  +0.06  0.55
+ridge − N(role,k=3)                  0.93   0.163        +0.579  +0.06  0.83     +0.340  +0.07  0.66
+ridge − N(role,k=5)                  0.93   0.163        +0.543  +0.06  0.84     +0.259  +0.05  0.85
+ridge − N(both,k=1)                  0.93   0.163        +0.561  +0.07  0.77     +0.464  +0.12  0.52
+ridge − N(both,k=2)                  0.93   0.163        +0.558  +0.07  0.79     +0.480  +0.12  0.51
+ridge − N(both,k=3)                  0.92   0.164        +0.496  +0.07  0.68     +0.133  +0.04  0.53
+ridge − N(both,k=5)                  0.92   0.162        +0.197  +0.02  0.95     +0.374  +0.06  0.81
+ridge + control prompts in training   0.93   0.162        +0.229  +0.01  0.99     +0.284  +0.02  0.98
+nuisance(mention) v1: energy k=1 0.48, k=3 0.70; angle to ridge weight 90°, to curve plane 88°
+nuisance(role) v1: energy k=1 0.73, k=3 0.85; angle to ridge weight 90°, to curve plane 83°
+bootstrap (30): ridge A w2x [+0.86, +0.93] mention pull [+0.41, +0.66] role pull [+0.26, +0.59] | ridge − N(both,3): A w2x [+0.86, +0.93] mention pull [+0.38, +0.63] role pull [-0.05, +0.39]
+
+=== generalization to held-out distractor families (runs/gemma-4-31b_families_s0: ['elapsed_planning', 'frequency', 'future_event', 'option_age']) ===
+behavior: standardized logistic coefficients for chose_short  logH / logD  (5-fold logloss params+H vs params+H+D)
+  elapsed_planning  n=239  logH -3.58  logD +0.02   logloss +H 0.188  +H+D 0.199
+  frequency         n=238  logH -2.87  logD -0.25   logloss +H 0.212  +H+D 0.210
+  future_event      n=236  logH -3.93  logD -0.06   logloss +H 0.185  +H+D 0.189
+  option_age        n=238  logH -3.41  logD -0.13   logloss +H 0.154  +H+D 0.159
+
+--- L33 T3: held-out families (pull, slope, within-2x on family rows; all decoders fit WITHOUT these families) ---
+decoder                                  elapsed_planning              frequency           future_event             option_age
+ridge                                +0.10 +0.02  0.66     -0.04 -0.01  0.50     +0.09 +0.03  0.47     +0.41 +0.08  0.57   
+ridge − N(mention+role,k=3)          +0.15 +0.03  0.63     -0.01 +0.00  0.49     +0.11 +0.04  0.49     +0.45 +0.09  0.49   
+ridge + mention/role in training     +0.02 +0.01  0.67     -0.16 -0.03  0.60     +0.06 +0.03  0.60     +0.31 +0.05  0.68   
+ridge − N(own family,k=3)            +0.17 +0.03  0.56     +0.16 +0.03  0.44     +0.26 +0.09  0.47     +0.40 +0.08  0.57   
+
+--- L39 T1: held-out families (pull, slope, within-2x on family rows; all decoders fit WITHOUT these families) ---
+decoder                                  elapsed_planning              frequency           future_event             option_age
+ridge                                +0.30 +0.08  0.46     +0.27 +0.08  0.41     +0.36 +0.17  0.29     +0.48 +0.16  0.30   
+ridge − N(mention+role,k=3)          +0.29 +0.08  0.46     +0.21 +0.06  0.41     +0.37 +0.18  0.30     +0.46 +0.15  0.34   
+ridge + mention/role in training     -0.05 -0.01  0.53     +0.03 +0.01  0.45     +0.33 +0.13  0.35     +0.30 +0.07  0.37   
+ridge − N(own family,k=3)            +0.35 +0.10  0.42     +0.31 +0.09  0.36     +0.55 +0.23  0.31     +0.61 +0.17  0.25   
+
+--- L33 R0: held-out families (pull, slope, within-2x on family rows; all decoders fit WITHOUT these families) ---
+decoder                                  elapsed_planning              frequency           future_event             option_age
+ridge                                +0.32 +0.07  0.85     -0.23 -0.02  0.78     +0.17 +0.03  0.77     +0.56 +0.06  0.88   
+ridge − N(mention+role,k=3)          +0.29 +0.06  0.85     -0.26 -0.02  0.80     +0.14 +0.03  0.78     +0.54 +0.06  0.88   
+ridge + mention/role in training     +0.07 +0.02  0.91     -0.33 -0.04  0.65     +0.15 +0.02  0.82     +0.41 +0.03  0.95   
+ridge − N(own family,k=3)            -0.21 -0.01  0.78     +0.06 +0.01  0.94     +0.20 +0.03  0.80     +0.29 +0.03  0.90   
+wrote figures/gemma-4-31b_matrix_s0/relevance

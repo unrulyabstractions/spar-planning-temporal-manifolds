@@ -1,7 +1,13 @@
 # Alan — Planning Temporal Manifolds snapshot
 
 Snapshot of my working repo (`CodeReclaimers/SPAR-2026`, private) at the commit named in
-`SNAPSHOT.yaml`. **Second snapshot (2026-10-01).** Start with `notes/update-2026-10-01.md`: a plain-language
+`SNAPSHOT.yaml`. **Third snapshot (2026-10-04).** New since the second: the standard chain on two current models,
+**Qwen/Qwen3.8-27B** and **google/gemma-4-31B-it** (Vast.ai A100, 2026-10-03; run names `qwen3.8-27b_*`,
+`gemma-4-31b_*`), their activations in a Google Cloud Storage bucket (below), a six-model depth profile
+(`figures/depth_profiles/`), and the intrinsic-dimension work of 2026-10-01..03 (`progress-2026100{1,2,3}.md`;
+parked follow-ups in `notes/open-threads.md`). See "New in the third snapshot" below.
+
+**Second snapshot (2026-10-01).** Start with `notes/update-2026-10-01.md`: a plain-language
 account of everything added since the first snapshot (forward curve model, Guttman check, LEACE, the
 polynomial ladder, stakes, the relevance-decoder generalization and late-readout results, and the
 Qwen3.5-27B run). The 2026-09-23 note covers the first snapshot. The Qwen3-14B runs were regenerated
@@ -10,13 +16,20 @@ from committed code on 2026-09-25 (`runs/reproduce_all.log`); the Qwen3.5-27B ru
 
 ## What is here
 
-- `ptm/`, `scripts/`, `tests/` — capture and analysis code (Python; `uv sync --extra dev`; 59 tests).
+- `ptm/`, `scripts/`, `tests/` — capture and analysis code (Python; `uv sync --extra dev`; 131 tests).
 - `CLAUDE.md` — project conventions, capture facts, and commands. `progress-*.md` — dated logs with
   every number and the command that produced it. `notes/` — weekly-update notes (`update-2026-10-01.md` is the current one).
 - `data/prompts/` — all prompt datasets (regenerable: `gen_prompts.py`, `gen_matrix.py`).
 - `runs/<run>/index.parquet` — one row per prompt: parameters, generated text, parsed choice, label
   logits; `meta.json` — model, layer convention, positions.
-- **Activations** are hosted separately to keep this repo small:
+- **Activations of the Qwen3.8-27B and Gemma 4 31B-it runs, and of the 2026-10-01..03 Qwen3-14B dense sets,** are in
+  the Google Cloud Storage bucket `gs://alan-captures-20261003` (us-east4, not public; ask Alan for read access):
+  `<tag>/runs/<run>/` holds the full bf16 shards `acts_NNNN.safetensors` and the tier-1 subsets
+  `acts_subset_L*_c*.safetensors` (7 fractional depths 0.35–0.92 L × all positions) next to the `index.parquet`,
+  `meta.json`, `subset.json` and `SHA256SUMS.{tier1,shards}` copied here; `qwen3-14b-dense/<run>/` holds the
+  dense/matched/control runs' full shards. Every object was MD5-verified against the instance before its local copy
+  was deleted. Reads from inside us-east4 are free; downloading to outside Google Cloud is billed egress.
+- **Activations of the earlier runs** are hosted separately to keep this repo small:
   `https://huggingface.co/datasets/CodeReclaimers/spar-planning-temporal-manifolds-activations`
   (public). Per run it holds `index.parquet`, `meta.json`, `subset.json` and bf16
   `acts_subset_L*_c*.safetensors` (rows in `index.parquet` order). Qwen3-14B: the canonical run at
@@ -26,8 +39,9 @@ from committed code on 2026-09-25 (`runs/reproduce_all.log`); the Qwen3.5-27B ru
   positions (37 GB; uploading at snapshot time, run by run). Load with
   `ptm.subset.load_subset(run_dir, layer, position)` → float32 `[n, d]`, or read the safetensors
   directly. Stored layer `l` is the residual stream after decoder layer `l−1`; positions are named in
-  `CLAUDE.md` (T0–T8 = the 9-token transition window ending in the empty think block, identical for Qwen3
-  and Qwen3.5; R0–R7 = the first generated tokens, R3 = the choice label; the `_long` runs add M0 = first
+  `CLAUDE.md` (T0–T8 = the 9-token transition window ending in the empty think block, identical for Qwen3,
+  Qwen3.5 and Qwen3.8; for Gemma 4 it is `<turn|>`, `\n`, `<|turn>`, `model`, `\n`, `<|channel>`, `thought`, `\n`,
+  `<channel|>` — compared across families by index; R0–R7 = the first generated tokens, R3 = the choice label; the `_long` runs add M0 = first
   reasoning token, E0 = last token, MEAN = mean over the reasoning). Full activations are not hosted:
   `scripts/reproduce_all.sh` (14B, local) and `scripts/vast_full_chain.sh` (any model, rented GPU)
   regenerate every dataset, capture, and analysis; each run's `SHA256SUMS.shards` lets a recapture be
@@ -37,8 +51,10 @@ from committed code on 2026-09-25 (`runs/reproduce_all.log`); the Qwen3.5-27B ru
 
 ## Runs
 
-Qwen/Qwen3-14B (bf16, no-thinking template, 2 × RTX 4080) and Qwen/Qwen3.5-27B (bf16, same template,
-1 × A100 80 GB; run names `qwen3.5-27b_*`). Both models have every run below.
+Qwen/Qwen3-14B (bf16, no-thinking template, 2 × RTX 4080), Qwen/Qwen3.5-27B, Qwen/Qwen3.8-27B and
+google/gemma-4-31B-it (bf16, no-thinking templates, 1 × A100 80 GB; run names `qwen3.5-27b_*`, `qwen3.8-27b_*`,
+`gemma-4-31b_*`). All four models have every run below. Instance logs of the 2026-10-03 run (tests, verification,
+chain, upload) are in `runs/vast_logs_<tag>/`; the prompt files used there in `data/prompts_<tag>/`.
 
 | run | prompts | purpose |
 |---|---|---|
@@ -50,10 +66,37 @@ Qwen/Qwen3-14B (bf16, no-thinking template, 2 × RTX 4080) and Qwen/Qwen3.5-27B 
 | `*_families_s0` | 960 | four held-out distractor families (option age, future event, frequency, elapsed planning) |
 | `*_matrix_s0_long`, `*_families_s0_long` | 3,240 / 960 | the same prompts with 160 generated tokens and anchored reasoning positions (M0, E0, MEAN) |
 
+Qwen3-14B only (2026-10-01..03, intrinsic dimension; `runs/` holds index/metadata, activations in the bucket):
+`qwen3-14b_dense_days_n1500` (1,500 integer day horizons, one fixed scenario), `…_dense_short_reward_n1500` and
+`…_dense_long_reward_h20y_n1500` (reward controls), `…_dense_days_cfirst_n1500` (line-position control),
+`…_dense_units_pooled_n1500`, `…_matched_months_dwm_n1200`, `…_matched_years_dwmy_n100` (matched-duration units),
+`…_years_render_n1200` (digit-count control), `…_matched_months_years_dec2_n1200` and the month-delay pair
+`…_matched_months_{months,years_dec2}_dm_n1200` (option-delay-unit control).
+
 Also `figures/stakes_pilot*/` (stakes pilot on existing captures) and, for the 27B,
 `figures/qwen3.5-27b_matrix_s0/peak/` (cell analyses at the sweep's peak layers, L23 T3 / L20 R0 / L31 T6).
 
-## Headline results
+## New in the third snapshot
+
+Numbers and commands are in `progress-2026100{1,2,3,4}.md`.
+
+- **Current models (canonical investment set).** Best |ρ(PC1, log horizon)| before the answer token: Qwen3.8-27B
+  0.973 (R0, 0.33 L), Gemma 4 31B-it 0.929 (R0, 0.62 L); cells ≥ 0.8: 529 vs 141 (Qwen3.5-27B 488); the reward-ratio
+  control at those cells stays ≤ 0.133 / 0.159 for the two (0.125–0.192 across the four earlier models). Format
+  adherence 1.000 / 0.999.
+- **Depth profile, six models** (`figures/depth_profiles/`). Qwen3.8-27B follows Qwen3.5 (onset ≈ 0.2 L at T0/T3/R0,
+  T0 sustained to the last layer, R0 collapse at ≈ 0.75 L). Gemma 4 31B-it is a third pattern: late onset (0.38–0.53 L)
+  and not sustained — T0 collapses to ≈ 0 at ≈ 0.83–0.95 L and partly recovers at the last layer.
+- **Intrinsic dimension (Levina–Bickel MLE, Qwen3-14B, four cells).** Horizon prompts are not a 1-D manifold at the
+  estimator's neighbourhood scale (k = 10–20): a dense single-scenario horizon set gives 14–26, while a smooth curve in
+  log horizon carries 58–89 % of the variance; the rest is high-dimensional and tied to the rendered digits. Horizon is
+  more curve-dominated than a matched reward amount under matched digit strings, token distance and choice switch
+  (spline R² +0.20 to +0.27). Each time unit is its own manifold, mostly a shared curve translated per unit; years
+  renderings have lower-dimensional local scatter than days/weeks/months at matched durations (not explained by digit
+  strings or by the options' unit). The unit's effect on choices is a match effect with the options' delay unit.
+  Values are orderings at matched n, not absolute dimensions.
+
+## Headline results (first and second snapshots)
 
 For everything since 2026-09-25 — curve model, Guttman check (the "vertex near one year" is withdrawn), LEACE,
 polynomial ladder, stakes, relevance-decoder generalization, late readout, and the 27B comparison — read
@@ -102,6 +145,8 @@ HF_HUB_OFFLINE=1 .venv/bin/python -m pytest -q tests
 nohup scripts/reproduce_all.sh &          # ~1 h 45 on 2 × RTX 4080 SUPER (16 GB); needs Qwen/Qwen3-14B cached
 # any other model on a rented GPU (inside tmux):  MODEL=Qwen/Qwen3.5-27B TAG=qwen3.5-27b scripts/vast_full_chain.sh
 # then locally: scripts/vast_fetch.sh HOST PORT ; scripts/peak_cells.sh TAG
+# several models + GCS bucket (2026-10-03):  GCS_DEST=<bucket> GCS_KEY=<key> MODELS="<id>:<tag> ..." scripts/vast_models_sequence.sh
+#   (with scripts/vast_eager_upload.sh alongside); fetch results with scripts/gcs_fetch_results.sh <bucket>/<tag>
 ```
 Capture facts that matter for comparison: activations are taken by forward hooks in an unpadded
 per-sample pass (bit-exact against transformers' hidden states); stored layer `l` is the residual

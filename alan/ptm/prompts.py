@@ -13,6 +13,7 @@ import random
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 
 from .horizons import GRIDS, STANDARD_HORIZONS, Horizon
@@ -63,20 +64,24 @@ class PromptFormat:
     action_text: str = "Select one of the two options. Provide reasoning."
     choice_prefix: str = "I choose:"
     reasoning_prefix: str = "My reasoning:"
+    constraint_first: bool = False     # CONSTRAINT line right after TASK, before the options (line-position control)
 
     def render(self, s: "PromptSample") -> str:
         d = DOMAINS[s.domain]
         first, second = (s.short_line, s.long_line) if s.short_first else (s.long_line, s.short_line)
+        constraint = []
+        if s.horizon_text is not None:
+            phrasing = CONSTRAINT_PHRASINGS[s.phrasing_id] if s.phrasing_id is not None else self.constraint_text
+            constraint = [f"{self.constraint_marker} {phrasing.format(horizon=s.horizon_text)}"]
         lines = [
             f"{self.situation_marker} {d.situation}",
             f"{self.task_marker} You, {d.role}, are tasked to {d.task}:",
+            *(constraint if self.constraint_first else []),
             f"{s.label_a} {first}",
             f"{s.label_b} {second}",
             f"{self.objective_marker} {self.objective_text}",
+            *([] if self.constraint_first else constraint),
         ]
-        if s.horizon_text is not None:
-            phrasing = CONSTRAINT_PHRASINGS[s.phrasing_id] if s.phrasing_id is not None else self.constraint_text
-            lines.append(f"{self.constraint_marker} {phrasing.format(horizon=s.horizon_text)}")
         lines.append(f"{self.action_marker} {self.action_text}")
         lines.append(
             f"{self.format_marker} {self.choice_prefix} <{s.label_a} or {s.label_b}>. "
@@ -118,16 +123,17 @@ class PromptSample:
     distractor_years: float = float("nan")
     scale: float = float("nan")
     scale_base_horizon: Optional[str] = None
+    reward_commas: bool = True                # thousands separators in rendered rewards ("10,000"); False -> "10000"
     prompt_id: str = ""
     text: str = ""
 
     @property
     def short_line(self) -> str:
-        return f"{_fmt_reward(self.short_reward)} {DOMAINS[self.domain].reward_unit} in {self.short_delay_text}."
+        return f"{_fmt_reward(self.short_reward, self.reward_commas)} {DOMAINS[self.domain].reward_unit} in {self.short_delay_text}."
 
     @property
     def long_line(self) -> str:
-        return f"{_fmt_reward(self.long_reward)} {DOMAINS[self.domain].reward_unit} in {self.long_delay_text}."
+        return f"{_fmt_reward(self.long_reward, self.reward_commas)} {DOMAINS[self.domain].reward_unit} in {self.long_delay_text}."
 
     @property
     def short_label(self) -> str:
@@ -138,8 +144,8 @@ class PromptSample:
         return self.label_b if self.short_first else self.label_a
 
 
-def _fmt_reward(r: float) -> str:
-    return f"{int(r):,}"
+def _fmt_reward(r: float, commas: bool = True) -> str:
+    return f"{int(r):,}" if commas else f"{int(r)}"
 
 
 # Alternative renderings of each canonical horizon: integer values within 10% of the canonical
@@ -280,4 +286,58 @@ def from_frame(df: pd.DataFrame) -> list[PromptSample]:
         if d.get("horizon_heldout") is not None:
             d["horizon_heldout"] = bool(d["horizon_heldout"])
         out.append(PromptSample(**d))
+    return out
+
+
+def dense_integer_grid(n: int, max_value: int) -> list[int]:
+    """About n distinct integers in [1, max_value], log-spaced: the smallest geometric grid whose rounding yields
+    at least n distinct values. Below the value where consecutive integers are coarser than the log spacing every
+    integer is present, so the low end is sparser in log scale than the rest."""
+    m = n
+    while True:
+        v = sorted({int(round(x)) for x in np.geomspace(1, max_value, m)})
+        if len(v) >= n:
+            return v
+        m += max(1, (n - len(v)) // 2)
+
+
+def _horizon_renderer(spec: str):
+    if spec == "plain":
+        return str
+    if spec.startswith("pad"):
+        w = int(spec[3:]); return lambda h: f"{int(h.value):0{w}d} {h.unit}"
+    if spec.startswith("dec"):
+        k = int(spec[3:]); return lambda h: f"{h.value:.{k}f} {h.unit}"
+    raise ValueError(f"unknown horizon rendering {spec!r} (plain | padN | decN)")
+
+
+def fixed_scenario(horizons, *, domain: str = "investment", short_reward, short_delay: Horizon,
+                   long_reward, long_delay: Horizon, short_first: bool = True, labels=LABEL_STYLES[0],
+                   reward_commas: bool = True, fmt: Optional[PromptFormat] = None, uid_prefix: str = "f",
+                   horizon_render: str = "plain") -> list[PromptSample]:
+    """One option configuration and label order with exactly one varying quantity: exactly one of `horizons` (list of
+    Horizon; prompts differ only in the CONSTRAINT line), `short_reward` or `long_reward` (list; prompts differ only in
+    that option's line) is a list, the others scalars (one Horizon). For measuring what one quantity alone traces out.
+    Nothing enforces short_reward < long_reward: a varying long reward crosses the short one on purpose.
+    horizon_render: "plain" (str(Horizon): "37 years", "1 year"), "padN" (zero-padded integer, always plural: "0037 years"),
+    "decN" (N decimals, always plural: "37.00 years"); recorded in the `rendering` column."""
+    fmt = fmt or PromptFormat()
+    is_list = [not isinstance(horizons, Horizon), not isinstance(short_reward, (int, float)), not isinstance(long_reward, (int, float))]
+    if sum(is_list) != 1:
+        raise ValueError("vary exactly one of horizons, short_reward, long_reward (as a list)")
+    n = len([horizons, short_reward, long_reward][is_list.index(True)])
+    hs, srs, lrs = ([x] * n if not lst else list(x) for x, lst in zip((horizons, short_reward, long_reward), is_list))
+    out = []
+    render = _horizon_renderer(horizon_render)
+    for i, (h, short_reward, long_reward) in enumerate(zip(hs, srs, lrs)):
+        s = PromptSample(
+            sample_uid=f"{uid_prefix}_{i:06d}", domain=domain, horizon_text=render(h), horizon_years=h.years,
+            short_reward=float(short_reward), short_delay_text=str(short_delay), short_delay_years=short_delay.years,
+            long_reward=float(long_reward), long_delay_text=str(long_delay), long_delay_years=long_delay.years,
+            short_first=short_first, label_a=labels[0], label_b=labels[1], format_name=fmt.name,
+            horizon_unit=h.unit, horizon_value=h.value, reward_commas=reward_commas,
+            rendering=None if horizon_render == "plain" else horizon_render)
+        s.text = fmt.render(s)
+        s.prompt_id = hashlib.sha1(s.text.encode()).hexdigest()[:12]
+        out.append(s)
     return out

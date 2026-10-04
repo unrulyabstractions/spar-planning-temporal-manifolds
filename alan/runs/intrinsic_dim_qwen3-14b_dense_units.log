@@ -1,0 +1,46 @@
+run runs/qwen3-14b_dense_units_pooled_n1500 (Qwen3-14B, dense 4-unit pooled, L=40); activations from shards; k1..k2 = 10..20
+L22 R0 (0.55 L) n=1500 (dropped 0 duplicates): m = 17.26 [k-2 form 15.94]  Gaussian, same covariance 21.34
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 39.62 29.37 25.39 21.87 19.25 17.06 15.75 13.87 11.45 9.61 8.44 7.08 6.29 5.44
+   1-D reference (log10 horizon_years, same sampling) 1.14; mean |rank gap| to 20-NN 63.6 (1-D reference 5.6); local estimate vs log horizon_years: Spearman +0.29, by decade (log10 horizon_years) {"-3": 5.93, "-2": 11.05, "-1": 13.09, "0": 16.34, "1": 19.17, "2": 18.65}
+   spline in log horizon_years (quantile knots): held-out R² 0.294 [value 1-9 0.51, 10-99 0.38, >=100 0.21; line 0.236]; estimate on the residual 19.46; residual variance share by last digit 0.029 (permuted 0.011), by digit count 0.320
+   78 rows tie on horizon_years (equal values in different renderings); ref_1d uses the 1422 distinct values
+   by horizon_unit (interpolation only): spline R² shared curve 0.294, + per-level offsets 0.692, per-level curves 0.761 (excluded rows 10/10/10); line + offsets 0.634
+   per level: {"days": {"n": 467, "m": 15.84, "spline_r2": 0.72, "line_r2": 0.57, "log10_range": [-2.56, 2.0]}, "weeks": {"n": 467, "m": 17.87, "spline_r2": 0.6, "line_r2": 0.494, "log10_range": [-1.72, 2.0]}, "months": {"n": 466, "m": 19.81, "spline_r2": 0.555, "line_r2": 0.403, "log10_range": [-1.08, 2.0]}, "years": {"n": 100, "m": 8.75, "spline_r2": 0.651, "line_r2": 0.537, "log10_range": [0.0, 2.0]}}
+   79 pairs of equal values in different levels: median pair distance / median 20-th NN distance 2.00; partner among the 20-NN in 0.05 of pairs
+   horizon_unit       same-level share of 20-NN 0.99 (chance 0.29)  centered 18.36  permuted-centered 17.40 ± 0.06
+   mean |Δ log10 H| to the 20-NN: 0.11 decades
+L29 R0 (0.72 L) n=1500 (dropped 0 duplicates): m = 11.30 [k-2 form 10.43]  Gaussian, same covariance 15.20
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 27.19 20.50 17.53 14.83 12.66 11.18 10.25 8.82 7.33 6.35 5.72 4.99 4.60 4.12
+   1-D reference (log10 horizon_years, same sampling) 1.14; mean |rank gap| to 20-NN 51.1 (1-D reference 5.6); local estimate vs log horizon_years: Spearman +0.41, by decade (log10 horizon_years) {"-3": 3.76, "-2": 5.87, "-1": 7.34, "0": 10.24, "1": 13.15, "2": 18.23}
+   spline in log horizon_years (quantile knots): held-out R² 0.733 [value 1-9 0.69, 10-99 0.78, >=100 0.69; line 0.577]; estimate on the residual 12.78; residual variance share by last digit 0.015 (permuted 0.007), by digit count 0.222
+   78 rows tie on horizon_years (equal values in different renderings); ref_1d uses the 1422 distinct values
+   by horizon_unit (interpolation only): spline R² shared curve 0.737, + per-level offsets 0.841, per-level curves 0.897 (excluded rows 10/10/10); line + offsets 0.688
+   per level: {"days": {"n": 467, "m": 9.76, "spline_r2": 0.903, "line_r2": 0.69, "log10_range": [-2.56, 2.0]}, "weeks": {"n": 467, "m": 11.96, "spline_r2": 0.847, "line_r2": 0.651, "log10_range": [-1.72, 2.0]}, "months": {"n": 466, "m": 13.01, "spline_r2": 0.81, "line_r2": 0.523, "log10_range": [-1.08, 2.0]}, "years": {"n": 100, "m": 6.24, "spline_r2": 0.822, "line_r2": 0.55, "log10_range": [0.0, 2.0]}}
+   79 pairs of equal values in different levels: median pair distance / median 20-th NN distance 2.37; partner among the 20-NN in 0.06 of pairs
+   horizon_unit       same-level share of 20-NN 0.98 (chance 0.29)  centered 11.38  permuted-centered 11.50 ± 0.04
+   mean |Δ log10 H| to the 20-NN: 0.09 decades
+L37 T3 (0.93 L) n=1500 (dropped 0 duplicates): m = 21.13 [k-2 form 19.51]  Gaussian, same covariance 27.06
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 50.32 35.89 31.23 27.32 23.77 21.00 19.05 16.48 13.44 11.17 9.73 8.20 7.46 6.78
+   1-D reference (log10 horizon_years, same sampling) 1.14; mean |rank gap| to 20-NN 64.5 (1-D reference 5.6); local estimate vs log horizon_years: Spearman +0.23, by decade (log10 horizon_years) {"-3": 6.84, "-2": 14.76, "-1": 16.7, "0": 20.31, "1": 23.05, "2": 25.96}
+   spline in log horizon_years (quantile knots): held-out R² 0.308 [value 1-9 0.53, 10-99 0.37, >=100 0.26; line 0.235]; estimate on the residual 24.23; residual variance share by last digit 0.027 (permuted 0.007), by digit count 0.241
+   78 rows tie on horizon_years (equal values in different renderings); ref_1d uses the 1422 distinct values
+   by horizon_unit (interpolation only): spline R² shared curve 0.309, + per-level offsets 0.586, per-level curves 0.665 (excluded rows 10/10/10); line + offsets 0.509
+   per level: {"days": {"n": 467, "m": 19.96, "spline_r2": 0.615, "line_r2": 0.429, "log10_range": [-2.56, 2.0]}, "weeks": {"n": 467, "m": 20.95, "spline_r2": 0.543, "line_r2": 0.43, "log10_range": [-1.72, 2.0]}, "months": {"n": 466, "m": 24.26, "spline_r2": 0.507, "line_r2": 0.372, "log10_range": [-1.08, 2.0]}, "years": {"n": 100, "m": 12.15, "spline_r2": 0.59, "line_r2": 0.462, "log10_range": [0.0, 2.0]}}
+   79 pairs of equal values in different levels: median pair distance / median 20-th NN distance 1.51; partner among the 20-NN in 0.04 of pairs
+   horizon_unit       same-level share of 20-NN 0.98 (chance 0.29)  centered 22.22  permuted-centered 21.24 ± 0.04
+   mean |Δ log10 H| to the 20-NN: 0.12 decades
+L22 T3 (0.55 L) n=1500 (dropped 0 duplicates): m = 19.19 [k-2 form 17.72]  Gaussian, same covariance 25.48
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 44.46 33.34 28.87 24.53 21.71 18.95 17.46 15.26 12.63 10.52 9.20 7.53 6.69 5.95
+   1-D reference (log10 horizon_years, same sampling) 1.14; mean |rank gap| to 20-NN 60.8 (1-D reference 5.6); local estimate vs log horizon_years: Spearman +0.28, by decade (log10 horizon_years) {"-3": 6.25, "-2": 11.6, "-1": 13.99, "0": 18.32, "1": 21.4, "2": 18.75}
+   spline in log horizon_years (quantile knots): held-out R² 0.304 [value 1-9 0.55, 10-99 0.39, >=100 0.23; line 0.245]; estimate on the residual 21.44; residual variance share by last digit 0.030 (permuted 0.006), by digit count 0.266
+   78 rows tie on horizon_years (equal values in different renderings); ref_1d uses the 1422 distinct values
+   by horizon_unit (interpolation only): spline R² shared curve 0.304, + per-level offsets 0.622, per-level curves 0.703 (excluded rows 10/10/10); line + offsets 0.559
+   per level: {"days": {"n": 467, "m": 17.49, "spline_r2": 0.654, "line_r2": 0.491, "log10_range": [-2.56, 2.0]}, "weeks": {"n": 467, "m": 19.37, "spline_r2": 0.55, "line_r2": 0.431, "log10_range": [-1.72, 2.0]}, "months": {"n": 466, "m": 22.58, "spline_r2": 0.533, "line_r2": 0.389, "log10_range": [-1.08, 2.0]}, "years": {"n": 100, "m": 10.24, "spline_r2": 0.573, "line_r2": 0.412, "log10_range": [0.0, 2.0]}}
+   79 pairs of equal values in different levels: median pair distance / median 20-th NN distance 1.71; partner among the 20-NN in 0.04 of pairs
+   horizon_unit       same-level share of 20-NN 0.99 (chance 0.29)  centered 20.34  permuted-centered 19.35 ± 0.06
+   mean |Δ log10 H| to the 20-NN: 0.11 decades
+calibration N_m(0, I), n=1500, eq. (9) k=10..20: m=1: 1.08  m=2: 2.20  m=3: 3.31  m=5: 5.46  m=8: 8.31  m=10: 9.97  m=12: 11.55  m=15: 13.57  m=20: 16.44  m=30: 21.76
+calibration N_m(0, I), n=467, eq. (9) k=10..20: m=1: 1.09  m=2: 2.23  m=3: 3.36  m=5: 5.37  m=8: 7.80  m=10: 9.45  m=12: 10.59  m=15: 12.53  m=20: 15.13  m=30: 19.55
+calibration N_m(0, I), n=466, eq. (9) k=10..20: m=1: 1.08  m=2: 2.24  m=3: 3.24  m=5: 5.28  m=8: 7.84  m=10: 9.46  m=12: 10.64  m=15: 12.38  m=20: 15.31  m=30: 19.62
+calibration N_m(0, I), n=100, eq. (9) k=10..20: m=1: 1.18  m=2: 2.14  m=3: 3.24  m=5: 5.01  m=8: 6.88  m=10: 7.99  m=12: 9.74  m=15: 10.34  m=20: 12.67  m=30: 15.69
+wrote figures/qwen3-14b_dense_units_pooled_n1500/intrinsic_dim.csv, figures/qwen3-14b_dense_units_pooled_n1500/intrinsic_dim_kcurve.csv, figures/qwen3-14b_dense_units_pooled_n1500/intrinsic_dim_kcurve.png

@@ -1,11 +1,13 @@
 """Activation capture: generate greedily, then re-run teacher-forced and hook the residual stream.
 
 Residual-stream convention (stored axis `layer`, length n_layers + 1):
-  layer 0        = output of the token embedding (input to decoder layer 0)
+  layer 0        = output of the token embedding (input to decoder layer 0; for Gemma this includes its
+                   sqrt(d) embedding scale, which the embedding module applies itself)
   layer l >= 1   = output of decoder layer l-1, i.e. the residual stream after l layers
                    (the prior work's `resid_post` of layer l-1)
 No final norm is applied to any stored layer. Choice logits are computed by applying the model's
-final norm and lm_head to the layer-n_layers vector at the position that predicts the label token.
+final norm, lm_head and (Gemma) final logit soft cap to the layer-n_layers vector at the position that
+predicts the label token.
 """
 
 from __future__ import annotations
@@ -19,7 +21,8 @@ from typing import Optional
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .chat import ANCHOR_LABELS, ChatEncoding, encode_user_turn, find_anchor, find_choice, label_first_token_id, position_labels
+from .chat import (ANCHOR_LABELS, ChatEncoding, encode_user_turn, end_of_turn_id, find_anchor, find_choice,
+                   label_first_token_id, position_labels)
 from .prompts import PromptSample
 
 
@@ -60,11 +63,36 @@ class SampleResult:
     pos_valid: Optional[list[bool]] = None
 
 
+def text_stack(model):
+    """The decoder stack holding embed_tokens / layers / norm: `model.model` for Qwen3 and Qwen3.5 (which
+    AutoModelForCausalLM loads text-only), `model.model.language_model` when it returns a multimodal wrapper
+    (Gemma 4: Gemma4ForConditionalGeneration)."""
+    base = model.model
+    stack = getattr(base, "language_model", base)
+    for name in ("embed_tokens", "layers", "norm"):
+        if not hasattr(stack, name):
+            raise AttributeError(f"{type(model).__name__}: decoder stack {type(stack).__name__} has no {name!r}; unverified layout")
+    return stack
+
+
+def final_logit_softcap(model) -> Optional[float]:
+    """Gemma's final logit soft cap c (logits = c·tanh(z/c)); None for models without one (Qwen)."""
+    cfg = model.config
+    return getattr(cfg.get_text_config(), "final_logit_softcapping", None)
+
+
+def softcap(x, cap: Optional[float]):
+    """Apply the model's final logit soft cap, as its own forward does after lm_head."""
+    if cap is None:
+        return x
+    return cap * (torch.tanh(x / cap) if isinstance(x, torch.Tensor) else math.tanh(x / cap))
+
+
 class ResidualHooks:
     """Forward hooks that copy the residual stream at requested positions to CPU as it is produced."""
 
     def __init__(self, model):
-        base = model.model
+        base = text_stack(model)
         self.modules = [base.embed_tokens] + list(base.layers)
         self.n_layers = len(base.layers)
         self.positions: Optional[torch.Tensor] = None   # [B, n_pos] long, on CPU
@@ -106,15 +134,25 @@ class ResidualHooks:
 
 
 def explicit_device_map(model_name: str, split_layers: int) -> dict:
-    """Embeddings and decoder layers [0, split) on cuda:0; the rest, final norm and lm_head on cuda:1."""
+    """Embeddings and decoder layers [0, split) on cuda:0; the rest, final norm and lm_head on cuda:1.
+    Module paths come from a weightless (meta-device) instance of the class AutoModelForCausalLM will load, so a
+    multimodal wrapper (Gemma 4) gets its `model.language_model.*` paths and its non-text modules go on cuda:0."""
     from transformers import AutoConfig
     cfg = AutoConfig.from_pretrained(model_name)
     n = getattr(cfg, "text_config", cfg).num_hidden_layers     # multimodal wrappers (Qwen3.5) keep the depth in text_config
     if not (0 < split_layers < n):
         raise ValueError(f"split_layers must be in (0, {n}), got {split_layers}")
-    dm = {"model.embed_tokens": 0, "model.rotary_emb": 0, "model.norm": 1, "lm_head": 1}
+    with torch.device("meta"):
+        skeleton = AutoModelForCausalLM.from_config(cfg)
+    wrapped = hasattr(skeleton.model, "language_model")
+    p = "model.language_model" if wrapped else "model"
+    dm = {f"{p}.embed_tokens": 0, f"{p}.rotary_emb": 0, f"{p}.norm": 1, "lm_head": 1}
     for i in range(n):
-        dm[f"model.layers.{i}"] = 0 if i < split_layers else 1
+        dm[f"{p}.layers.{i}"] = 0 if i < split_layers else 1
+    if wrapped:   # vision/audio towers and projections: unused for text, but every module needs a device
+        for name, _ in skeleton.model.named_children():
+            if name != "language_model":
+                dm[f"model.{name}"] = 0
     return dm
 
 
@@ -163,7 +201,7 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
     for e in encs:
         assert len(e.transition_tokens) == n_trans, "transition window length differs across prompts; template drift"
     pad_id = tok.pad_token_id
-    eos_ids = sorted({tok.convert_tokens_to_ids("<|im_end|>"), tok.eos_token_id})
+    eos_ids = sorted({end_of_turn_id(tok), tok.eos_token_id})
     device = model.get_input_embeddings().weight.device
 
     # 1) greedy generation, left-padded so all sequences end at the same index
@@ -214,7 +252,7 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
             mean_range = [(m0, e0) if ok else None]; valid.append(ok)
         hooks.arm(positions, mean_range if cfg.anchors else None)
         last_raw: dict = {}
-        hh = model.model.layers[-1].register_forward_hook(
+        hh = text_stack(model).layers[-1].register_forward_hook(
             lambda m, i, o: last_raw.setdefault("x", (o[0] if isinstance(o, (tuple, list)) else o)))
         try:
             model.model(input_ids=torch.tensor([e.input_ids + g], device=device))
@@ -254,19 +292,21 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
                 raw = acts_list[b][-1, k]
             else:                          # choice beyond the stored response window: pull it now
                 raw = last_raw_list[b][pos].to("cpu")
-            norm = model.model.norm
+            norm = text_stack(model).norm
             h = norm(raw.to(norm.weight.device, dtype=norm.weight.dtype))
             W = model.lm_head.weight
+            cap = final_logit_softcap(model)
             # the actual emitted token decides the spacing variant; its counterpart uses the same variant
             emitted = g[j]
             spaced = emitted == label_first_token_id(tok, s.label_a if choice == "a" else s.label_b)
             ia = tok((" " if spaced else "") + s.label_a, add_special_tokens=False)["input_ids"][0]
             ib = tok((" " if spaced else "") + s.label_b, add_special_tokens=False)["input_ids"][0]
             h32 = h.to(W.device).float()
-            # two-row logits in float32 (exact given the bf16 residual); full-vocab softmax in model dtype
-            logit_a = float(h32 @ W[ia].float())
-            logit_b = float(h32 @ W[ib].float())
-            probs = torch.softmax(model.lm_head(h.to(W.device)).float(), dim=-1)
+            # two-row logits in float32 (exact given the bf16 residual); full-vocab softmax in model dtype.
+            # Both include the model's final logit soft cap (Gemma), so p_short is the model's own pairwise preference.
+            logit_a = softcap(float(h32 @ W[ia].float()), cap)
+            logit_b = softcap(float(h32 @ W[ib].float()), cap)
+            probs = torch.softmax(softcap(model.lm_head(h.to(W.device)).float(), cap), dim=-1)
             r.choice, r.choice_gen_index = choice, j
             r.logit_a, r.logit_b = logit_a, logit_b
             r.p_a, r.p_b = float(probs[ia]), float(probs[ib])

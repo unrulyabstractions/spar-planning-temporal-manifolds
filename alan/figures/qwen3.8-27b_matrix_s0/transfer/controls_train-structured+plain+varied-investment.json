@@ -1,0 +1,47 @@
+{
+  "tag": "train-structured+plain+varied-investment",
+  "layer": 53,
+  "position": "T0",
+  "alpha": 1.0,
+  "controls": {
+    "mention": {
+      "n": 240,
+      "rmse": 0.4149001353691928,
+      "bias": -0.18336026238731376,
+      "rmse_debiased": 0.3721842776188026,
+      "medae": 0.2681653395705582,
+      "rho": 0.964770328698841,
+      "within2x": 0.55,
+      "worst_group": 0.35,
+      "worst_group_name": "100 years",
+      "rho_resid_distractor": 0.47930188449727373
+    },
+    "role": {
+      "n": 240,
+      "rmse": 0.7220856759323009,
+      "bias": 0.43096073749331804,
+      "rmse_debiased": 0.5793794664344114,
+      "medae": 0.43670769751865635,
+      "rho": 0.9393692571485058,
+      "within2x": 0.3416666666666667,
+      "worst_group": 0.0,
+      "worst_group_name": "1 day",
+      "rho_resid_distractor": 0.7936190930993731
+    },
+    "factual": {
+      "n": 240,
+      "rmse": 6.1035500352715255,
+      "bias": -5.963087670925576,
+      "rmse_debiased": 1.3018865011660687,
+      "medae": 6.0138280391693115,
+      "rho": 0.3145516782176278,
+      "within2x": 0.0,
+      "worst_group": 0.0,
+      "worst_group_name": "1 day"
+    },
+    "scaling": {
+      "slope_mean": 0.6831893553336461,
+      "n": 360
+    }
+  }
+}

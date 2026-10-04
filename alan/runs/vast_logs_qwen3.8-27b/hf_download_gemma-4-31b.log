@@ -1,0 +1,5 @@
+[90mHint: A new version of huggingface_hub (2.1.1) is available! You are using version 1.32.0.[0m
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 12 files:  67%|██████▋   | 8/12 [00:00<00:00, 70.36it/s]Fetching 12 files:  92%|█████████▏| 11/12 [00:20<00:00, 70.36it/s]Fetching 12 files: 100%|██████████| 12/12 [00:33<00:00,  3.49s/it]Fetching 12 files: 100%|██████████| 12/12 [00:33<00:00,  2.80s/it]
+[32m✓ Downloaded[0m
+  path: /workspace/.hf_home/hub/models--google--gemma-4-31B-it/snapshots/842da3794eaa0b77d5f08bae87a17459d91ff475

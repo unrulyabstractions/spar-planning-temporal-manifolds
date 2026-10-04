@@ -1,0 +1,6 @@
+2026-10-03 11:21:47 SETUP START HF_HOME=/workspace/.hf_home
+torch 2.11.0+cu128 12.8 NVIDIA A100 80GB PCIe transformers 5.17.0 fla 0.5.2
+2026-10-03 11:22:23 env ok; downloading models
+2026-10-03 11:22:48 download Qwen3.8-27B ok
+2026-10-03 11:22:57 download gemma-4-31B-it ok
+2026-10-03 11:22:57 SETUP DONE; disk overlay         345G  118G  228G  34% /

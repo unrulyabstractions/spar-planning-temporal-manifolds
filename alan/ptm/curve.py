@@ -55,6 +55,52 @@ class Basis:
         return self(np.array([0.0])).shape[1]
 
 
+def quantile_basis(t, n_interior: int = 8) -> Basis:
+    """Cubic spline basis with interior knots at equally spaced quantiles of t, so every basis function has data support
+    when t is sampled unevenly (log10 of a dense integer grid has 1 point in [0, 0.3) and hundreds per 0.3 decades at
+    the top). Equally spaced knots there leave the first basis functions resting on a handful of points, and a
+    near-unregularised fit extrapolates wildly in held-out folds."""
+    t = np.asarray(t, dtype=float); lo, hi = float(t.min()), float(t.max())
+    inner = np.quantile(t, np.linspace(0, 1, n_interior + 2)[1:-1])
+    return Basis("spline", t_min=lo, t_max=hi, n_interior=n_interior, knots=np.concatenate([[lo] * 4, inner, [hi] * 4]))
+
+
+def cv_r2(X, t, make_basis, n_splits: int = 5, alpha: float = 1e-6, seed: int = 0, ctx=None, context: str = "none",
+          interpolate_only: bool = False, make_level_basis=None):
+    """K-fold held-out R² of the forward curve, as a share of variance about the training-fold mean.
+
+    context: none (x = mu + f(t)) | offset (+ c(ctx)) | interaction (CurveModel per-level curves on make_basis's knots)
+             | separate (each level fit on its own, basis make_level_basis(t of that level); the baseline stays the pooled
+             training-fold mean, so the score is comparable across contexts).
+    interpolate_only: score only test rows whose t lies inside the training rows' t range (of the same level when there
+             is a context); excluded rows get NaN errors. The extreme value of each level otherwise lands in some test
+             fold and is extrapolated, which a curve fit is not meant to do.
+    Returns (R², per-row squared error, per-row squared error of the training-fold mean)."""
+    from sklearn.model_selection import KFold
+    X = np.asarray(X, dtype=np.float64); t = np.asarray(t, dtype=float)
+    c = None if ctx is None else np.asarray(ctx)
+    err = np.full(len(X), np.nan); err0 = np.full(len(X), np.nan)
+    for tr, te in KFold(n_splits, shuffle=True, random_state=seed).split(X):
+        if context == "none":
+            pred = CurveModel(make_basis(), alpha=alpha).fit(X[tr], t[tr]).predict(t[te])
+        elif context == "separate":
+            pred = np.zeros((len(te), X.shape[1]))
+            for lv in np.unique(c[te]):
+                a_tr, a_te = tr[c[tr] == lv], c[te] == lv
+                pred[a_te] = CurveModel(make_level_basis(t[c == lv]), alpha=alpha).fit(X[a_tr], t[a_tr]).predict(t[te][a_te])
+        else:
+            pred = CurveModel(make_basis(), context=context, alpha=alpha).fit(X[tr], t[tr], c[tr]).predict(t[te], c[te])
+        keep = np.ones(len(te), bool)
+        if interpolate_only:
+            for lv in (np.unique(c[te]) if c is not None else [None]):
+                m_te = np.ones(len(te), bool) if lv is None else c[te] == lv
+                t_tr = t[tr] if lv is None else t[tr][c[tr] == lv]
+                keep &= ~m_te | ((t[te] >= t_tr.min()) & (t[te] <= t_tr.max()))
+        e = ((X[te] - pred) ** 2).sum(1); e0 = ((X[te] - X[tr].mean(0)) ** 2).sum(1)
+        err[te] = np.where(keep, e, np.nan); err0[te] = np.where(keep, e0, np.nan)
+    return float(1 - np.nansum(err) / np.nansum(err0)), err, err0
+
+
 # ------------------------------------------------------------------ model
 
 @dataclass

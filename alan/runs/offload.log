@@ -1,0 +1,54 @@
+2026-10-03 07:39:21 OFFLOAD START commit 5b99ab9 dest gs://alan-captures-20261003/qwen3-14b-dense, 13 runs
+2026-10-03 07:39:21 pilot_reward_switch: upload 2.0G
+2026/10/03 07:46:44 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/pilot_reward_switch: 0 differences found
+2026/10/03 07:46:44 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/pilot_reward_switch: 7 matching files
+2026-10-03 07:46:44 pilot_reward_switch: verified (7 files, md5 equal); full shards deleted, folder now 84K
+2026-10-03 07:46:44 pilot_long_reward_switch: upload 2.0G
+2026/10/03 07:54:18 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/pilot_long_reward_switch: 0 differences found
+2026/10/03 07:54:18 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/pilot_long_reward_switch: 7 matching files
+2026-10-03 07:54:19 pilot_long_reward_switch: verified (7 files, md5 equal); full shards deleted, folder now 84K
+2026-10-03 07:54:19 qwen3-14b_matched_years_dwmy_n100: upload 2.7G
+2026/10/03 08:04:15 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_years_dwmy_n100: 0 differences found
+2026/10/03 08:04:15 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_years_dwmy_n100: 9 matching files
+2026-10-03 08:04:15 qwen3-14b_matched_years_dwmy_n100: verified (9 files, md5 equal); full shards deleted, folder now 104K
+2026-10-03 08:04:15 qwen3-14b_matched_months_years_dec2_n1200: upload 8.0G
+2026/10/03 08:34:08 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_months_years_dec2_n1200: 0 differences found
+2026/10/03 08:34:08 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_months_years_dec2_n1200: 21 matching files
+2026-10-03 08:34:09 qwen3-14b_matched_months_years_dec2_n1200: verified (21 files, md5 equal); full shards deleted, folder now 208K
+2026-10-03 08:34:09 qwen3-14b_matched_months_months_dm_n1200: upload 8.0G
+2026/10/03 09:05:09 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_months_months_dm_n1200: 0 differences found
+2026/10/03 09:05:09 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_months_months_dm_n1200: 21 matching files
+2026-10-03 09:05:09 qwen3-14b_matched_months_months_dm_n1200: verified (21 files, md5 equal); full shards deleted, folder now 212K
+2026-10-03 09:05:09 qwen3-14b_matched_months_years_dec2_dm_n1200: upload 8.0G
+2026/10/03 09:36:56 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_months_years_dec2_dm_n1200: 0 differences found
+2026/10/03 09:36:56 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_months_years_dec2_dm_n1200: 21 matching files
+2026-10-03 09:36:56 qwen3-14b_matched_months_years_dec2_dm_n1200: verified (21 files, md5 equal); full shards deleted, folder now 212K
+2026-10-03 09:36:56 qwen3-14b_dense_days_n1500: upload 10G
+2026/10/03 10:14:35 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_days_n1500: 0 differences found
+2026/10/03 10:14:35 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_days_n1500: 26 matching files
+2026-10-03 10:14:36 qwen3-14b_dense_days_n1500: verified (26 files, md5 equal); full shards deleted, folder now 260K
+2026-10-03 10:14:36 qwen3-14b_dense_short_reward_n1500: upload 10G
+2026/10/03 10:51:56 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_short_reward_n1500: 0 differences found
+2026/10/03 10:51:56 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_short_reward_n1500: 26 matching files
+2026-10-03 10:51:56 qwen3-14b_dense_short_reward_n1500: verified (26 files, md5 equal); full shards deleted, folder now 176K
+2026-10-03 10:51:56 qwen3-14b_dense_days_cfirst_n1500: upload 10G
+2026/10/03 11:29:28 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_days_cfirst_n1500: 0 differences found
+2026/10/03 11:29:28 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_days_cfirst_n1500: 26 matching files
+2026-10-03 11:29:29 qwen3-14b_dense_days_cfirst_n1500: verified (26 files, md5 equal); full shards deleted, folder now 272K
+2026-10-03 11:29:29 qwen3-14b_dense_long_reward_h20y_n1500: upload 10G
+2026/10/03 12:06:22 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_long_reward_h20y_n1500: 0 differences found
+2026/10/03 12:06:22 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_long_reward_h20y_n1500: 26 matching files
+2026-10-03 12:06:22 qwen3-14b_dense_long_reward_h20y_n1500: verified (26 files, md5 equal); full shards deleted, folder now 228K
+2026-10-03 12:06:22 qwen3-14b_dense_units_pooled_n1500: upload 10G
+2026/10/03 12:43:36 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_units_pooled_n1500: 0 differences found
+2026/10/03 12:43:36 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_dense_units_pooled_n1500: 26 matching files
+2026-10-03 12:43:37 qwen3-14b_dense_units_pooled_n1500: verified (26 files, md5 equal); full shards deleted, folder now 268K
+2026-10-03 12:43:37 qwen3-14b_matched_months_dwm_n1200: upload 24G
+2026/10/03 14:13:34 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_months_dwm_n1200: 0 differences found
+2026/10/03 14:13:34 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_matched_months_dwm_n1200: 59 matching files
+2026-10-03 14:13:34 qwen3-14b_matched_months_dwm_n1200: verified (59 files, md5 equal); full shards deleted, folder now 556K
+2026-10-03 14:13:34 qwen3-14b_years_render_n1200: upload 24G
+2026/10/03 15:44:17 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_years_render_n1200: 0 differences found
+2026/10/03 15:44:17 NOTICE: GCS bucket alan-captures-20261003 path qwen3-14b-dense/qwen3-14b_years_render_n1200: 59 matching files
+2026-10-03 15:44:18 qwen3-14b_years_render_n1200: verified (59 files, md5 equal); full shards deleted, folder now 460K
+2026-10-03 15:44:18 OFFLOAD DONE; disk 815G free

@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 export HF_HUB_OFFLINE=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 PY=.venv/bin/python; MODEL=${MODEL:-Qwen/Qwen3-14B}; TAG=${TAG:-qwen3-14b}; CAP="--model $MODEL ${CAP_ARGS:---batch-size 8 --split 19}"
 CHECKSUMS=${CHECKSUMS:-snapshot/checksums_post_20260925.json}
-LOG=runs/reproduce_all.log; mkdir -p runs figures data/prompts
+LOG=${REPRO_LOG:-runs/reproduce_all.log}; mkdir -p runs figures data/prompts   # REPRO_LOG: per-model log when several models share runs/
 stamp() { echo "$(date '+%F %T') $*" | tee -a $LOG; }
 stamp "START commit $(git rev-parse --short HEAD) model $MODEL tag $TAG cap [$CAP]"
 

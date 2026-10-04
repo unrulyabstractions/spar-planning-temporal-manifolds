@@ -1,0 +1,16 @@
+{
+  "out": "data/prompts/dense_long_reward_h20y_n1500.parquet",
+  "vary": "long_reward",
+  "n": 1500,
+  "unit": "days",
+  "max": 36525,
+  "horizon": "20 years",
+  "short_reward": 1000.0,
+  "short_delay": "1 year",
+  "long_reward": 50000,
+  "long_delay": "10 years",
+  "long_first": false,
+  "no_reward_commas": true,
+  "constraint_first": false,
+  "n_values": 1500
+}

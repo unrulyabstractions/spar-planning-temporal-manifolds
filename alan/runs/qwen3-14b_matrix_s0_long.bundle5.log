@@ -1,0 +1,3 @@
+    raise LinAlgError("SVD did not converge")
+numpy.linalg.LinAlgError: SVD did not converge
+GEOM_DONE

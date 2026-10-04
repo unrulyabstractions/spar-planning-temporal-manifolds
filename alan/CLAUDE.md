@@ -283,6 +283,26 @@ Runbook: `scripts/vast_full_chain.sh` on the instance (inside tmux; `MODEL=... T
 BLAS/OpenMP threads (the runbook exports `OMP_NUM_THREADS=4` etc.) and never let a 24-thread analysis run beside
 a capture there, or the kernel-launching thread starves and the GPU idles.
 
+**Convention: check a rented Vast.ai instance every 10 minutes (Alan, 2026-10-03).** From the moment an instance is
+running until it is destroyed, run `scripts/vast_status.sh HOST PORT` every 10 minutes so compute budget is not
+wasted. In Claude Code, create a recurring `CronCreate` job for it at the start of the Vast session (jobs live only
+while the session is open and expire after 7 days: re-create it in every new session, and tell Alan when the checks
+will stop because the session is ending). Act on the verdict line: `WARN failure|idle|stalled|disk|unreachable` →
+diagnose immediately and report; `DONE` → finish the fetch/verification, delete the bucket key on the instance, and
+tell Alan the instance can be destroyed. Before renting, confirm the offer's disk (≥ 300 GB; a 32 GB default
+happened once) and upload bandwidth. Keep the GPU busy: upload finished runs while later ones capture
+(`scripts/vast_eager_upload.sh`) instead of after the chain, and run the later analyses beside the remaining captures
+(`vast_full_chain.sh` does this when the CPU quota is ≥ 12 cores; `DRY_RUN=1` tests the schedule without a GPU).
+Analyses stay on the instance, not local: reading the activations out of the bucket to this machine is billed egress
+(≈ 400 GB ≈ $48 per two-model run, vs ≈ $3 of idle GPU saved). Fetch results with `scripts/gcs_fetch_results.sh`
+(figures, logs, run metadata; `--subsets` adds the tier-1 activation subsets, ~20 GB per model).
+
+**Two-model runbook with GCS (2026-10-03, Qwen3.8-27B and Gemma 4 31B-it):** `scripts/vast_models_sequence.sh` runs
+`vast_full_chain.sh` per model on one instance, uploads each model's outputs to `gs://alan-captures-20261003/<tag>/`
+with rclone (service-account key on the instance, outside the repo), verifies with `rclone check` (MD5) and a file
+count, and only then deletes that model's shards and weights. huggingface_hub ≥ 1.x stores weights in a shared
+`hub/blobs` store: deleting a model folder frees nothing by itself (the script removes unreferenced blobs).
+
 ### Local hardware (scanned 2026-09-13), for prototyping
 
 | Resource | Value |

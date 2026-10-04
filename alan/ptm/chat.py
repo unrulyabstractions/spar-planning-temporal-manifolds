@@ -1,9 +1,10 @@
 """Chat-template encoding and the token positions we capture.
 
 Positions are named, never assumed: the transition window is every token from the last
-`<|im_end|>` of the user turn through the end of the generation prompt (including the
-no-thinking prefill), and the response window is the first `n_response` generated tokens.
-`tests/test_chat_tokens.py` asserts the exact token strings for each model family used.
+end-of-turn token of the user turn (`<|im_end|>` for Qwen3/Qwen3.5, `<turn|>` for Gemma 4) through
+the end of the generation prompt (including the no-thinking prefill), and the response window is
+the first `n_response` generated tokens. `tests/test_chat_tokens.py` asserts the exact token strings
+for each model family used.
 """
 
 from __future__ import annotations
@@ -11,11 +12,24 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+# End-of-turn token of each chat-template family in use: Qwen3 / Qwen3.5, Gemma 4. A tokenizer must have exactly one.
+END_OF_TURN_TOKENS = ("<|im_end|>", "<turn|>")
+
+
+def end_of_turn_id(tok) -> int:
+    """Id of the tokenizer's end-of-turn token. Unknown tokens map to None (Qwen) or to the unk id (Gemma)."""
+    found = {t: i for t in END_OF_TURN_TOKENS
+             if (i := tok.convert_tokens_to_ids(t)) is not None and i != tok.unk_token_id}
+    if len(found) != 1:
+        raise ValueError(f"expected exactly one of {END_OF_TURN_TOKENS} in the vocabulary, found {sorted(found)}; "
+                         f"unverified chat template family")
+    return next(iter(found.values()))
+
 
 @dataclass
 class ChatEncoding:
     input_ids: list[int]
-    transition_start: int          # index of the last <|im_end|> in the prompt
+    transition_start: int          # index of the last end-of-turn token in the prompt
     transition_tokens: list[str]   # decoded token strings, one per transition position
 
     @property
@@ -36,10 +50,10 @@ def encode_user_turn(tok, user_text: str, enable_thinking: bool = False) -> Chat
         enable_thinking=enable_thinking,
     )
     ids = tok(text, add_special_tokens=False)["input_ids"]
-    im_end = tok.convert_tokens_to_ids("<|im_end|>")
-    occurrences = [i for i, t in enumerate(ids) if t == im_end]
+    eot = end_of_turn_id(tok)
+    occurrences = [i for i, t in enumerate(ids) if t == eot]
     if not occurrences:
-        raise ValueError("no <|im_end|> found in encoded prompt; wrong chat template family?")
+        raise ValueError(f"no {tok.decode([eot])!r} found in encoded prompt; wrong chat template family?")
     start = occurrences[-1]
     toks = [tok.decode([t]) for t in ids[start:]]
     return ChatEncoding(input_ids=ids, transition_start=start, transition_tokens=toks)

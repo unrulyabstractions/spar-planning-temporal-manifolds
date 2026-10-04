@@ -4,12 +4,12 @@
 Checks, on a small batch:
   1. acts[l] == hidden_states[l] for l in 0..n_layers-1 (input to decoder layer l)
   2. acts[n_layers] == output of the last decoder layer (raw, pre-norm)
-  3. norm(acts[n_layers][pos]) -> lm_head == model(...).logits[pos]
+  3. norm(acts[n_layers][pos]) -> lm_head -> soft cap (Gemma) == model(...).logits[pos]
   4. the captured token at each stored position decodes to the expected string
 """
 import argparse, sys
 import pandas as pd, torch
-from ptm.capture import CaptureConfig, ResidualHooks, capture_batch, load_model
+from ptm.capture import CaptureConfig, ResidualHooks, capture_batch, load_model, text_stack
 from ptm.chat import encode_user_turn
 from ptm.prompts import from_frame
 
@@ -34,7 +34,7 @@ for s, r in zip(samples, res):
     ref = model(input_ids=full, output_hidden_states=True)
     hs = ref.hidden_states
     last_raw = {}
-    h = model.model.layers[-1].register_forward_hook(lambda m, i, o: last_raw.setdefault("x", (o[0] if isinstance(o, (tuple, list)) else o)))
+    h = text_stack(model).layers[-1].register_forward_hook(lambda m, i, o: last_raw.setdefault("x", (o[0] if isinstance(o, (tuple, list)) else o)))
     model.model(input_ids=full); h.remove()
     n_trans = len(enc.transition_tokens)
     positions = list(range(enc.transition_start, enc.prompt_len)) + [enc.prompt_len + k for k in range(cfg.n_response) if k < len(r.gen_ids)]

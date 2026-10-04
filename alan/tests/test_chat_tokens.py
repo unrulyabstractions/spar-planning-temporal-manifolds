@@ -5,15 +5,31 @@ import pytest
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 from transformers import AutoTokenizer  # noqa: E402
 
-from ptm.chat import encode_user_turn, find_choice, label_first_token_id, position_labels  # noqa: E402
+from ptm.chat import encode_user_turn, end_of_turn_id, find_choice, label_first_token_id, position_labels  # noqa: E402
 
 QWEN3_NOTHINK_WINDOW = ["<|im_end|>", "\n", "<|im_start|>", "assistant", "\n", "<think>", "\n\n", "</think>", "\n\n"]
 QWEN3_THINK_WINDOW = ["<|im_end|>", "\n", "<|im_start|>", "assistant", "\n"]
 # Qwen3.5 opens the think block in the template itself when thinking is enabled (7 tokens); the no-think window is identical to Qwen3.
+# Qwen3.8 (same Qwen3_5 architecture class, identical vocab) renders the no-think turn identically to Qwen3.5; its thinking
+# template differs earlier in the prompt but ends in the same 7-token window.
 QWEN35_THINK_WINDOW = QWEN3_THINK_WINDOW + ["<think>", "\n"]
+# Gemma 4 (-it): no-think prefill is an empty thought channel; thinking mode adds `<|think|>` in a system turn
+# before the user turn, so the window after the user's end-of-turn is the bare generation prompt.
+GEMMA4_NOTHINK_WINDOW = ["<turn|>", "\n", "<|turn>", "model", "\n", "<|channel>", "thought", "\n", "<channel|>"]
+GEMMA4_THINK_WINDOW = ["<turn|>", "\n", "<|turn>", "model", "\n"]
+
+MODELS = ["Qwen/Qwen3-14B", "Qwen/Qwen3-8B", "Qwen/Qwen3.5-9B", "Qwen/Qwen3.5-27B", "Qwen/Qwen3.8-27B", "google/gemma-4-31B-it"]
 
 
-@pytest.fixture(scope="module", params=["Qwen/Qwen3-14B", "Qwen/Qwen3-8B", "Qwen/Qwen3.5-9B", "Qwen/Qwen3.5-27B"])
+def is_gemma4(tok):
+    return "gemma-4" in tok.name_or_path
+
+
+def nothink_window(tok):
+    return GEMMA4_NOTHINK_WINDOW if is_gemma4(tok) else QWEN3_NOTHINK_WINDOW
+
+
+@pytest.fixture(scope="module", params=MODELS)
 def tok(request):
     try:
         return AutoTokenizer.from_pretrained(request.param)
@@ -23,22 +39,40 @@ def tok(request):
 
 def test_transition_window_nothink(tok):
     enc = encode_user_turn(tok, "SITUATION: x\nTASK: y", enable_thinking=False)
-    print("transition tokens:", enc.transition_tokens)
-    assert enc.transition_tokens == QWEN3_NOTHINK_WINDOW
-    assert enc.input_ids[enc.transition_start] == tok.convert_tokens_to_ids("<|im_end|>")
+    print(tok.name_or_path, "transition tokens:", enc.transition_tokens)
+    assert enc.transition_tokens == nothink_window(tok)
+    assert enc.input_ids[enc.transition_start] == end_of_turn_id(tok)
     assert enc.transition_positions == list(range(enc.prompt_len - 9, enc.prompt_len))
 
 
 def test_transition_window_think(tok):
     enc = encode_user_turn(tok, "hello", enable_thinking=True)
-    expected = QWEN35_THINK_WINDOW if "Qwen3.5" in tok.name_or_path else QWEN3_THINK_WINDOW
-    print("thinking-mode transition tokens:", enc.transition_tokens)
+    expected = GEMMA4_THINK_WINDOW if is_gemma4(tok) else QWEN35_THINK_WINDOW if ("Qwen3.5" in tok.name_or_path or "Qwen3.8" in tok.name_or_path) else QWEN3_THINK_WINDOW
+    print(tok.name_or_path, "thinking-mode transition tokens:", enc.transition_tokens)
     assert enc.transition_tokens == expected
 
 
-def test_user_text_with_im_end_lookalike_is_not_confused(tok):
-    enc = encode_user_turn(tok, "the string im_end appears here", enable_thinking=False)
-    assert enc.transition_tokens == QWEN3_NOTHINK_WINDOW
+def test_user_text_with_end_of_turn_lookalike_is_not_confused(tok):
+    enc = encode_user_turn(tok, "the strings im_end, turn| and <turn appear here", enable_thinking=False)
+    assert enc.transition_tokens == nothink_window(tok)
+
+
+def test_single_bos(tok):
+    """The template text carries its own BOS (Gemma); encoding must not add a second one."""
+    enc = encode_user_turn(tok, "SITUATION: x", enable_thinking=False)
+    if tok.bos_token_id is not None and is_gemma4(tok):
+        assert enc.input_ids[0] == tok.bos_token_id and enc.input_ids.count(tok.bos_token_id) == 1
+    else:
+        assert tok.bos_token_id is None or tok.bos_token_id not in enc.input_ids, "unexpected BOS in a Qwen prompt"
+
+
+def test_end_of_turn_id_rejects_unknown_family():
+    class Fake:
+        unk_token_id = 0
+        def convert_tokens_to_ids(self, t):
+            return 0
+    with pytest.raises(ValueError, match="unverified chat template family"):
+        end_of_turn_id(Fake())
 
 
 def test_labels():

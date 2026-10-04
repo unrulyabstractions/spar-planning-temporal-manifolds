@@ -1,0 +1,8 @@
+2026-09-29 21:01:51 CHAIN START commit 2f52e2e model Qwen/Qwen3.5-27B tag qwen3.5-27b
+torch 2.11.0+cu128 12.8 NVIDIA A100-SXM4-80GB
+2026-09-29 21:02:11 tests: 48 passed, 16 skipped in 9.74s
+2026-09-29 21:03:19 verify: mem per gpu (GiB): [50.84] VERIFY OK 
+2026-09-29 21:03:19 START commit 2f52e2e model Qwen/Qwen3.5-27B tag qwen3.5-27b cap [--model Qwen/Qwen3.5-27B --batch-size 16]
+2026-09-29 21:03:19 datasets
+2026-09-29 21:03:23 datasets done
+2026-09-29 21:03:23 capture qwen3.5-27b_investment_n2000_s0 start

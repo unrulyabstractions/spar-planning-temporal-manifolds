@@ -1,0 +1,50 @@
+{
+  "n": 2000,
+  "seed": 0,
+  "domains": [
+    "investment"
+  ],
+  "null_horizon_fraction": 0.05555555555555555,
+  "horizons": [
+    "1 day",
+    "3 days",
+    "1 week",
+    "2 weeks",
+    "1 month",
+    "2 months",
+    "3 months",
+    "6 months",
+    "1 year",
+    "2 years",
+    "3 years",
+    "5 years",
+    "10 years",
+    "20 years",
+    "30 years",
+    "50 years",
+    "100 years"
+  ],
+  "format": {
+    "name": "formatted_v1",
+    "situation_marker": "SITUATION:",
+    "task_marker": "TASK:",
+    "objective_marker": "OBJECTIVE:",
+    "constraint_marker": "CONSTRAINT:",
+    "action_marker": "ACTION:",
+    "format_marker": "FORMAT:",
+    "objective_text": "Think deeply about which option is preferable.",
+    "constraint_text": "You must select the option that provides the greatest benefit for this time horizon: {horizon}.",
+    "action_text": "Select one of the two options. Provide reasoning.",
+    "choice_prefix": "I choose:",
+    "reasoning_prefix": "My reasoning:"
+  },
+  "randomize_order": true,
+  "unit_rewrite": false,
+  "phrasing_ids": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "paired": false
+}

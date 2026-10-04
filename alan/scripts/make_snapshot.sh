@@ -25,7 +25,10 @@ printf '.venv/\n__pycache__/\n*.pyc\n*.egg-info/\n.pytest_cache/\n.idea/\n' > "$
 # 2. regenerable prompt datasets (small) and run indices / metadata (small), figures and tables
 mkdir -p "$DEST/data/prompts" "$DEST/runs" "$DEST/figures"
 cp -r data/prompts/. "$DEST/data/prompts/"
+for d in data/prompts_*/; do [ -d "$d" ] && cp -r "$d" "$DEST/data/"; done   # prompt files used on rented instances
+for d in runs/vast_logs_*/; do [ -d "$d" ] && cp -r "$d" "$DEST/runs/"; done  # instance logs (not runs: no meta.json)
 for r in runs/*/; do
+  [ -f "$r/meta.json" ] || continue          # only run folders (vast_logs_* and the like are copied above)
   n=$(basename "$r"); mkdir -p "$DEST/runs/$n"
   cp "$r/index.parquet" "$r/meta.json" "$DEST/runs/$n/"
   # shareable activation subsets (scripts/export_subset.py), if present
@@ -49,7 +52,7 @@ done
 # 4. manifest
 {
   echo "snapshot_commit: $HASH"; echo "snapshot_date: $(date -u +%FT%TZ)"; echo "source: https://github.com/CodeReclaimers/SPAR-2026"
-  echo "runs:"; for r in runs/*/; do n=$(basename "$r"); echo "  - $n: $(python3 -c "import json;m=json.load(open('$r/meta.json'));print(m['model_name'], m.get('n_prompts'), 'prompts;', m.get('started','?'), '->', m.get('finished','?'))")"; done
+  echo "runs:"; for r in runs/*/; do [ -f "$r/meta.json" ] || continue; n=$(basename "$r"); echo "  - $n: $(python3 -c "import json;m=json.load(open('$r/meta.json'));print(m['model_name'], m.get('n_prompts'), 'prompts;', m.get('started','?'), '->', m.get('finished','?'))")"; done
   echo "activation_subsets: $(ls "$DEST"/runs/*/acts_subset_*.safetensors 2>/dev/null | wc -l) files ($(du -ch "$DEST"/runs/*/acts_subset_*.safetensors 2>/dev/null | tail -1 | cut -f1))"
   for j in "$DEST"/runs/*/subset.json; do [ -f "$j" ] && echo "  - $(basename "$(dirname "$j")"): $(python3 -c "import json;m=json.load(open('$j'));print('layers', m['layers'], 'positions', m['positions'])")"; done
   echo "full_activations_included: $(ls "$DEST"/runs/*/acts_????.safetensors 2>/dev/null | wc -l) shard files"

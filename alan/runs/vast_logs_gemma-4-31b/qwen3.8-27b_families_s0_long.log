@@ -1,0 +1,65 @@
+Loading weights:   0%|          | 0/851 [00:00<?, ?it/s]Loading weights:   0%|          | 1/851 [00:00<05:28,  2.59it/s]Loading weights:   3%|▎         | 24/851 [00:00<00:13, 62.96it/s]Loading weights:   5%|▍         | 41/851 [00:00<00:09, 89.52it/s]Loading weights:   7%|▋         | 62/851 [00:00<00:06, 120.37it/s]Loading weights:  10%|▉         | 81/851 [00:00<00:05, 136.33it/s]Loading weights:  12%|█▏        | 101/851 [00:00<00:04, 152.96it/s]Loading weights:  14%|█▍        | 121/851 [00:01<00:04, 165.67it/s]Loading weights:  17%|█▋        | 143/851 [00:01<00:03, 181.15it/s]Loading weights:  19%|█▉        | 163/851 [00:01<00:03, 184.15it/s]Loading weights:  22%|██▏       | 187/851 [00:01<00:03, 195.73it/s]Loading weights:  24%|██▍       | 208/851 [00:01<00:03, 184.49it/s]Loading weights:  28%|██▊       | 236/851 [00:01<00:02, 208.97it/s]Loading weights:  30%|███       | 258/851 [00:01<00:03, 195.74it/s]Loading weights:  33%|███▎      | 280/851 [00:01<00:02, 195.02it/s]Loading weights:  36%|███▌      | 305/851 [00:01<00:02, 207.83it/s]Loading weights:  38%|███▊      | 327/851 [00:02<00:02, 189.10it/s]Loading weights:  41%|████      | 347/851 [00:02<00:02, 183.42it/s]Loading weights:  43%|████▎     | 366/851 [00:02<00:02, 181.06it/s]Loading weights:  47%|████▋     | 398/851 [00:02<00:02, 209.14it/s]Loading weights:  49%|████▉     | 420/851 [00:02<00:02, 174.41it/s]Loading weights:  53%|█████▎    | 447/851 [00:02<00:02, 183.64it/s]Loading weights:  55%|█████▌    | 470/851 [00:02<00:01, 193.11it/s]Loading weights:  58%|█████▊    | 491/851 [00:02<00:01, 183.16it/s]Loading weights:  61%|██████    | 519/851 [00:03<00:01, 200.68it/s]Loading weights:  64%|██████▎   | 542/851 [00:03<00:01, 201.44it/s]Loading weights:  66%|██████▌   | 563/851 [00:03<00:01, 201.92it/s]Loading weights:  69%|██████▊   | 584/851 [00:03<00:01, 191.46it/s]Loading weights:  72%|███████▏  | 609/851 [00:03<00:01, 199.50it/s]Loading weights:  74%|███████▍  | 630/851 [00:03<00:01, 188.53it/s]Loading weights:  76%|███████▋  | 651/851 [00:03<00:01, 194.04it/s]Loading weights:  80%|███████▉  | 678/851 [00:03<00:00, 199.55it/s]Loading weights:  82%|████████▏ | 702/851 [00:03<00:00, 209.58it/s]Loading weights:  85%|████████▌ | 724/851 [00:04<00:00, 210.87it/s]Loading weights:  88%|████████▊ | 746/851 [00:04<00:00, 205.21it/s]Loading weights:  90%|█████████ | 769/851 [00:04<00:00, 204.69it/s]Loading weights:  93%|█████████▎| 790/851 [00:04<00:00, 175.95it/s]Loading weights:  96%|█████████▋| 820/851 [00:04<00:00, 206.74it/s]Loading weights:  99%|█████████▉| 842/851 [00:04<00:00, 187.06it/s]Loading weights: 100%|██████████| 851/851 [00:04<00:00, 179.37it/s]
+loaded Qwen/Qwen3.8-27B: n_layers=64 devices=['cuda:0']
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[16/960] batch 11.9s total 12s format_ok 16/16
+[32/960] batch 18.2s total 30s format_ok 16/16
+[48/960] batch 11.7s total 42s format_ok 16/16
+[64/960] batch 18.8s total 61s format_ok 16/16
+[80/960] batch 11.7s total 72s format_ok 16/16
+[96/960] batch 18.3s total 91s format_ok 16/16
+[112/960] batch 13.6s total 104s format_ok 16/16
+[128/960] batch 18.9s total 123s format_ok 16/16
+[144/960] batch 11.2s total 134s format_ok 16/16
+[160/960] batch 10.0s total 144s format_ok 16/16
+[176/960] batch 18.4s total 163s format_ok 16/16
+[192/960] batch 13.4s total 176s format_ok 16/16
+[208/960] batch 10.6s total 187s format_ok 16/16
+[224/960] batch 18.4s total 205s format_ok 16/16
+[240/960] batch 11.0s total 216s format_ok 16/16
+[256/960] batch 11.4s total 228s format_ok 16/16
+[272/960] batch 11.0s total 238s format_ok 16/16
+[288/960] batch 12.0s total 250s format_ok 16/16
+[304/960] batch 12.2s total 263s format_ok 16/16
+[320/960] batch 11.5s total 274s format_ok 16/16
+[336/960] batch 13.7s total 288s format_ok 16/16
+[352/960] batch 10.8s total 299s format_ok 16/16
+[368/960] batch 18.5s total 317s format_ok 16/16
+[384/960] batch 12.2s total 329s format_ok 16/16
+[400/960] batch 11.7s total 341s format_ok 16/16
+[416/960] batch 11.9s total 353s format_ok 16/16
+[432/960] batch 9.8s total 363s format_ok 16/16
+[448/960] batch 11.4s total 374s format_ok 16/16
+[464/960] batch 10.6s total 385s format_ok 16/16
+[480/960] batch 18.5s total 403s format_ok 16/16
+[496/960] batch 11.9s total 415s format_ok 16/16
+[512/960] batch 19.8s total 435s format_ok 16/16
+[528/960] batch 11.3s total 446s format_ok 16/16
+[544/960] batch 11.6s total 458s format_ok 16/16
+[560/960] batch 11.1s total 469s format_ok 16/16
+[576/960] batch 18.9s total 488s format_ok 16/16
+[592/960] batch 11.0s total 499s format_ok 16/16
+[608/960] batch 11.6s total 510s format_ok 16/16
+[624/960] batch 18.5s total 529s format_ok 16/16
+[640/960] batch 10.6s total 540s format_ok 16/16
+[656/960] batch 13.0s total 552s format_ok 16/16
+[672/960] batch 12.5s total 565s format_ok 16/16
+[688/960] batch 11.3s total 576s format_ok 16/16
+[704/960] batch 12.0s total 588s format_ok 16/16
+[720/960] batch 12.3s total 601s format_ok 16/16
+[736/960] batch 10.5s total 611s format_ok 16/16
+[752/960] batch 11.7s total 623s format_ok 16/16
+[768/960] batch 11.9s total 635s format_ok 16/16
+[784/960] batch 11.1s total 646s format_ok 16/16
+[800/960] batch 11.3s total 657s format_ok 16/16
+[816/960] batch 11.6s total 669s format_ok 16/16
+[832/960] batch 13.7s total 682s format_ok 16/16
+[848/960] batch 18.8s total 701s format_ok 16/16
+[864/960] batch 11.6s total 713s format_ok 16/16
+[880/960] batch 10.4s total 723s format_ok 16/16
+[896/960] batch 19.2s total 742s format_ok 16/16
+[912/960] batch 12.0s total 754s format_ok 16/16
+[928/960] batch 9.5s total 764s format_ok 16/16
+[944/960] batch 10.8s total 775s format_ok 16/16
+[960/960] batch 19.2s total 794s format_ok 16/16
+done: 960 samples, format adherence 960/960 = 1.000

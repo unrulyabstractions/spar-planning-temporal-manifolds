@@ -1,0 +1,19 @@
+{
+  "out": "data/prompts/matched_months_months_dm_n1200.parquet",
+  "vary": "horizon",
+  "n": 1200,
+  "unit": "days",
+  "max": 1200,
+  "units": "months",
+  "horizon": "5 years",
+  "short_reward": 10000,
+  "short_delay": "12 months",
+  "long_reward": 50000,
+  "long_delay": "120 months",
+  "long_first": false,
+  "no_reward_commas": false,
+  "matched_base": "months",
+  "render": "plain",
+  "constraint_first": false,
+  "n_values": 1200
+}

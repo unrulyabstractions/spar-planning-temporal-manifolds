@@ -1,0 +1,54 @@
+Loading weights:   0%|          | 0/443 [00:00<?, ?it/s]Loading weights:   0%|          | 1/443 [00:00<02:01,  3.64it/s]Loading weights:   2%|▏         | 10/443 [00:00<00:13, 32.47it/s]Loading weights:   5%|▍         | 21/443 [00:00<00:07, 56.20it/s]Loading weights:   7%|▋         | 29/443 [00:00<00:06, 63.55it/s]Loading weights:   9%|▉         | 39/443 [00:00<00:05, 73.14it/s]Loading weights:  11%|█▏        | 50/443 [00:00<00:04, 80.05it/s]Loading weights:  14%|█▍        | 61/443 [00:00<00:04, 85.39it/s]Loading weights:  16%|█▋        | 72/443 [00:01<00:04, 87.21it/s]Loading weights:  19%|█▊        | 83/443 [00:01<00:04, 89.76it/s]Loading weights:  21%|██        | 94/443 [00:01<00:03, 95.02it/s]Loading weights:  24%|██▎       | 105/443 [00:01<00:03, 98.30it/s]Loading weights:  27%|██▋       | 120/443 [00:01<00:02, 111.69it/s]Loading weights:  30%|██▉       | 132/443 [00:01<00:02, 111.46it/s]Loading weights:  33%|███▎      | 147/443 [00:01<00:02, 114.91it/s]Loading weights:  36%|███▌      | 159/443 [00:01<00:02, 109.73it/s]Loading weights:  39%|███▊      | 171/443 [00:01<00:02, 108.41it/s]Loading weights:  42%|████▏     | 186/443 [00:02<00:02, 117.05it/s]Loading weights:  45%|████▌     | 200/443 [00:02<00:01, 122.99it/s]Loading weights:  48%|████▊     | 213/443 [00:02<00:01, 122.00it/s]Loading weights:  51%|█████     | 226/443 [00:02<00:02, 102.40it/s]Loading weights:  53%|█████▎    | 237/443 [00:02<00:02, 101.53it/s]Loading weights:  56%|█████▌    | 248/443 [00:02<00:01, 100.56it/s]Loading weights:  58%|█████▊    | 259/443 [00:02<00:01, 100.14it/s]Loading weights:  61%|██████    | 270/443 [00:02<00:01, 102.17it/s]Loading weights:  63%|██████▎   | 281/443 [00:02<00:01, 103.56it/s]Loading weights:  66%|██████▌   | 292/443 [00:03<00:01, 104.73it/s]Loading weights:  69%|██████▉   | 306/443 [00:03<00:01, 114.47it/s]Loading weights:  72%|███████▏  | 318/443 [00:03<00:01, 110.76it/s]Loading weights:  74%|███████▍  | 330/443 [00:03<00:01, 112.95it/s]Loading weights:  77%|███████▋  | 342/443 [00:03<00:00, 107.97it/s]Loading weights:  80%|███████▉  | 353/443 [00:03<00:00, 104.46it/s]Loading weights:  82%|████████▏ | 364/443 [00:03<00:00, 102.55it/s]Loading weights:  85%|████████▍ | 375/443 [00:03<00:00, 103.77it/s]Loading weights:  87%|████████▋ | 386/443 [00:03<00:00, 102.75it/s]Loading weights:  90%|████████▉ | 397/443 [00:04<00:00, 101.04it/s]Loading weights:  92%|█████████▏| 408/443 [00:04<00:00, 100.11it/s]Loading weights:  95%|█████████▍| 419/443 [00:04<00:00, 99.44it/s] Loading weights:  97%|█████████▋| 429/443 [00:04<00:00, 98.45it/s]Loading weights:  99%|█████████▉| 439/443 [00:04<00:00, 95.48it/s]Loading weights: 100%|██████████| 443/443 [00:04<00:00, 98.05it/s]
+loaded Qwen/Qwen3-14B: n_layers=40 devices=['cuda:0', 'cuda:1']
+[8/400] batch 4.1s total 4s format_ok 8/8
+[16/400] batch 3.6s total 8s format_ok 8/8
+[24/400] batch 3.4s total 11s format_ok 8/8
+[32/400] batch 3.8s total 15s format_ok 8/8
+[40/400] batch 3.5s total 18s format_ok 8/8
+[48/400] batch 3.5s total 22s format_ok 8/8
+[56/400] batch 3.6s total 26s format_ok 8/8
+[64/400] batch 4.0s total 30s format_ok 8/8
+[72/400] batch 3.8s total 33s format_ok 8/8
+[80/400] batch 3.6s total 37s format_ok 8/8
+[88/400] batch 3.6s total 41s format_ok 8/8
+[96/400] batch 3.6s total 44s format_ok 8/8
+[104/400] batch 3.8s total 48s format_ok 8/8
+[112/400] batch 3.5s total 51s format_ok 8/8
+[120/400] batch 3.7s total 55s format_ok 8/8
+[128/400] batch 3.7s total 59s format_ok 8/8
+[136/400] batch 3.4s total 62s format_ok 8/8
+[144/400] batch 3.6s total 66s format_ok 8/8
+[152/400] batch 3.5s total 69s format_ok 8/8
+[160/400] batch 3.5s total 73s format_ok 8/8
+[168/400] batch 3.5s total 76s format_ok 8/8
+[176/400] batch 3.6s total 80s format_ok 8/8
+[184/400] batch 3.8s total 84s format_ok 8/8
+[192/400] batch 3.9s total 88s format_ok 8/8
+[200/400] batch 3.7s total 91s format_ok 8/8
+[208/400] batch 3.5s total 95s format_ok 8/8
+[216/400] batch 3.6s total 99s format_ok 8/8
+[224/400] batch 3.5s total 102s format_ok 8/8
+[232/400] batch 3.6s total 106s format_ok 8/8
+[240/400] batch 3.7s total 109s format_ok 8/8
+[248/400] batch 3.7s total 113s format_ok 8/8
+[256/400] batch 3.8s total 117s format_ok 8/8
+[264/400] batch 3.4s total 120s format_ok 8/8
+[272/400] batch 3.4s total 124s format_ok 8/8
+[280/400] batch 3.4s total 127s format_ok 8/8
+[288/400] batch 3.7s total 131s format_ok 8/8
+[296/400] batch 3.4s total 134s format_ok 8/8
+[304/400] batch 3.6s total 138s format_ok 8/8
+[312/400] batch 3.7s total 141s format_ok 8/8
+[320/400] batch 3.7s total 145s format_ok 8/8
+[328/400] batch 3.5s total 148s format_ok 8/8
+[336/400] batch 3.4s total 152s format_ok 8/8
+[344/400] batch 3.4s total 155s format_ok 8/8
+[352/400] batch 3.4s total 159s format_ok 8/8
+[360/400] batch 3.4s total 162s format_ok 8/8
+[368/400] batch 3.4s total 166s format_ok 8/8
+[376/400] batch 3.4s total 169s format_ok 8/8
+[384/400] batch 3.6s total 173s format_ok 8/8
+[392/400] batch 3.4s total 176s format_ok 8/8
+[400/400] batch 3.7s total 180s format_ok 8/8
+done: 400 samples, format adherence 400/400 = 1.000
+CHAIN DONE

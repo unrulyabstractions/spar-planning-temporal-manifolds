@@ -1,0 +1,6 @@
+    raise LinAlgError("SVD did not converge")
+numpy.linalg.LinAlgError: SVD did not converge
+wrote figures/qwen3-14b_matrix_s0_long/view3d_centroid_L22_R0.html  (691 KB; plotly.min.js shared in figures/qwen3-14b_matrix_s0_long)
+wrote figures/qwen3-14b_matrix_s0_long/view3d_centroid_L26_MEAN.html  (637 KB; plotly.min.js shared in figures/qwen3-14b_matrix_s0_long)
+wrote figures/qwen3-14b_matrix_s0_long/view3d_centroid_L26_M0.html  (635 KB; plotly.min.js shared in figures/qwen3-14b_matrix_s0_long)
+GEOM_DONE

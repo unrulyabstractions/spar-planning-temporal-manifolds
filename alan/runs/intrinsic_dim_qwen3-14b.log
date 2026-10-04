@@ -1,0 +1,39 @@
+run runs/qwen3-14b_investment_n2000_s0 (Qwen3-14B, L=40); activations from shards; k1..k2 = 10..20
+L22 R0 (0.55 L) n=1849 (dropped 41 duplicates): m = 8.98 [k-2 form 8.30]  Gaussian, same covariance 20.93
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 15.96 12.72 11.28 10.21 9.38 8.92 8.72 8.42 8.17 7.96 7.80 7.58 7.38 7.03
+   horizon_years      same-level share of 20-NN 0.46 (chance 0.06)  centered 11.70  permuted-centered 9.31 ± 0.06
+   short_reward       same-level share of 20-NN 0.32 (chance 0.14)  centered 9.02  permuted-centered 9.12 ± 0.05
+   short_delay_years  same-level share of 20-NN 0.56 (chance 0.20)  centered 9.99  permuted-centered 9.06 ± 0.03
+   long_reward        same-level share of 20-NN 0.19 (chance 0.07)  centered 8.75  permuted-centered 9.33 ± 0.04
+   long_delay_years   same-level share of 20-NN 0.35 (chance 0.17)  centered 8.99  permuted-centered 9.09 ± 0.02
+   short_first        same-level share of 20-NN 0.98 (chance 0.50)  centered 10.13  permuted-centered 9.01 ± 0.01
+   mean |Δ log10 H| to the 20-NN: 0.23 decades
+L29 R0 (0.72 L) n=1849 (dropped 41 duplicates): m = 7.04 [k-2 form 6.51]  Gaussian, same covariance 18.02
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 13.29 9.99 8.86 7.92 7.34 7.02 6.84 6.63 6.42 6.18 6.00 5.67 5.45 5.09
+   horizon_years      same-level share of 20-NN 0.46 (chance 0.06)  centered 8.08  permuted-centered 7.53 ± 0.05
+   short_reward       same-level share of 20-NN 0.22 (chance 0.14)  centered 7.00  permuted-centered 7.25 ± 0.06
+   short_delay_years  same-level share of 20-NN 0.53 (chance 0.20)  centered 7.50  permuted-centered 7.16 ± 0.03
+   long_reward        same-level share of 20-NN 0.12 (chance 0.07)  centered 7.15  permuted-centered 7.47 ± 0.06
+   long_delay_years   same-level share of 20-NN 0.36 (chance 0.17)  centered 7.08  permuted-centered 7.21 ± 0.03
+   short_first        same-level share of 20-NN 1.00 (chance 0.50)  centered 7.17  permuted-centered 7.07 ± 0.01
+   mean |Δ log10 H| to the 20-NN: 0.22 decades
+L37 T3 (0.93 L) n=1849 (dropped 41 duplicates): m = 11.08 [k-2 form 10.24]  Gaussian, same covariance 23.65
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 18.76 15.12 13.64 12.36 11.53 11.04 10.77 10.45 10.09 9.82 9.62 9.29 8.98 8.47
+   horizon_years      same-level share of 20-NN 0.38 (chance 0.06)  centered 13.13  permuted-centered 11.35 ± 0.03
+   short_reward       same-level share of 20-NN 0.40 (chance 0.14)  centered 12.09  permuted-centered 11.16 ± 0.03
+   short_delay_years  same-level share of 20-NN 0.55 (chance 0.20)  centered 11.95  permuted-centered 11.14 ± 0.02
+   long_reward        same-level share of 20-NN 0.26 (chance 0.07)  centered 11.92  permuted-centered 11.36 ± 0.06
+   long_delay_years   same-level share of 20-NN 0.35 (chance 0.17)  centered 11.12  permuted-centered 11.17 ± 0.02
+   short_first        same-level share of 20-NN 0.96 (chance 0.50)  centered 12.22  permuted-centered 11.10 ± 0.01
+   mean |Δ log10 H| to the 20-NN: 0.31 decades
+L22 T3 (0.55 L) n=1849 (dropped 41 duplicates): m = 9.64 [k-2 form 8.91]  Gaussian, same covariance 22.01
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 18.00 12.70 11.57 10.57 9.96 9.59 9.44 9.26 9.04 8.84 8.69 8.45 8.24 7.85
+   horizon_years      same-level share of 20-NN 0.41 (chance 0.06)  centered 11.32  permuted-centered 9.93 ± 0.02
+   short_reward       same-level share of 20-NN 0.41 (chance 0.14)  centered 10.27  permuted-centered 9.77 ± 0.03
+   short_delay_years  same-level share of 20-NN 0.52 (chance 0.20)  centered 10.11  permuted-centered 9.70 ± 0.02
+   long_reward        same-level share of 20-NN 0.27 (chance 0.07)  centered 10.05  permuted-centered 9.97 ± 0.04
+   long_delay_years   same-level share of 20-NN 0.36 (chance 0.17)  centered 9.47  permuted-centered 9.76 ± 0.03
+   short_first        same-level share of 20-NN 0.97 (chance 0.50)  centered 10.88  permuted-centered 9.66 ± 0.01
+   mean |Δ log10 H| to the 20-NN: 0.29 decades
+calibration N_m(0, I), n=1849, eq. (9) k=10..20: m=1: 1.09  m=2: 2.19  m=3: 3.30  m=5: 5.44  m=8: 8.21  m=10: 9.95  m=12: 11.64  m=15: 13.51  m=20: 16.67  m=30: 22.02
+wrote figures/qwen3-14b_investment_n2000_s0/intrinsic_dim.csv, figures/qwen3-14b_investment_n2000_s0/intrinsic_dim_kcurve.csv, figures/qwen3-14b_investment_n2000_s0/intrinsic_dim_kcurve.png
