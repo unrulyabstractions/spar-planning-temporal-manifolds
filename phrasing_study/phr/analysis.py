@@ -96,7 +96,7 @@ def choice_tables(choice: pd.DataFrame) -> dict[str, pd.DataFrame]:
     # effective-horizon shifts for variants defined on >= 3 horizon levels
     shifts = []
     for r in per.itertuples():
-        if r.family in ("implicit", "no_horizon"):
+        if r.family in ("implicit", "no_horizon", "layout_cross"):
             continue
         s = effective_shift(choice, r.variant, r.ref)
         if not math.isnan(s["shift_log10"]):
@@ -125,11 +125,25 @@ def choice_tables(choice: pd.DataFrame) -> dict[str, pd.DataFrame]:
         m, lo, hi = boot_ci(x, "diff", "scenario")
         return dict(contrast=name, a=a, b=b, n=len(x), mean_diff=m, lo=lo, hi=hi)
 
-    pairs = [("lean_sooner", "lean_later", "agreement cue (sooner - later)"),
-             ("hurried", "relaxed", "pressure cue (hurried - relaxed)"),
-             ("nohorizon_lean_sooner", "nohorizon_lean_later", "agreement cue, no horizon"),
-             ("nohorizon_hurried", "nohorizon_relaxed", "pressure cue, no horizon")]
-    con = [contrast(a, b, n) for a, b, n in pairs if {a, b} <= set(choice.variant)]
+    def direction_contrast(a: str, b: str, name: str, sel: pd.Series) -> dict:
+        """Mean P(short) over all cue phrasings of direction a minus direction b, per cell."""
+        x = choice[sel].groupby(["cell", "config", "domain", "cue_direction"]).p_short.mean().unstack()
+        x = x[[a, b]].dropna().reset_index()
+        x["diff"], x["scenario"] = x[a] - x[b], x.config + "|" + x.domain
+        m, lo, hi = boot_ci(x, "diff", "scenario")
+        return dict(contrast=name, a=a, b=b, n=len(x), mean_diff=m, lo=lo, hi=hi)
+
+    con = []
+    dirs = set(choice.cue_direction.dropna())
+    for a, b, what in (("hurry", "relax", "pressure"), ("sooner", "later", "agreement")):
+        if {a, b} <= dirs:
+            con.append(direction_contrast(a, b, f"{what} cue ({a} - {b}), all phrasings, canonical layout",
+                                          choice.family == "cue"))
+            con.append(direction_contrast(a, b, f"{what} cue ({a} - {b}), no horizon", choice.family == "no_horizon"))
+            for lay in sorted(choice[choice.family == "layout_cross"].layout.unique()):
+                con.append(direction_contrast(a, b, f"{what} cue ({a} - {b}), layout {lay}",
+                                              (choice.family == "layout_cross") & (choice.layout == lay)))
+    con = [c for c in con if c["n"] > 0]
     # option order inside every variant: short first - short second, same everything else
     o = choice.assign(base=choice.cell.str.rsplit("|", n=1).str[0])
     o = o.pivot_table(index=["variant", "base", "config", "domain"], columns="short_first", values="p_short").dropna().reset_index()
@@ -147,7 +161,22 @@ def choice_tables(choice: pd.DataFrame) -> dict[str, pd.DataFrame]:
         m, lo, hi = boot_ci(x.reset_index(), "diff", "scenario")
         con.append(dict(contrast="unit-match interaction (h months: with month options - with mixed options)",
                         a="", b="", n=len(x), mean_diff=m, lo=lo, hi=hi))
-    return {"choice_variants": per, "choice_shifts": shifts, "choice_curve": curve.reset_index(),
+    # layout cross: the same variant's effect in each layout (vs that layout's own canonical prompt)
+    vmap = choice.drop_duplicates("variant").set_index("variant")
+    cross = per.assign(base_variant=per.variant.map(vmap.base_variant).fillna(per.variant),
+                       layout=per.variant.map(vmap.layout))
+    keep = set(cross[cross.family == "layout_cross"].base_variant)
+    cross = cross[cross.base_variant.isin(keep) & cross.family.isin(["layout_cross", "unit", "cue"])]
+    cross = cross[["base_variant", "layout", "n", "mean_delta", "lo", "hi"]].sort_values(["base_variant", "layout"])
+    # implicit vs twin by layout x determinacy x with_number
+    imp = d[d.family == "implicit"]
+    imp_sum = []
+    for (lay, det, num), g in imp.groupby(["layout", "determinacy", "with_number"]):
+        m, lo, hi = boot_ci(g, "delta", "scenario")
+        imp_sum.append(dict(layout=lay, determinacy=det, with_number=num, items=g.implicit_id.nunique(), n=len(g),
+                            mean_delta=m, lo=lo, hi=hi, mean_abs_delta=g.delta.abs().mean()))
+    return {"choice_layout_cross": cross, "choice_implicit": pd.DataFrame(imp_sum),
+            "choice_variants": per, "choice_shifts": shifts, "choice_curve": curve.reset_index(),
             "choice_gate": gate, "choice_contrasts": pd.DataFrame(con)}
 
 
@@ -158,8 +187,9 @@ def state_table(state: pd.DataFrame) -> pd.DataFrame:
     s["log_err"] = np.log10(s.stated_years / s.h_years)
     s["within_2x"] = s.log_err.abs() <= math.log10(2)
     s["exact_10pct"] = s.log_err.abs() <= math.log10(1.1)
-    grp = s.assign(kind=np.where(s.family.isin(["implicit", "twin"]),
-                                 s.family + np.where(s.with_number.fillna(False).astype(bool), " (with number)", " (no number)"),
+    imp = s.family.isin(["implicit", "twin"])
+    grp = s.assign(kind=np.where(imp, s.family + " " + s.determinacy.fillna("") +
+                                 np.where(s.with_number.fillna(False).astype(bool), " (with number)", " (no number)"),
                                  s.family))
     return grp.groupby("kind").agg(n=("item_id", "size"), parsed=("stated_years", lambda x: x.notna().mean()),
                                    within_2x=("within_2x", "mean"), within_10pct=("exact_10pct", "mean"),
@@ -177,13 +207,15 @@ def conversation_table(mt: pd.DataFrame, cue_step: int) -> pd.DataFrame:
                                      plan_end=("h_step_years", "max"))
     late = st[st.step >= cue_step].groupby("conv_id").log_h.mean().rename("log_late")
     conv = mt.drop_duplicates("conv_id").set_index("conv_id")[
-        ["scenario", "condition", "variant", "level", "h_years", "cue", "cue_where", "greedy", "sample", "parent"]]
+        ["scenario", "condition", "variant", "level", "h_years", "cue", "cue_direction", "cue_where", "greedy", "sample",
+         "parent"]]
     out = conv.join(agg).join(late)
     out["log_end"] = np.log10(out.plan_end)
     return out.reset_index()
 
 
-def multiturn_tables(mt: pd.DataFrame, cue_step: int) -> dict[str, pd.DataFrame]:
+def multiturn_tables(mt: pd.DataFrame, cue_step: int, determinacy: dict | None = None) -> dict[str, pd.DataFrame]:
+    """determinacy: implicit item id -> concrete | vague (from variants.yaml)."""
     c = conversation_table(mt, cue_step)
     rows = []
 
@@ -199,24 +231,31 @@ def multiturn_tables(mt: pd.DataFrame, cue_step: int) -> dict[str, pd.DataFrame]
         x = g.merge(base[key + ["log_end"]], on=key, suffixes=("", "_ref"))
         x["d"] = x.log_end - x.log_end_ref
         add(f"unit form {form} vs canonical (plan end)", x, "d")
-    # implicit vs twin
+    # implicit vs twin, overall and by determinacy (concrete / vague)
     imp, twin = c[c.condition == "implicit"], c[c.condition == "twin"]
     x = imp.merge(twin[key + ["log_end"]], on=key, suffixes=("", "_ref"))
     x["d"] = x.log_end - x.log_end_ref
     add("implicit vs explicit twin (plan end)", x, "d")
+    if determinacy:
+        x["det"] = x.level.map(determinacy)
+        for det, g in x.groupby("det"):
+            add(f"implicit vs explicit twin, {det} items (plan end)", g, "d")
     # first-turn cues vs the same conversation without cue
     for cond in ("base", "free"):
         ref = c[(c.condition == cond) & c.cue.isna()]
         k2 = key if cond == "base" else ["scenario", "sample"]
-        for cue, g in c[(c.condition == cond) & (c.cue_where == "first")].groupby("cue"):
-            x = g.merge(ref[k2 + ["log_end"]], on=k2, suffixes=("", "_ref"))
-            x["d"] = x.log_end - x.log_end_ref
-            add(f"{cond}: first-turn cue '{cue}' vs none (plan end)", x, "d")
+        for col in ("cue_direction", "cue"):          # all phrasings of a direction pooled, then each phrasing
+            for cue, g in c[(c.condition == cond) & (c.cue_where == "first")].groupby(col):
+                x = g.merge(ref[k2 + ["log_end"]], on=k2, suffixes=("", "_ref"))
+                x["d"] = x.log_end - x.log_end_ref
+                add(f"{cond}: first-turn cue {'direction ' if col == 'cue_direction' else ''}'{cue}' vs none (plan end)", x, "d")
         # step cues: branched from the parent, compare steps >= cue_step
-        for cue, g in c[(c.condition == cond) & (c.cue_where == "step")].groupby("cue"):
-            x = g.merge(c[["conv_id", "log_late"]].rename(columns={"conv_id": "parent", "log_late": "log_late_ref"}), on="parent")
-            x["d"] = x.log_late - x.log_late_ref
-            add(f"{cond}: cue '{cue}' before step {cue_step} vs none (steps >= {cue_step})", x, "d")
+        for col in ("cue_direction", "cue"):
+            for cue, g in c[(c.condition == cond) & (c.cue_where == "step")].groupby(col):
+                x = g.merge(c[["conv_id", "log_late"]].rename(columns={"conv_id": "parent", "log_late": "log_late_ref"}), on="parent")
+                x["d"] = x.log_late - x.log_late_ref
+                add(f"{cond}: cue {'direction ' if col == 'cue_direction' else ''}'{cue}' before step {cue_step} vs none "
+                    f"(steps >= {cue_step})", x, "d")
     comp = pd.DataFrame(rows)
     # sanity: does the plan track the stated horizon?
     from scipy.stats import spearmanr

@@ -34,6 +34,7 @@ from mtp.prompts import (CONTINUE, N_STEPS, SCENARIOS, SYSTEM, outline_mentions_
 from mtp.run import MAX_NEW, N_TURNS, SAMPLING, Capture, generate_batch, turn_kind  # noqa: E402
 
 from .durations import parse_years  # noqa: E402
+from .items import cue_table  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -45,7 +46,8 @@ class ConvSpec:
     level: str | None         # canonical horizon level, implicit id, or None
     h_text: str | None
     h_years: float
-    cue: str | None
+    cue: str | None           # cue id <direction>_<n> (choice.cues)
+    cue_direction: str | None # hurry | relax | neutral | ...
     cue_where: str | None     # first | step | None
     greedy: bool
     sample: int
@@ -67,18 +69,20 @@ def build_specs(cfg: dict, scenarios: list[str] | None = None) -> list[ConvSpec]
     items = {i["id"]: i for i in cfg["choice"]["implicit"]}
     scen = scenarios or list(SCENARIOS)
     branch = mt["cue_step"] + 1                    # turn k asks for step k-1
+    cues = cue_table(cfg)
     specs: list[ConvSpec] = []
 
     def add(cid, sc, cond, var, level, h_text, cue=None, where=None, greedy=True, sample=0, parent=None, sentence=None):
         # true horizon in years: the canonical level (base/unit) or the implicit item's twin (implicit/twin)
         y = parse_years(items[level]["twin"] if cond in ("implicit", "twin") else level) if level else math.nan
-        cue_text = mt["cues"][cue] if (cue and where == "first") else None
-        specs.append(ConvSpec(cid, sc, cond, var, level, h_text, y, cue, where, greedy, sample, parent,
+        cue_text = cues[cue]["text"] if (cue and where == "first") else None
+        specs.append(ConvSpec(cid, sc, cond, var, level, h_text, y, cue, cues[cue]["direction"] if cue else None,
+                              where, greedy, sample, parent,
                               branch if where == "step" else None, first_user(SCENARIOS[sc], sentence, cue_text)))
 
-    def with_cues(cid, sc, cond, var, level, h_text, sentence, greedy=True, sample=0):
+    def with_cues(cid, sc, cond, var, level, h_text, sentence, greedy=True, sample=0, first=True):
         add(cid, sc, cond, var, level, h_text, greedy=greedy, sample=sample, sentence=sentence)
-        for c in mt["first_turn_cues"]:
+        for c in (mt["first_turn_cues"] if first else []):
             add(f"{cid}__first_{c}", sc, cond, var, level, h_text, c, "first", greedy, sample, None, sentence)
         for c in mt["later_cues"]:
             add(f"{cid}__step_{c}", sc, cond, var, level, h_text, c, "step", greedy, sample, cid, sentence)
@@ -98,7 +102,8 @@ def build_specs(cfg: dict, scenarios: list[str] | None = None) -> list[ConvSpec]
         add(f"{sc}__twin__{iid}", sc, "twin", f"twin:{iid}", iid, it["twin"],
             sentence=mt["horizon_sentence"].format(h=it["twin"]))
     for sc, s in itertools.product(scen, range(mt["free_form_samples"])):
-        with_cues(f"{sc}__free__s{s}", sc, "free", "none", None, None, None, greedy=False, sample=s)
+        with_cues(f"{sc}__free__s{s}", sc, "free", "none", None, None, None, greedy=False, sample=s,
+                  first=s < mt["first_turn_cue_free_samples"])
     ids = [s.conv_id for s in specs]
     assert len(ids) == len(set(ids)), "duplicate conversation ids"
     return specs
@@ -109,7 +114,7 @@ def user_message(spec: ConvSpec, cfg: dict, k: int) -> str:
     if k == 1:
         return spec.first_user
     if spec.cue_where == "step" and k == spec.branch_turn:
-        return f"{CONTINUE}. {cfg['multiturn']['cues'][spec.cue]}"
+        return f"{CONTINUE}. {cue_table(cfg)[spec.cue]['text']}"
     return CONTINUE
 
 

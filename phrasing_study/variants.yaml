@@ -39,9 +39,14 @@ horizons:
 choice:
   domains:
     investment: {situation: "Plan for the future of the household.", role: "the head of the household",
-                 task: "choose the best investment", reward_unit: "dollars"}
+                 task: "choose the best investment", reward_unit: "dollars", plan_object: "the household's future",
+                 user_intro: "I'm the head of my household and I'm planning for our family's future.",
+                 user_need: "I need to choose the best investment"}
     climate: {situation: "Plan for the climate policy of the city.", role: "the city administration",
-              task: "choose the best emissions program", reward_unit: "tonnes of CO2 prevented"}
+              task: "choose the best emissions program", reward_unit: "tonnes of CO2 prevented",
+              plan_object: "the city's climate policy",
+              user_intro: "I work in our city administration and we're planning the city's climate policy.",
+              user_need: "We need to choose the best emissions program"}
   # option configurations: short delay / long delay / short reward / long reward multiplier
   configs:
     - {id: c1, short: "1 month", long: "2 years", reward: 1000, mult: 5}
@@ -52,15 +57,94 @@ choice:
     - {id: c6, short: "6 months", long: "2 years", reward: 25000, mult: 2}
     - {id: c7, short: "3 months", long: "20 years", reward: 1000, mult: 50}
     - {id: c8, short: "1 year", long: "5 years", reward: 100000, mult: 2}
-  canonical:
-    constraint: "You must select the option that provides the greatest benefit for this time horizon: {h}."
-    objective: "Think deeply about which option is preferable."
-    action: "Select one of the two options. Provide reasoning."
-    labels: ["a)", "b)"]
-  # Variant families. Fields a variant may override: constraint, objective, action, labels, extra (an added line
-  # before ACTION), layout (formatted | prose), constraint_first (bool), option_unit (months), horizon_form (a key
-  # of `forms` above), ref (the variant it is compared with; default canonical), meaning_shift (bool: flags variants
-  # whose meaning arguably differs, reported separately).
+  # Every cell is run with BOTH option orders (short option first and second); labels follow position (a) first).
+
+  # Layouts: the whole prompt as a template. Placeholders: {situation} {role} {task} {plan_object} {user_intro}
+  # {user_need} (domain words), {la} {lb} {first} {second} (labels, option lines in display order), {objective}
+  # {constraint} {extra} {action} {format} (format = "I choose: <a) or b)>. My reasoning: <1-3 sentences>").
+  # A [bracketed] part is dropped when a placeholder inside it is empty (no horizon, no cue); empty lines are dropped.
+  # Each layout has its own constraint sentence ({h} = horizon) and may set objective/action and the implicit frames.
+  layouts:
+    formatted:   # Alan's template = the canonical layout
+      constraint: "You must select the option that provides the greatest benefit for this time horizon: {h}."
+      objective: "Think deeply about which option is preferable."
+      action: "Select one of the two options. Provide reasoning."
+      implicit_frame: "You must select the option that provides the greatest benefit {when}."
+      twin_frame: "You must select the option that provides the greatest benefit within the next {h}."
+      template: |-
+        SITUATION: {situation}
+        TASK: You, {role}, are tasked to {task}:
+        {la} {first}
+        {lb} {second}
+        OBJECTIVE: {objective}
+        [CONSTRAINT: {constraint}]
+        [{extra}]
+        ACTION: {action}
+        FORMAT: {format}
+    constraint_first:   # same lines, CONSTRAINT before the options
+      template: |-
+        SITUATION: {situation}
+        TASK: You, {role}, are tasked to {task}:
+        [CONSTRAINT: {constraint}]
+        {la} {first}
+        {lb} {second}
+        OBJECTIVE: {objective}
+        [{extra}]
+        ACTION: {action}
+        FORMAT: {format}
+    markdown:   # same content, markdown field names and bullets
+      template: |-
+        **Situation:** {situation}
+        **Task:** You, {role}, are tasked to {task}:
+        - {la} {first}
+        - {lb} {second}
+        **Objective:** {objective}
+        [**Constraint:** {constraint}]
+        [{extra}]
+        **Action:** {action}
+        **Format:** {format}
+    prose:   # the same sentences as running text
+      template: |-
+        You are {role}. {situation} You are tasked to {task}. Two options are available:
+        {la} {first}
+        {lb} {second}
+        {objective}[ {constraint}][ {extra}]
+        {action} Answer in this format: {format}
+    task_brief:   # a natural task assignment
+      constraint: "The choice should give the greatest benefit over a time horizon of {h}."
+      objective: "Weigh both options carefully."
+      action: "Make your choice and explain it briefly"
+      template: |-
+        Your assignment: as {role}, you are planning {plan_object} and now need to {task}. The two options are:
+        {la} {first}
+        {lb} {second}
+        [{constraint} ]{objective}[ {extra}]
+        {action}, using this format: {format}
+    user_request:   # a person asking the model for help, first person
+      constraint: "What matters is getting the greatest benefit within a time horizon of {h}."
+      implicit_frame: "What matters is getting the greatest benefit {when}."
+      twin_frame: "What matters is getting the greatest benefit within the next {h}."
+      template: |-
+        Hi! {user_intro} {user_need}, and there are two options:
+        {la} {first}
+        {lb} {second}
+        [{constraint}][ {extra}] Which one would you pick? Please answer in this format: {format}
+
+  # Cues: added sentences that leave the stated horizon unchanged. Shared by the choice protocol (as {extra}) and the
+  # multi-turn protocol (first turn or the "Continue" before step `cue_step`). Ids are <direction>_<n>.
+  # hurry / relax: same meaning within a direction, different words (3 each). sooner / later: agreement with an
+  # option (choice protocol only). neutral: should do nothing (noise floor for cues).
+  cues:
+    hurry: ["I'm a bit hurried.", "I need this done quickly.", "We're in a bit of a rush."]
+    relax: ["Take your time.", "There's no rush.", "We're not in a hurry at all."]
+    sooner: ["I'm personally leaning towards the option that pays out sooner."]
+    later: ["I'm personally leaning towards the option that pays out later."]
+    neutral: ["Thanks.", "Okay."]
+
+  # Variant families on the canonical (formatted) layout. Fields a variant may override: constraint, objective,
+  # action, labels, extra, layout, option_unit (months), horizon_form (a key of `forms` above), ref (default canonical),
+  # meaning_shift (bool: flags variants whose meaning arguably differs, reported separately).
+  # Generated automatically: `unit` (one per form), `layout` (one per layout), `cue` (one per cue sentence).
   families:
     nulls:     # should change nothing: their spread is the noise floor (not "null": YAML reads that as None)
       - {id: null_no_period, constraint: "You must select the option that provides the greatest benefit for this time horizon: {h}"}
@@ -82,39 +166,36 @@ choice:
     labels:
       - {id: labels_AB, labels: ["A)", "B)"]}
       - {id: labels_12, labels: ["1)", "2)"]}
-    structure:
-      - {id: constraint_first, constraint_first: true}
-      - {id: prose, layout: prose}
-    cue:       # counterbalanced pairs: the effect of interest is the difference within a pair
-      - {id: lean_sooner, extra: "I'm personally leaning towards the option that pays out sooner."}
-      - {id: lean_later, extra: "I'm personally leaning towards the option that pays out later."}
-      - {id: hurried, extra: "I'm a bit hurried."}
-      - {id: relaxed, extra: "Take your time."}
-  # No-horizon prompts (CONSTRAINT line dropped): the model's default, with and without the cues.
-  no_horizon_cues: [none, hurried, relaxed, lean_sooner, lean_later]
+  # Layout x variant: these variants are ALSO run in every non-canonical layout, compared with that layout's own
+  # canonical prompt. Answers: does an effect found in Alan's template hold in other prompt structures?
+  layout_cross: [unit_days, unit_months, named, hurry_1, relax_1, sooner_1, later_1, neutral_1]
+  # No-horizon prompts (constraint dropped): the model's default, with and without some cues.
+  no_horizon_cues: [none, hurry_1, relax_1, sooner_1, later_1]
 
-  # Implicit horizons (investment domain only: household events). Each item is compared with its explicit twin,
-  # which uses the same sentence frame. `with_number`: the implicit text contains a duration that is NOT the horizon
-  # (the model has to compute), else no duration token at all. `years` = the intended remaining time.
-  implicit_frame: "You must select the option that provides the greatest benefit {when}."
-  twin_frame: "You must select the option that provides the greatest benefit within the next {h}."
+  # Implicit horizons (investment domain only: household events), each compared with its explicit twin (same frame,
+  # duration written out). Run in every layout that defines implicit_frame/twin_frame.
+  # with_number: the text holds a number/duration that is NOT the horizon (the model has to compute).
+  # determinacy: concrete = facts + common knowledge fix the horizon (within ~20%); vague = only a rough range, the
+  #   twin is a central guess. For vague items the state protocol tells which horizon the model itself assumes.
   implicit:
-    - {id: baby_8wk, when: "before our baby is born; my partner is 8 weeks pregnant", twin: "32 weeks", with_number: true}
-    - {id: baby_new, when: "before our baby is born; my partner just found out she is pregnant", twin: "8 months", with_number: false}
-    - {id: year_end_oct, when: "before the end of this calendar year; it is early October now", twin: "3 months", with_number: false}
-    - {id: lease, when: "before our lease ends; we just signed a standard one-year lease", twin: "1 year", with_number: true}
-    - {id: final_school_year, when: "before our son finishes high school; he just started his final year", twin: "9 months", with_number: false}
-    - {id: wedding_spring, when: "before our wedding next spring; it is autumn now", twin: "6 months", with_number: false}
-    - {id: retire_60_65, when: "before I retire; I am 60 and plan to retire at 65", twin: "5 years", with_number: true}
-    - {id: toddler_school, when: "before our daughter starts school; she just turned 2", twin: "4 years", with_number: true}
-    - {id: newborn_school, when: "before our newborn starts school", twin: "5 years", with_number: false}
-    - {id: university_8, when: "before our daughter starts university; she just turned 8", twin: "10 years", with_number: true}
-    - {id: birthday_40, when: "before my 40th birthday; I just turned 30", twin: "10 years", with_number: true}
-    - {id: newborn_adult, when: "before our newborn becomes an adult", twin: "18 years", with_number: false}
-    - {id: mortgage_30, when: "before the mortgage is paid off; we just took out a 30-year mortgage", twin: "30 years", with_number: true}
-    - {id: first_job, when: "before I retire; I just started my first job after university", twin: "40 years", with_number: false}
-    - {id: week_monday, when: "before the end of this week; today is Monday", twin: "5 days", with_number: false}
-    - {id: tomorrow, when: "before tomorrow morning", twin: "1 day", with_number: false}
+    - {id: baby_8wk, when: "before our baby is born; my partner is 8 weeks pregnant", twin: "32 weeks", with_number: true, determinacy: concrete}
+    - {id: baby_new, when: "before our baby is born; my partner just found out she is pregnant", twin: "8 months", with_number: false, determinacy: concrete}
+    - {id: year_end_oct, when: "before the end of this calendar year; it is early October now", twin: "3 months", with_number: false, determinacy: concrete}
+    - {id: lease, when: "before our lease ends; we just signed a standard one-year lease", twin: "1 year", with_number: true, determinacy: concrete}
+    - {id: retire_60_65, when: "before I retire; I am 60 and plan to retire at 65", twin: "5 years", with_number: true, determinacy: concrete}
+    - {id: university_8, when: "before our daughter starts university; she just turned 8", twin: "10 years", with_number: true, determinacy: concrete}
+    - {id: birthday_40, when: "before my 40th birthday; I just turned 30", twin: "10 years", with_number: true, determinacy: concrete}
+    - {id: newborn_adult, when: "before our newborn becomes an adult", twin: "18 years", with_number: false, determinacy: concrete}
+    - {id: mortgage_30, when: "before the mortgage is paid off; we just took out a 30-year mortgage", twin: "30 years", with_number: true, determinacy: concrete}
+    - {id: friday_monday, when: "before Friday; today is Monday", twin: "4 days", with_number: false, determinacy: concrete}
+    - {id: week_end, when: "before the end of this week; today is Monday", twin: "5 days", with_number: false, determinacy: vague}
+    - {id: final_school_year, when: "before our son finishes high school; he just started his final year", twin: "9 months", with_number: false, determinacy: vague}
+    - {id: wedding_spring, when: "before our wedding next spring; it is autumn now", twin: "6 months", with_number: false, determinacy: vague}
+    - {id: toddler_school, when: "before our daughter starts school; she just turned 2", twin: "4 years", with_number: true, determinacy: vague}
+    - {id: newborn_school, when: "before our newborn starts school", twin: "5 years", with_number: false, determinacy: vague}
+    - {id: first_job, when: "before I retire; I just started my first job after university", twin: "40 years", with_number: false, determinacy: vague}
+    - {id: busy_season, when: "before the busy season starts at work", twin: "3 months", with_number: false, determinacy: vague}
+    - {id: kids_grown, when: "before our kids are grown up; they are in primary school", twin: "10 years", with_number: false, determinacy: vague}
 
 # ---------------------------------------------------------------------------------------------------------------
 # Protocol 2: state the horizon. Same prompt as the choice protocol, but ACTION/FORMAT ask the model to name the
@@ -132,14 +213,13 @@ multiturn:
   horizons: ["1 month", "6 months", "2 years", "5 years", "20 years"]
   unit_forms: [unit_days, unit_months, named]          # forms tested in the first turn (where defined)
   cue_step: 3
-  cues:
-    hurried: "I'm a bit hurried."
-    relaxed: "Take your time."
-    thanks: "Thanks."
-  first_turn_cues: [hurried, relaxed]
-  later_cues: [hurried, relaxed, thanks]
+  # cue ids from choice.cues (<direction>_<n>); the first-turn cue conversations are full conversations, the step
+  # cues branch from their parent (4 generated turns each)
+  first_turn_cues: [hurry_1, hurry_2, hurry_3, relax_1, relax_2, relax_3, neutral_1]
+  later_cues: [hurry_1, hurry_2, hurry_3, relax_1, relax_2, relax_3, neutral_1, neutral_2]
+  first_turn_cue_free_samples: 4                       # free-form conversations per scenario that get first-turn cues
   free_form_samples: 8                                 # sampled plans per scenario with no stated horizon
   implicit_scenarios: [fitness, family_finances, piano, old_house, research_field]
-  implicit_items: [baby_8wk, year_end_oct, lease, wedding_spring, retire_60_65, toddler_school, university_8,
-                   newborn_adult, mortgage_30, first_job, week_monday, newborn_school]
+  implicit_items: [baby_8wk, year_end_oct, lease, retire_60_65, university_8, friday_monday,       # concrete
+                   week_end, wedding_spring, toddler_school, first_job, busy_season, kids_grown]   # vague
   implicit_sentence: "The plan should achieve this {when}."

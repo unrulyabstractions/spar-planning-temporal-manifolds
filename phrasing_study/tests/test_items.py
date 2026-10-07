@@ -3,7 +3,7 @@ import math
 import pytest
 
 from phr.durations import has_duration, parse_years
-from phr.items import build_choice, build_state, check_config, choice_variants, load_config
+from phr.items import build_choice, build_state, check_config, cue_table, fill_template, load_config
 from phr.multiturn import build_specs, messages, user_message
 
 
@@ -44,7 +44,7 @@ def test_variant_differs_from_reference_only_in_its_change(choice):
     for r in choice[choice.ref_variant.notna()].itertuples():
         ref = texts[(r.ref_variant, r.cell)]
         assert r.text != ref, r.variant
-        if r.variant not in ("prose", "constraint_first"):
+        if r.family != "layout":
             changed = sum(a != b for a, b in zip(r.text.split("\n"), ref.split("\n")))
             changed += abs(len(r.text.split("\n")) - len(ref.split("\n")))
             assert changed <= 3, (r.variant, changed)
@@ -54,15 +54,15 @@ def test_horizon_only_where_expected(choice):
     nh = choice[choice.family == "no_horizon"]
     assert not nh.text.str.contains("CONSTRAINT").any()
     imp = choice[(choice.family == "implicit") & ~choice.with_number.astype(bool)]
-    assert not any(has_duration(t.split("CONSTRAINT:")[1].split("\n")[0]) for t in imp.text)
+    assert not any(has_duration(t) or any(c.isdigit() for c in t) for t in imp.h_text)
 
 
 def test_order_and_labels(choice):
     for r in choice.sample(200, random_state=0).itertuples():
         lines = r.text.split("\n")
-        first = next(l for l in lines if l.startswith(("a)", "b)", "A)", "B)", "1)", "2)")))
-        is_short_first = first.startswith(r.label_short)
-        assert is_short_first == r.short_first or not r.short_first and first.startswith(r.label_long)
+        first = next(l.lstrip("- ") for l in lines if l.lstrip("- ").startswith(("a)", "b)", "A)", "B)", "1)", "2)")))
+        short_line_first = first.startswith(r.label_short)
+        assert short_line_first == r.short_first
 
 
 def test_unit_forms_cover_levels(cfg, choice):
@@ -83,11 +83,40 @@ def test_multiturn_specs(cfg):
         if s.cue_where == "step":
             assert s.parent in by and by[s.parent].cue is None and by[s.parent].greedy == s.greedy
             assert s.branch_turn == cfg["multiturn"]["cue_step"] + 1
-            assert user_message(s, cfg, s.branch_turn).endswith(cfg["multiturn"]["cues"][s.cue])
+            assert user_message(s, cfg, s.branch_turn).endswith(cue_table(cfg)[s.cue]["text"])
             assert all(user_message(s, cfg, k) == user_message(by[s.parent], cfg, k) for k in range(1, s.branch_turn))
         if s.cue_where == "first":
-            assert s.first_user.endswith(cfg["multiturn"]["cues"][s.cue])
+            assert s.first_user.endswith(cue_table(cfg)[s.cue]["text"])
         if s.condition == "free":
             assert not has_duration(s.first_user)
     m = messages(specs[0], cfg, ["outline", "step 1"])
     assert [x["role"] for x in m] == ["system", "user", "assistant", "user", "assistant", "user"]
+
+
+def test_fill_template_optional_parts():
+    t = "A {x}\n[B: {y}]\n{z}[ and {y}] end"
+    assert fill_template(t, {"x": 1, "y": None, "z": "z"}) == "A 1\nz end"
+    assert fill_template(t, {"x": 1, "y": "y", "z": "z"}) == "A 1\nB: y\nz and y end"
+
+
+def test_every_layout_renders_options_format_and_horizon(cfg, choice):
+    can = choice[choice.family.isin(["canonical", "layout"])]
+    assert set(can.layout) == set(cfg["choice"]["layouts"])
+    for r in can.itertuples():
+        assert r.h_text in r.text and "I choose: <" in r.text and r.text.count(" dollars in ") + r.text.count(" prevented in ") == 2
+
+
+def test_no_horizon_and_cues_in_every_layout(choice):
+    nh = choice[choice.family == "no_horizon"]
+    for r in nh.itertuples():
+        assert "CONSTRAINT" not in r.text and "time horizon" not in r.text
+    cross = choice[choice.family == "layout_cross"]
+    assert cross.layout.nunique() == choice[choice.family == "layout"].layout.nunique()
+    cues = cue_table(load_config())
+    for r in cross[cross.cue.notna()].itertuples():
+        assert r.text.count(cues[r.cue]["text"]) == 1
+
+
+def test_implicit_items_have_determinacy(choice):
+    imp = choice[choice.family == "implicit"]
+    assert set(imp.determinacy) == {"concrete", "vague"} and imp.layout.nunique() >= 2

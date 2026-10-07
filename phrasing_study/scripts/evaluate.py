@@ -56,7 +56,11 @@ def main():
                   f"### Variants: Δ P(short) vs reference (95% CI over scenarios). `matters` = above the null floor, "
                   f"CI excludes 0, |Δ| ≥ {MIN_EFFECT}", "", md(per.drop(columns=["above_floor"])), "",
                   "### Effective-horizon shift (log10 years; multiplier = 10^shift; < 1 acts like a shorter horizon)", "",
-                  md(t["choice_shifts"]), "", "### Contrasts", "", md(t["choice_contrasts"]), ""]
+                  md(t["choice_shifts"]), "", "### Contrasts", "", md(t["choice_contrasts"]), "",
+                  "### Layout cross: the same variant's Δ P(short) in each layout (vs that layout's canonical)", "",
+                  md(t["choice_layout_cross"]), "",
+                  "### Implicit vs explicit twin (Δ P(short)), by layout, determinacy and hidden number", "",
+                  md(t["choice_implicit"]), ""]
     if (a.run / "state.parquet").exists():
         st = pd.read_parquet(a.run / "state.parquet")
         tables["state"] = state_table(st)
@@ -64,7 +68,8 @@ def main():
         lines += ["## State protocol (the model names the horizon)", "", md(tables["state"]), ""]
     if (a.run / "multiturn.parquet").exists():
         mt = pd.read_parquet(a.run / "multiturn.parquet")
-        t = multiturn_tables(mt, cfg["multiturn"]["cue_step"])
+        det = {i["id"]: i["determinacy"] for i in cfg["choice"]["implicit"]}
+        t = multiturn_tables(mt, cfg["multiturn"]["cue_step"], det)
         tables.update(t)
         lines += ["## Multi-turn protocol", "", md(t["multiturn_adherence"]), "",
                   "Differences in log10 years of the plan's horizons vs the reference conversation "
