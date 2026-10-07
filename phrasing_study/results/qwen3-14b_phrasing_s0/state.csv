@@ -1,0 +1,12 @@
+kind,n,parsed,within_2x,within_10pct,median_abs_log_err
+canonical,20,1.0,1.0,1.0,0.0
+implicit concrete (no number),4,1.0,0.5,0.25,0.309894379144197
+implicit concrete (with number),6,1.0,0.8333333333333334,0.8333333333333334,0.0
+implicit vague (no number),7,1.0,0.5714285714285714,0.14285714285714285,0.3010299956639812
+implicit vague (with number),1,1.0,1.0,0.0,0.09691001300805642
+no_horizon,2,1.0,0.0,0.0,
+twin concrete (no number),4,1.0,1.0,1.0,0.0
+twin concrete (with number),6,1.0,1.0,1.0,0.0
+twin vague (no number),7,1.0,1.0,1.0,0.0
+twin vague (with number),1,1.0,1.0,1.0,0.0
+unit,108,1.0,1.0,0.9907407407407407,0.0

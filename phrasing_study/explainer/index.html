@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Phrasing Study Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #1A242D;
+  --muted: #56636E;
+  --rule: #D6DDE2;
+  --accent: #1D6A84;
+  --accent-soft: #E3EEF2;
+  --warn: #9A5B12;
+  --warn-soft: #F6EBDD;
+  --plate: #FFFFFF;
+  --mark: #FBE7B5;
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11171C;
+    --surface: #182027;
+    --ink: #E2E8EC;
+    --muted: #9AA7B1;
+    --rule: #2B363F;
+    --accent: #72B9D1;
+    --accent-soft: #1B2C34;
+    --warn: #E0A866;
+    --warn-soft: #2E2419;
+    --plate: #F4F6F7;
+    --mark: #5A4A1C;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11171C;
+  --surface: #182027;
+  --ink: #E2E8EC;
+  --muted: #9AA7B1;
+  --rule: #2B363F;
+  --accent: #72B9D1;
+  --accent-soft: #1B2C34;
+  --warn: #E0A866;
+  --warn-soft: #2E2419;
+  --plate: #F4F6F7;
+  --mark: #5A4A1C;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 17px/1.62 var(--sans);
+  padding-inline: 20px;
+  padding-block: 40px 80px;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { max-width: 1080px; margin-inline: auto; display: grid; gap: 72px; }
+.col { max-width: 68ch; }
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(2rem, 4.5vw, 2.8rem); letter-spacing: -0.01em; }
+h2 { font-size: clamp(1.5rem, 3vw, 1.9rem); }
+h3 { font-size: 1.15rem; font-family: var(--sans); font-weight: 600; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+.eyebrow {
+  font: 500 0.78rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.muted { color: var(--muted); }
+.stack { display: grid; gap: 16px; }
+.stack-lg { display: grid; gap: 28px; }
+
+header.intro { display: grid; gap: 20px; }
+.lede { font-size: 1.12rem; color: var(--muted); max-width: 62ch; }
+.meta { font: 400 0.82rem/1.5 var(--mono); color: var(--muted); }
+
+/* table of contents */
+.toc { display: grid; gap: 0; border-top: 1px solid var(--rule); max-width: 760px; }
+.toc a {
+  display: grid; grid-template-columns: 2.4em 1fr; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--rule);
+  text-decoration: none; color: var(--ink);
+}
+.toc a:hover .toc-q { color: var(--accent); }
+.toc-n { font-family: var(--mono); color: var(--accent); font-size: 0.9rem; padding-top: 2px; }
+.toc-q { font-weight: 600; }
+.toc-a { color: var(--muted); font-weight: 400; }
+
+/* sections */
+section.finding { display: grid; gap: 24px; scroll-margin-top: 24px; }
+.finding-head { display: grid; gap: 10px; }
+.question { font-size: 1.05rem; color: var(--muted); }
+
+figure { margin: 0; display: grid; gap: 10px; }
+.plate {
+  background: var(--plate);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+}
+.plate img { margin-inline: auto; }
+.plate.narrow img { max-width: 720px; width: 100%; }
+figcaption { font-size: 0.86rem; color: var(--muted); max-width: 90ch; }
+figcaption code { font-size: 0.95em; }
+
+.readings { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px 32px; }
+.reading { display: grid; gap: 6px; align-content: start; }
+.reading h3 { font-size: 0.78rem; font-family: var(--mono); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.reading p + p { margin-top: 8px; }
+
+.for-us {
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 16px 20px;
+  display: grid; gap: 6px;
+  max-width: 78ch;
+}
+.for-us .eyebrow { font-size: 0.72rem; }
+.caveat {
+  background: var(--warn-soft);
+  border-radius: 6px;
+  padding: 14px 20px;
+  max-width: 78ch;
+  display: grid; gap: 6px;
+}
+.caveat .eyebrow { color: var(--warn); font-size: 0.72rem; }
+
+/* prompt specimen */
+.prompt {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 16px 18px;
+  font: 400 0.86rem/1.6 var(--mono);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-width: 88ch;
+}
+.prompt .label { color: var(--accent); font-weight: 500; }
+mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 2px; }
+
+/* token strip */
+.tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.tok {
+  display: grid; gap: 2px; justify-items: center;
+  border: 1px solid var(--rule); background: var(--surface);
+  border-radius: 4px; padding: 6px 8px; min-width: 52px;
+}
+.tok b { font: 500 0.72rem/1 var(--mono); color: var(--accent); }
+.tok span { font: 400 0.8rem/1.2 var(--mono); white-space: nowrap; }
+.tok.resp { border-style: dashed; }
+.tok.hot { border-color: var(--warn); }
+.tok.hot b { color: var(--warn); }
+
+/* small tables */
+.tbl-wrap { overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 16px 7px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 500 0.74rem/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+td.num { font-family: var(--mono); font-size: 0.88rem; }
+tr.em td { font-weight: 600; }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.metric { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; align-content: start; }
+.metric .name { font-weight: 600; }
+.metric .desc { font-size: 0.92rem; color: var(--muted); }
+
+.vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; max-width: 820px; }
+.vs-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.vs-card .big { font: 500 1.6rem/1.1 var(--mono); }
+.vs-card .who { font: 500 0.74rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px 40px; }
+.summary ul { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; }
+.summary .stack { align-content: start; }
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+footer { font-size: 0.85rem; color: var(--muted); display: grid; gap: 8px; max-width: 80ch; }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; padding-inline: 16px; }
+  .page { gap: 56px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+caption { max-width: 80ch; }
+th.grp, td.grp { padding-left: 28px; border-left: 1px solid var(--rule); }
+td.num { padding-right: 28px; }
+.plate img { image-rendering: auto; }
+
+/* keep wide children (tables, token strips) from widening the page on narrow screens */
+.page, section.finding, figure { grid-template-columns: minmax(0, 1fr); }
+.page > *, section.finding > * { min-width: 0; }
+</style>
+
+</head>
+<body>
+<main class="page">
+
+<header class="intro">
+  <div class="eyebrow">Planning Temporal Manifolds · phrasing study · Qwen3-14B</div>
+  <h1>Which ways of phrasing a prompt change temporal-horizon behaviour?</h1>
+  <p class="lede">Same meaning, different words: 24,864 two-option choices and 2,436 multi-turn plans, each compared with its own reference prompt. Most rewordings do nothing. A few change the behaviour more than the horizon itself does, and those are the ones every experiment has to control.</p>
+  <p class="meta">Run <code>qwen3-14b_phrasing_s0</code> · 2026-10-07 · branch <code>phrasing-study</code> (commit f84e676) · 1× RTX PRO 5000 48 GB, 2.7 h · all prompt text in <code>phrasing_study/variants.yaml</code></p>
+  <nav class="toc" aria-label="Contents">
+    <a href="#summary"><span class="toc-n">00</span><span><span class="toc-q">Summary for the group</span> <span class="toc-a">what to control, ranked</span></span></a>
+    <a href="#setup"><span class="toc-n">01</span><span><span class="toc-q">What was run</span> <span class="toc-a">three protocols, one set of variants</span></span></a>
+    <a href="#methods"><span class="toc-n">02</span><span><span class="toc-q">Methods primer</span> <span class="toc-a">P(short), paired Δ, null floor, effective horizon</span></span></a>
+    <a href="#baseline"><span class="toc-n">03</span><span><span class="toc-q">Is the baseline sound?</span> <span class="toc-a">yes, but option order is huge</span></span></a>
+    <a href="#ranking"><span class="toc-n">04</span><span><span class="toc-q">Which phrasings change the choice?</span> <span class="toc-a">labels, agreement cues, one rewording</span></span></a>
+    <a href="#layouts"><span class="toc-n">05</span><span><span class="toc-q">Do they hold in other prompt structures?</span> <span class="toc-a">agreement yes, units only sometimes</span></span></a>
+    <a href="#implicit"><span class="toc-n">06</span><span><span class="toc-q">Implicit horizons</span> <span class="toc-a">short ones are read as years</span></span></a>
+    <a href="#cues"><span class="toc-n">07</span><span><span class="toc-q">Can a sentence steer a plan?</span> <span class="toc-a">yes: hurry ×0.6, relax ×1.1–1.3</span></span></a>
+    <a href="#units-mt"><span class="toc-n">08</span><span><span class="toc-q">Units and implicit horizons in plans</span> <span class="toc-a">the unit becomes the step size</span></span></a>
+    <a href="#readout"><span class="toc-n">09</span><span><span class="toc-q">How reliable is the choice readout?</span> <span class="toc-a">fine in Alan's layout, not in markdown</span></span></a>
+    <a href="#next"><span class="toc-n">10</span><span><span class="toc-q">Recommendations and next steps</span></span></a>
+  </nav>
+</header>
+
+<section class="finding" id="summary">
+  <div class="finding-head">
+    <div class="eyebrow">00 · Summary</div>
+    <h2>What every experiment should control, in order of size</h2>
+  </div>
+  <div class="summary">
+    <div class="stack">
+      <h3>Matters (control or counterbalance)</h3>
+      <ul>
+        <li><b>Option order.</b> Listing the short option first raises P(short) by <b>+0.22</b>. Always run both orders.</li>
+        <li><b>A stated preference</b> ("I'm leaning towards the option that pays out sooner / later"): <b>+0.25 / −0.11</b>, a 0.36 swing; 0.91 with no horizon. Holds in every prompt structure.</li>
+        <li><b>Digit labels.</b> <code>1)</code>/<code>2)</code> instead of <code>a)</code>/<code>b)</code>: <b>+0.20</b> (acts like a horizon ×0.15 as long). <code>A)</code>/<code>B)</code> is harmless.</li>
+        <li><b>Wording of the constraint.</b> "Evaluate the two options over a time frame of <i>h</i>" vs Alan's sentence: <b>−0.15</b>, acts like a horizon <b>×3.9</b> as long.</li>
+        <li><b>Verbal pressure in multi-turn plans.</b> "I'm a bit hurried" before step 3 shrinks the remaining steps to <b>×0.65</b>; "Take your time"-type cues stretch them to <b>×1.12</b> (×1.27 when no horizon was given).</li>
+        <li><b>Implicit horizons.</b> The model states multi-year horizons for "before Friday; today is Monday" (5 years) and "before the end of this week" (2 years); choices move accordingly.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Small or nothing</h3>
+      <ul>
+        <li><b>Null rewordings</b> (punctuation, synonyms, "Please", "Thank you."): all within ±0.009. The method's noise floor is tight.</li>
+        <li><b>Units and number forms</b> in single choices: −0.03 to −0.07 each (acts like a horizon ×1.2–1.5 as long). Consistent in direction, mostly below the bar.</li>
+        <li><b>Pressure cues in single choices:</b> "hurried" does nothing (|Δ| ≤ 0.015); only "We're not in a hurry at all." passes the bar (−0.07).</li>
+        <li><b>Layout</b> (markdown, prose, person asking) leaves the average unchanged; the task-brief layout lowers it (−0.08).</li>
+        <li><b>Alan's unit-match effect</b> (horizon unit matching the option unit): not seen in this design (interaction −0.04, CI includes 0).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="caveat">
+    <div class="eyebrow">Read the protocol, not just the phrasing</div>
+    <p>The same rewording can push the two protocols in opposite directions. Implicit horizons and non-canonical units make <em>choices</em> more patient (fewer short choices) but make <em>plans</em> shorter. There is no single "effective horizon" per phrasing; each protocol has to be checked on its own.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="finding" id="setup">
+  <div class="finding-head">
+    <div class="eyebrow">01 · Setup</div>
+    <h2>One set of variants, three ways of running the model</h2>
+    <p class="question col">Group decision 2026-10-06: phrasing is not a central pillar, but every experiment must account for it. The question here is which phrasings change behaviour, with effect sizes.</p>
+  </div>
+  <div class="metrics">
+    <div class="metric"><span class="name">Choice (24,864 prompts)</span><span class="desc">Alan's two-option template, single turn. Behaviour = P(short option), read from the answer logits. 8 option configurations × 2 domains (household investment, city climate) × 10 horizons (1 week – 50 years) × 2 option orders = 320 cells per variant.</span></div>
+    <div class="metric"><span class="name">State (166 prompts)</span><span class="desc">Same prompt, but the model is asked to name the horizon as a duration. Tells "doesn't understand the horizon" apart from "understands but acts differently".</span></div>
+    <div class="metric"><span class="name">Multi-turn (2,436 conversations)</span><span class="desc">The "Continue" planning protocol of <code>multiturn_planning</code>: outline, 5 steps each with a "Time horizon:", then "Plan Completed". 12 goals × 5 horizons (1 month – 20 years), plus no-horizon plans sampled 8× per goal.</span></div>
+  </div>
+  <div class="stack col">
+    <p>The canonical choice prompt (Alan's layout). Every variant changes exactly one thing in it:</p>
+  </div>
+  <div class="prompt"><span class="label">SITUATION:</span> Plan for the future of the household.
+<span class="label">TASK:</span> You, the head of the household, are tasked to choose the best investment:
+a) 5,000 dollars in 3 months.
+b) 50,000 dollars in 5 years.
+<span class="label">OBJECTIVE:</span> Think deeply about which option is preferable.
+<span class="label">CONSTRAINT:</span> You must select the option that provides the greatest benefit for this time horizon: <mark>5 years</mark>.
+<span class="label">ACTION:</span> Select one of the two options. Provide reasoning.
+<span class="label">FORMAT:</span> I choose: &lt;a) or b)&gt;. My reasoning: &lt;1-3 sentences&gt;</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Family</th><th>What changes</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>nulls</td><td>should change nothing</td><td>"largest" for "greatest"; + "Thank you."</td></tr>
+        <tr><td>reword</td><td>the constraint sentence</td><td>"Your planning horizon is 5 years. Choose the option that is best over that horizon."</td></tr>
+        <tr><td>unit</td><td>the horizon's unit or form</td><td>"1825 days", "60 months", "five years", "half a decade"</td></tr>
+        <tr><td>option unit</td><td>option delays in months</td><td>"50,000 dollars in 60 months"</td></tr>
+        <tr><td>labels</td><td>option labels</td><td>A) / B), 1) / 2)</td></tr>
+        <tr><td>layout</td><td>the whole structure</td><td>markdown, plain prose, task brief, a person asking for help, constraint before the options</td></tr>
+        <tr><td>cue</td><td>an added sentence</td><td>hurry ×3 ("I'm a bit hurried."…), relax ×3 ("Take your time."…), neutral ×2, leaning sooner / later</td></tr>
+        <tr><td>implicit</td><td>horizon implied, not stated, vs its explicit twin</td><td>"…greatest benefit before our baby is born; my partner is 8 weeks pregnant" vs "…within the next 32 weeks"</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="finding" id="methods">
+  <div class="finding-head">
+    <div class="eyebrow">02 · Methods primer</div>
+    <h2>Five ideas used on every figure</h2>
+  </div>
+  <div class="readings">
+    <div class="reading"><h3>P(short)</h3><p>The prompt is followed by the start of the answer, "I choose: ", and we read the model's next-token probabilities for the two labels. P(short) = the probability of the short option's label, normalised over the two. It is continuous, so small effects show up without thousands of samples. A sample of free generations checks that the model really answers this way (it does, 100%; the readout agrees with the written choice 94% of the time).</p></div>
+    <div class="reading"><h3>Paired Δ</h3><p>Every variant is run on exactly the same cells as its reference: same options, domain, horizon and option order. Δ = P(short | variant) − P(short | reference) per cell, then averaged. Example: "180 days" vs "6 months", same options, same order. Positive Δ = more short choices = the model acts as if the horizon were shorter.</p></div>
+    <div class="reading"><h3>95% CI over scenarios</h3><p>Cells from the same scenario (one option configuration in one domain; 16 in total) are not independent. The bootstrap resamples whole scenarios, so the interval says how much the average would move with other scenarios, not with more cells.</p></div>
+    <div class="reading"><h3>Null floor and "matters"</h3><p>Six null rewordings should change nothing; the largest of their average effects is the noise floor (±0.009 here). A variant <b>matters</b> if its Δ is beyond the floor, its CI excludes 0, and |Δ| ≥ 0.05, a threshold fixed before the run.</p></div>
+    <div class="reading"><h3>Effective horizon</h3><p>P(short) falls as the stated horizon grows. Fitting that curve with and without the variant gives how far the variant slides it along the horizon axis, written as a multiplier: "acts like a horizon ×3.9 as long". In plans, the multiplier is direct: plan horizons with the cue ÷ plan horizons without it.</p></div>
+    <div class="reading"><h3>Multi-turn comparisons</h3><p><b>Plan end</b> = the largest step horizon in the plan. Cues before step 3 are added to a copy of the conversation that shares turns 1–3 word for word with its no-cue parent, so the comparison of steps 3–5 is exact. First-message cues start a new conversation, compared with the same goal and horizon without the cue.</p></div>
+  </div>
+</section>
+
+<hr>
+
+<section class="finding" id="baseline">
+  <div class="finding-head">
+    <div class="eyebrow">03 · Baseline</div>
+    <h2>The model follows the horizon, but option order matters almost as much</h2>
+    <p class="question col">Before asking whether phrasing matters: does the canonical prompt behave sensibly?</p>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/f1_curve.png" alt="P(short) against the stated horizon for both option orders: near 1 up to one year, falling to about 0.1 at 20 years; the short-first line sits above the short-second line by up to 0.43" loading="lazy"></div>
+    <figcaption>Canonical prompt, mean over 8 option configurations × 2 domains per point.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>How to read it</h3><p>Each line is P(short) at one stated horizon. Orange: the short option is listed first, as a). Blue: it is listed second, as b).</p></div>
+    <div class="reading"><h3>What it shows</h3><p>Horizons up to a year: the short option wins (0.90–0.97). From 2 years it falls to 0.11 at 20 years. At 1 week both options pay out after the horizon, so the instruction can't be met; there, position decides (1.00 if listed first, 0.57 if second). Across every variant, listing the short option first adds <b>+0.22</b> (95% CI 0.13–0.31).</p></div>
+  </div>
+  <div class="for-us">
+    <div class="eyebrow">For us</div>
+    <p>The horizon signal is clear, so the baseline is valid. But a single fixed order would bias every result by up to 0.4 at the extremes. Counterbalancing order is not optional.</p>
+  </div>
+</section>
+
+<section class="finding" id="ranking">
+  <div class="finding-head">
+    <div class="eyebrow">04 · Single choices</div>
+    <h2>Most rewordings do nothing; labels, stated preferences and one constraint wording do a lot</h2>
+    <p class="question col">Every variant on Alan's layout, as Δ P(short) against the canonical prompt.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/f2_ranking.png" alt="Dot plot of Δ P(short) per variant with confidence intervals; null rewordings cluster at zero; option order, the 1)/2) labels and the leaning-sooner cue are near +0.2; the leaning-later cue, the time-frame rewording and decades are negative" loading="lazy"></div>
+    <figcaption>Filled dot: passes the bar and survives the readout check (§09). Hollow black: passes on the full readout only. Gray: below the bar. * meaning arguably changes ("only outcomes within"). † compared with "options in months", not with the canonical prompt.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>How to read it</h3><p>Right of zero: more short choices (acts like a shorter horizon). Gray band: the null floor. Dotted lines: the ±0.05 bar.</p></div>
+    <div class="reading"><h3>What it shows</h3>
+      <p><b>Labels.</b> <code>1)</code>/<code>2)</code> add +0.20 (CI 0.17–0.22). <code>A)</code>/<code>B)</code> do nothing.</p>
+      <p><b>Stated preference.</b> "…leaning towards the option that pays out sooner": +0.25; "…later": −0.11. With no horizon in the prompt, the swing between the two is 0.91: the model mostly does what the user leans towards.</p>
+      <p><b>Constraint wording.</b> "Evaluate the two options over a time frame of <i>h</i> and pick the better one": −0.15, acting like a horizon ×3.9 as long. "Your planning horizon is <i>h</i>" and "within the next <i>h</i>" do nothing.</p>
+      <p><b>Units.</b> Every non-canonical form lowers P(short) a little (−0.03 to −0.07), except decimal years ("0.5 years", only defined below a year: +0.04); only decades clears the bar robustly.</p>
+      <p><b>Pressure.</b> The three "hurry" phrasings do nothing in a single choice. Of the "relax" phrasings only "We're not in a hurry at all." clears the bar (−0.07).</p></div>
+  </div>
+  <div class="for-us">
+    <div class="eyebrow">For us</div>
+    <p>A variant either changes nothing measurable or changes a lot; there is little middle ground. Keep labels as letters, never put a user preference into a prompt unless that is the manipulation, and freeze the constraint sentence across conditions.</p>
+  </div>
+</section>
+
+<section class="finding" id="layouts">
+  <div class="finding-head">
+    <div class="eyebrow">05 · Prompt structure</div>
+    <h2>Stated preferences matter in every structure; pressure never does; units depend on the layout</h2>
+    <p class="question col">The same eight variants repeated in five other layouts, each compared with that layout's own canonical prompt.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/f3_layout_cross.png" alt="Heatmap of Δ P(short): rows are variants, columns are layouts; the sooner row is red in all layouts, the later row blue in all, the hurry, relax and thanks rows near zero, and the unit rows slightly blue except in task brief and person asking" loading="lazy"></div>
+    <figcaption>Red: more short choices; blue: fewer. Hatched, gray italic: the readout is unreliable there (fewer than 30% of cell pairs with readout mass ≥ 0.5; see §09). The layouts are shown in §01's table.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>"Leaning sooner/later" moves P(short) in every layout, from +0.10/−0.10 (constraint first) to +0.32/−0.35 (task brief). Hurry, relax and "Thanks." stay within ±0.04 everywhere. Days and months lower P(short) in Alan's lines, constraint-first and prose layouts (−0.05 to −0.11), but not in the task brief or the person-asking layout.</p></div>
+    <div class="reading"><h3>Layouts on their own</h3><p>Against the canonical prompt, layout alone shifts the average little: task brief −0.08, constraint first +0.08 (full readout only), others within ±0.03. But the per-cell differences are larger (mean |Δ| 0.04–0.19): layouts reshape the curve more than they shift it.</p></div>
+  </div>
+  <div class="for-us">
+    <div class="eyebrow">For us</div>
+    <p>An effect measured in Alan's template is not automatically a property of the model: unit effects disappear in more natural layouts. Results that should generalise need at least two layouts.</p>
+  </div>
+</section>
+
+<section class="finding" id="implicit">
+  <div class="finding-head">
+    <div class="eyebrow">06 · Implicit horizons</div>
+    <h2>Short implicit horizons are read as years, and the choices follow</h2>
+    <p class="question col">An implicit horizon ("before our baby is born; my partner is 8 weeks pregnant") against its explicit twin ("within the next 32 weeks"), in Alan's layout. Right: what the model says when asked to name the horizon.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/f4_implicit.png" alt="Left: Δ P(short) for 18 implicit items, mostly negative between −0.6 and 0; right: the stated horizon relative to the twin, with large overestimates for Friday (5 years) and end of week (2 years)" loading="lazy"></div>
+    <figcaption>Blue: concrete (facts plus common knowledge fix the horizon). Orange: vague (only a rough range; the twin is a central guess). Filled: the text holds a number that is not the horizon. Quoted text: the model's answer in the state protocol.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>15 of 18 implicit items get fewer short choices than their twin (one of them, the end of the calendar year, by only −0.003), by up to −0.63. Concrete items move at least as much as vague ones (−0.27 vs −0.21 on average). The model's stated horizons explain part of it: "before Friday; today is Monday" → "5 years"; "before the end of this week" → "2 years"; "before the busy season starts" → "2 years"; "8 weeks pregnant" → "2 years". When a number makes the computation explicit (retire at 65 from 60, 40th birthday from 30), the stated horizon is right.</p></div>
+    <div class="reading"><h3>Knows but acts differently</h3><p>Some items are stated correctly and still shift the choice: retiring at 65 from 60 (stated "5 years", Δ −0.45), the 40th birthday (stated "10 years", Δ −0.33). Either the event framing ("before X") makes the model more patient than "within the next X", or knowing the horizon does not mean using it. The four long-horizon items (mortgage, kids grown up, first job, newborn adult) go the other way or not at all.</p></div>
+  </div>
+  <div class="caveat">
+    <div class="eyebrow">Caveat</div>
+    <p>The twin frame ("within the next 32 weeks") and the implicit frame ("before our baby is born") differ in wording as well as in explicitness. The same items in the person-asking layout mostly point the same way (15 of 18 negative), but the readout is unreliable there (§09), so they are not shown.</p>
+  </div>
+  <div class="for-us">
+    <div class="eyebrow">For the implicit-horizon direction</div>
+    <p>The intended horizon is not a usable ground truth for short implicit horizons: the model often believes something else. Probes should be scored against the horizon the model itself states (or a behavioural readout), and "knows vs uses" can be separated with exactly this pair of protocols.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="finding" id="cues">
+  <div class="finding-head">
+    <div class="eyebrow">07 · Multi-turn cues</div>
+    <h2>One sentence mid-plan moves the rest of the plan</h2>
+    <p class="question col">Three hurry and three relax phrasings, added either to the first message or to the "Continue" that asks for step 3. Effect on the plan's horizons, relative to the same conversation without the cue.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/f5_multiturn_cues.png" alt="Multipliers on plan horizons: hurry cues around ×0.6–0.7 (×0.4 in the first message when no horizon was given), relax cues ×1.1–1.4, neutral cues near ×1 except in the first message with a stated horizon (×0.79)" loading="lazy"></div>
+    <figcaption>Left: a horizon was stated in the first message. Right: no horizon (sampled plans). Dot: the three phrasings pooled, 95% CI over 12 goals. Vertical ticks: each phrasing on its own.</figcaption>
+  </figure>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Cue before step 3</th><th>Horizon stated</th><th>No horizon</th></tr></thead>
+      <tbody>
+        <tr><td>hurry (3 phrasings)</td><td class="num">×0.65 (0.58–0.72)</td><td class="num">×0.59 (0.50–0.72)</td></tr>
+        <tr><td>relax (3 phrasings)</td><td class="num">×1.12 (1.03–1.25)</td><td class="num">×1.27 (1.14–1.49)</td></tr>
+        <tr><td>neutral ("Thanks." / "Okay.")</td><td class="num">×0.96 (0.92–1.00)</td><td class="num">×1.01</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>A hurry cue before step 3 shrinks steps 3–5 to about two thirds; a relax cue stretches them by 12–27%; neutral cues do nothing. All three phrasings of each direction agree in sign. "I'm a bit hurried." is the weakest hurry phrasing (×0.79). "We're not in a hurry at all." is the strongest relax phrasing (×1.28), as it was in the single choices.</p></div>
+    <div class="reading"><h3>First message</h3><p>With no stated horizon the effect is largest: hurry ×0.40, relax ×1.37. With a stated horizon, even "Thanks." in the first message changes the greedy plan (×0.79), so a first-message hurry cue (×0.68) is only modestly beyond that. The mid-plan comparison, with its shared prefix, is the clean one.</p></div>
+  </div>
+  <div class="for-us">
+    <div class="eyebrow">For the steering direction</div>
+    <p>Pressure cues barely touch single choices but clearly steer multi-step plans, mid-conversation, with the stated horizon unchanged. That is a ready-made behavioural target and a baseline for activation steering: does adding a horizon direction at the boundary do what "I'm a bit hurried." does?</p>
+  </div>
+</section>
+
+<section class="finding" id="units-mt">
+  <div class="finding-head">
+    <div class="eyebrow">08 · Units in plans</div>
+    <h2>In plans, the unit becomes the step size</h2>
+    <p class="question col">The same horizon in days, months or a named form, in the first message. Plan end against the stated horizon.</p>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/f6_multiturn_units.png" alt="Plan end against stated horizon: the canonical line ends at about half the target; days and months collapse to about 1 year at a 20-year horizon" loading="lazy"></div>
+    <figcaption>Median over 12 goals. Months are only defined at 2, 5 and 20 years in the variant set. Dashed: plan ends exactly at the target.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>With the canonical wording, plans end at about half the target (slope 0.90, Spearman 0.89 against the target). For "7300 days" (20 years) the model counts in days, "30 days, 60 days, 90 days, 120 days, 180 days", and the plan ends after about a year instead of 10 years. Pooled over horizons: days ×0.66, months ×0.68 (CI touches 1), named forms ×0.72.</p></div>
+    <div class="reading"><h3>Implicit horizons in plans</h3><p>Plans with an implicit horizon end at ×0.38 of their explicit twin's plan end (concrete ×0.44, vague ×0.32): shorter, while the same implicit texts made single choices more patient. A deadline phrased as an event seems to pull the plan in, not push it out.</p></div>
+  </div>
+</section>
+
+<hr>
+
+<section class="finding" id="readout">
+  <div class="finding-head">
+    <div class="eyebrow">09 · Caveat</div>
+    <h2>The choice readout is reliable in Alan's layout, not in markdown</h2>
+    <p class="question col">The readout prefills "I choose: " followed by a space, the separator the model used most in a calibration sample (37 of 48). Where the model would rather write "I choose: **a)", the two label tokens get little probability and the comparison is off-distribution.</p>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/f7_readout.png" alt="Readout mass by layout: around 0.9 in Alan's layout and prose, 0.7 in task brief and person asking, 0.18 for implicit items in the person-asking layout and 0.05 in markdown" loading="lazy"></div>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>Median mass on the two labels: 0.91 in Alan's layout, 0.99 in plain prose, 0.68–0.73 in the task brief and person-asking layouts, 0.18 for implicit items in the person-asking layout, and 0.05 in markdown (the model bolds its answer there).</p></div>
+    <div class="reading"><h3>The check used in §04</h3><p>Each effect was recomputed on cell pairs where both prompts have mass ≥ 0.5. That check is biased towards easy cells (near 0 or 1), so it shrinks real effects; an effect counts as robust only if it keeps its sign and a CI that excludes 0. Labels, both agreement cues, the time-frame and "only outcomes within" rewordings, "We're not in a hurry at all.", decades and the task-brief layout pass it.</p></div>
+  </div>
+  <div class="for-us">
+    <div class="eyebrow">Fix for the next run</div>
+    <p>Read the choice under both separators (" " and " **") and add the probabilities, which costs one extra forward pass per prompt. The choice protocol took 10.5 minutes on the 48 GB card, so a rerun of the affected layouts is cheap.</p>
+  </div>
+</section>
+
+<section class="finding" id="next">
+  <div class="finding-head">
+    <div class="eyebrow">10 · Recommendations</div>
+    <h2>A checklist for the group's experiments</h2>
+  </div>
+  <div class="summary">
+    <div class="stack">
+      <h3>Control in every experiment</h3>
+      <ul>
+        <li>Run both option orders.</li>
+        <li>Letter labels only (a/b or A/B).</li>
+        <li>No user preference or pressure sentence unless it is the manipulation.</li>
+        <li>One fixed constraint sentence across conditions.</li>
+        <li>One unit system per experiment, or units as an explicit factor; in plans, expect the unit to set the step size.</li>
+        <li>At least two prompt layouts for any claim meant to generalise.</li>
+        <li>For implicit horizons, score against the horizon the model states, not the intended one.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Next</h3>
+      <ul>
+        <li>Rerun the choice readout with both separators for the markdown and person-asking layouts (≈ 10 min of GPU).</li>
+        <li>Activations are in the bucket (9 layers; transition window and readout position for choices, 13 positions per turn for plans): does the horizon readout move with the variants that change behaviour, and not with the null ones?</li>
+        <li>Steering: compare an activation-space horizon direction with the hurry/relax cues on the same branched conversations.</li>
+        <li>Implicit horizons: a separate frame-matched control ("before the end of the 32 weeks" vs "within the next 32 weeks") to separate event framing from implicitness.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Data: <code>gs://augusto-phrasing-study/qwen3-14b_phrasing_s0/</code> (37 GB: run files including activations, results, logs; rclone md5 check 0 differences). Small files and results in <code>phrasing_study/runs/qwen3-14b_phrasing_s0/</code> and <code>phrasing_study/results/qwen3-14b_phrasing_s0/</code> (<code>sha256sum -c</code> 27/27 OK). Figures: <code>make_figs.py</code> in this folder; robustness numbers in <code>figs/choice_variants_with_robustness.csv</code>. Design and runbook: <code>phrasing_study/README.md</code>; all prompt text: <code>phrasing_study/variants.yaml</code>.</p>
+  <p>Builds on Alan's template, option grid and unit/phrasing controls (<code>alan/</code>) and on our multi-turn protocol (<code>multiturn_planning/</code>). Model Qwen/Qwen3-14B, revision 40c06982, bf16, thinking off.</p>
+</footer>
+
+</main>
+</body>
+</html>
