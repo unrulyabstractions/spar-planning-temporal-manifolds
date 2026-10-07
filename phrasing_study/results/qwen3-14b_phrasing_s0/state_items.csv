@@ -1,0 +1,167 @@
+variant,domain,h_text,answer,stated_years,h_years
+canonical,investment,1 week,1 week,0.019164955509924708,0.019164955509924708
+unit_days,investment,7 days,7 days,0.019164955509924708,0.019164955509924708
+unit_months,investment,0.25 months,0.25 months,0.020833333333333332,0.019164955509924708
+unit_years,investment,0.02 years,0.02 years,0.02,0.019164955509924708
+words,investment,one week,One week.,0.019164955509924708,0.019164955509924708
+named,investment,a week,A week,0.019164955509924708,0.019164955509924708
+canonical,climate,1 week,1 week,0.019164955509924708,0.019164955509924708
+unit_days,climate,7 days,7 days,0.019164955509924708,0.019164955509924708
+unit_months,climate,0.25 months,0.25 months,0.020833333333333332,0.019164955509924708
+unit_years,climate,0.02 years,0.02 years,0.02,0.019164955509924708
+words,climate,one week,One week.,0.019164955509924708,0.019164955509924708
+named,climate,a week,A week,0.019164955509924708,0.019164955509924708
+canonical,investment,1 month,1 month,0.08333333333333333,0.08333333333333333
+unit_days,investment,30 days,30 days,0.08213552361396304,0.08333333333333333
+unit_weeks,investment,4 weeks,4 weeks,0.07665982203969883,0.08333333333333333
+unit_years,investment,0.08 years,0.08 years,0.08,0.08333333333333333
+words,investment,one month,One month.,0.08333333333333333,0.08333333333333333
+named,investment,a month,1 month,0.08333333333333333,0.08333333333333333
+canonical,climate,1 month,1 month,0.08333333333333333,0.08333333333333333
+unit_days,climate,30 days,30 days,0.08213552361396304,0.08333333333333333
+unit_weeks,climate,4 weeks,4 weeks,0.07665982203969883,0.08333333333333333
+unit_years,climate,0.08 years,0.08 years,0.08,0.08333333333333333
+words,climate,one month,One month,0.08333333333333333,0.08333333333333333
+named,climate,a month,1 month,0.08333333333333333,0.08333333333333333
+canonical,investment,3 months,3 months,0.25,0.25
+unit_days,investment,90 days,90 days,0.2464065708418891,0.25
+unit_weeks,investment,13 weeks,13 weeks,0.2491444216290212,0.25
+unit_years,investment,0.25 years,0.25 years,0.25,0.25
+words,investment,three months,Three months.,0.25,0.25
+named,investment,a quarter of a year,3 months,0.25,0.25
+canonical,climate,3 months,3 months,0.25,0.25
+unit_days,climate,90 days,90 days,0.2464065708418891,0.25
+unit_weeks,climate,13 weeks,13 weeks,0.2491444216290212,0.25
+unit_years,climate,0.25 years,0.25 years,0.25,0.25
+words,climate,three months,Three months.,0.25,0.25
+named,climate,a quarter of a year,3 months,0.25,0.25
+canonical,investment,6 months,6 months,0.5,0.5
+unit_days,investment,180 days,180 days,0.4928131416837782,0.5
+unit_weeks,investment,26 weeks,26 weeks,0.4982888432580424,0.5
+unit_years,investment,0.5 years,0.5 years,0.5,0.5
+words,investment,six months,Six months,0.5,0.5
+named,investment,half a year,Half a year.,0.5,0.5
+canonical,climate,6 months,6 months,0.5,0.5
+unit_days,climate,180 days,180 days,0.4928131416837782,0.5
+unit_weeks,climate,26 weeks,26 weeks,0.4982888432580424,0.5
+unit_years,climate,0.5 years,0.5 years,0.5,0.5
+words,climate,six months,Six months,0.5,0.5
+named,climate,half a year,6 months,0.5,0.5
+canonical,investment,1 year,1 year,1.0,1.0
+unit_days,investment,365 days,365 days,0.999315537303217,1.0
+unit_weeks,investment,52 weeks,52 weeks,0.9965776865160848,1.0
+unit_months,investment,12 months,12 months,1.0,1.0
+words,investment,one year,One year.,1.0,1.0
+named,investment,a year,1 year,1.0,1.0
+canonical,climate,1 year,1 year,1.0,1.0
+unit_days,climate,365 days,365 days,0.999315537303217,1.0
+unit_weeks,climate,52 weeks,52 weeks,0.9965776865160848,1.0
+unit_months,climate,12 months,12 months,1.0,1.0
+words,climate,one year,One year,1.0,1.0
+named,climate,a year,1 year,1.0,1.0
+canonical,investment,2 years,2 years,2.0,2.0
+unit_days,investment,730 days,730 days,1.998631074606434,2.0
+unit_weeks,investment,104 weeks,104 weeks,1.9931553730321696,2.0
+unit_months,investment,24 months,24 months,2.0,2.0
+words,investment,two years,Two years.,2.0,2.0
+named,investment,a couple of years,A couple of years.,2.0,2.0
+canonical,climate,2 years,2 years,2.0,2.0
+unit_days,climate,730 days,730 days,1.998631074606434,2.0
+unit_weeks,climate,104 weeks,104 weeks,1.9931553730321696,2.0
+unit_months,climate,24 months,24 months,2.0,2.0
+words,climate,two years,Two years,2.0,2.0
+named,climate,a couple of years,A couple of years.,2.0,2.0
+canonical,investment,5 years,5 years,5.0,5.0
+unit_days,investment,1825 days,1825 days,4.996577686516085,5.0
+unit_weeks,investment,260 weeks,260 weeks,4.982888432580424,5.0
+unit_months,investment,60 months,60 months,5.0,5.0
+unit_decades,investment,0.5 decades,5 years,5.0,5.0
+words,investment,five years,Five years.,5.0,5.0
+named,investment,half a decade,Half a decade,5.0,5.0
+canonical,climate,5 years,5 years,5.0,5.0
+unit_days,climate,1825 days,1825 days,4.996577686516085,5.0
+unit_weeks,climate,260 weeks,260 weeks,4.982888432580424,5.0
+unit_months,climate,60 months,60 months,5.0,5.0
+unit_decades,climate,0.5 decades,2.5 years,2.5,5.0
+words,climate,five years,Five years.,5.0,5.0
+named,climate,half a decade,5 years,5.0,5.0
+canonical,investment,10 years,10 years,10.0,10.0
+unit_days,investment,3650 days,3650 days,9.99315537303217,10.0
+unit_weeks,investment,520 weeks,520 weeks,9.965776865160848,10.0
+unit_months,investment,120 months,120 months,10.0,10.0
+unit_decades,investment,1 decade,1 decade,10.0,10.0
+words,investment,ten years,Ten years.,10.0,10.0
+named,investment,a decade,A decade,10.0,10.0
+canonical,climate,10 years,10 years,10.0,10.0
+unit_days,climate,3650 days,3650 days,9.99315537303217,10.0
+unit_weeks,climate,520 weeks,520 weeks,9.965776865160848,10.0
+unit_months,climate,120 months,120 months,10.0,10.0
+unit_decades,climate,1 decade,10 years,10.0,10.0
+words,climate,ten years,Ten years.,10.0,10.0
+named,climate,a decade,A decade,10.0,10.0
+canonical,investment,20 years,20 years,20.0,20.0
+unit_days,investment,7300 days,7300 days,19.98631074606434,20.0
+unit_weeks,investment,1040 weeks,1040 weeks,19.931553730321696,20.0
+unit_months,investment,240 months,240 months,20.0,20.0
+unit_decades,investment,2 decades,20 years,20.0,20.0
+words,investment,twenty years,Twenty years.,20.0,20.0
+named,investment,two decades,Two decades.,20.0,20.0
+canonical,climate,20 years,20 years,20.0,20.0
+unit_days,climate,7300 days,7300 days,19.98631074606434,20.0
+unit_weeks,climate,1040 weeks,1040 weeks,19.931553730321696,20.0
+unit_months,climate,240 months,240 months,20.0,20.0
+unit_decades,climate,2 decades,20 years,20.0,20.0
+words,climate,twenty years,Twenty years.,20.0,20.0
+named,climate,two decades,Two decades.,20.0,20.0
+canonical,investment,50 years,50 years,50.0,50.0
+unit_days,investment,18250 days,18250 days,49.96577686516085,50.0
+unit_weeks,investment,2600 weeks,2600 weeks,49.82888432580424,50.0
+unit_months,investment,600 months,600 months,50.0,50.0
+unit_decades,investment,5 decades,5 decades,50.0,50.0
+words,investment,fifty years,Fifty years,50.0,50.0
+named,investment,half a century,Half a century.,50.0,50.0
+canonical,climate,50 years,50 years,50.0,50.0
+unit_days,climate,18250 days,18250 days,49.96577686516085,50.0
+unit_weeks,climate,2600 weeks,2600 weeks,49.82888432580424,50.0
+unit_months,climate,600 months,600 months,50.0,50.0
+unit_decades,climate,5 decades,5 decades,50.0,50.0
+words,climate,fifty years,Fifty years,50.0,50.0
+named,climate,half a century,Half a century.,50.0,50.0
+implicit:baby_8wk,investment,before our baby is born; my partner is 8 weeks pregnant,2 years,2.0,0.6132785763175906
+twin:baby_8wk,investment,32 weeks,32 weeks,0.6132785763175906,0.6132785763175906
+implicit:baby_new,investment,before our baby is born; my partner just found out she is pregnant,10 months,0.8333333333333333,0.6666666666666666
+twin:baby_new,investment,8 months,8 months,0.6666666666666666,0.6666666666666666
+implicit:year_end_oct,investment,before the end of this calendar year; it is early October now,10 months,0.8333333333333333,0.25
+twin:year_end_oct,investment,3 months,3 months,0.25,0.25
+implicit:lease,investment,before our lease ends; we just signed a standard one-year lease,1 year,1.0,1.0
+twin:lease,investment,1 year,1 year,1.0,1.0
+implicit:retire_60_65,investment,before I retire; I am 60 and plan to retire at 65,5 years,5.0,5.0
+twin:retire_60_65,investment,5 years,5 years,5.0,5.0
+implicit:university_8,investment,before our daughter starts university; she just turned 8,10 years,10.0,10.0
+twin:university_8,investment,10 years,10 years,10.0,10.0
+implicit:birthday_40,investment,before my 40th birthday; I just turned 30,10 years,10.0,10.0
+twin:birthday_40,investment,10 years,10 years,10.0,10.0
+implicit:newborn_adult,investment,before our newborn becomes an adult,18 years,18.0,18.0
+twin:newborn_adult,investment,18 years,18 years,18.0,18.0
+implicit:mortgage_30,investment,before the mortgage is paid off; we just took out a 30-year mortgage,30 years,30.0,30.0
+twin:mortgage_30,investment,30 years,30 years,30.0,30.0
+implicit:friday_monday,investment,before Friday; today is Monday,5 years,5.0,0.010951403148528405
+twin:friday_monday,investment,4 days,4 days,0.010951403148528405,0.010951403148528405
+implicit:week_end,investment,before the end of this week; today is Monday,2 years,2.0,0.013689253935660506
+twin:week_end,investment,5 days,5 days,0.013689253935660506,0.013689253935660506
+implicit:final_school_year,investment,before our son finishes high school; he just started his final year,3 years,3.0,0.75
+twin:final_school_year,investment,9 months,9 months,0.75,0.75
+implicit:wedding_spring,investment,before our wedding next spring; it is autumn now,1 year and 3 months,1.0,0.5
+twin:wedding_spring,investment,6 months,6 months,0.5,0.5
+implicit:toddler_school,investment,before our daughter starts school; she just turned 2,5 years,5.0,4.0
+twin:toddler_school,investment,4 years,4 years,4.0,4.0
+implicit:newborn_school,investment,before our newborn starts school,5 years,5.0,5.0
+twin:newborn_school,investment,5 years,5 years,5.0,5.0
+implicit:first_job,investment,before I retire; I just started my first job after university,30 years,30.0,40.0
+twin:first_job,investment,40 years,40 years,40.0,40.0
+implicit:busy_season,investment,before the busy season starts at work,2 years,2.0,0.25
+twin:busy_season,investment,3 months,3 months,0.25,0.25
+implicit:kids_grown,investment,before our kids are grown up; they are in primary school,12 years,12.0,10.0
+twin:kids_grown,investment,10 years,10 years,10.0,10.0
+nohorizon_none,investment,,10 years,10.0,
+nohorizon_none,climate,,10 years,10.0,

@@ -95,6 +95,21 @@ choice 24,864 items ≈ 15–25 min, multi-turn 13,308 turns ≈ 75 min, smoke +
 **≈ 2 h of rental, ≈ $2**. Disk ≥ 100 GB (weights 30 GB + activations ≈ 23 GB choice + 16 GB multi-turn + smoke).
 To shorten: fewer `later_cues` / `first_turn_cues` in `variants.yaml` (each cue costs ~160 conversations).
 
+## Full run: `qwen3-14b_phrasing_s0` (Qwen3-14B, commit f84e676, 2026-10-07)
+
+1x RTX PRO 5000 Blackwell 48 GB on vast.ai, 2.7 h of rental (capture 95 min: choice 10.5 min, multi-turn 84 min;
+upload 37 GB at only 13-17 MB/s took 36 min). All gates OK. Data: `gs://augusto-phrasing-study/qwen3-14b_phrasing_s0/`
+(run files incl. activations, results, logs; rclone md5 check 0 differences); small files local (`sha256sum -c` 27/27).
+Results explainer: [`explainer/index.html`](explainer/index.html) (figures: `explainer/make_figs.py`).
+
+- Matters: option order (+0.22), stated preference "leaning sooner/later" (+0.25/-0.11, every layout), labels 1)/2)
+  (+0.20), "time frame" wording of the constraint (-0.15). Nulls within +-0.009. Units -0.03..-0.07 (consistent sign).
+- Pressure cues: ~0 in single choices; in plans, hurry before step 3 x0.65, relax x1.12 (no horizon: x0.59 / x1.27).
+- Plans: a horizon in days/months sets the step unit ("7300 days" -> plan ends after ~1 year). Implicit short horizons
+  are stated as years ("before Friday; today is Monday" -> "5 years").
+- Readout caveat: the prefilled separator was " "; in markdown (and implicit items in the person-asking layout) the
+  model prefers " **", readout mass 0.05-0.18 there. Next run: read both separators and sum.
+
 ## Run it (vast.ai, one 48 GB GPU)
 
 Single commands, run on the box from `/workspace` (Python at `/venv/main/bin/python` on the PyTorch image):
