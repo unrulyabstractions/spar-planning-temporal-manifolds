@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Phrasing Study Results</title>
+<title>Phrasing Study</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -213,6 +213,14 @@ td.num { padding-right: 28px; }
 /* keep wide children (tables, token strips) from widening the page on narrow screens */
 .page, section.finding, figure { grid-template-columns: minmax(0, 1fr); }
 .page > *, section.finding > * { min-width: 0; }
+
+/* reproduce table: wrap long paths/hashes; label above text on narrow screens */
+table.repro { width: 100%; }
+table.repro td { overflow-wrap: anywhere; }
+@media (max-width: 620px) {
+  table.repro tr, table.repro th, table.repro td { display: block; }
+  table.repro th { border-bottom: 0; padding-bottom: 2px; }
+}
 </style>
 
 </head>
@@ -220,10 +228,10 @@ td.num { padding-right: 28px; }
 <main class="page">
 
 <header class="intro">
-  <div class="eyebrow">Planning Temporal Manifolds · phrasing study · Qwen3-14B</div>
+  <div class="eyebrow">SPAR · Planning Temporal Manifolds · phrasing study</div>
   <h1>Which ways of phrasing a prompt change temporal-horizon behaviour?</h1>
   <p class="lede">Same meaning, different words: 24,864 two-option choices and 2,436 multi-turn plans, each compared with its own reference prompt. Most rewordings do nothing. A few change the behaviour more than the horizon itself does, and those are the ones every experiment has to control.</p>
-  <p class="meta">Run <code>qwen3-14b_phrasing_s0</code> · 2026-10-07 · branch <code>phrasing-study</code> (commit f84e676) · 1× RTX PRO 5000 48 GB, 2.7 h · all prompt text in <code>phrasing_study/variants.yaml</code></p>
+  <p class="meta">Run <code>qwen3-14b_phrasing_s0</code>, 2026-10-07 · code <code>phrasing_study/</code>, branch <code>phrasing-study</code>, capture commit <code>f84e676</code> · Qwen/Qwen3-14B, thinking off · all prompt text in <code>phrasing_study/variants.yaml</code> · one run; the ±0.05 bar was fixed before it, the rest is exploratory.</p>
   <nav class="toc" aria-label="Contents">
     <a href="#summary"><span class="toc-n">00</span><span><span class="toc-q">Summary for the group</span> <span class="toc-a">what to control, ranked</span></span></a>
     <a href="#setup"><span class="toc-n">01</span><span><span class="toc-q">What was run</span> <span class="toc-a">three protocols, one set of variants</span></span></a>
@@ -236,6 +244,7 @@ td.num { padding-right: 28px; }
     <a href="#units-mt"><span class="toc-n">08</span><span><span class="toc-q">Units and implicit horizons in plans</span> <span class="toc-a">the unit becomes the step size</span></span></a>
     <a href="#readout"><span class="toc-n">09</span><span><span class="toc-q">How reliable is the choice readout?</span> <span class="toc-a">fine in Alan's layout, not in markdown</span></span></a>
     <a href="#next"><span class="toc-n">10</span><span><span class="toc-q">Recommendations and next steps</span></span></a>
+    <a href="#reproduce"><span class="toc-n">11</span><span><span class="toc-q">Reproduce</span> <span class="toc-a">code, model, data</span></span></a>
   </nav>
 </header>
 
@@ -279,7 +288,7 @@ td.num { padding-right: 28px; }
   <div class="finding-head">
     <div class="eyebrow">01 · Setup</div>
     <h2>One set of variants, three ways of running the model</h2>
-    <p class="question col">Group decision 2026-10-06: phrasing is not a central pillar, but every experiment must account for it. The question here is which phrasings change behaviour, with effect sizes.</p>
+    <p class="question col">At the 2026-10-06 meeting the group agreed that phrasing is not a central question of the project, but that every experiment has to account for it. This study measures which phrasings change the model's behaviour, and by how much, so that each experiment knows what to hold fixed.</p>
   </div>
   <div class="metrics">
     <div class="metric"><span class="name">Choice (24,864 prompts)</span><span class="desc">Alan's two-option template, single turn. Behaviour = P(short option), read from the answer logits. 8 option configurations × 2 domains (household investment, city climate) × 10 horizons (1 week – 50 years) × 2 option orders = 320 cells per variant.</span></div>
@@ -346,7 +355,7 @@ b) 50,000 dollars in 5 years.
     <div class="reading"><h3>What it shows</h3><p>Horizons up to a year: the short option wins (0.90–0.97). From 2 years it falls to 0.11 at 20 years. At 1 week both options pay out after the horizon, so the instruction can't be met; there, position decides (1.00 if listed first, 0.57 if second). Across every variant, listing the short option first adds <b>+0.22</b> (95% CI 0.13–0.31).</p></div>
   </div>
   <div class="for-us">
-    <div class="eyebrow">For us</div>
+    <div class="eyebrow">What it means</div>
     <p>The horizon signal is clear, so the baseline is valid. But a single fixed order would bias every result by up to 0.4 at the extremes. Counterbalancing order is not optional.</p>
   </div>
 </section>
@@ -371,7 +380,7 @@ b) 50,000 dollars in 5 years.
       <p><b>Pressure.</b> The three "hurry" phrasings do nothing in a single choice. Of the "relax" phrasings only "We're not in a hurry at all." clears the bar (−0.07).</p></div>
   </div>
   <div class="for-us">
-    <div class="eyebrow">For us</div>
+    <div class="eyebrow">What it means</div>
     <p>A variant either changes nothing measurable or changes a lot; there is little middle ground. Keep labels as letters, never put a user preference into a prompt unless that is the manipulation, and freeze the constraint sentence across conditions.</p>
   </div>
 </section>
@@ -391,7 +400,7 @@ b) 50,000 dollars in 5 years.
     <div class="reading"><h3>Layouts on their own</h3><p>Against the canonical prompt, layout alone shifts the average little: task brief −0.08, constraint first +0.08 (full readout only), others within ±0.03. But the per-cell differences are larger (mean |Δ| 0.04–0.19): layouts reshape the curve more than they shift it.</p></div>
   </div>
   <div class="for-us">
-    <div class="eyebrow">For us</div>
+    <div class="eyebrow">What it means</div>
     <p>An effect measured in Alan's template is not automatically a property of the model: unit effects disappear in more natural layouts. Results that should generalise need at least two layouts.</p>
   </div>
 </section>
@@ -484,7 +493,7 @@ b) 50,000 dollars in 5 years.
     <div class="reading"><h3>The check used in §04</h3><p>Each effect was recomputed on cell pairs where both prompts have mass ≥ 0.5. That check is biased towards easy cells (near 0 or 1), so it shrinks real effects; an effect counts as robust only if it keeps its sign and a CI that excludes 0. Labels, both agreement cues, the time-frame and "only outcomes within" rewordings, "We're not in a hurry at all.", decades and the task-brief layout pass it.</p></div>
   </div>
   <div class="for-us">
-    <div class="eyebrow">Fix for the next run</div>
+    <div class="eyebrow">Fix for a rerun</div>
     <p>Read the choice under both separators (" " and " **") and add the probabilities, which costs one extra forward pass per prompt. The choice protocol took 10.5 minutes on the 48 GB card, so a rerun of the affected layouts is cheap.</p>
   </div>
 </section>
@@ -511,7 +520,7 @@ b) 50,000 dollars in 5 years.
       <h3>Next</h3>
       <ul>
         <li>Rerun the choice readout with both separators for the markdown and person-asking layouts (≈ 10 min of GPU).</li>
-        <li>Activations are in the bucket (9 layers; transition window and readout position for choices, 13 positions per turn for plans): does the horizon readout move with the variants that change behaviour, and not with the null ones?</li>
+        <li>Activations were captured (9 layers; transition window and readout position for choices, 13 positions per turn for plans): does the horizon readout move with the variants that change behaviour, and not with the null ones?</li>
         <li>Steering: compare an activation-space horizon direction with the hurry/relax cues on the same branched conversations.</li>
         <li>Implicit horizons: a separate frame-matched control ("before the end of the 32 weeks" vs "within the next 32 weeks") to separate event framing from implicitness.</li>
       </ul>
@@ -519,9 +528,28 @@ b) 50,000 dollars in 5 years.
   </div>
 </section>
 
+<section class="finding" id="reproduce">
+  <div class="finding-head">
+    <div class="eyebrow">11 · Reproduce</div>
+    <h2>Code, model and data</h2>
+  </div>
+  <div class="tbl-wrap">
+    <table class="repro">
+      <tbody>
+        <tr><th>Code</th><td><code>phrasing_study/</code> on branch <code>phrasing-study</code>, capture at commit <code>f84e676</code>. Package <code>phr</code> (items, model, single-choice and multi-turn protocols, analysis); the multi-turn protocol imports <code>multiturn_planning/mtp</code>. All prompt text is in <code>variants.yaml</code> (check edits with <code>scripts/check_variants.py</code>). Design and runbook: <code>README.md</code>.</td></tr>
+        <tr><th>Run</th><td><code>bash phrasing_study/scripts/run_pipeline.sh</code> on one GPU with ≥ 40 GB: unit tests → smoke slice + sanity gates → capture (choice, state, multi-turn) → evaluate → gates → checksums (optional upload to a GCS bucket). The analysis alone, <code>python scripts/evaluate.py runs/qwen3-14b_phrasing_s0</code>, takes about 75 s (73 s in this run).</td></tr>
+        <tr><th>Model</th><td><code>Qwen/Qwen3-14B</code>, revision <code>40c069824f4251a91eefaf281ebe4c544efd3e18</code>, bf16, thinking off.</td></tr>
+        <tr><th>Hardware</th><td>1× RTX PRO 5000 Blackwell (48 GB) on vast.ai, torch 2.11 + CUDA 12.8, transformers 5.17. Choice protocol 11 min, multi-turn 84 min; rental ≈ 2.7 h, ≈ $2.</td></tr>
+        <tr><th>Results</th><td><code>results/qwen3-14b_phrasing_s0/</code> (in git): per-variant effects (<code>choice_variants.csv</code>, <code>choice_contrasts.csv</code>, <code>choice_shifts.csv</code>), layouts (<code>choice_layout_cross.csv</code>), implicit items (<code>choice_implicit.csv</code>, <code>state_items.csv</code>), multi-turn (<code>multiturn_comparisons.csv</code>, <code>multiturn_conversations.csv</code>, <code>multiturn_adherence.csv</code>), and <code>summary.md</code>. The robustness column of §04 is in <code>explainer/figs/choice_variants_with_robustness.csv</code>.</td></tr>
+        <tr><th>Data</th><td>Not in git. The whole run (37 GB: per-item tables with every reply, activations, metadata, logs, SHA-256 checksums) is in the GCS bucket <code>gs://augusto-phrasing-study/qwen3-14b_phrasing_s0/</code>; ask Augusto for read access. The small files (everything except activations) are enough for the analysis and the figures; place them in <code>runs/qwen3-14b_phrasing_s0/</code> and check them with <code>sha256sum -c SHA256SUMS</code>.</td></tr>
+        <tr><th>Figures</th><td><code>explainer/make_figs.py</code> regenerates every figure on this page from <code>results/</code> and the small files in <code>runs/qwen3-14b_phrasing_s0/</code>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <footer>
-  <p>Data: <code>gs://augusto-phrasing-study/qwen3-14b_phrasing_s0/</code> (37 GB: run files including activations, results, logs; rclone md5 check 0 differences). Small files and results in <code>phrasing_study/runs/qwen3-14b_phrasing_s0/</code> and <code>phrasing_study/results/qwen3-14b_phrasing_s0/</code> (<code>sha256sum -c</code> 27/27 OK). Figures: <code>make_figs.py</code> in this folder; robustness numbers in <code>figs/choice_variants_with_robustness.csv</code>. Design and runbook: <code>phrasing_study/README.md</code>; all prompt text: <code>phrasing_study/variants.yaml</code>.</p>
-  <p>Builds on Alan's template, option grid and unit/phrasing controls (<code>alan/</code>) and on our multi-turn protocol (<code>multiturn_planning/</code>). Model Qwen/Qwen3-14B, revision 40c06982, bf16, thinking off.</p>
+  <p>Builds on Alan's choice template, option grid and unit/phrasing controls (<code>alan/</code>) and on the multi-turn "Continue" protocol of <code>multiturn_planning/</code>. Author: Augusto Nicola, SPAR fall 2026, project <em>Planning Temporal Manifolds</em> (mentors: Ian Rios-Sialer, Shantanu Darveshi, Justin Shenk).</p>
 </footer>
 
 </main>
