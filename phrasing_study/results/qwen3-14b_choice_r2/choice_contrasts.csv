@@ -1,0 +1,17 @@
+contrast,a,b,n,mean_diff,lo,hi
+"pressure cue (hurry - relax), all phrasings, canonical layout",hurry,relax,320,0.05343437901402366,0.031373092792327695,0.07648117987346396
+"pressure cue (hurry - relax), no horizon",hurry,relax,32,0.010417429992012955,-0.03095193326851935,0.05248174264391379
+"pressure cue (hurry - relax), layout constraint_first",hurry,relax,320,-0.0038363930132661954,-0.012614586985924606,0.003809439206787663
+"pressure cue (hurry - relax), layout markdown",hurry,relax,320,0.006236267179282636,0.00025271785502532735,0.0114023275151972
+"pressure cue (hurry - relax), layout prose",hurry,relax,320,0.006241917989481549,-0.009022271762963318,0.020378126061417385
+"pressure cue (hurry - relax), layout task_brief",hurry,relax,320,0.011774291159619164,-0.006437252105026674,0.028703226692973097
+"pressure cue (hurry - relax), layout user_request",hurry,relax,320,-0.005011393842295037,-0.01701867396963606,0.0061882561798127225
+"agreement cue (sooner - later), all phrasings, canonical layout",sooner,later,320,0.28304120243357656,0.20307155770193724,0.3618436501587559
+"agreement cue (sooner - later), no horizon",sooner,later,32,0.8891724647237543,0.8023528993971896,0.9669338483537414
+"agreement cue (sooner - later), layout constraint_first",sooner,later,320,0.1624000743251054,0.13527763035872542,0.18979839653012834
+"agreement cue (sooner - later), layout markdown",sooner,later,320,0.24408584597241187,0.16785820054119222,0.32010250354746916
+"agreement cue (sooner - later), layout prose",sooner,later,320,0.46450680216764334,0.3924707012840713,0.5408929046571774
+"agreement cue (sooner - later), layout task_brief",sooner,later,320,0.5897950943138279,0.4893021785807607,0.690069833760833
+"agreement cue (sooner - later), layout user_request",sooner,later,320,0.2664359995310172,0.21071805016077513,0.32393149144922934
+"option order (short first - short second), all variants",,,12432,0.15710788019235064,0.06131551079796389,0.2482166042830428
+unit-match interaction (h months: with month options - with mixed options),,,224,-0.028107819024827434,-0.07270951031830775,0.019141022597345108

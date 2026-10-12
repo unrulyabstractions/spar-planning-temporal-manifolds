@@ -131,6 +131,22 @@ reference for the 32B and, against `qwen3-14b_phrasing_s0`, shows what the reado
 nohup bash -c 'for M in Qwen3-32B Qwen3-14B; do env PY=/venv/main/bin/python MODEL=Qwen/$M PROTOCOLS=choice NAME=$(echo $M | tr A-Z a-z)_choice_r2 GCS_DEST=augusto-phrasing-study GCS_KEY=/root/gcs-key.json bash phrasing_study/scripts/run_pipeline.sh; done' > /workspace/run.out 2>&1 &
 ```
 
+### Results (2026-10-12): `qwen3-32b_choice_r2`, `qwen3-14b_choice_r2`
+
+1x A100 80 GB PCIe, commit d642a78, choice protocol only; 32B 23 min, 14B 11 min; all gates OK (readout mass median
+0.994 / 1.000). Data: `gs://augusto-phrasing-study/qwen3-{32b,14b}_choice_r2/`. Explainer:
+[`explainer-32b/index.html`](explainer-32b/index.html) (figures: `explainer-32b/make_figs.py`).
+
+- The fix, on the 14B: conclusions of the Oct 7 run hold; sizes change (option order +0.22 -> +0.16, labels 1)/2)
+  +0.20 -> +0.15, leaning later -0.11 -> -0.07). Not the GPU: the " " path alone reproduces Oct 7 (mean change 0.004);
+  the paths disagree (order +0.22 on " ", +0.11 on " **").
+- 32B vs 14B: formatting effects vanish (order +0.01, labels 1)/2) +0.00, "time frame" wording -0.00, no layout passes
+  the bar); stated preferences stay or grow (leaning later -0.18, person-asking swing 0.64 vs 0.27); "We're not in a
+  hurry at all." -0.12; days/weeks/months flip sign (+0.05..+0.08 on the 32B). Implicit items: 16/18 more patient,
+  per-item correlation with the 14B 0.64.
+- Caveat: in the prose and person-asking layouts the 32B often writes `I choose: <b)>` (mass ~0.5 there); add " <" as a
+  third readout path next time.
+
 ## Run it (vast.ai, one 48 GB GPU)
 
 Single commands, run on the box from `/workspace` (Python at `/venv/main/bin/python` on the PyTorch image):
