@@ -110,6 +110,27 @@ Results explainer: [`explainer/index.html`](explainer/index.html) (figures: `exp
 - Readout caveat: the prefilled separator was " "; in markdown (and implicit items in the person-asking layout) the
   model prefers " **", readout mass 0.05-0.18 there. Next run: read both separators and sum.
 
+## Readout v2 (2026-10-12): sum over separators; single-choice runs on Qwen3-32B + 14B
+
+The 14B run prefilled one separator for every item (`" "`, the majority in 48 free generations), but some layouts
+make the model write `" **"` first: 36% of 14B items had < 0.5 of the probability on the two labels (markdown 0.05).
+Now each label's probability is summed over both paths, `P(label) = sum_s P(s | "I choose:") P(label | "I choose:" s)`,
+scored from the same point; letter labels need one forward pass (P(" a") is read inside the `I choose: **` sequence),
+digit labels two. `choice.parquet` keeps the summed `logit_diff`, `p_short`, `mass_ab` (so the analysis is unchanged)
+plus `ld_space`, `mass_space`, `ld_bold`, `mass_bold`; `ld_<main separator>` alone is the old readout. Activations:
+same layout as before (C = last prefill token of the detected separator). Tests: summed readout = probabilities
+computed token by token (fp32, Qwen3-1.7B, 1e-4); CPU slice on 1.7B: summed mass median 1.000 (`" "` alone 0.03).
+Qwen3-32B: same tokenizer and chat template as Qwen3-1.7B/14B (identical ids for all 154 variants), 64 layers, d 5120.
+
+`PROTOCOLS=choice` runs only the single-choice part. The pipeline refuses to upload into a bucket folder that already
+has files. Planned: **Qwen3-32B and Qwen3-14B, choice only, readout v2**, on one box (1x >= 80 GB GPU, >= 200 GB disk;
+estimate 1.5-2 h, ~$1-3). Run names `qwen3-32b_choice_r2`, `qwen3-14b_choice_r2`; the 14B one is the like-for-like
+reference for the 32B and, against `qwen3-14b_phrasing_s0`, shows what the readout fix changes.
+
+```
+nohup bash -c 'for M in Qwen3-32B Qwen3-14B; do env PY=/venv/main/bin/python MODEL=Qwen/$M PROTOCOLS=choice NAME=$(echo $M | tr A-Z a-z)_choice_r2 GCS_DEST=augusto-phrasing-study GCS_KEY=/root/gcs-key.json bash phrasing_study/scripts/run_pipeline.sh; done' > /workspace/run.out 2>&1 &
+```
+
 ## Run it (vast.ai, one 48 GB GPU)
 
 Single commands, run on the box from `/workspace` (Python at `/venv/main/bin/python` on the PyTorch image):

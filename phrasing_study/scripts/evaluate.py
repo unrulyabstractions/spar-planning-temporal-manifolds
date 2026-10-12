@@ -39,7 +39,9 @@ def main():
     cfg = yaml.safe_load((a.run / "variants.yaml").read_text())
     lines = [f"# Phrasing study: {a.run.name}", "",
              f"Model `{meta.get('model')}` (rev {meta.get('model_revision')}), commit {meta.get('git_commit')}, "
-             f"GPU {meta.get('gpu')}. Choice readout separator {meta.get('choice_separator')!r}.", ""]
+             f"GPU {meta.get('gpu')}. Choice readout separator {meta.get('choice_separator')!r}"
+             + (f", summed over {meta['choice_readout_separators']}" if meta.get("choice_readout_separators") else "")
+             + ".", ""]
     tables = {}
     if (a.run / "choice.parquet").exists():
         ch = pd.read_parquet(a.run / "choice.parquet")
@@ -51,7 +53,9 @@ def main():
         lines += ["## Choice protocol", "",
                   f"{len(ch)} items. Free-generation check: {ok.mean():.0%} follow the format, readout agrees on "
                   f"{(g[ok].gen_short == g[ok].readout_short).mean():.0%}. Readout mass on the two labels: "
-                  f"median {ch.mass_ab.median():.3f}, min {ch.mass_ab.min():.3f}.", "",
+                  f"median {ch.mass_ab.median():.3f}, min {ch.mass_ab.min():.3f}"
+                  + "".join(f"; {c} median {ch[c].median():.3f}" for c in ch.columns if c.startswith("mass_") and c != "mass_ab")
+                  + ".", "",
                   "### Validity gate (canonical curve)", "", md(t["choice_gate"]), "", md(t["choice_curve"]), "",
                   f"### Variants: Δ P(short) vs reference (95% CI over scenarios). `matters` = above the null floor, "
                   f"CI excludes 0, |Δ| ≥ {MIN_EFFECT}", "", md(per.drop(columns=["above_floor"])), "",
