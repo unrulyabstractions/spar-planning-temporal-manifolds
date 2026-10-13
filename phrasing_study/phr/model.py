@@ -80,12 +80,46 @@ class Capture:
             h.remove()
 
 
+def readout_paths(tok, seps, label_a: str, label_b: str) -> list[tuple[str, list[int], int, int]]:
+    """One readout path per separator the model may write after "I choose:" (" ", " **", ...): (sep, prefill ids,
+    token id for a, token id for b). Paths with identical tokens are kept once (the first separator's name)."""
+    out, seen = [], set()
+    for s in seps:
+        pre, ia, ib = label_readout(tok, PREFILL + s, label_a, label_b)
+        if (tuple(pre), ia, ib) not in seen:
+            seen.add((tuple(pre), ia, ib))
+            out.append((s, pre, ia, ib))
+    return out
+
+
+def plan_readout(prefills: list[list[int]]) -> tuple[list[list[int]], list[int], int]:
+    """Fewest sequences that hold every path's prefill as a prefix: P(' a' | 'I choose:') is read inside the
+    'I choose: **' sequence, so letter labels need one forward pass; ' 1' vs ' **1' need two.
+    Returns (sequences, index of the sequence holding each prefill, k = length of the prefix all prefills share).
+    Tokens from k on are scored, so every path's probability is conditional on the same context."""
+    k = 0
+    while all(len(p) > k for p in prefills) and len({p[k] for p in prefills}) == 1:
+        k += 1
+    seqs: list[list[int]] = []
+    for p in sorted(prefills, key=len, reverse=True):
+        if not any(s[: len(p)] == p for s in seqs):
+            seqs.append(p)
+    where = [next(j for j, s in enumerate(seqs) if s[: len(p)] == p) for p in prefills]
+    return seqs, where, k
+
+
+def _logits_fp32(h: torch.Tensor, W: torch.Tensor, chunk: int = 16384) -> torch.Tensor:
+    """h @ W.T in float32 (bf16 logits are only good to ~0.1 at |logit| ~ 20), in vocabulary chunks."""
+    h = h.float()
+    return torch.cat([h @ W[i:i + chunk].float().T for i in range(0, W.shape[0], chunk)], -1)
+
+
 @torch.no_grad()
-def forward_choice(tok, model, cap: Capture | None, seqs: list[list[int]], positions: list[list[int]],
-                   label_ids: list[tuple[int, int]]):
-    """One right-padded batch. seqs end with the prefill; the last token predicts the label.
-    Returns (logit_a, logit_b, mass_ab, acts [B, n_layers, n_pos, d] or None). Logits in float32 from the final-normed
-    last-layer state (two rows of lm_head); mass_ab = full-vocab softmax probability of the two label tokens."""
+def forward_logprobs(tok, model, cap: Capture | None, seqs: list[list[int]], positions: list[list[int]],
+                     reads: list[list[tuple[int, int]]]):
+    """One right-padded batch. reads[i] = [(pos, token id), ...] for row i. Returns (per row, a float32 tensor of
+    log p(token | seq[: pos + 1]) = full-vocab log-softmax of the final-normed last-layer state at pos;
+    acts [B, n_layers, n_pos, d] or None)."""
     B, T = len(seqs), max(map(len, seqs))
     pad = tok.pad_token_id
     ids = torch.full((B, T), pad, dtype=torch.long)
@@ -100,19 +134,14 @@ def forward_choice(tok, model, cap: Capture | None, seqs: list[list[int]], posit
     hid = model.model(input_ids=ids.to(dev), attention_mask=att.to(dev)).last_hidden_state   # final norm applied
     if cap is not None:
         cap.index = None
-    last = torch.tensor([len(s) - 1 for s in seqs], device=hid.device)
-    h = hid[torch.arange(B, device=hid.device), last]                                       # [B, d]
+    rows = torch.tensor([i for i, r in enumerate(reads) for _ in r], device=hid.device)
+    pos = torch.tensor([p for r in reads for p, _ in r], device=hid.device)
     W = model.lm_head.weight
-    h = h.to(W.device)
-    full = (h @ W.T).float()                                                                  # [B, V]
-    ia = torch.tensor([a for a, _ in label_ids], device=W.device)
-    ib = torch.tensor([b for _, b in label_ids], device=W.device)
-    la = (h.float() * W[ia].float()).sum(-1)
-    lb = (h.float() * W[ib].float()).sum(-1)
-    p = torch.softmax(full, -1)
-    mass = p.gather(1, ia[:, None]).squeeze(1) + p.gather(1, ib[:, None]).squeeze(1)
+    lp = torch.log_softmax(_logits_fp32(hid[rows, pos].to(W.device), W), -1)
+    toks = torch.tensor([t for r in reads for _, t in r], device=W.device)
+    vals = lp[torch.arange(len(toks), device=W.device), toks].cpu()
     acts = torch.stack([cap.out[l] for l in cap.layers], 1) if cap is not None else None
-    return la.cpu(), lb.cpu(), mass.cpu(), acts
+    return list(vals.split([len(r) for r in reads])), acts
 
 
 @torch.no_grad()

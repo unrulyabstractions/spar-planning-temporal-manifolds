@@ -1,8 +1,11 @@
 """Run the single-turn protocols.
 
-choice: prompt + "I choose:" (+ shared label prefix) in one forward pass; P(short) = two-way softmax of the short and
-        long label logits. Residual stream stored at the transition window T0..T8 and at C (the last prefill token,
-        which predicts the label). A stratified sample is also generated freely (no prefill) to check that the
+choice: prompt + "I choose:" + separator, then the label. The model may write " " or " **" before the label, so each
+        label's probability is summed over both separator paths (READOUT_SEPS), each path's probability counted from
+        "I choose:" on: P(label) = sum_s P(s | "I choose:") P(label | "I choose:" s). P(short) = P_short / (P_short +
+        P_long); mass_ab = P_short + P_long. Per-separator values are kept (ld_space, mass_space, ld_bold, mass_bold).
+        Residual stream stored at the transition window T0..T8 and at C (the last prefill token of the separator the
+        model writes most often, detected per run, which predicts the label). A stratified sample is also generated freely (no prefill) to check that the
         model writes "I choose: <label>" and that its label agrees with the readout (`gencheck.parquet`).
 state:  the model is asked to name the horizon; greedy, short generation, parsed to years.
 """
@@ -20,12 +23,14 @@ import torch
 from safetensors.torch import save_file
 
 from .durations import parse_years
-from .model import (PREFILL, Capture, encode_chat, forward_choice, generate, label_readout, transition_window)
+from .model import (Capture, encode_chat, forward_logprobs, generate, plan_readout, readout_paths, transition_window)
 
 CHOICE_POSITIONS = [f"T{i}" for i in range(9)] + ["C"]
 _CHOICE_RE = re.compile(r"I choose:\s*\**\s*\(?([A-Za-z0-9])\)?", re.IGNORECASE)
 
 
+READOUT_SEPS = (" ", " **")
+SEP_NAMES = {" ": "space", " **": "bold"}
 _SEP_RE = re.compile(r"^\s*I choose:(\s*[*_]*\s*)\(?[A-Za-z0-9]\)")
 
 
@@ -42,17 +47,48 @@ def detect_separator(tok, model, texts: list[str], batch: int = 16) -> tuple[str
     return (max(set(found), key=found.count) if found else " "), counts
 
 
-def _prep_choice(tok, items: pd.DataFrame, sep: str) -> list[dict]:
-    cache, out = {}, []
-    for r in items.itertuples():
+def _sep_name(sep: str, i: int) -> str:
+    return SEP_NAMES.get(sep, f"sep{i}")
+
+
+def _prep_choice(tok, items: pd.DataFrame, seps: list[str]) -> list[dict]:
+    """One row per forward sequence (letter labels: 1 per item; ' 1)' vs ' **1)': 2). seps[0] is the main separator:
+    its sequence carries the stored activations, C = its last prefill token."""
+    cache, rows = {}, []
+    for n, r in enumerate(items.itertuples()):
         key = (r.label_short, r.label_long)
         if key not in cache:
-            cache[key] = label_readout(tok, PREFILL + sep, r.label_short, r.label_long)
-        pre, i_short, i_long = cache[key]
+            paths = readout_paths(tok, seps, r.label_short, r.label_long)
+            cache[key] = (paths, *plan_readout([p[1] for p in paths]))
+        paths, pres, where, k = cache[key]
         ids = encode_chat(tok, r.text)
-        win = transition_window(tok, ids)
-        seq = ids + pre
-        out.append(dict(item_id=r.item_id, seq=seq, pos=win + [len(seq) - 1], labels=(i_short, i_long)))
+        win, L = transition_window(tok, ids), len(ids)
+        for j, pre in enumerate(pres):
+            reads, keys = [], []
+            for i, (sep, ppre, ia, ib) in enumerate(paths):
+                if where[i] != j:
+                    continue
+                reads += [(L + t - 1, ppre[t]) for t in range(k, len(ppre))]      # the separator's own tokens
+                keys += [(sep, "sep")] * (len(ppre) - k)
+                reads += [(L + len(ppre) - 1, ia), (L + len(ppre) - 1, ib)]
+                keys += [(sep, "a"), (sep, "b")]
+            main = where[0] == j
+            c = L + len(paths[0][1]) - 1 if main else L + len(pre) - 1
+            rows.append(dict(n=n, item_id=r.item_id, seq=ids + pre, pos=win + [c], reads=reads, keys=keys, main=main,
+                             n_tokens=L + len(paths[0][1])))
+    return rows
+
+
+def _combine(lp: dict, names: dict) -> dict:
+    """lp[sep] = {"sep": log P(separator tokens), "a": [...], "b": [...]} -> summed readout + per-separator columns."""
+    out, la, lb = {}, [], []
+    for sep, d in lp.items():
+        a, b = d["sep"] + d["a"], d["sep"] + d["b"]
+        la.append(a)
+        lb.append(b)
+        out[f"ld_{names[sep]}"], out[f"mass_{names[sep]}"] = a - b, float(np.exp(a) + np.exp(b))
+    LA, LB = np.logaddexp.reduce(la), np.logaddexp.reduce(lb)
+    out.update(logit_diff=float(LA - LB), p_short=float(1 / (1 + np.exp(LB - LA))), mass_ab=float(np.exp(LA) + np.exp(LB)))
     return out
 
 
@@ -61,12 +97,16 @@ def run_choice(items: pd.DataFrame, out_dir: Path, tok, model, layers: list[int]
     out_dir.mkdir(parents=True, exist_ok=True)
     canon = items[items.variant == "canonical"]
     sep, counts = detect_separator(tok, model, canon.text.iloc[:: max(1, len(canon) // 48)].tolist()[:48], batch)
-    write_meta(out_dir, choice_separator=sep, choice_separator_counts=counts)
-    log(f"choice readout separator {sep!r} (free generations: {counts})")
+    seps = [sep] + [s for s in READOUT_SEPS if s != sep]
+    names = {s: _sep_name(s, i) for i, s in enumerate(seps)}
+    write_meta(out_dir, choice_separator=sep, choice_separator_counts=counts, choice_readout_separators=seps,
+               choice_readout="sum over separators")
+    log(f"choice readout separator {sep!r} (free generations: {counts}); readout sums {seps}")
     cap = Capture(model, layers)
-    prepped = _prep_choice(tok, items, sep)
-    order = sorted(range(len(prepped)), key=lambda i: len(prepped[i]["seq"]))     # similar lengths per batch
-    res, acts, shard, t0 = [], [], 0, time.time()
+    rows = _prep_choice(tok, items, seps)
+    order = sorted(range(len(rows)), key=lambda i: len(rows[i]["seq"]))     # similar lengths per batch
+    lp = [dict() for _ in range(len(items))]
+    where, acts, shard, n_in_shard, t0 = {}, [], 0, 0, time.time()
 
     def flush():
         nonlocal acts, shard
@@ -74,17 +114,24 @@ def run_choice(items: pd.DataFrame, out_dir: Path, tok, model, layers: list[int]
             save_file({"acts": torch.cat(acts)}, str(out_dir / f"choice_acts_{shard:04d}.safetensors"))
             shard, acts = shard + 1, []
 
-    n_in_shard = 0
     for b in range(0, len(order), batch):
-        chunk = [prepped[i] for i in order[b:b + batch]]
-        la, lb, mass, a = forward_choice(tok, model, cap, [c["seq"] for c in chunk], [c["pos"] for c in chunk],
-                                         [c["labels"] for c in chunk])
+        chunk = [rows[i] for i in order[b:b + batch]]
+        vals, a = forward_logprobs(tok, model, cap, [c["seq"] for c in chunk], [c["pos"] for c in chunk],
+                                   [c["reads"] for c in chunk])
+        mains = [j for j, c in enumerate(chunk) if c["main"]]
         for j, c in enumerate(chunk):
-            d = float(la[j] - lb[j])                       # logit(short) - logit(long)
-            res.append(dict(item_id=c["item_id"], logit_diff=d, p_short=float(torch.sigmoid(torch.tensor(d))),
-                            mass_ab=float(mass[j]), n_tokens=len(c["seq"]), shard=shard, row_in_shard=n_in_shard + j))
-        acts.append(a)
-        n_in_shard += len(chunk)
+            for (s, what), v in zip(c["keys"], vals[j].tolist()):
+                d = lp[c["n"]].setdefault(s, {"sep": 0.0})
+                if what == "sep":
+                    d["sep"] += v
+                else:
+                    d[what] = v
+        for m, j in enumerate(mains):
+            where[chunk[j]["n"]] = dict(item_id=chunk[j]["item_id"], n_tokens=chunk[j]["n_tokens"], shard=shard,
+                                        row_in_shard=n_in_shard + m)
+        if mains:
+            acts.append(a[mains])
+            n_in_shard += len(mains)
         if n_in_shard >= shard_size:
             flush()
             n_in_shard = 0
@@ -92,9 +139,12 @@ def run_choice(items: pd.DataFrame, out_dir: Path, tok, model, layers: list[int]
             log(f"choice {b + len(chunk)}/{len(order)}  {time.time() - t0:.0f}s")
     flush()
     cap.remove()
+    res = [dict(**where[n], **_combine(lp[n], names)) for n in range(len(items))]
     out = items.merge(pd.DataFrame(res), on="item_id")
     out.to_parquet(out_dir / "choice.parquet")
-    log(f"choice done: {len(out)} items, {shard} shards, {time.time() - t0:.0f}s")
+    log(f"choice done: {len(out)} items ({len(rows)} sequences), {shard} shards, {time.time() - t0:.0f}s; "
+        + ", ".join(f"mass_{v} median {out[f'mass_{v}'].median():.3f}" for v in names.values())
+        + f", summed {out.mass_ab.median():.3f}")
 
     # free-generation check on a stratified sample
     rng = np.random.default_rng(0)

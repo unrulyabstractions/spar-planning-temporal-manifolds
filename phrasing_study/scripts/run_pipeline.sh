@@ -3,10 +3,11 @@
 #
 #   bash phrasing_study/scripts/run_pipeline.sh          # from the repo root
 #   env: PY, MODEL, BATCH (choice forward batch, 16), GEN_BATCH (generation batch, 16), NAME (run name),
+#        PROTOCOLS (choice,state,multiturn; e.g. PROTOCOLS=choice for the single-choice part only),
 #        SMOKE_FIRST=1 (default: a small slice of every protocol first, with sanity gates; 0 skips it),
 #        OVERWRITE=1, GCS_DEST=<bucket>/<prefix> + GCS_KEY=<service-account key file> (upload + verify at the end)
 #
-# Steps: 1 unit tests · 2 smoke slice + gates · 3 capture (choice, state, multiturn) · 4 evaluate (behaviour, a few min)
+# Steps: 1 unit tests · 2 smoke slice + gates · 3 capture ($PROTOCOLS) · 4 evaluate (behaviour, a few min)
 #        · 5 checksums (RUN/SHA256SUMS = small files + results; RUN/SHA256SUMS.acts = activation shards)
 #        · 6 upload RUN + results to gs://GCS_DEST/NAME/ with rclone, verified (md5 check + file count).
 set -Eeuo pipefail
@@ -15,6 +16,7 @@ PY=${PY:-python}
 MODEL=${MODEL:-Qwen/Qwen3-14B}
 BATCH=${BATCH:-16}
 GEN_BATCH=${GEN_BATCH:-16}
+PROTOCOLS=${PROTOCOLS:-choice,state,multiturn}
 NAME=${NAME:-$(basename "$MODEL" | tr 'A-Z' 'a-z')_phrasing_s0}
 RUN=runs/$NAME; RES=results/$NAME; LOG=runs/pipeline.log
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -41,7 +43,7 @@ on_error() {
 trap 'on_error $? $LINENO' ERR
 step() { STEP=$1; stamp "$STEP"; }
 
-stamp "START model $MODEL batch $BATCH/$GEN_BATCH threads $NCORES run $RUN commit $(git rev-parse --short HEAD 2>/dev/null || echo none)"
+stamp "START model $MODEL protocols $PROTOCOLS batch $BATCH/$GEN_BATCH threads $NCORES run $RUN commit $(git rev-parse --short HEAD 2>/dev/null || echo none)"
 if [[ -e "$RUN/capture_meta.json" ]]; then
     if [[ "${OVERWRITE:-0}" == 1 ]]; then stamp "OVERWRITE=1: removing $RUN $RES"; rm -rf "$RUN" "$RES" "$RUN".*.log
     else stamp "FAILED at step setup: $RUN already exists; move it or set OVERWRITE=1"; exit 1; fi
@@ -52,20 +54,23 @@ if [[ -n "${GCS_DEST:-}" ]]; then   # fail now, not after the run, if the bucket
     rclone --gcs-service-account-file "$GCS_KEY" --gcs-bucket-policy-only lsf ":gcs:${GCS_DEST%%/*}" --max-depth 1 > /dev/null \
         || { stamp "FAILED: cannot list gs://${GCS_DEST%%/*} with $GCS_KEY"; exit 1; }
     stamp "bucket gs://${GCS_DEST%%/*} reachable"
+    if [[ -n "$(rclone --gcs-service-account-file "$GCS_KEY" --gcs-bucket-policy-only lsf ":gcs:$GCS_DEST/$NAME" --max-depth 1 2>/dev/null)" ]]; then
+        stamp "FAILED: gs://$GCS_DEST/$NAME already has files (an earlier run?); pick another NAME"; exit 1
+    fi
 fi
 
 step "1/6 unit tests"; $PY -m pytest -q tests >> "$LOG" 2>&1
 if [[ "${SMOKE_FIRST:-1}" == 1 ]]; then
     step "2/6 smoke slice"
     SM=runs/smoke_$NAME; rm -rf "$SM" "results/smoke_$NAME"
-    $PY -u scripts/capture.py "$SM" --model "$MODEL" --batch "$BATCH" --gen-batch "$GEN_BATCH" --smoke > "$SM.capture.log" 2>&1
+    $PY -u scripts/capture.py "$SM" --model "$MODEL" --batch "$BATCH" --gen-batch "$GEN_BATCH" --protocols "$PROTOCOLS" --smoke > "$SM.capture.log" 2>&1
     $PY scripts/evaluate.py "$SM" > "$SM.evaluate.log" 2>&1
     $PY scripts/gates.py "$SM" 2>&1 | tee -a "$LOG"          # exits non-zero if a gate fails
 else
     stamp "2/6 smoke slice skipped (SMOKE_FIRST=0)"
 fi
 step "3/6 capture"
-$PY -u scripts/capture.py "$RUN" --model "$MODEL" --batch "$BATCH" --gen-batch "$GEN_BATCH" > "$RUN.capture.log" 2>&1
+$PY -u scripts/capture.py "$RUN" --model "$MODEL" --batch "$BATCH" --gen-batch "$GEN_BATCH" --protocols "$PROTOCOLS" > "$RUN.capture.log" 2>&1
 CAPTURED=1; stamp "   $(tail -1 "$RUN.capture.log")"
 $PY -m pip freeze > "$RUN/pip_freeze.txt" 2>/dev/null || true
 step "4/6 evaluate"; $PY -u scripts/evaluate.py "$RUN" > "$RUN.evaluate.log" 2>&1
