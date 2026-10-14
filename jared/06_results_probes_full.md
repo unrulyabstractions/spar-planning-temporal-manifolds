@@ -5,11 +5,12 @@ mode, 471 with a horizon over 48 log-spaced horizons (30 s to 500 y), option
 delays and order randomized. Thinking on: 124 min, 103/500 force-closed,
 median think length 1,748. Probes run locally, `analysis/probe_dimensionality.py
 results/horizon` (spec `04_spec_probes.md`). Outputs in
-`results/horizon/analysis/`. Compare `05_results_probes_v3.md` (116-prompt
+`results/horizon/analysis/`. Compare `history/05_results_probes_v3.md` (116-prompt
 starter bank, 16 horizons).
 
 Metric throughout: held-out R² of log horizon on interior horizons,
-leave-one-horizon-out (48 folds). The shuffled-horizon control is at most
+leave-one-horizon-out (48 folds; each holds out every prompt at one horizon,
+3-18 prompts, median 10). The shuffled-horizon control is at most
 -0.04 in every cell.
 
 ## 1. Where the horizon is readable
@@ -113,8 +114,22 @@ one to quote.
 - Decodable, not used: whether the model's choice runs through the curved
   direction needs steering along the line vs along the curve (R5, box).
 
-## 5. Next
+## 5. Review, 2026-10-13: the unit-word baseline
 
-- Replication against Alan's 2,000-prompt Qwen3-14B activations (public), and
-  against the paper's layer findings.
-- R5 steering at the suffix (L16) and the pre-label token (L21).
+Under the same leave-one-horizon-out protocol, predicting each held-out
+horizon as the mean log horizon of the training horizons with the same unit
+word (seconds, minutes, ..., years) gives **R² 0.962 (interior 0.961)**, with
+no activations. The held-out horizon always has same-unit neighbours in
+training, so a unit detector scores almost everything above.
+
+- Only the margin above ~0.96 shows magnitude within a unit. The k = 1
+  linear probes at the suffix (0.90) and the thinking-off pre-label (0.83)
+  are below a unit lookup; part of the MLP's lead at small k may be mapping
+  unit clusters to their values rather than a curved manifold.
+- The ridge picks its penalty by leave-one-prompt-out inside the training
+  fold (`geometry._fit`), where same-horizon prompts remain, so it can
+  under-regularize for this task while the MLP's penalty is fixed. No effect
+  at k = 1-2; it may understate the linear probe at k >= 8.
+- Needed before quoting the dimensionality numbers: within-unit R² (target
+  and predictions with unit means removed), the inner CV grouped by horizon,
+  and the natural-closes-only run (§4). Next steps: `01_plan.md` §5.

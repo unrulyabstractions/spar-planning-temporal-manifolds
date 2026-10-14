@@ -1,164 +1,177 @@
 # Plan and status: the time-horizon representation in Qwen3-8B, thinking on
 
-Last revised 2026-10-02. One file for the question, the experiments, the
-decisions, and what is done. Superseded drafts are in `history/` and do not
-need reading; the facts that still matter from them are summarized here.
+Last revised 2026-10-14. The question, what is done (§3: do not rerun it),
+what is established (§4), what is next (§5), and the dated decisions (§6).
+The previous version is `history/01_plan_2026-10-11.md`.
 
-## 1. Research question
+## 1. Question
 
-**Is the linearly-readable time-horizon representation a stable, prompt-
-independent quantity, and does the model's choice causally depend on it?**
-And, new to this project: what happens to it while the model reasons?
+On Qwen3-8B with **thinking on**: is the stated time horizon represented in a
+stable, prompt-independent form, does the model's choice causally use that
+representation, and what happens to it while the model reasons?
 
-| # | Sub-question | Manipulation | Metric | Pass |
-|---|---|---|---|---|
-| R1 | Survives rewording | Constraint phrasings | Probe trained on phrasing A, tested on B: rho, R² | rho > 0.8 |
-| R2 | Survives domain change | Investment vs. climate (and others) | Cross-domain transfer | rho > 0.7 |
-| R3 | Encodes duration, not unit | "1 year" / "12 months" / "365 days" | Within-duration vs between-duration spread on the axis | unit variance < 20% |
-| R4 | Invariant to nuisance | Option order, labels, rewards | PC1 rho with reward near 0; horizon rho stable | reward rho < 0.2 |
-| R5 | Causally used | Add ±alpha × horizon direction at the probe layer | Choice flip rate vs alpha, random-direction control | monotone, control flat |
-| R6 | Persists through reasoning | Thinking on: positions inside the think block | Probe R² and rho per think fraction; label readable at the think end | see `03_results_think_geometry.md` |
+| # | Sub-question | Status |
+|---|---|---|
+| R1 | Survives rewording (Alan's 4 constraint phrasings) | open on the full bank; starter bank, thinking off: transfer 0.99 |
+| R2 | Survives a domain change | deferred |
+| R3 | Encodes duration, not the unit word | open, and now the main threat to the probe results (§4) |
+| R4 | Invariant to option order, labels, rewards | thinking on: option order adds +2.5 near log-odds |
+| R5 | Causally used | partly: the decision reaches the answer slot from L24; curve steering at L24 moves it, the probe line does not; the horizon-vs-decision question is open (§4) |
+| R6 | Persists through reasoning | weak in the middle of the think block, re-formed at the close (§4) |
 
-R1-R4 and R6 are representational. R5 turns it from descriptive into a finding.
+## 2. Fixed setup
 
-## 2. Where this comes from, and what it must be compared to
+- **Model:** `Qwen/Qwen3-8B`, bf16, one vast.ai RTX 4090. Thinking on only (§6, 2026-10-14).
+- **Bank:** the full bank (Alan's generator, prior project's structured
+  format), 500 prompts, 471 with a horizon over 48 log-spaced horizons (30 s
+  to 500 y), delays, rewards and option order drawn per prompt. Each record
+  carries `regime`: `none` (horizon shorter than the near delay), `near`
+  (between the delays), `both` (past the far delay), `null`.
+- **Reasoning:** think block force-closed at 3,072 tokens; 103 of 500
+  forced, mostly long horizons. Forced prompts are flagged, not dropped.
+- **Outcome for causal tests:** near log-odds `logit(near label) - logit(far
+  label)` at the token before the label, on the cached reasoning (no
+  regeneration). Effects are in units of the regime contrast
+  `C = mean LO(near) - mean LO(both)` = 12.9 log-odds on the 176 near/both prompts.
+- **Data on disk** (`SPAR/results/horizon/`): the 500 reasoning traces in
+  `gen_cache/`, activations at every layer for the suffix, think@0.25/0.5/1,
+  `</think>` and pre-label positions in `exp0_Qwen3-8B_think-on_full/activations.npz`.
+  New analyses at these positions need no box time.
 
-The starter (`starter/spar_starter_geometry.py`) distills the prior project
-(`../../temporal-awareness/`, Rios-Sialer et al. 2026, Qwen3-4B-Instruct-2507):
-the constraint sentence, PCA per (layer, token) against log horizon, turn-suffix
-and response positions, and the three coherence tests. The paper localized the
-horizon signal to late-layer attention (L21, L24) and steered it with CAA at
-L19-22.
+## 3. Done: do not rerun
 
-Two sibling efforts in this repo use the prior project's **structured prompt
-format** on Qwen3-14B with thinking off:
+| what | date | output (`SPAR/results/horizon/`) | write-up |
+|---|---|---|---|
+| E0 full bank, thinking on (generation, activations, behavior) | 2026-10-04 | `exp0_Qwen3-8B_think-on_full/`, `gen_cache/` | `06_results_probes_full.md` |
+| E0 full bank, thinking off (record only) | 2026-10-04 | `exp0_Qwen3-8B_think-off_full/` | same |
+| E7 linear vs MLP probes, both modes | 2026-10-04 | `analysis/probe_*` | `06_results_probes_full.md`, spec `04_spec_probes.md` |
+| E8 run 1: patching map (thinking off), 4 decodability-chosen cells: all null | 2026-10-11 | `exp8_Qwen3-8B_full/` | `08_results_steering.md` §1-3, spec `07_spec_steering.md` |
+| E8 run 2: answer-slot ablation and steering at L24/27/30, answer-slot patching across prompts, both modes | 2026-10-12 | `exp8_Qwen3-8B_answer_slot/` | `08_results_steering.md` §5 |
+| Horizon-vs-decision check on the answer-slot subspace (local) | 2026-10-12 | `analysis/steering_decision_check.*` | `08_results_steering.md` §6 |
+| Starter bank: v1 (thinking off, E0-E5), v3 (thinking on, E0, E6) | 2026-09 | `snapshots/v1_noprefill`, `snapshots/v3_think` | `history/` |
 
-- **Alan** (`../alan/`): 2,000-prompt runs with randomized option delays and
-  rewards, 17-point horizon grid, four constraint phrasings, unit rewrites, a
-  climate domain, and relevance controls. PC1 |rho| 0.96 at the `assistant`
-  token (L36-37); choice of the short option falls smoothly from 92% at 1 day
-  to 15% at 50 years.
-- **Augusto** (`../relevance_aware_decoder/`): Alan's matrix plus distractor
-  durations, to ask whether a linear decoder can separate "the horizon" from
-  "a duration".
+## 4. Established (Qwen3-8B, thinking on, full bank unless noted)
 
-**Replication note.** From the full bank onward our prompts are in that same
-format (`spar_horizon/full_bank.py` is Alan's generator, copied). Every
-full-bank result should therefore be reported next to the matching number in
-the paper (Qwen3-4B), Alan's runs (Qwen3-14B, thinking off), and Augusto's
-where applicable, as a replication on Qwen3-8B with thinking on and off. The
-starter-bank results (snapshots `v1_noprefill`, `v3_think`) are not comparable
-to theirs: different format, fixed delays, near option always first.
+**Representation**
+- Before reasoning the horizon is readable almost perfectly: suffix newline
+  after `<|im_end|>` R² 1.00 (L16), leave-one-horizon-out.
+- **But the unit word alone scores R² 0.96 under the same protocol** (each
+  held-out horizon predicted by the mean of training horizons with the same
+  unit; no activations; 2026-10-13). Only the margin above 0.96 shows
+  magnitude within a unit. The k = 1 linear probe at the suffix (0.90) is
+  below a unit lookup. The "one curved direction" reading in `06` is open
+  until within-unit R² is computed.
+- In the middle of the think block the horizon is barely readable (R² 0.32 at
+  think@0.25, 0.28 at 0.5); it recovers at the last think token (0.81), the
+  `</think>` (0.96) and the pre-label token (0.98), in 2-4 curved
+  dimensions plus a long tail.
+- Forced closes confound every thinking-on cell after the block: the top
+  horizon-average component at `</think>` separates forced from natural
+  closes with AUC 1.00 (0.88 at the pre-label token).
+- Starter bank (v3, `history/03_results_think_geometry_starter.md`): a commit
+  phrase appears at a median 34% of the block and nothing in the horizon
+  reading changes there; the think-block probe direction is nearly orthogonal
+  to the suffix one (cosine 0.09-0.15); the chosen label is readable from the
+  suffix before reasoning at 0.91 (fixed delays, so label and horizon were confounded).
 
-## 3. Model
+**Causal path**
+- The decision reaches the answer slot (pre-label `:`) at L22-24: patching
+  that one position from a prompt in the other regime transfers 0.22 at L22,
+  0.56 at L24, 0.82 at L34. Reasoning does not move where the decision is
+  read from (thinking off: 0.58 at L24).
+- The positions where the horizon decodes best are not on the causal path
+  (run 1: all 12 verdicts null; the suffix newline decodes at 1.00 and
+  carries 0.00 of the effect in thinking-off patching).
+- **Probe line:** moving along the ridge probe direction shifts its readout
+  by 18-29 decades and the choice by at most 0.01 C. Inert at every cell.
+- **Curve at L24:** moving along the curve of horizon averages by 2 decades
+  shifts the choice 0.15 C toward the rational answer (both-regime prompts
+  +0.15 at -2 decades). Two caveats from the 2026-10-13 review:
+  near-regime prompts move toward far at both -2 and +2 decades (-0.14 each),
+  so part of the effect is non-specific; and the L24 subspace decodes the
+  near-vs-far log-odds at R² 0.65 (the a-vs-b label only at 0.23), so the
+  curve may carry the decision rather than the horizon.
+- **Mean difference (CAA)** at L24 steers the wrong way (+0.13 C toward near
+  at +1 decade). Suspected cause: long horizons are force-closed more often,
+  so long-minus-short partly reads "was cut off".
+- **Ablation at L27/L30** removes 0.74-0.83 C, but the subspace there decodes
+  the a-vs-b decision at 0.95, so this says nothing about the horizon.
 
-Qwen3-8B (`Qwen/Qwen3-8B`): native `enable_thinking` toggle, bf16 fits the
-vast.ai 4090, ungated, same family as the paper's model. Llama-3.1-8B and
-Gemma-2-9B have no native think block; Qwen3-14B needs 8-bit on a 4090;
-Qwen3.5-27B's hybrid attention has no plain residual stream. The local
-Qwen3.5-0.8B is for tests and smoke runs only: it never closes its think
-block and its answers are position reflexes (see §6).
+## 5. Next (proposed, thinking on only; each needs an approved spec before code)
 
-## 4. Prompt banks
-
-| bank | `--bank` | prompts | format | answer slot | status |
-|---|---|---|---|---|---|
-| starter | `starter` (default) | 116: 16 horizons × 3 reward pairs × 2 fixed delay pairs + 20 no-horizon | bare 5 lines | prefill `I choose:` | frozen; the v1/v3 snapshots |
-| full | `full` | 500 by default from Alan's generator: delays and rewards drawn per prompt, option order randomized, 48 log-spaced horizons (30 s to 500 y) in natural units | prior project's SITUATION/TASK/OBJECTIVE/CONSTRAINT/ACTION/FORMAT | none; the model writes `I choose:` and the label is located after it | built 2026-10-02, not yet run on the box |
-
-Why the full bank (details in `02_spec_full_bank.md`): with fixed delays the
-sensible answer is a step function of the horizon, so the label probe and the
-horizon probe read the same variable; the near option was always a), so
-position bias and the rational choice coincided; the bare format is comparable
-to nobody; and three of the 16 horizons were rendered ungrammatically.
-
-Each full-bank record carries `regime` (`none`: horizon shorter than the near
-delay; `near`: between the delays; `both`: past the far delay; `null`) and
-`truth` (`near` / `far` where one is defined). The question is ill-posed in
-the `none` regime and open-ended in `both` (no interest rate is given); the
-model says so in its reasoning. That is inherited from the paper and from
-Alan's design, and is a reason to report behavior per regime.
-
-## 5. Experiments and status
-
-| | Name | Question | starter bank | full bank |
-|---|---|---|---|---|
-| E0 | baseline | Peak and probe layer; PCA 2D/3D; with thinking on the think-span positions, probe track, dense track, label probe | done, both modes (`v3_think`) | done 2026-10-04, both modes, `results/horizon/` (thinking on 124 min, 103/500 forced) |
-| E1 | nuisance | Is PC1 horizon, not reward or delay? | done, off | Phase 2 |
-| E2 | paraphrase | Probe transfer across constraint wordings | done, off (6 wordings) | Phase 2, with Alan's 4 phrasings |
-| E3 | units | Same duration, different units | done, off | Phase 2, with Alan's unit rewrites |
-| E4 | perturb | Distractor, horizon first, implicit horizon | done, off | Phase 2; perturbations need the six-line layout |
-| E5 | attribution | Which layer/position/component carries the horizon to the answer | done, off | not planned yet |
-| E6 | think PCA | PCA of the whole think block | done, on (0.8B and 4B logs) | Phase 1 if time allows |
-| R5 / E8 | patching, ablation, steering | Where is the horizon causally carried; is the low-dimensional code necessary and sufficient; does the curve beat the line; does the end-of-reasoning code drive the answer | not planned | run 2026-10-11, `08_results_steering.md`: pre-registered cells null; patching locates the path (answer slot from L24) |
-| E7 | probes | Is the horizon extractable, linearly or only nonlinearly, and in how many dimensions? Linear and MLP probes on the top-k PCs, k increased step by step, leave-one-horizon-out (requirement from Jared, 2026-10-03; spec `04_spec_probes.md`) | done on v3, `05_results_probes_v3.md` | done, `06_results_probes_full.md` |
-| multiturn | horizon across turns | override and carry-over | draft only (`history/08_spec_multiturn_draft.md`) | deferred |
-
-Results so far: `03_results_think_geometry.md` (Qwen3-8B, thinking on, starter
-bank). Earlier runs: `snapshots/`.
+1. **Local, saved activations:** probes on natural closes only
+   (`probe_dimensionality.py --natural-only`, built, not run) and
+   within-unit R² at the suffix, `</think>` and pre-label cells, with the
+   ridge's inner CV grouped by horizon.
+2. **Local, saved E8 results:** split the per-prompt curve effects
+   (`toward` in `exp8_Qwen3-8B_answer_slot/results.json`) by whether the
+   shifted horizon crosses a delay. A horizon representation should change
+   the choice only when it does.
+3. **Box, cached reasoning:** at L24, steer with the curve minus its
+   near-vs-far component, and with that component alone at matched norm;
+   directions refit on natural closes. Code gap: `exp8_steering.py --tests
+   answer` also builds the thinking-off set; it needs a mode filter.
+4. **Box, regenerates reasoning (~1 h):** steer before reasoning, at the
+   prompt positions after the horizon around L15-19 where the horizon flows
+   in thinking-off patching, then let the model reason. This is the only test
+   of whether reasoning uses the horizon code. (Called T5 in `07` §8; T5 in
+   `07` §9 is the answer-slot patch. Rename it when specced.)
+5. **Representation tests at the suffix (forward pass only, no reasoning):**
+   E3 with Alan's unit rewrites (same duration, different unit), which is the
+   direct test of R3, and E2 with his 4 phrasings.
 
 ## 6. Decisions, dated
 
-- **2026-09-21.** One model, Qwen3-8B. Thinking on is the primary condition,
-  off is the control. Standalone package in `jared/`, not the prior repo.
-- **2026-09-23.** E2 uses constraint paraphrases only. E4 adds implicit
-  horizons and two structural perturbations. E5 is attribution patching with
-  our own hooks, thinking off only. Layers for E2/E3: E0's probe layer ± 2.
-- **2026-09-23, box.** Every 8B prompt overran a 1024-token think budget and
-  short horizons loop ("neither is feasible, maybe a typo"), so the think
-  block is **force-closed** at `max_think_tokens` (3072) and the forced
-  count is recorded; generation is **batched** (left-padded greedy, verified
-  token-identical to single-prompt).
-- **2026-09-24.** Qwen3-8B thinking off writes a paragraph before its choice,
-  so the starter bank uses the assistant **prefill** `I choose:`.
-- **2026-09-30.** Mid-thinking positions: kept layout `suffix | think | pre |
-  prelabel | answer`, four think fractions, explicit `regions` everywhere;
-  forced prompts are flagged, not skipped. Spec: `history/06_spec_think_geometry.md`.
-- **2026-10-02.** The **full bank** (Alan's generator, copied into
-  `spar_horizon/full_bank.py` and `horizons.py`). No prefill: the label is
-  located after the model's own `I choose:` as Alan parses it. 500 prompts
-  for the first thinking-on run. Our 16 horizons kept, in natural units.
-  E1-E4 move to the full bank after Phase 1. Results to be framed as a
-  replication (§2).
-- **2026-10-03.** E7 probes (`04_spec_probes.md`): log-horizon regression,
-  linear vs MLP on the top-k PCs, leave-one-horizon-out, run after the fact
-  on saved activations. For the box run: 48 log-spaced horizons instead of
-  16, and three think fractions (0.25, 0.5, 1) instead of four.
+- **2026-09-21.** One model, Qwen3-8B. Standalone package in `jared/`.
+- **2026-09-23.** Think block force-closed at `max_think_tokens` (3,072);
+  generation batched (left-padded greedy).
+- **2026-10-02.** The full bank (Alan's generator, `spar_horizon/full_bank.py`);
+  the label is located after the model's own `I choose:`, no prefill.
+  Full-bank results are reported as a replication next to the paper
+  (Qwen3-4B), Alan and Augusto (Qwen3-14B, thinking off).
+- **2026-10-03.** 48 log-spaced horizons; three think fractions (0.25, 0.5, 1);
+  E7 probes leave-one-horizon-out on saved activations.
+- **2026-10-11.** E8 success criteria fixed before each run (`07` §5, §9).
+- **2026-10-14. Thinking on only for Qwen3-8B.** With thinking off the
+  model separates the regimes (contrast 11.4 log-odds vs 12.9 on), but option
+  order adds +6.3 log-odds (vs +2.5 on) and the dependence on the exact
+  horizon within a regime flips sign with option order, so there is no
+  coherent per-horizon choice to explain. Thinking-off results stay as a
+  record; nothing new runs in that mode. Cost: the prompt-side patching map
+  (T1) exists only for thinking off, since patching prompt positions with
+  thinking on changes the reasoning that follows.
 
 ## 7. Facts that constrain the design
 
-- Think length on the 8B: median ~2.8k tokens, 46-48 of 116 forced at 3072;
-  the forced prompts are mostly the long horizons (22 of 30 at ≥ 10 years).
-- bf16 batched greedy is not bit-stable across batch composition (two prompts
-  changed between identical runs).
-- The 0.8B reproduces the geometry (|rho| 0.955) but its answers are fixed
-  reflexes ("a)" for letters, "2)" for digits), so its behavior numbers mean
-  nothing; it is a plumbing check only (`history/03_baseline_qwen3.5-0.8b.md`).
-- Each kept position costs 116 × 37 × 4096 × 4 bytes ≈ 70 MB in the npz on
-  the starter bank; scale by prompt count for the full bank.
-- Run time (2026-10-03): behavior regeneration was 96% of the v3 wall
-  time. Now position bias and per-regime accuracy come from the base
-  answers (`base_behavior`), the stability tests take `--behavior-n`, and
-  the default batch is 12 with an out-of-memory step-down. Details in
-  `02_spec_full_bank.md` §3.1.
-- Qwen3-4B on the full bank (8 prompts, 2026-10-03): think lengths and the
-  forced-at-long-horizons pattern match the 8B on the starter bank, so the
-  3072 budget and the 500-prompt estimate in `02_spec_full_bank.md` stand.
-- Alan found that rendering the same horizon in a new unit shifts both
-  geometry and behavior (11 points more long-option choices for "decades"),
-  which is why the full bank keeps one rendering per horizon by default.
+- Think length on the full bank: median 1,748 tokens; E0 thinking on took
+  124 min at batch 12. On the cached reasoning (batch 8, last-position
+  logits only), one thinking-on E8 cell took 25 min (ablation 7, steering
+  19) and answer-slot patching over all layers 12 min.
+- bf16 batched greedy is not bit-stable across batch composition (a few
+  prompts change between identical runs).
+- Activations: about 6 GB per mode, float32 (Qwen outlier dimensions exceed
+  float16); load per layer.
+- The local Qwen3.5-0.8B never closes its think block and answers by
+  reflex: plumbing checks only. Model-backed checks go to Jared via
+  `local_checks.py` (see `../../CLAUDE.md`).
+- The unit word grows with the duration by design, so unit and log horizon
+  are confounded on the bank (unit explains 0.97 of log horizon).
 
 ## 8. Deferred
 
-R2 beyond the climate domain, R5 steering, the multiturn design, E5 on the
-full bank, and Alan's extended grid (1 minute to 10,000 years).
+R2 (domain), the multiturn design (`history/08_spec_multiturn_draft.md`),
+E5 attribution on the full bank (superseded by patching), Alan's extended
+grid, and the replication against Alan's public 14B activations.
 
 ## History
 
-| file | what it was | why it is in history |
-|---|---|---|
-| `history/01_plan_2026-09-21.md` | original research plan | merged into this file |
-| `history/02_execution_plan_2026-09-23.md` | build plan for E0-E5 with task checklists and build notes | all tasks done; notes merged into §6-7 |
-| `history/03_baseline_qwen3.5-0.8b.md` | the starter on the 0.8B | one-line summary in §7 |
-| `history/05_prompt_think_geometry.md`, `history/06_spec_think_geometry.md` | task prompt and spec for the mid-thinking positions | built; results in `03_results_think_geometry.md` |
-| `history/08_spec_multiturn_draft.md` | multiturn spec, draft | never run; its counterbalancing point is addressed by the full bank |
+| file | what it was |
+|---|---|
+| `history/01_plan_2026-10-11.md`, `history/00_README_2026-10-12.md` | previous plan and index, both modes |
+| `history/02_spec_full_bank.md` | spec for the full bank and its first box run; built and run |
+| `history/03_results_think_geometry_starter.md` | thinking-on results on the starter bank (v3); numbers superseded by `06` |
+| `history/05_results_probes_v3.md` | E7 on v3; superseded by `06` |
+| `history/01_plan_2026-09-21.md`, `history/02_execution_plan_2026-09-23.md` | original plan and E0-E5 build plan |
+| `history/03_baseline_qwen3.5-0.8b.md` | the starter on the 0.8B |
+| `history/05_prompt_think_geometry.md`, `history/06_spec_think_geometry.md` | mid-thinking positions, built |
+| `history/08_spec_multiturn_draft.md` | multiturn draft, never run |

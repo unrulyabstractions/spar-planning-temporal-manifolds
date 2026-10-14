@@ -56,7 +56,7 @@ typical spread of 4.95.
   behave the same way, so the same late hand-off to the answer slot is the
   first hypothesis.
 
-## 4. Next (built 2026-10-11: `07_spec_steering.md` section 9)
+## 4. Next after run 1 (done: section 5)
 
 1. Repeat T2-T3 where the map says the effect lives: the pre-label `:` at
    L24-L30 (transfer 0.63-0.82), thinking off and on. Directions can be fitted
@@ -124,15 +124,31 @@ horizon-average PCs):
   does nothing. This is the first evidence that the horizon representation is
   used, and that its curved geometry matters for the effect.
 
-## 7. Next
+## 7. Review, 2026-10-13
 
-1. **Decision-orthogonal ablation at L27-L30:** remove the a-vs-b direction
-   (fitted from the label logits) from the horizon basis, then ablate. This
-   asks whether the horizon content beyond the decision is necessary there.
-2. **Finer around the hand-off:** L22-L26 at the answer slot, and the
-   "prompt after the horizon" positions at L15-L21 (T1's other carrier), with
-   curve steering, the direction that works.
-3. **Calibrate the curve effect:** compare a 2-decade curve move with real
-   prompts whose horizon is 2 decades away, to state the effect as a share of a
-   real horizon change.
-4. T5 steering before reasoning remains deferred until the site is settled.
+From the per-direction, per-alpha table in `exp8_Qwen3-8B_answer_slot/results.json`:
+
+- **The L24 subspace carries the abstract decision too.** §6 reads L24 as
+  mostly horizon from the a-vs-b column (0.23-0.34), but the near-vs-far
+  log-odds decode from it at 0.64 (off) and 0.65 (on). L24 looks like the
+  point where a near-vs-far preference exists before it is bound to a label.
+  The curve is fitted on horizon averages, so it can include that preference
+  and the probe line does not: "curve beats line" is not yet "the horizon is used".
+- **Thinking on, the curve effect is partly non-specific.** Near-regime
+  prompts lose near preference whichever way the curve moves: -0.14 at -2
+  and at +2 decades (L24), -0.16 / -0.07 (L27), -0.16 / -0.06 (L30). The
+  `toward` metric counts only the +alpha side for them. A shorter horizon
+  may land in the `none` regime, where lower near log-odds could be
+  legitimate; comparing with real `none`-regime prompts settles it.
+  Thinking off, L24 behaves as a horizon edit should: near -0.20 / -0.39 at
+  +1 / +2, both +0.17 / +0.38 at -1 / -2.
+- **The mean difference steers backwards thinking on** at L24 (+0.13 near at
+  +1 decade, -0.20 at -2). Suspected cause: long horizons are force-closed
+  more often, so long-minus-short partly reads "was cut off" (`06` §4).
+- **Patching consistency:** in run 1's T1 the transfer fractions of all
+  position groups sum to 0.92-1.00 at every layer, so the groups are close to
+  additive and nothing is missing from the map.
+
+## 8. Next
+
+Thinking on only from 2026-10-14; the list is in `01_plan.md` §5.

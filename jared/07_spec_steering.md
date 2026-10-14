@@ -5,6 +5,10 @@ code for the box tests"). Companion to `06_results_probes_full.md`, whose
 cells and directions this tests. Success criteria in §5 are fixed before the
 run.
 
+**Status 2026-10-14: done.** Both runs are in `08_results_steering.md`. Kept as
+the method record (directions, units, criteria). From 2026-10-14 nothing new
+runs with thinking off; open follow-ups are in `01_plan.md` §5.
+
 ## 1. Question
 
 The probes show the stated duration is decodable, ordered and low-dimensional

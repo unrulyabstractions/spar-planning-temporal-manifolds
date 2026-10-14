@@ -2,6 +2,9 @@
 
 Date: 2026-10-03. Decisions from Jared in §5. Companion to `01_plan.md`.
 
+**Status 2026-10-14: done** on v3 and the full bank (`06_results_probes_full.md`).
+Kept as the method record; open follow-ups are in `01_plan.md` §5.
+
 ## 1. Question
 
 Is the horizon extractable from the residual stream, and is the information
