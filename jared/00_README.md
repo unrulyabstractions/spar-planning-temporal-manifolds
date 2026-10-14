@@ -5,12 +5,18 @@ Everything for the new SPAR experiments lives in `jared/`. Read in order.
 | File | What it is |
 |---|---|
 | `00_README.md` | This index, plus lineage, environment, and model notes |
-| `01_plan.md` | The research plan: question, R1-R5 robustness tests, decisions |
-| `02_execution_plan.md` | The build plan: experiments E0-E5, tasks, status, how to ship |
-| `03_baseline_qwen3.5-0.8b.md` | What the unmodified starter produced on the 0.8B model, and why its 100% reasoning score is an artifact |
-| `spar_horizon/` | The package: prompts, model I/O, extraction, geometry, behavior, attribution, plots, run manifests |
-| `experiments/` | One CLI per experiment (`exp0`-`exp5`) plus `run_all.sh` |
-| `tests/` | 48 pytest tests on the pure-python parts and a tiny in-memory model |
+| `01_plan.md` | Question, experiments and their status, dated decisions, the facts that constrain the design |
+| `02_spec_full_bank.md` | The current spec: the full prompt bank (Alan's generator, no prefill) and the Phase 1 run |
+| `03_results_think_geometry.md` | Results: the horizon axis during reasoning (Qwen3-8B, starter bank) |
+| `04_spec_probes.md` | Spec for E7: linear vs MLP probes on the top-k PCs, leave-one-horizon-out |
+| `05_results_probes_v3.md` | Results of E7 on v3: the horizon sits on a 2-4 dimensional curve where it is strong |
+| `08_results_steering.md` | Results of E8: the horizon reaches the answer slot from layer 24; probe-chosen cells are passengers; at L24 moving along the curve shifts the choice, the straight line does not |
+| `07_spec_steering.md` | Spec for E8: patching, ablation and steering on the full bank, success criteria fixed before the run |
+| `06_results_probes_full.md` | Results of E7 on the full bank (500 prompts, 48 horizons): one curved direction before reasoning, diffuse during it |
+| `history/` | Superseded plans and specs; indexed at the end of `01_plan.md`, no need to read |
+| `spar_horizon/` | The package: the two prompt banks, model I/O, extraction, geometry, behavior, attribution, plots, run manifests |
+| `experiments/` | One CLI per experiment (`exp0`-`exp6`) plus `run_all.sh` |
+| `tests/` | pytest on the pure-python parts, the real 0.8B tokenizer, and the 0.8B on CPU for generation |
 | `horizon_geometry.py` / `.ipynb` | Notebook wrapper for E0; `build_notebook.py` regenerates the .ipynb |
 | `requirements.txt` | What the vast.ai box needs on top of its torch image |
 | `analysis/` | Post-analysis on synced results: cross-mode transfer, feature dimensionality, the 3D explorer (notebook + HTML), and `snapshot.py` |
@@ -34,11 +40,20 @@ et al. 2026, temporal preference in Qwen3-4B-Instruct-2507):
 The paper localized the horizon signal to late-layer attention (L21, L24 in
 Qwen3-4B) and steered it with CAA at L19-22.
 
-## The prompt, in one line
+## The prompt, in one line, and the two banks
 
 Pick between a small near payout and a large far payout "for this time
-horizon: X", with X log-swept from 30 seconds to 500 years. 96 horizon
-prompts plus 20 no-horizon controls. Full list: `starter/starter_geometry_prompts.md`.
+horizon: X", with X log-swept from 30 seconds to 500 years.
+
+| `--bank` | module | prompts | format | answer slot |
+|---|---|---|---|---|
+| `starter` (default) | `spar_horizon/prompts.py` | 96 horizon prompts (16 horizons × 3 reward pairs × 2 fixed delay pairs, near option always a) + 20 no-horizon controls; list in `starter/starter_geometry_prompts.md` | bare 5 lines | assistant prefill `I choose:` pins the label token |
+| `full` | `spar_horizon/full_bank.py` + `horizons.py` (Alan's generator, copied) | `--n-prompts` (500) drawn with per-prompt delays and rewards, option order randomized, 48 log-spaced horizons from 30 seconds to 500 years in natural units (84 minutes, 43 hours, 15 months), ~1/18 no-horizon | prior project's SITUATION / TASK / OBJECTIVE / CONSTRAINT / ACTION / FORMAT, as in `../alan/` and `../relevance_aware_decoder/` | none; the FORMAT line asks for `I choose: <a) or b)>`, the model writes it, and the label is located after it within `answer_window` (48) tokens |
+
+Full-bank records also carry `near_label`, `regime` (`none` / `near` /
+`both` / `null`: where the horizon sits relative to the two payouts) and
+`truth` (the rational choice where one is defined). `run_all.sh` with
+`BANK=full` runs E0 only until E1-E4 are ported (Phase 2 in `01_plan.md`).
 
 ## Experiments
 
@@ -51,9 +66,14 @@ prompts plus 20 no-horizon controls. Full list: `starter/starter_geometry_prompt
 | E4 | perturb | Distractor, horizon-first, implicit horizon: probe transfer + behavior | table per variant |
 | E5 | attribution | Which layer/position/component carries the horizon to the answer? | heatmaps, top-10 |
 
-All take `--model`, `--thinking on|off`, `--limit N`, `--out DIR`, `--max-think-tokens`, `--batch-size`, `--prefill`. Each run
-writes `manifest.json`. E1-E4 read E0's manifest for the layer choice, so E0
-runs first (`run_all.sh` enforces this). E5 is thinking-off only.
+All take `--model`, `--thinking on|off`, `--bank starter|full`, `--n-prompts`, `--limit N`, `--out DIR`,
+`--max-think-tokens`, `--batch-size` (default 12, sized for the 4090; use 2 on the 14 GB laptop),
+`--prefill`, `--behavior-n`. E0 always writes `base_behavior` (near rate by horizon, position
+bias, per-regime accuracy, all from the base answers); `--skip-behavior` skips only the
+regenerating stability tests, and `--behavior-n N` runs them on N evenly spaced prompts. Each run writes
+`manifest.json`. E1-E4 read E0's manifest for the layer choice, so E0 runs
+first (`run_all.sh` enforces this). E5 is thinking-off only. Full-bank runs
+land in `<exp>_<model>_think-<mode>_full/`.
 
 ## Environment
 
@@ -90,6 +110,10 @@ PY=~/miniconda3/envs/intel_ai/bin/python bash experiments/run_all.sh   # same fl
 # one experiment
 python experiments/exp0_baseline.py --model Qwen/Qwen3-8B --thinking on --limit 12
 
+# the full bank (Phase 1): E0 thinking on, 500 prompts; local smoke with --model Qwen/Qwen3.5-0.8B --limit 6
+python experiments/exp0_baseline.py --model Qwen/Qwen3-8B --thinking on --bank full --skip-behavior
+BANK=full MODES=on bash experiments/run_all.sh
+
 # on the box: everything, both modes (E0 first); MAX_THINK and MODES are optional
 MAX_THINK=3072 bash experiments/run_all.sh
 ```
@@ -97,21 +121,41 @@ MAX_THINK=3072 bash experiments/run_all.sh
 Outputs go to `out/<exp>_<model>_think-<on|off>/` locally, or to
 `$WORKSPACE/results/horizon/` on the box so `just sync` brings them home.
 
-## Shipping (Phase C, not yet done)
+## Shipping
+
+Rent the box in the vast.ai console, then from `spar-planning-temporal-manifolds/`
+(its own `justfile`; `just` lists the verbs):
 
 ```
-just up
-just push spar-planning-temporal-manifolds
+just new ssh -p 41234 root@ssh5.vast.ai -L 8080:localhost:8080   # the console's ssh line, pasted
+just push                                                        # ships this project, not out/
 just ssh "cd /workspace/SPAR/spar-planning-temporal-manifolds/jared && /venv/main/bin/python -m pip install -r requirements.txt"
-just ssh "cd /workspace/SPAR/spar-planning-temporal-manifolds/jared && /venv/main/bin/python -m pytest -q tests"
-just ssh "cd /workspace/SPAR/spar-planning-temporal-manifolds/jared && /venv/main/bin/python experiments/exp0_baseline.py --thinking off --limit 12"
-# then the thinking-on smoke, then run_all.sh, then: just sync; just stop
+just ssh "cd /workspace/SPAR/spar-planning-temporal-manifolds/jared && /venv/main/bin/python -m pytest -q tests --ignore=tests/test_generation.py"
+# experiments: see 02_spec_full_bank.md section 3; long ones inside tmux on the box
+just sync      # results into SPAR/results/
+just stop      # or: just down
 ```
+
+`just new` stores the host and port (`SPAR/.state/hostport`) and matches them
+to an instance on the vast.ai account, so `status`, `stop` and `down` work too.
+After `just resume` the port can change; paste the new line with `just new`.
+The generation tests are skipped on the box because it runs in bfloat16, where
+batched greedy decoding is not token-identical to single-prompt; they are CPU
+tests (`local_checks.py`).
 
 `/venv/main/bin/python` is where the vast.ai image keeps torch; see
 `infra/provision.sh` for the resolution order if that path differs.
 
-## The answer position: prefill
+## The answer position: prefill (starter bank) or located label (full bank)
+
+With the full bank there is no prefill. The FORMAT line makes the model
+write `I choose:` itself; `locate_label` finds the first letter-or-digit
+token after that phrase in the generated text (markdown in between is a
+lead, as below), which is how Alan's parser reads his runs. `answer_window`
+tokens are generated so the phrase fits. If the phrase never appears the
+first letter-or-digit token is taken, and the usual answer-token WARNING
+says so. The starter bank is unchanged:
+
 
 Qwen3-8B with thinking off does not answer "a)"; 85% of the time it opens
 with "To determine the best investment..." and names the label later. So the
@@ -133,16 +177,20 @@ its answer formatting or for a force-closed think block:
 ```
 thinking on   (Qwen3-8B, prefill on; S = 5 suffix tokens on the 8B, 7 on the 0.8B)
 [ suffix:    <|im_end|> \n <|im_start|> assistant \n (<think> \n) ]   region suffix   (0, S)
-[ think:     think@0.25  think@0.5  think@0.75  think@1 ]              region think    (S, S+4)
-[ pre:       </think>  \n\n  I  choose  : ]                             region pre      (S+4, S+9)
-[ pre-label: the token right before the label (':' or a lead like ' **') ] region prelabel (S+9, S+10)
-[ answer:    a  )  ... n_response tokens ]                               region answer   (S+10, S+16)
+[ think:     think@0.25  think@0.5  think@1 ]                          region think    (S, S+3)
+[ pre:       </think>  \n\n  I  choose  : ]                             region pre      (S+3, S+8)
+[ pre-label: the token right before the label (':' or a lead like ' **') ] region prelabel (S+8, S+9)
+[ answer:    a  )  ... n_response tokens ]                               region answer   (S+9, S+15)
+(v1-v3 runs kept four think fractions, 0.25 / 0.5 / 0.75 / 1; their files carry their own regions)
 
 thinking off  (suffix runs through the prefill; think and pre are empty)
 [ suffix ... I choose : ] [ pre-label ] [ answer ... ]
+
+full bank, thinking on (no prefill; the model's own "I choose:" is part of the lead, not kept)
+[ suffix ] [ think ×3 ] [ pre: </think> \n\n ] [ ... I choose (lead, variable) ] [ pre-label: ':' ] [ answer: a ) ... ]
 ```
 
-Think positions sit at `think_fractions` (default 0.25, 0.5, 0.75, 1.0) of
+Think positions sit at `think_fractions` (default 0.25, 0.5, 1.0) of
 each prompt's own think span; f = 1 is the last token before `</think>`.
 Their token differs per prompt, so they are labelled `think@0.25*`. The
 regions are stored in `activations.npz` and the manifest; `n_suffix` is
@@ -190,6 +238,8 @@ the activation files are not copied and stay under `results/`.
 
 ## Smoke-test log
 
+- 2026-10-03, Qwen3-4B on Jared's xpu, full bank, `think_budget.py --limit 8 --batch-size 2`, 3072 budget: 61 min. The model writes `I choose:` after the close and the label is located correctly on all 8. Think lengths 1.3k-2.7k on natural closes; 3/8 forced, all long horizons (50, 50, 500 y), as on the starter bank. `both` regime 5/5 rational; `none` regime 2 far / 1 near; no `near`-regime prompt in the subset. Batch 8 on the 14 GB laptop swapped at ~2.4k tokens; batch 2 fits.
+- 2026-10-02, full bank: 77 fast tests green. 0.8B thinking-off E0 on the full bank (6 prompts, CPU) writes `out/exp0_Qwen3.5-0.8B_think-off_full/`: the model writes `I choose: a) ...` itself, the label is located after it, prelabel `:` and answer ` a` `)`, layout `suffix (0,9) | prelabel | answer`. The generation tests and the thinking-on smoke run on Jared's xpu env via `local_checks.py`.
 - 2026-09-30, mid-thinking positions: 63 tests green; 0.8B thinking-on E0 smoke (6 prompts, 32-token budget) writes 4 think columns, probe_track, dense_track, label_probe and a manifest with per-fraction numbers; thinking-off run_all smoke passes all six experiments; explorer export carries regions.
 - 2026-09-21, 0.8B, thinking off, 6 prompts: suffix derived as 9 tokens
   (matches the starter), behavior reproduces the position bias.

@@ -3,7 +3,7 @@
 #
 # Thin wrapper over `experiments/exp0_baseline.py`. The knobs cell is the only
 # thing to edit. Everything else lives in the `spar_horizon` package; see
-# `00_README.md` and `02_execution_plan.md`.
+# `00_README.md` and `01_plan.md`.
 #
 # - `MODEL`: any HF causal LM with a chat template. Thinking on needs a native
 #   `</think>` token (Qwen3 family).

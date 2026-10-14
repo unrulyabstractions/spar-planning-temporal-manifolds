@@ -87,10 +87,10 @@ def test_extract_thinking_on_layout(loaded):
     ext = extract(tok, model, dev, prompts, cfg, layers=[0])
     n_suffix = suffix_length(tok, prompts[0], cfg)
     n_pre = 2 + len(tok.encode(cfg.prefill, add_special_tokens=False))
-    assert ext.regions["think"] == (n_suffix, n_suffix + 4)
-    assert ext.tokens[n_suffix:n_suffix + 4] == ["think@0.25*", "think@0.5*", "think@0.75*", "think@1*"]
-    assert ext.regions["pre"] == (n_suffix + 4, n_suffix + 4 + n_pre)
-    assert ext.tokens[n_suffix + 4] == "</think>"
+    assert ext.regions["think"] == (n_suffix, n_suffix + 3)
+    assert ext.tokens[n_suffix:n_suffix + 3] == ["think@0.25*", "think@0.5*", "think@1*"]
+    assert ext.regions["pre"] == (n_suffix + 3, n_suffix + 3 + n_pre)
+    assert ext.tokens[n_suffix + 3] == "</think>"
     assert ext.forced_mask.all() and ext.kept.all() and (ext.think_len >= 32).all()
     assert ext.n_suffix == ext.regions["answer"][0]
     assert all(t.strip() == "" for t in ext.think_text) is False

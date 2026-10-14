@@ -1,19 +1,23 @@
 # Jared — Temporal horizon robustness on Qwen3-8B
 
-Snapshot of my working directory as of 2026-09-26. Provenance in `SNAPSHOT.yaml`.
-The long-form docs are `00_README.md` (index, lineage, environment, how to run),
-`01_plan.md` (research question, tests R1–R5), `02_execution_plan.md` (build
-log, decisions), `03_baseline_qwen3.5-0.8b.md` (the starter's 0.8B baseline).
+Working directory; `SNAPSHOT.yaml` records the last snapshot. The long-form
+docs are `00_README.md` (index, environment, how to run), `01_plan.md`
+(question, experiments, dated decisions, status), `02_spec_full_bank.md`
+(the current spec: the full prompt bank), `03_results_think_geometry.md`
+(results so far). Superseded plans and specs are in `history/`.
 
 ## Question
 
 Is the linearly readable time-horizon direction in the residual stream a stable,
-prompt-independent quantity, and does the model's choice depend on it? Prompts
-are the starter's intertemporal choice: small near payout vs. large far payout
-"for this time horizon: X", X log-swept from 30 seconds to 500 years (96 horizon
-prompts + 20 no-horizon controls). Lineage: `temporal-awareness` (Rios-Sialer et
-al. 2026, Qwen3-4B). Model here: `Qwen/Qwen3-8B`, bf16, one RTX 4090, thinking
-on and off via the native toggle.
+prompt-independent quantity, and does the model's choice depend on it? And what
+happens to it while the model reasons? Prompts are an intertemporal choice:
+small near payout vs. large far payout "for this time horizon: X", X log-swept
+from 30 seconds to 500 years. Two banks: the 116-prompt starter bank (fixed
+delays, bare format; the results so far) and the full bank (Alan's generator in
+the prior project's structured format, randomized delays and order; the next
+runs). Lineage: `temporal-awareness` (Rios-Sialer et al. 2026, Qwen3-4B) and
+`../alan/`. Model here: `Qwen/Qwen3-8B`, bf16, one RTX 4090, thinking on and
+off via the native toggle.
 
 ## What is here
 
@@ -24,7 +28,7 @@ on and off via the native toggle.
   behavior coherence tests, attribution patching, plots, run manifests.
 - `experiments/exp0..exp5_*.py` + `run_all.sh` — one CLI per experiment (see
   table). Every run writes `manifest.json`; a run without one is a failure.
-- `tests/` — 48 pytest tests, tokenizer-only, no GPU. Green on 2026-09-26.
+- `tests/` — pytest: 77 fast tests (pure python + the 0.8B tokenizer) and `test_generation.py` on the 0.8B; `local_checks.py` runs the model-backed ones.
 - `analysis/` — post-hoc on synced results: cross-mode (think on/off) probe
   transfer, feature dimensionality, PCA-3 export, an interactive 3D explorer
   (`pca3_explorer.ipynb`, ~10 MB with outputs, and its HTML template), and

@@ -1,0 +1,1079 @@
+{
+ "standard_n40_s0": {
+  "config": {
+   "n": 40,
+   "seed": 0
+  },
+  "samples": [
+   {
+    "sample_uid": "s0_000000",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 625,000 dollars in 10 years.\nb) 25,000 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 20 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "20 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000001",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 1 year.\nb) 125,000 dollars in 5 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 5 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "5 years",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000002",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 1 year.\nb) 5,000,000 dollars in 50 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 1 year.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 year",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000003",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000 dollars in 6 months.\nb) 10,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 3 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "3 years",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000004",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 6 months.\nb) 10,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 50 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "50 years",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000005",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000,000 dollars in 20 years.\nb) 100,000 dollars in 1 year.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 1 day.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 day",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000006",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 1 month.\nb) 5,000,000 dollars in 5 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 6 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "6 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000007",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 250,000 dollars in 10 years.\nb) 25,000 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 50 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "50 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000008",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 625,000 dollars in 2 years.\nb) 25,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000009",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 1 week.\nb) 500,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000010",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000,000 dollars in 50 years.\nb) 100,000 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 3 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "3 days",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000011",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 1 month.\nb) 625,000 dollars in 50 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 6 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "6 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000012",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 6 months.\nb) 500,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 weeks",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000013",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 3 months.\nb) 125,000 dollars in 5 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 6 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "6 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000014",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 1 week.\nb) 2,500,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 6 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "6 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000015",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 2 years.\nb) 5,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 weeks",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000016",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 20 years.\nb) 2,500 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000017",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 1 month.\nb) 500,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 1 week.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 week",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000018",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 1 year.\nb) 1,250,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 3 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "3 days",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000019",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 1 month.\nb) 500,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000020",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 250,000 dollars in 2 years.\nb) 10,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 30 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "30 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000021",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 30 years.\nb) 50,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 1 year.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 year",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000022",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500,000 dollars in 5 years.\nb) 100,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 1 year.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 year",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000023",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 3 months.\nb) 1,250,000 dollars in 20 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 1 month.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 month",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000024",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,250,000 dollars in 5 years.\nb) 50,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000025",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 1 year.\nb) 200,000 dollars in 20 years.\nOBJECTIVE: Think deeply about which option is preferable.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": null,
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": null
+   },
+   {
+    "sample_uid": "s0_000026",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,250,000 dollars in 20 years.\nb) 25,000 dollars in 1 year.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 30 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "30 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000027",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 125,000 dollars in 20 years.\nb) 2,500 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 30 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "30 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000028",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 10 years.\nb) 1,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 10 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "10 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000029",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 2 years.\nb) 2,500 dollars in 1 year.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 100 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "100 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000030",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 1 week.\nb) 2,500,000 dollars in 20 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000031",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 3 months.\nb) 2,500,000 dollars in 5 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 weeks",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000032",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 2 years.\nb) 2,500 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 1 day.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 day",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000033",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 6 months.\nb) 100,000 dollars in 50 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 50 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "50 years",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000034",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 10 years.\nb) 5,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": null,
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": null
+   },
+   {
+    "sample_uid": "s0_000035",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500 dollars in 1 week.\nb) 12,500 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 3 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "3 days",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000036",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 1 month.\nb) 25,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 50 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "50 years",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000037",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 250,000 dollars in 30 years.\nb) 10,000 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 weeks",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000038",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 20 years.\nb) 1,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 weeks",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s0_000039",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 200,000 dollars in 2 years.\nb) 100,000 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 10 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "10 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   }
+  ]
+ },
+ "rewrite_phrasings_n60_s1": {
+  "config": {
+   "n": 60,
+   "seed": 1,
+   "unit_rewrite": true,
+   "phrasing_ids": [
+    0,
+    1,
+    2,
+    3
+   ]
+  },
+  "samples": [
+   {
+    "sample_uid": "s1_000000",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 6 months.\nb) 250,000 dollars in 20 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 7 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "7 days",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000001",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 250,000 dollars in 10 years.\nb) 50,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 120 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "120 months",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000002",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 2 years.\nb) 10,000 dollars in 1 year.\nOBJECTIVE: Think deeply about which option is preferable.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": null,
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": null
+   },
+   {
+    "sample_uid": "s1_000003",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 250,000 dollars in 5 years.\nb) 50,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 5 decades. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "5 decades",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000004",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 250,000 dollars in 50 years.\nb) 5,000 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 2 weeks matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 weeks",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000005",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 1 year.\nb) 50,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 5 decades and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "5 decades",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000006",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 1 year.\nb) 500,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 5 years and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "5 years",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000007",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 30 years.\nb) 2,500 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 730 days. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "730 days",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000008",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 6 months.\nb) 2,500,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 260 weeks matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "260 weeks",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000009",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,250,000 dollars in 10 years.\nb) 25,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 90 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "90 days",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000010",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 1 week.\nb) 1,250,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 60 months matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "60 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000011",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000,000 dollars in 30 years.\nb) 100,000 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 8 weeks. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "8 weeks",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000012",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 3 months.\nb) 10,000 dollars in 5 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 24 hours.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "24 hours",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000013",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 3 months.\nb) 500,000 dollars in 20 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 12 months matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "12 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000014",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 250,000 dollars in 2 years.\nb) 5,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 36 months. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "36 months",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000015",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 5 years.\nb) 1,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 1 day.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 day",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000016",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 30 years.\nb) 50,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 26 weeks and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "26 weeks",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000017",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 5 years.\nb) 1,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 20 years matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "20 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000018",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 10 years.\nb) 2,500 dollars in 1 year.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 24 months and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "24 months",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000019",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 5 years.\nb) 5,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 30 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "30 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000020",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 20,000 dollars in 30 years.\nb) 10,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 50 years and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "50 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000021",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 3 months.\nb) 500,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 1 day. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 day",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000022",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 1 year.\nb) 5,000,000 dollars in 20 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 1 decade matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 decade",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000023",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 3 months.\nb) 1,250,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 2 months. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000024",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 1 month.\nb) 50,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 26 weeks and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "26 weeks",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000025",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 625,000 dollars in 30 years.\nb) 25,000 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 1 month matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 month",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000026",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000 dollars in 1 year.\nb) 25,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 52 weeks matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "52 weeks",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000027",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 6 months.\nb) 200,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 1 day.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 day",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000028",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 200,000 dollars in 50 years.\nb) 100,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 30 years. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "30 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000029",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500 dollars in 3 months.\nb) 25,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 104 weeks and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "104 weeks",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000030",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,000 dollars in 20 years.\nb) 1,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 36 months and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "36 months",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000031",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500 dollars in 3 months.\nb) 125,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 12 weeks and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "12 weeks",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000032",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 1 week.\nb) 250,000 dollars in 50 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 1 year and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 year",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000033",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 1 month.\nb) 5,000,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": null,
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": null
+   },
+   {
+    "sample_uid": "s1_000034",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 20,000 dollars in 5 years.\nb) 10,000 dollars in 1 week.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 1 week. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 week",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000035",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 20 years.\nb) 10,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 1 day matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 day",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000036",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 1 month.\nb) 10,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 2 months. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000037",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 1 month.\nb) 500,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 72 hours. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "72 hours",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000038",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 250,000 dollars in 30 years.\nb) 5,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 168 hours and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "168 hours",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000039",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 125,000 dollars in 5 years.\nb) 5,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": null,
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": null
+   },
+   {
+    "sample_uid": "s1_000040",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 1 year.\nb) 125,000 dollars in 5 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 1 day matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 day",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000041",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 20 years.\nb) 1,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 10 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "10 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000042",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 6 months.\nb) 50,000 dollars in 50 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 6 months matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "6 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000043",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 1 year.\nb) 25,000 dollars in 50 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 6 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "6 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000044",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 1 year.\nb) 200,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 5 years and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "5 years",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000045",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 125,000 dollars in 20 years.\nb) 25,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 72 hours and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "72 hours",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000046",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 200,000 dollars in 30 years.\nb) 100,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 14 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "14 days",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000047",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 10 years.\nb) 10,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 120 months and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "120 months",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000048",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 500,000 dollars in 5 years.\nb) 10,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 20 years matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "20 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000049",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000 dollars in 1 month.\nb) 25,000 dollars in 5 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 1 day matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 day",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000050",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 200,000 dollars in 20 years.\nb) 100,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 30 years matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "30 years",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000051",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 50 years.\nb) 1,000 dollars in 1 year.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 weeks",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000052",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 6 months.\nb) 500,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Only outcomes within the next 260 weeks matter for this decision.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "260 weeks",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 2
+   },
+   {
+    "sample_uid": "s1_000053",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 3 months.\nb) 2,500,000 dollars in 50 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Evaluate the two options over a time frame of 60 months and pick the better one.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "60 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 3
+   },
+   {
+    "sample_uid": "s1_000054",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 5,000,000 dollars in 30 years.\nb) 100,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 24 hours. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "24 hours",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000055",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 30 years.\nb) 1,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 3 decades. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "3 decades",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000056",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 25,000 dollars in 50 years.\nb) 1,000 dollars in 3 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 7 days. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "7 days",
+    "short_first": false,
+    "pair_id": null,
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s1_000057",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 100,000 dollars in 3 months.\nb) 2,500,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000058",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000 dollars in 3 months.\nb) 50,000 dollars in 30 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 3 decades.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "3 decades",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s1_000059",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 1 week.\nb) 500,000 dollars in 20 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 1 day. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "1 day",
+    "short_first": true,
+    "pair_id": null,
+    "phrasing_id": 1
+   }
+  ]
+ },
+ "paired_n30_s2": {
+  "config": {
+   "n": 30,
+   "seed": 2,
+   "unit_rewrite": true,
+   "phrasing_ids": [
+    0,
+    1
+   ],
+   "paired": true
+  },
+  "samples": [
+   {
+    "sample_uid": "s2_000000_0",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000,000 dollars in 50 years.\nb) 100,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 5 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "5 years",
+    "short_first": false,
+    "pair_id": "p2_000000",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000000_1",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000,000 dollars in 50 years.\nb) 100,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 5 years. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "5 years",
+    "short_first": false,
+    "pair_id": "p2_000000",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000000_2",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000,000 dollars in 50 years.\nb) 100,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 60 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "60 months",
+    "short_first": false,
+    "pair_id": "p2_000000",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000000_3",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000,000 dollars in 50 years.\nb) 100,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 60 months. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "60 months",
+    "short_first": false,
+    "pair_id": "p2_000000",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000000_4",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000,000 dollars in 50 years.\nb) 100,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 260 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "260 weeks",
+    "short_first": false,
+    "pair_id": "p2_000000",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000000_5",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 1,000,000 dollars in 50 years.\nb) 100,000 dollars in 1 month.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 260 weeks. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "260 weeks",
+    "short_first": false,
+    "pair_id": "p2_000000",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000001_0",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 500,000 dollars in 50 years.\nb) 10,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": false,
+    "pair_id": "p2_000001",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000001_1",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 500,000 dollars in 50 years.\nb) 10,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 2 months. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": false,
+    "pair_id": "p2_000001",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000001_2",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 500,000 dollars in 50 years.\nb) 10,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 60 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "60 days",
+    "short_first": false,
+    "pair_id": "p2_000001",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000001_3",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 500,000 dollars in 50 years.\nb) 10,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 60 days. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "60 days",
+    "short_first": false,
+    "pair_id": "p2_000001",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000001_4",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 500,000 dollars in 50 years.\nb) 10,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 8 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "8 weeks",
+    "short_first": false,
+    "pair_id": "p2_000001",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000001_5",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 500,000 dollars in 50 years.\nb) 10,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 8 weeks. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "8 weeks",
+    "short_first": false,
+    "pair_id": "p2_000001",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000002_0",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 1 week.\nb) 100,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 3 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "3 days",
+    "short_first": true,
+    "pair_id": "p2_000002",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000002_1",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 1 week.\nb) 100,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 3 days. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "3 days",
+    "short_first": true,
+    "pair_id": "p2_000002",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000002_2",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 1 week.\nb) 100,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 72 hours.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "72 hours",
+    "short_first": true,
+    "pair_id": "p2_000002",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000002_3",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 10,000 dollars in 1 week.\nb) 100,000 dollars in 10 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 72 hours. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "72 hours",
+    "short_first": true,
+    "pair_id": "p2_000002",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000003_0",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500 dollars in 1 month.\nb) 25,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 6 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "6 months",
+    "short_first": true,
+    "pair_id": "p2_000003",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000003_1",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500 dollars in 1 month.\nb) 25,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 6 months. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "6 months",
+    "short_first": true,
+    "pair_id": "p2_000003",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000003_2",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500 dollars in 1 month.\nb) 25,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 180 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "180 days",
+    "short_first": true,
+    "pair_id": "p2_000003",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000003_3",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500 dollars in 1 month.\nb) 25,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 180 days. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "180 days",
+    "short_first": true,
+    "pair_id": "p2_000003",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000003_4",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500 dollars in 1 month.\nb) 25,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 26 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "26 weeks",
+    "short_first": true,
+    "pair_id": "p2_000003",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000003_5",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500 dollars in 1 month.\nb) 25,000 dollars in 2 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 26 weeks. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "26 weeks",
+    "short_first": true,
+    "pair_id": "p2_000003",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000004_0",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500,000 dollars in 20 years.\nb) 50,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 2 months.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": false,
+    "pair_id": "p2_000004",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000004_1",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500,000 dollars in 20 years.\nb) 50,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 2 months. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "2 months",
+    "short_first": false,
+    "pair_id": "p2_000004",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000004_2",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500,000 dollars in 20 years.\nb) 50,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 60 days.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "60 days",
+    "short_first": false,
+    "pair_id": "p2_000004",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000004_3",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500,000 dollars in 20 years.\nb) 50,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 60 days. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "60 days",
+    "short_first": false,
+    "pair_id": "p2_000004",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000004_4",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500,000 dollars in 20 years.\nb) 50,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 8 weeks.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "8 weeks",
+    "short_first": false,
+    "pair_id": "p2_000004",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000004_5",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 2,500,000 dollars in 20 years.\nb) 50,000 dollars in 6 months.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 8 weeks. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "8 weeks",
+    "short_first": false,
+    "pair_id": "p2_000004",
+    "phrasing_id": 1
+   },
+   {
+    "sample_uid": "s2_000005_0",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 1 month.\nb) 1,250,000 dollars in 20 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 30 years.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "30 years",
+    "short_first": true,
+    "pair_id": "p2_000005",
+    "phrasing_id": 0
+   },
+   {
+    "sample_uid": "s2_000005_1",
+    "text": "SITUATION: Plan for the future of the household.\nTASK: You, the head of the household, are tasked to choose the best investment:\na) 50,000 dollars in 1 month.\nb) 1,250,000 dollars in 20 years.\nOBJECTIVE: Think deeply about which option is preferable.\nCONSTRAINT: Your planning horizon is 30 years. Choose the option that is best over that horizon.\nACTION: Select one of the two options. Provide reasoning.\nFORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>",
+    "horizon_text": "30 years",
+    "short_first": true,
+    "pair_id": "p2_000005",
+    "phrasing_id": 1
+   }
+  ]
+ }
+}

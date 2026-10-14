@@ -49,7 +49,7 @@ from common import parse_args
 from spar_horizon.geometry import horizon_probe
 from spar_horizon.model_io import generate_batch, load_model, prefill_ids, suffix_length
 from spar_horizon.plots import horizon_spec
-from spar_horizon.prompts import build_prompts
+from spar_horizon.banks import build_records
 from spar_horizon.runs import Manifest, resolve_out_dir, stamp
 
 warnings.filterwarnings("ignore", category=ConstantInputWarning)
@@ -377,7 +377,7 @@ def run(cfg, layers_spec, stride, hours, out=None):
     budget = Budget(hours)
     out_dir = resolve_out_dir(EXP, cfg, out)
     manifest = Manifest(EXP, cfg, out_dir)
-    records = build_prompts(seed=cfg.seed, limit=cfg.limit)
+    records = build_records(cfg)
     order = interleave_by_horizon(records)
     print(f"{len(records)} prompts, model {cfg.model}, thinking {cfg.thinking}, budget {hours} h")
     tokenizer, model, device = load_model(cfg)

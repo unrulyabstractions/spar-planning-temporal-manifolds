@@ -40,7 +40,8 @@ def candidate_pairs(seed=0, n_pairs=48):
     rng = random.Random(seed)
     pairs = []
     for rewards, delays in itertools.product(REWARD_PAIRS, DELAY_PAIRS):
-        near = [(h, t) for h, t in horizon_phrases() if only_near_delivers({"horizon": h, "delays": delays})]
+        years = {"near_delay_years": DELAY_YEARS[delays[0]], "far_delay_years": DELAY_YEARS[delays[1]]}
+        near = [(h, t) for h, t in horizon_phrases() if only_near_delivers({"horizon": h, **years})]
         far = [(h, t) for h, t in horizon_phrases() if h >= DELAY_YEARS[delays[1]]]
         for (hs, ts), (hl, tl) in itertools.product(near, far):
             if len(ts.split()[0]) == len(tl.split()[0]):
@@ -51,7 +52,7 @@ def candidate_pairs(seed=0, n_pairs=48):
 
 def run(cfg, out=None):
     if cfg.thinking != "off":
-        raise SystemExit("E5 runs with thinking off only (see 02_execution_plan.md)")
+        raise SystemExit("E5 runs with thinking off only (see 01_plan.md)")
     out_dir = resolve_out_dir(EXP, cfg, out)
     manifest = Manifest(EXP, cfg, out_dir)
     tokenizer, model, device = load_model(cfg)

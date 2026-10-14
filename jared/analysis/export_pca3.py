@@ -13,7 +13,7 @@ from scipy.stats import spearmanr
 from sklearn.decomposition import PCA
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from spar_horizon.prompts import DELAY_YEARS, build_prompts, horizon_text  # noqa: E402
+from spar_horizon.prompts import build_prompts, horizon_text  # noqa: E402
 from spar_horizon.runs import load_activations  # noqa: E402
 
 
@@ -33,7 +33,7 @@ def export(root):
         recs = [r for r, k in zip(build_prompts(), z["kept"]) if k]
         has_h = ~np.isnan(z["horizons"])
         log_h = np.where(has_h, np.log10(np.where(has_h, z["horizons"], 1.0)), np.nan)
-        far = np.array([DELAY_YEARS[r["delays"][1]] for r in recs])
+        far = np.array([r["far_delay_years"] for r in recs])
         points = [{"h": (horizon_text(r["horizon"]) if r["horizon"] is not None else "no horizon"),
                    "lh": (None if not has_h[i] else round(float(log_h[i]), 3)),
                    "ratio": (None if not has_h[i] else round(float(log_h[i] - np.log10(far[i])), 3)),

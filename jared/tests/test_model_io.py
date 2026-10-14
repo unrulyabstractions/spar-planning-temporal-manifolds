@@ -64,3 +64,36 @@ def test_system_prompt_goes_before_user(tok):
 def test_settings_rejects_bad_thinking():
     with pytest.raises(ValueError):
         Settings(thinking="maybe")
+
+
+FULL = dict(model=STARTER_MODEL, thinking="off", prefill="", choice_prefix="I choose:")
+
+
+def test_label_ids_follow_choice_prefix(tok):
+    a, b = label_ids(tok, cfg=Settings(**FULL))
+    assert tok.decode([a]) == " a" and tok.decode([b]) == " b"
+
+
+def test_locate_label_after_choice_prefix(tok):
+    from spar_horizon.model_io import locate_label
+    cfg = Settings(**FULL)
+    prompt = tok.encode("PROMPT", add_special_tokens=False)
+    # after a markdown lead the label token has no leading space, as in the prefill path;
+    # digits are their own tokens, so the space before "2" is a lead token too
+    for answer, expect in [("I choose: a). My reasoning: fine.", " a"),
+                           ("**I choose: b)**. My reasoning: fine.", " b"),
+                           ("I choose: **a)**. My reasoning:", "a"),
+                           ("Sure.\nI choose: 2). My reasoning:", "2")]:
+        ids = prompt + tok.encode(answer, add_special_tokens=False)
+        i = locate_label(tok, ids, len(prompt), cfg)
+        assert tok.decode([ids[i]]) == expect, (answer, tok.decode([ids[i]]))
+    ids = prompt + tok.encode("**b)** is better.", add_special_tokens=False)
+    assert tok.decode([ids[locate_label(tok, ids, len(prompt), cfg)]]) == "b"
+
+
+def test_suffix_off_full_bank_has_no_prefill(tok):
+    from spar_horizon.full_bank import build_full_prompts
+    cfg = Settings(**FULL)
+    prompt = build_full_prompts(n=4)[0]["prompt"]
+    assert suffix_length(tok, prompt, cfg) == 9
+    assert chat_text(tok, prompt, cfg).endswith("<think>\n\n</think>\n\n")
