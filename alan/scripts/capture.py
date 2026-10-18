@@ -45,6 +45,7 @@ def main():
     ap.add_argument("--anchors", action="store_true", help="also store M0 (first reasoning token), E0 (last generated token), MEAN over M0..E0")
     ap.add_argument("--max-memory-gib", default=None, help="per-GPU cap in GiB, e.g. 14 or 13.9,14.7")
     ap.add_argument("--split", type=int, default=None, help="explicit 2-GPU map: decoder layers on GPU 0 (Qwen3-14B: 19)")
+    ap.add_argument("--no-acts", action="store_true", help="behaviour only: generation and choice logits, no activation shards")
     a = ap.parse_args()
 
     df = pd.read_parquet(a.prompts)
@@ -53,7 +54,7 @@ def main():
     cfg = CaptureConfig(model_name=a.model, enable_thinking=a.thinking, max_new_tokens=a.max_new_tokens,
                         n_response=a.n_response, batch_size=a.batch_size, anchors=a.anchors,
                         max_memory_gib=([float(x) for x in a.max_memory_gib.split(',')] if a.max_memory_gib else None),
-                        split_layers=a.split)
+                        split_layers=a.split, store_acts=not a.no_acts)
     hf_cfg = AutoConfig.from_pretrained(a.model)
     tcfg = getattr(hf_cfg, "text_config", hf_cfg)          # multimodal wrappers (Qwen3.5) keep the text depth/width in text_config
     n_layers, d_model = tcfg.num_hidden_layers, tcfg.hidden_size

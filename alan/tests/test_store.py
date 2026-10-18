@@ -38,3 +38,24 @@ def test_writer_reader_roundtrip(tmp_path):
     sub = r.index[r.index["shard"] == 1]
     Xs = r.get(layer=0, label="T0", rows=sub)
     np.testing.assert_allclose(Xs[:, 0], [3, 4, 5])
+
+
+def test_writer_behaviour_only(tmp_path):
+    """acts=None (capture --no-acts): no shard files, shard = row = -1, every row and its behaviour in the index,
+    and the index is rewritten as rows arrive (so a killed run keeps what it finished)."""
+    samples = generate(DatasetConfig(n=7, seed=0))
+    w = RunWriter(tmp_path / "run", meta={"n_layers": 3, "d_model": 5, "position_labels": ["T0"], "model_name": "fake"}, shard_rows=3)
+    w.register_samples(samples)
+    results = [SampleResult(sample_uid=s.sample_uid, gen_text="I choose: a).", choice="a", logit_a=1.0, logit_b=0.0,
+                            p_a=0.6, p_b=0.3, acts=None, pos_valid=[True]) for s in samples]
+    w(results[:4])
+    partial = RunData(tmp_path / "run").index
+    print(f"\nbehaviour-only: index rows after 4 results with shard_rows=3: {len(partial)}")
+    assert len(partial) == 3
+    w(results[4:]); w.close()
+    assert not list((tmp_path / "run").glob("acts_*.safetensors"))
+    idx = RunData(tmp_path / "run").index
+    print(f"behaviour-only: final rows {len(idx)}, shards {sorted(idx['shard'].unique())}, chose_short {idx['chose_short'].tolist()}")
+    assert len(idx) == 7 and (idx["shard"] == -1).all() and (idx["row"] == -1).all()
+    assert idx["chose_short"].tolist() == [s.short_first for s in samples]
+    assert np.allclose(idx["p_short"], [1 / (1 + np.exp(-1.0)) if s.short_first else 1 / (1 + np.exp(1.0)) for s in samples])

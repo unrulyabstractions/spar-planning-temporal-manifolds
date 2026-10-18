@@ -314,13 +314,14 @@ def _horizon_renderer(spec: str):
 def fixed_scenario(horizons, *, domain: str = "investment", short_reward, short_delay: Horizon,
                    long_reward, long_delay: Horizon, short_first: bool = True, labels=LABEL_STYLES[0],
                    reward_commas: bool = True, fmt: Optional[PromptFormat] = None, uid_prefix: str = "f",
-                   horizon_render: str = "plain") -> list[PromptSample]:
+                   horizon_render: str = "plain", phrasing_id: Optional[int] = None) -> list[PromptSample]:
     """One option configuration and label order with exactly one varying quantity: exactly one of `horizons` (list of
     Horizon; prompts differ only in the CONSTRAINT line), `short_reward` or `long_reward` (list; prompts differ only in
     that option's line) is a list, the others scalars (one Horizon). For measuring what one quantity alone traces out.
     Nothing enforces short_reward < long_reward: a varying long reward crosses the short one on purpose.
     horizon_render: "plain" (str(Horizon): "37 years", "1 year"), "padN" (zero-padded integer, always plural: "0037 years"),
-    "decN" (N decimals, always plural: "37.00 years"); recorded in the `rendering` column."""
+    "decN" (N decimals, always plural: "37.00 years"); recorded in the `rendering` column.
+    phrasing_id: index into CONSTRAINT_PHRASINGS (None = the format's own constraint text, identical to phrasing 0)."""
     fmt = fmt or PromptFormat()
     is_list = [not isinstance(horizons, Horizon), not isinstance(short_reward, (int, float)), not isinstance(long_reward, (int, float))]
     if sum(is_list) != 1:
@@ -335,7 +336,7 @@ def fixed_scenario(horizons, *, domain: str = "investment", short_reward, short_
             short_reward=float(short_reward), short_delay_text=str(short_delay), short_delay_years=short_delay.years,
             long_reward=float(long_reward), long_delay_text=str(long_delay), long_delay_years=long_delay.years,
             short_first=short_first, label_a=labels[0], label_b=labels[1], format_name=fmt.name,
-            horizon_unit=h.unit, horizon_value=h.value, reward_commas=reward_commas,
+            horizon_unit=h.unit, horizon_value=h.value, reward_commas=reward_commas, phrasing_id=phrasing_id,
             rendering=None if horizon_render == "plain" else horizon_render)
         s.text = fmt.render(s)
         s.prompt_id = hashlib.sha1(s.text.encode()).hexdigest()[:12]

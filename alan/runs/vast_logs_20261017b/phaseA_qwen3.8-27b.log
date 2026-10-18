@@ -1,0 +1,7 @@
+2026-10-17 21:34:22 PHASE A START Qwen/Qwen3.8-27B commit 86c63b0
+2026-10-17 21:37:35 download done; disk 57G free
+2026-10-17 21:38:28 tests: 93 passed, 48 skipped, 14 warnings in 50.69s
+2026-10-17 21:39:28 VERIFY OK
+2026-10-17 21:53:01 probe: done: 8 samples, format adherence 7/8 = 0.875 done: 8 samples, format adherence 7/8 = 0.875  peak MiB 1, 62067
+2026-10-17 21:54:28 nothink: done: 192 samples, format adherence 192/192 = 1.000 done: 192 samples, format adherence 192/192 = 1.000 
+2026-10-17 21:54:28 PHASE A DONE

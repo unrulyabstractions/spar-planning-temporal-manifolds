@@ -1,0 +1,7 @@
+2026-10-18 01:11:08 PHASE A START google/gemma-4-31B-it commit 86c63b0
+2026-10-18 01:14:42 download done; disk 57G free
+2026-10-18 01:15:33 tests: 93 passed, 48 skipped in 49.75s
+2026-10-18 01:16:00 VERIFY OK
+2026-10-18 01:19:21 probe: done: 8 samples, format adherence 8/8 = 1.000 done: 8 samples, format adherence 8/8 = 1.000  peak MiB 1, 64389
+2026-10-18 01:20:47 nothink: done: 192 samples, format adherence 192/192 = 1.000 done: 192 samples, format adherence 192/192 = 1.000 
+2026-10-18 01:20:47 PHASE A DONE

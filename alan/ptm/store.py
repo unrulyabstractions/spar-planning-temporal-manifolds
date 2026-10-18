@@ -4,6 +4,7 @@
       meta.json          model, layers, d_model, position labels, capture + dataset config
       index.parquet      one row per sample: prompt parameters, generation, behavior, shard/row
       acts_0000.safetensors ...   tensor "acts": [n, n_layers+1, n_pos, d_model] bf16
+                         (absent for a behaviour-only capture: results with acts=None get shard = row = -1)
 
 Rows in index.parquet are in the same order as rows across shards, and each row records its
 (shard, row) so lookups never rely on ordering alone.
@@ -36,6 +37,7 @@ class RunWriter:
         self._buf: list[torch.Tensor] = []
         self._shard = 0
         self._samples_by_uid: dict[str, PromptSample] = {}
+        self._n_unindexed = 0               # behaviour-only rows since the last index write
 
     def register_samples(self, samples: Iterable[PromptSample]) -> None:
         for s in samples:
@@ -56,7 +58,7 @@ class RunWriter:
                 choice_gen_index=r.choice_gen_index,
                 anchor_index=json.dumps(r.anchor_index) if r.anchor_index is not None else None,
                 logit_a=r.logit_a, logit_b=r.logit_b, p_a=r.p_a, p_b=r.p_b,
-                shard=self._shard, row=len(self._buf),
+                shard=self._shard if r.acts is not None else -1, row=len(self._buf) if r.acts is not None else -1,
             )
             # behavior in short/long terms, independent of label order
             if r.choice is None:
@@ -72,6 +74,12 @@ class RunWriter:
                 pa, pb = r.p_a, r.p_b
                 row["p_short_vocab"], row["p_long_vocab"] = (pa, pb) if s.short_first else (pb, pa)
             self.rows.append(row)
+            if r.acts is None:              # behaviour only: no shard; rewrite the index at the same cadence
+                self._n_unindexed += 1
+                if self._n_unindexed >= self.shard_rows:
+                    self._write_index()
+                    self._n_unindexed = 0
+                continue
             self._buf.append(r.acts)
             if len(self._buf) >= self.shard_rows:
                 self._flush()

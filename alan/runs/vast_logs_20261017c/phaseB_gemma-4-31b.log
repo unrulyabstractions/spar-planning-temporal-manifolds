@@ -1,0 +1,7 @@
+2026-10-18 01:20:56 PHASE B START google/gemma-4-31B-it batch 4
+2026-10-18 02:43:55 think: done: 192 samples, format adherence 192/192 = 1.000 done: 192 samples, format adherence 192/192 = 1.000 
+runs/gemma-4-31b_think_pilot 384 rows; uids unique and equal to the pilot set
+runs/gemma-4-31b_nothink_pilot 384 rows; uids unique and equal to the pilot set
+2026-10-18 02:49:54 analysis done
+2026-10-18 02:49:54 weights freed; disk 115G free
+2026-10-18 02:49:54 PHASE B DONE

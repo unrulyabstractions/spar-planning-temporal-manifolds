@@ -57,7 +57,10 @@ for s, r in zip(samples, res):
     if r.choice is not None:
         pos = enc.prompt_len + r.choice_gen_index - 1
         lg = ref.logits[0, pos].float().cpu()
-        ia, ib = tok(" a)", add_special_tokens=False)["input_ids"][0], tok(" b)", add_special_tokens=False)["input_ids"][0]
+        # spacing variant from the emitted token, as capture does (`I choose: **b)` emits 'b', not ' b')
+        spaced = full[0, pos + 1].item() in (tok(" a)", add_special_tokens=False)["input_ids"][0], tok(" b)", add_special_tokens=False)["input_ids"][0])
+        sp = " " if spaced else ""
+        ia, ib = tok(sp + "a)", add_special_tokens=False)["input_ids"][0], tok(sp + "b)", add_special_tokens=False)["input_ids"][0]
         pr = torch.softmax(lg, -1)
         line += f" | logits ref a={lg[ia]:.3f} b={lg[ib]:.3f} mine a={r.logit_a:.3f} b={r.logit_b:.3f}; p ref a={pr[ia]:.3f} b={pr[ib]:.3f}"
         ok &= abs((lg[ia] - lg[ib]) - (r.logit_a - r.logit_b)) < 1.0   # bf16 ulp at |logit|~60 is 0.5

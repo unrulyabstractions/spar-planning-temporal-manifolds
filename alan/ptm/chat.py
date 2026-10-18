@@ -26,6 +26,33 @@ def end_of_turn_id(tok) -> int:
     return next(iter(found.values()))
 
 
+# Token that closes the model's own thinking in thinking mode: Qwen3 / Qwen3.5 / Qwen3.8 `</think>`, Gemma 4 `<channel|>`
+# (end of the thought channel). A tokenizer must have exactly one.
+END_OF_THINKING_TOKENS = ("</think>", "<channel|>")
+
+
+def end_of_thinking_id(tok) -> int:
+    found = {t: i for t in END_OF_THINKING_TOKENS
+             if (i := tok.convert_tokens_to_ids(t)) is not None and i != tok.unk_token_id}
+    if len(found) != 1:
+        raise ValueError(f"expected exactly one of {END_OF_THINKING_TOKENS} in the vocabulary, found {sorted(found)}; "
+                         f"unverified chat template family")
+    return next(iter(found.values()))
+
+
+def answer_start(tok, gen_ids: list[int], thinking: bool) -> Optional[int]:
+    """Index into gen_ids where the answer may start. 0 without thinking (the template pre-fills an empty think block).
+    With thinking: the index after the FIRST end-of-thinking token the model generated; None if it never closed its
+    thinking (truncated or malformed), so nothing it wrote while deliberating is read as the answer."""
+    if not thinking:
+        return 0
+    eot = end_of_thinking_id(tok)
+    for k, t in enumerate(gen_ids):
+        if t == eot:
+            return k + 1
+    return None
+
+
 @dataclass
 class ChatEncoding:
     input_ids: list[int]
@@ -73,30 +100,31 @@ def label_first_token_ids(tok, label: str) -> set[int]:
     return {tok(" " + label, add_special_tokens=False)["input_ids"][0], tok(label, add_special_tokens=False)["input_ids"][0]}
 
 
-def find_choice(tok, gen_ids: list[int], label_a: str, label_b: str, prefix: str = "I choose:") -> tuple[Optional[int], Optional[str]]:
-    """Locate the choice token in generated ids.
+def find_choice(tok, gen_ids: list[int], label_a: str, label_b: str, prefix: str = "I choose:",
+                start: int = 0) -> tuple[Optional[int], Optional[str]]:
+    """Locate the choice token in generated ids, searching only gen_ids[start:] (see answer_start).
 
     Returns (index into gen_ids of the label's first token, 'a' | 'b'), or (None, None) when the
-    response does not follow the format. The decoded prefix must end with `prefix` so an incidental
-    ' a' article elsewhere is not mistaken for the choice.
+    response does not follow the format. The decoded prefix (from `start`) must end with `prefix` so an
+    incidental ' a' article elsewhere is not mistaken for the choice.
     """
     ia, ib = label_first_token_ids(tok, label_a), label_first_token_ids(tok, label_b)
     if ia & ib:
         raise ValueError(f"labels {label_a!r} and {label_b!r} share a first token; choice readout is ambiguous")
-    for j in range(1, len(gen_ids)):
+    for j in range(max(1, start + 1), len(gen_ids)):
         if gen_ids[j] in ia or gen_ids[j] in ib:
             # allow markdown emphasis between the prefix and the label: `I choose: **a)`
-            before = tok.decode(gen_ids[:j]).rstrip().rstrip("*_").rstrip()
+            before = tok.decode(gen_ids[start:j]).rstrip().rstrip("*_").rstrip()
             if before.endswith(prefix):
                 return j, ("a" if gen_ids[j] in ia else "b")
     return None, None
 
 
-def find_anchor(tok, gen_ids: list[int], prefix: str) -> Optional[int]:
-    """Index into gen_ids of the first token AFTER the generated text ends with `prefix` (e.g. "My reasoning:"),
-    or None if the prefix never occurs (or nothing follows it)."""
-    for j in range(1, len(gen_ids)):
-        if tok.decode(gen_ids[:j]).rstrip().endswith(prefix):
+def find_anchor(tok, gen_ids: list[int], prefix: str, start: int = 0) -> Optional[int]:
+    """Index into gen_ids of the first token AFTER the generated text (from `start`) ends with `prefix` (e.g.
+    "My reasoning:"), or None if the prefix never occurs (or nothing follows it)."""
+    for j in range(max(1, start + 1), len(gen_ids)):
+        if tok.decode(gen_ids[start:j]).rstrip().endswith(prefix):
             return j
     return None
 

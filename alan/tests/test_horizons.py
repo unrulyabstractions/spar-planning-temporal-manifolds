@@ -8,6 +8,9 @@ def test_parse_and_years():
     assert Horizon.parse("1 year").years == 1.0
     assert Horizon.parse("2 weeks").years == pytest.approx(14 / 365.25)
     assert Horizon.parse("1 century").years == 100.0
+    assert Horizon.parse("1 quarter").years == 0.25
+    assert Horizon.parse("37.25 quarters").years == pytest.approx(9.3125)
+    assert str(Horizon(1, "quarters")) == "1 quarter" and str(Horizon(8, "quarters")) == "8 quarters"
 
 
 def test_str_roundtrip():

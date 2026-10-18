@@ -39,3 +39,21 @@ months, year delays), runs/qwen3-14b_matched_months_years_dec2_n1200, runs/qwen3
 runs/qwen3-14b_matched_months_years_dec2_dm_n1200 (month delays), runs/qwen3-14b_matched_years_dwmy_n100,
 runs/qwen3-14b_years_render_n1200. Generators: scripts/gen_dense_horizons.py; analysis: scripts/intrinsic_dim.py,
 scripts/run_matched_units.sh, scripts/run_years_render.sh, scripts/run_delay_unit.sh.
+
+## 2. Peak-cell reruns for Qwen3.8-27B and Gemma 4 31B-it (opened 2026-10-04)
+
+**Status:** shelved by Alan on 2026-10-04 because of egress cost; he wants to come back and run them.
+
+**What:** `scripts/peak_cells.sh <tag>` for both models (curve model, Guttman, relevance, scaling, LEACE, PLS, within-bin,
+late readout at each model's own sweep-peak layers). The fixed fractional cells (0.55/0.65 L) sit before Gemma's
+ordinality peak (≈ 0.62 L), so the fixed-cell comparison may understate Gemma (progress-20261004.md, review entry).
+Peak cells: Qwen3.8-27B T3 → L32, R0 → L21 (overall L21 R0); Gemma T3 → L33, R0 → L37, overall L38 R6 — the last is
+after the answer token; use the best pre-answer cell instead (L37 R0) unless Alan wants the post-answer one.
+
+**Why it is not trivial:** needs the FULL shards (only Gemma L33 is among the exported subset layers) of six runs per model
+(investment, matrix, extended, families, matrix_long, families_long): 138.5 GiB (Qwen3.8) + 136.4 GiB (Gemma) ≈ 295 GB
+in gs://alan-captures-20261003. Downloading that to any non-Google machine (Vast, local) is billed egress, ≈ $35 at
+~$0.12/GB list (recollection; check). CPU-only, ≈ 25 min per model (27B peak run on 09-30).
+**Options:** a CPU VM in us-east4 reading the bucket (no egress; a few dollars; console setup in project
+spar2026-temp-man), or Vast (≥ 200 GB disk processing one model at a time, ≥ 8 cores of real cgroup quota, ≥ 32 GB RAM,
+≥ 1 Gbps down, cheapest GPU) plus the egress charge.

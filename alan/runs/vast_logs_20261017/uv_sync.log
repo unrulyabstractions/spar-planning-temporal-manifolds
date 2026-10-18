@@ -1,0 +1,7 @@
+Resolved 82 packages in 2ms
+   Building ptm @ file:///workspace/SPAR-2026
+      Built ptm @ file:///workspace/SPAR-2026
+Prepared 1 package in 918ms
+Uninstalled 1 package in 0.76ms
+Installed 1 package in 4ms
+ ~ ptm==0.0.1 (from file:///workspace/SPAR-2026)

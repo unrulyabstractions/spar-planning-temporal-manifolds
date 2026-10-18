@@ -21,7 +21,7 @@ from typing import Optional
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .chat import (ANCHOR_LABELS, ChatEncoding, encode_user_turn, end_of_turn_id, find_anchor, find_choice,
+from .chat import (ANCHOR_LABELS, ChatEncoding, answer_start, encode_user_turn, end_of_turn_id, find_anchor, find_choice,
                    label_first_token_id, position_labels)
 from .prompts import PromptSample
 
@@ -38,6 +38,7 @@ class CaptureConfig:
     dtype: str = "bfloat16"
     max_memory_gib: Optional[object] = None  # per-GPU cap in GiB: a number, or a list per GPU; None = accelerate decides
     split_layers: Optional[int] = None       # explicit 2-GPU map: embeddings + this many decoder layers on GPU 0, rest on GPU 1
+    store_acts: bool = True                  # False: behaviour only (generation + choice logits), no residual hooks or shards
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -243,14 +244,16 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
                 valid.append(False)
         mean_range = None
         if cfg.anchors:
-            j = find_anchor(tok, g, cfg.reasoning_prefix)
+            st = answer_start(tok, g, cfg.enable_thinking)
+            j = find_anchor(tok, g, cfg.reasoning_prefix, start=st) if st is not None else None
             m0 = (e.prompt_len + j) if (j is not None and j < len(g)) else None
             e0 = (e.prompt_len + len(g) - 1) if len(g) > 0 else None
             positions[0, n_fixed] = m0 if m0 is not None else 0; valid.append(m0 is not None)
             positions[0, n_fixed + 1] = e0 if e0 is not None else 0; valid.append(e0 is not None)
             ok = m0 is not None and e0 is not None and e0 >= m0
             mean_range = [(m0, e0) if ok else None]; valid.append(ok)
-        hooks.arm(positions, mean_range if cfg.anchors else None)
+        if cfg.store_acts:
+            hooks.arm(positions, mean_range if cfg.anchors else None)
         last_raw: dict = {}
         hh = text_stack(model).layers[-1].register_forward_hook(
             lambda m, i, o: last_raw.setdefault("x", (o[0] if isinstance(o, (tuple, list)) else o)))
@@ -259,10 +262,13 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
         finally:
             hh.remove()
             hooks.disarm()
-        a = hooks.out[0].clone()   # [L+1, n_pos, d]
-        for k, v in enumerate(valid):
-            if not v:
-                a[:, k] = 0
+        if cfg.store_acts:
+            a = hooks.out[0].clone()   # [L+1, n_pos, d]
+            for k, v in enumerate(valid):
+                if not v:
+                    a[:, k] = 0
+        else:
+            a = None
         acts_list.append(a)
         pos_valid.append(valid)
         positions_list.append(positions)
@@ -284,13 +290,15 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
             acts=acts_list[b],
             pos_valid=pos_valid[b],
         )
-        j, choice = find_choice(tok, g, s.label_a, s.label_b)
+        # thinking mode: only text after the model closed its thinking can be the answer
+        st = answer_start(tok, g, cfg.enable_thinking)
+        j, choice = find_choice(tok, g, s.label_a, s.label_b, start=st) if st is not None else (None, None)
         if j is not None:
             k = n_trans + (j - 1)          # stored position R{j-1} predicts the label token
             pos = e.prompt_len + j - 1
-            if k < n_pos and pos_valid[b][k]:
+            if cfg.store_acts and k < n_pos and pos_valid[b][k]:
                 raw = acts_list[b][-1, k]
-            else:                          # choice beyond the stored response window: pull it now
+            else:                          # choice beyond the stored response window, or no stored acts: pull it now
                 raw = last_raw_list[b][pos].to("cpu")
             norm = text_stack(model).norm
             h = norm(raw.to(norm.weight.device, dtype=norm.weight.dtype))
@@ -317,7 +325,7 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
 def run_capture(samples: list[PromptSample], cfg: CaptureConfig, sink, log=print) -> None:
     """Capture all samples in batches, handing each batch's results to `sink(results)`."""
     model, tok = load_model(cfg)
-    hooks = ResidualHooks(model)
+    hooks = ResidualHooks(model)          # with store_acts=False the hooks stay disarmed and copy nothing
     log(f"loaded {cfg.model_name}: n_layers={hooks.n_layers} devices={sorted({str(p.device) for p in model.parameters()})}")
     sys.stdout.flush()
     t0 = time.time()

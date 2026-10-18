@@ -1,7 +1,12 @@
 # Alan — Planning Temporal Manifolds snapshot
 
 Snapshot of my working repo (`CodeReclaimers/SPAR-2026`, private) at the commit named in
-`SNAPSHOT.yaml`. **Third snapshot (2026-10-04).** New since the second: the standard chain on two current models,
+`SNAPSHOT.yaml`. **Fourth snapshot (2026-10-18).** New since the third: unit compatibility of the horizon constraint
+(code and logs of 2026-10-05..11), the thinking-mode pilot on three models (2026-10-17) with its run indices and
+figures, and an audit of thinking conclusions against final answers. Start with `notes/update-2026-10-18.md`; see "New in
+the fourth snapshot" below.
+
+**Third snapshot (2026-10-04).** New since the second: the standard chain on two current models,
 **Qwen/Qwen3.8-27B** and **google/gemma-4-31B-it** (Vast.ai A100, 2026-10-03; run names `qwen3.8-27b_*`,
 `gemma-4-31b_*`), their activations in a Google Cloud Storage bucket (below), a six-model depth profile
 (`figures/depth_profiles/`), and the intrinsic-dimension work of 2026-10-01..03 (`progress-2026100{1,2,3}.md`;
@@ -16,9 +21,9 @@ from committed code on 2026-09-25 (`runs/reproduce_all.log`); the Qwen3.5-27B ru
 
 ## What is here
 
-- `ptm/`, `scripts/`, `tests/` — capture and analysis code (Python; `uv sync --extra dev`; 131 tests).
+- `ptm/`, `scripts/`, `tests/` — capture and analysis code (Python; `uv sync --extra dev`; 141 tests).
 - `CLAUDE.md` — project conventions, capture facts, and commands. `progress-*.md` — dated logs with
-  every number and the command that produced it. `notes/` — weekly-update notes (`update-2026-10-01.md` is the current one).
+  every number and the command that produced it. `notes/` — weekly-update notes (`update-2026-10-18.md` is the current one).
 - `data/prompts/` — all prompt datasets (regenerable: `gen_prompts.py`, `gen_matrix.py`).
 - `runs/<run>/index.parquet` — one row per prompt: parameters, generated text, parsed choice, label
   logits; `meta.json` — model, layer convention, positions.
@@ -75,6 +80,35 @@ Qwen3-14B only (2026-10-01..03, intrinsic dimension; `runs/` holds index/metadat
 
 Also `figures/stakes_pilot*/` (stakes pilot on existing captures) and, for the 27B,
 `figures/qwen3.5-27b_matrix_s0/peak/` (cell analyses at the sweep's peak layers, L23 T3 / L20 R0 / L31 T6).
+
+## New in the fourth snapshot
+
+Numbers and commands are in `progress-2026100{5,6,7,8}.md`, `progress-202610{11,17,18}.md`; hypotheses in
+`notes/paper-directions-2026-10-13.md`. This snapshot was assembled from a laptop: it carries the code and logs for all
+of the work, but run indices and figures only for the 2026-10-17 thinking pilot. The 2026-10-07/08 full unit-boundary
+runs (18,128 prompts × Qwen3-14B, Qwen3.8-27B, Gemma 4 31B-it) are described in the logs, but their `runs/` and
+`figures/` folders are not included.
+
+- **Unit compatibility (10-07/08, behaviour only).** The prompt asks for the greatest benefit within a horizon H; short =
+  $10,000 in 1 year, long = ratio × $10,000 in D years; the short option is correct iff H < D. Models follow the
+  constraint well when H and the delays share a unit and lose it when they do not. Below-boundary violations
+  (long chosen though H < D), matched / mismatched, short first: Qwen3-14B 0.300 / 0.717, Qwen3.8-27B 0.011 / 0.254,
+  Gemma 4 31B-it 0.100 / 0.467.
+- **Thinking-mode pilot (10-17, Vast.ai 2 × A100).** 384 prompts (D = 10 y, ratio 5, phrasing 0, 16 unit cells × 12
+  H/D × 2 orders), each run with and without thinking, greedy, cap 8,192 tokens. Run indices:
+  `runs/<tag>_{think,nothink}_pilot/` (merged from two GPU halves, `merged_from.json`); tables and curves:
+  `figures/<tag>_{think,nothink}_pilot/` (`unit_boundary.md`, `paired_think_vs_nothink.txt`); no-thinking vs thinking
+  plots per model: `figures/unit_boundary_think_compare/`. Instance logs and checksums: `runs/vast_logs_20261017{,b,c}/`.
+  Mismatched-unit violations away from H/D ≈ 1: 0.000–0.008 with thinking vs 0.551–0.725 without; Gemma switches at
+  H/D ≈ 1.02 in all 16 cells. Unclosed thinking at the cap: Qwen3-14B 5, Qwen3.8-27B 22 (mostly quarter-denominated
+  delays read as per-period payments), Gemma 0. What this does not show: *why* non-thinking mode fails (conversion,
+  comparison, or not applying the constraint); see the closing slide in `notes/update-2026-10-18.md`.
+  Known defect: `figures/gemma-4-31b_think_pilot/paired_think_vs_nothink.txt` says "384 never closed thinking"; the
+  script counted only `</think>` (fixed in `scripts/think_vs_nothink_pilot.py`); all 384 closed.
+- **Thinking conclusion vs final answer (10-18).** `scripts/think_conclusion_audit.py` plus a hand audit: 3 of 1,125
+  closed traces end with a conclusion the final answer contradicts, all Qwen3-14B at H/D 0.983; none in Qwen3.8-27B or
+  Gemma 4 31B-it.
+- **Model choice.** Qwen3-14B is dropped as an experimental target from here; new work uses current models.
 
 ## New in the third snapshot
 

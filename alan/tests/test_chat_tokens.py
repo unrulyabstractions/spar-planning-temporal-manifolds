@@ -105,3 +105,26 @@ def test_find_anchor_first_reasoning_token(tok):
     assert j is not None and tok.decode(ids[:j]).rstrip().endswith("My reasoning:") and tok.decode([ids[j]]).strip() == "Over"
     assert find_anchor(tok, tok("I choose: a). No explanation.", add_special_tokens=False)["input_ids"], "My reasoning:") is None
     assert find_anchor(tok, tok("I choose: a). My reasoning:", add_special_tokens=False)["input_ids"], "My reasoning:") is None   # nothing follows
+
+
+def test_thinking_answer_is_read_after_thinking_closes(tok):
+    """Thinking mode: a choice written while deliberating must not be read as the answer. The parser reads only the
+    text after the model's end-of-thinking token (Qwen `</think>`, Gemma 4 `<channel|>`); unclosed thinking = no answer."""
+    from ptm.chat import answer_start, end_of_thinking_id
+    if is_gemma4(tok):
+        open_, close = "<|channel>thought\n", "<channel|>"
+    else:
+        open_, close = "<think>\n", "\n</think>\n\n"
+    think = "Option a) is 1 year. Maybe I choose: a) since it is sooner. But 40 quarters is 10 years, within 12 years."
+    full = tok(open_ + think + close + "I choose: b). My reasoning: both fit; b) is larger.", add_special_tokens=False)["input_ids"]
+    eot = end_of_thinking_id(tok)
+    assert full.count(eot) == 1, "end-of-thinking marker must be a single special token"
+    st = answer_start(tok, full, thinking=True)
+    j, c = find_choice(tok, full, "a)", "b)", start=st)
+    print(f"\n{tok.name_or_path}: end-of-thinking {tok.decode([eot])!r} at {st - 1}; choice {c!r} at {j}; "
+          f"without start the parser would read {find_choice(tok, full, 'a)', 'b)')[1]!r}")
+    assert c == "b" and j > st
+    assert find_choice(tok, full, "a)", "b)")[1] == "a"          # the trap the start index removes
+    unclosed = tok(open_ + think, add_special_tokens=False)["input_ids"]
+    assert answer_start(tok, unclosed, thinking=True) is None
+    assert answer_start(tok, unclosed, thinking=False) == 0

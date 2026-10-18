@@ -1,5 +1,5 @@
-snapshot_commit: b8bf7c5
-snapshot_date: 2026-10-04T10:54:47Z
+snapshot_commit: a248bac
+snapshot_date: 2026-10-18T17:45:00Z
 source: https://github.com/CodeReclaimers/SPAR-2026
 runs:
   - gemma-4-31b_extended_n2000_s0: google/gemma-4-31B-it 2000 prompts; 2026-10-03T17:39:37 -> 2026-10-03T17:57:14
@@ -49,6 +49,12 @@ runs:
   - qwen3.8-27b_phrasings_n2000_s0: Qwen/Qwen3.8-27B 2000 prompts; 2026-10-03T12:32:39 -> 2026-10-03T12:51:00
   - qwen3.8-27b_units_paired_n2000_s1: Qwen/Qwen3.8-27B 2000 prompts; 2026-10-03T12:51:07 -> 2026-10-03T13:08:07
   - qwen3-8b_investment_n2000_s0: Qwen/Qwen3-8B 2000 prompts; 2026-10-01T14:42:22 -> 2026-10-01T14:51:48
+  - gemma-4-31b_nothink_pilot: google/gemma-4-31B-it 384 prompts (merged from 2 GPU halves; meta.json is the first half's); 2026-10-18T01:19:28 -> 2026-10-18T01:20:46
+  - gemma-4-31b_think_pilot: google/gemma-4-31B-it 384 prompts (merged from 2 GPU halves; meta.json is the first half's); 2026-10-18T01:21:03 -> 2026-10-18T02:41:03
+  - qwen3-14b_nothink_pilot: Qwen/Qwen3-14B 384 prompts (merged from 2 GPU halves; meta.json is the first half's); 2026-10-17T19:10:01 -> 2026-10-17T19:10:37
+  - qwen3-14b_think_pilot: Qwen/Qwen3-14B 384 prompts (merged from 2 GPU halves; meta.json is the first half's); 2026-10-17T19:10:46 -> 2026-10-17T21:23:05
+  - qwen3.8-27b_nothink_pilot: Qwen/Qwen3.8-27B 384 prompts (merged from 2 GPU halves; meta.json is the first half's); 2026-10-17T21:53:07 -> 2026-10-17T21:54:25
+  - qwen3.8-27b_think_pilot: Qwen/Qwen3.8-27B 384 prompts (merged from 2 GPU halves; meta.json is the first half's); 2026-10-17T21:54:35 -> 2026-10-18T01:05:17
 activation_subsets: 0 files (0)
   - gemma-4-31b_extended_n2000_s0: layers [21, 27, 33, 39, 43, 50, 55] positions ['T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'R0', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7']
   - gemma-4-31b_families_s0_long: layers [21, 27, 33, 39, 43, 50, 55] positions ['T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'R0', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'M0', 'E0', 'MEAN']
