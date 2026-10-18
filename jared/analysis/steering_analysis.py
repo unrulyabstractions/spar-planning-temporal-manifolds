@@ -52,19 +52,26 @@ def cv_r2(features, target, folds=5, seed=0):
     return float(1 - ((target - pred) ** 2).sum() / ((target - target.mean()) ** 2).sum())
 
 
-def answer_slot(root, mode, layer, cell):
-    """Subspace coordinates Z [n, K], log horizon, and the decision per horizon prompt:
+def saved_decision(run, z):
+    """The decision per horizon prompt of a saved E0 run (rows as in cell_data):
     a-vs-b log-odds, near-vs-far log-odds, chose_near."""
-    run = root / f"exp0_Qwen3-8B_think-{mode}_full"
-    z = np.load(run / "activations.npz")
     answers = json.loads((run / "answers.json").read_text())
-    X, log_h, _ = cell_data(z, "pre-label", layer)
     keep = ~np.isnan(z["horizons"])
     rows = [a for a, k in zip(answers, keep) if k]
     ab = z["label_logits"][keep, 0] - z["label_logits"][keep, 1]
     near_is_a = np.array([r["near_label"] == "a" for r in rows])
     near = np.where(near_is_a, ab, -ab)
     chose_near = np.array([r["label"] == r["near_label"] for r in rows])
+    return ab, near, chose_near
+
+
+def answer_slot(root, mode, layer, cell):
+    """Subspace coordinates Z [n, K], log horizon, and the decision per horizon prompt:
+    a-vs-b log-odds, near-vs-far log-odds, chose_near."""
+    run = root / f"exp0_Qwen3-8B_think-{mode}_full"
+    z = np.load(run / "activations.npz")
+    X, log_h, _ = cell_data(z, "pre-label", layer)
+    ab, near, chose_near = saved_decision(run, z)
     Z = (X - cell["mean"]) @ cell["basis"][:K].T
     return Z, log_h, ab, near, chose_near
 

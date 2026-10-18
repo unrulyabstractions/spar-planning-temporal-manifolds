@@ -10,6 +10,8 @@ Inputs come from analysis/steering_prepare.py. Tests:
   steer   T3  line / curve / mean-difference / random steering at the off cells
   post    T4  T2 and T3 at the thinking-on cells, on the cached reasoning
   answer  T5  answer-slot patching across prompts, per layer, both modes
+Cells whose inputs carry a `decision` direction (steering_prepare.py, 07 section 10)
+are steered and ablated along the horizon/decision split instead of the probe line.
 Thinking off is teacher-forced through "I choose:" and each prompt is averaged
 with its option-swapped twin. Writes <out>/exp8_<inputs name>/results.json
 (e.g. exp8_Qwen3-8B_answer_slot) and prints the success criteria of the spec,
@@ -40,6 +42,10 @@ ALPHAS = (-2, -1, 1, 2)
 ABLATE_KS = (1, 2, 4, 8)
 CUT_K = {"off": 2, "on": 4}          # the k at which "necessary" is judged (spec section 5)
 DIRECTIONS = ("line", "curve", "mean difference", "random 0", "random 1")
+# for cells with a decision direction (07 section 10): the line is inert at every cell
+# so far and is dropped; the curve is split into its decision part and the rest
+DECISION_DIRECTIONS = ("curve", "curve without decision", "decision part of curve", "decision",
+                       "mean difference", "random 0")
 N_RANDOM_SUBSPACES = 3
 MAX_PAIRS = 96
 MAX_ANSWER_PAIRS = {"off": 96, "on": 64}   # thinking-on pairs cost ~2.5k-token passes per layer
@@ -72,8 +78,9 @@ def load_inputs(path):
     cells = {}
     for c in meta["cells"]:
         key = f"{c['mode']}|{c['label']}|{c['layer']}"
-        cells[key] = {**c, **{name: z[f"{key}|{name}"] for name in
-                              ("mean", "w", "basis", "curve_logh", "curve_coords", "caa")}, "b": float(z[f"{key}|b"])}
+        names = ("mean", "w", "basis", "curve_logh", "curve_coords", "caa") + (
+            ("decision",) if f"{key}|decision" in z.files else ())
+        cells[key] = {**c, **{name: z[f"{key}|{name}"] for name in names}, "b": float(z[f"{key}|b"])}
     names = ("ids", "offsets", "close", "think_len", "forced", "labels", "record")
     post = {name: z[f"post|{name}"] for name in names} if meta["n_post"] else None
     return meta, cells, post
@@ -108,13 +115,26 @@ def on_prompts(post, records, batch_size):
     return {"variants": [variant], "batch_size": batch_size}, rows
 
 
+def directions(cell):
+    return DECISION_DIRECTIONS if "decision" in cell else DIRECTIONS
+
+
 def delta_rows(cell, direction, alpha, log_h):
     """Per-row displacement [n, d] for one direction and alpha (decades along the
     curve of horizon averages). Every direction moves each row as far as the
-    curve does, so they differ in direction only."""
+    curve does, so they differ in direction only, except the two parts of the
+    curve, which add up to it."""
     if direction == "curve":
         return S.curve_delta(cell, log_h, alpha)
-    if direction == "line":
+    if direction == "curve without decision":
+        return S.without_direction(S.curve_delta(cell, log_h, alpha), cell["decision"])
+    if direction == "decision part of curve":
+        curve = S.curve_delta(cell, log_h, alpha)
+        return curve - S.without_direction(curve, cell["decision"])
+    if direction == "decision":
+        # a longer horizon (alpha > 0) should lower the near log-odds, so step against the decision vector
+        vector = -cell["decision"]
+    elif direction == "line":
         vector = cell["w"]
     elif direction == "mean difference":
         vector = cell["caa"]
@@ -130,22 +150,27 @@ def adder(deltas, device):
 def run_ablate(runner, prompts, cell, regimes, base):
     """T2/T4 ablation at one cell: removed share of the contrast for the horizon-average
     subspace at every k, and for random subspaces at the k where "necessary" is
-    judged (the control the criterion needs; at other k it would only cost time)."""
+    judged (the control the criterion needs; at other k it would only cost time).
+    Returns (removed shares, edited log-odds per prompt)."""
     d = len(cell["mean"])
     mean = torch.tensor(cell["mean"], device=runner.device, dtype=torch.float32)
     available = [k for k in ABLATE_KS if k <= cell["basis"].shape[0]]
     cut = CUT_K[cell["mode"]] if CUT_K[cell["mode"]] in available else max(available)
-    out = {}
+    out, per_prompt = {}, {}   # removed share per k and subspace; edited log-odds per prompt, "k|subspace"
     for k in available:
         bases = {"horizon": cell["basis"][:k]}
         if k == cut:
             bases.update({f"random {s}": S.random_orthonormal(d, k, seed=s) for s in range(N_RANDOM_SUBSPACES)})
+            if "decision" in cell:
+                bases["horizon without decision"] = S.basis_without(cell["basis"][:k], cell["decision"])
+                bases["decision"] = cell["decision"][None, :]
         out[k] = {}
         for name, basis in bases.items():
             edit = S.MeanAblate(mean, torch.tensor(basis, device=runner.device, dtype=torch.float32))
             edited = runner.score(prompts, cell["label"], cell["layer"], lambda rows, e=edit: e)
             out[k][name] = S.removed_fraction(base, edited, regimes)
-    return out
+            per_prompt[f"{k}|{name}"] = edited.tolist()
+    return out, per_prompt
 
 
 def run_steer(runner, prompts, cell, regimes, log_h, base, contrast):
@@ -154,7 +179,7 @@ def run_steer(runner, prompts, cell, regimes, log_h, base, contrast):
     effect signed toward the rational answer (for the curve-vs-line criterion)."""
     out = {}
     regimes = np.asarray(regimes)
-    for direction in DIRECTIONS:
+    for direction in directions(cell):
         out[direction] = {}
         for alpha in ALPHAS:
             deltas = delta_rows(cell, direction, alpha, log_h)
@@ -163,7 +188,8 @@ def run_steer(runner, prompts, cell, regimes, log_h, base, contrast):
             out[direction][alpha] = {"near": S.bootstrap_mean(effect[regimes == "near"]),
                                      "both": S.bootstrap_mean(effect[regimes == "both"]),
                                      "readout": float((deltas @ cell["w"]).mean()),
-                                     "toward": S.toward_rational(effect, regimes, alpha).tolist()}
+                                     "toward": S.toward_rational(effect, regimes, alpha).tolist(),
+                                     "effect": effect.tolist()}
     return out
 
 
@@ -245,7 +271,9 @@ def verdicts(mode, cell_results):
         worst_random = max(v[0] for name, v in ablate[k].items() if name.startswith("random"))
         out["necessary"] = {"k": k, "removed": horizon, "random_max": worst_random,
                             "pass": bool(horizon >= 0.5 and worst_random <= 0.1)}
-    if steer:
+    if steer and "curve without decision" in steer:
+        out.update(decision_verdicts(ablate, steer))
+    if steer and "line" in steer:
         near_up, both_down = steer["line"][1]["near"][0], steer["line"][-1]["both"][0]
         random_abs = np.mean([abs(steer[r][a][g][0]) for r in DIRECTIONS if r.startswith("random")
                               for a in (-2, 2) for g in ("near", "both")])
@@ -258,16 +286,46 @@ def verdicts(mode, cell_results):
     return out
 
 
+def toward_at_2(steer, direction):
+    """Per-prompt effect toward the rational answer at |alpha| = 2, both signs pooled."""
+    return np.concatenate([np.asarray(steer[direction][a]["toward"]) for a in (-2, 2)])
+
+
+def decision_verdicts(ablate, steer):
+    """07 section 10, fixed before the run: is the horizon content beyond the
+    decision direction used? Steering effects toward the rational answer at
+    |alpha| = 2, all 176 prompts."""
+    curve = S.bootstrap_mean(toward_at_2(steer, "curve"))
+    rest = S.bootstrap_mean(toward_at_2(steer, "curve without decision"))
+    part = S.bootstrap_mean(toward_at_2(steer, "decision part of curve"))
+    random = S.bootstrap_mean(toward_at_2(steer, "random 0"))
+    out = {"horizon_beyond_decision": {
+        "curve": curve[0], "without_decision": rest[0], "low": rest[1], "high": rest[2],
+        "decision_part": part[0], "random": random[0],
+        "pass": bool(rest[0] >= 0.05 and rest[1] > 0 and rest[0] >= curve[0] / 3)}}
+    k = next((k for k, row in ablate.items() if "horizon without decision" in row), None) if ablate else None
+    if k is not None:
+        removed = ablate[k]["horizon without decision"]
+        worst_random = max(v[0] for name, v in ablate[k].items() if name.startswith("random"))
+        out["ablate_beyond_decision"] = {"k": k, "removed": removed[0], "low": removed[1],
+                                         "decision_alone": ablate[k]["decision"][0], "random_max": worst_random,
+                                         "pass": bool(removed[0] >= 0.1 and removed[1] > 0 and worst_random <= 0.05)}
+    return out
+
+
 def print_cell(key, result, contrast):
     print(f"\n=== {key}   (contrast {contrast:+.2f} log-odds)")
     for k, row in result.get("ablate", {}).items():
         rand = [v[0] for name, v in row.items() if name.startswith("random")]
         print(f"  ablate k={k}: horizon subspace removes {row['horizon'][0]:+.2f} "
               f"[{row['horizon'][1]:+.2f}, {row['horizon'][2]:+.2f}] of the contrast; random {np.round(rand, 2)}")
+        for name in ("horizon without decision", "decision"):
+            if name in row:
+                print(f"           {name} removes {row[name][0]:+.2f} [{row[name][1]:+.2f}, {row[name][2]:+.2f}]")
     for direction, by_alpha in result.get("steer", {}).items():
         cells = "  ".join(f"a={a:+d}: near {v['near'][0]:+.2f} both {v['both'][0]:+.2f} (readout {v['readout']:+.1f})"
                           for a, v in by_alpha.items())
-        print(f"  steer {direction:15} {cells}")
+        print(f"  steer {direction:23} {cells}")
     for name, v in result.get("verdicts", {}).items():
         print(f"  {name:18} {'PASS' if v['pass'] else 'fail'}  {{{', '.join(f'{k}: {x:.2f}' if isinstance(x, float) else f'{k}: {x}' for k, x in v.items() if k != 'pass')}}}")
 
@@ -346,12 +404,17 @@ def main(args):
         base = timed(f"{mode} baseline", lambda: runner.score(prompts))
         contrast = S.contrast(base, regimes)
         results["contrast"][mode] = contrast
+        # per prompt, so results can be split afterwards (e.g. forced vs natural think closes)
+        results.setdefault("base", {})[mode] = base.tolist()
+        results.setdefault("forced", {})[mode] = ([bool(f) for f in post["forced"]] if mode == "on"
+                                                  else [False] * len(rows))
         for key, cell in cells.items():
             if cell["mode"] != mode:
                 continue
             res = {}
             if "ablate" in cell_tests[mode]:
-                res["ablate"] = timed(f"{key} ablate", lambda: run_ablate(runner, prompts, cell, regimes, base))
+                res["ablate"], res["ablate_per_prompt"] = timed(
+                    f"{key} ablate", lambda: run_ablate(runner, prompts, cell, regimes, base))
             if "steer" in cell_tests[mode]:
                 res["steer"] = timed(f"{key} steer",
                                      lambda: run_steer(runner, prompts, cell, regimes, log_h, base, contrast))

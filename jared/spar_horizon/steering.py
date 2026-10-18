@@ -15,6 +15,7 @@ from contextlib import contextmanager, nullcontext
 import numpy as np
 import torch
 from sklearn.decomposition import PCA
+from sklearn.model_selection import KFold
 
 from .full_bank import HORIZONS, regime, render_variant
 from .geometry import _fit
@@ -223,6 +224,35 @@ def matched_deltas(cell, vector, alpha, log_h):
     return np.sign(alpha) * lengths * vector / np.linalg.norm(vector)
 
 
+def decision_direction(X, near_lo, cell, folds=5):
+    """The decision inside the cell's horizon subspace: a ridge from the coordinates on
+    the horizon-average basis to the near log-odds, mapped back to a unit vector [d]
+    that raises the near log-odds. Kept inside the subspace so the curve can be split
+    into its decision part and the rest. Returns (vector, out-of-fold R²)."""
+    Z = (X - cell["mean"]) @ cell["basis"].T
+    pred = np.empty(len(near_lo))
+    for train, test in KFold(folds, shuffle=True, random_state=0).split(Z):
+        pred[test] = _fit(Z[train], near_lo[train]).predict(Z[test])
+    r2 = 1 - ((near_lo - pred) ** 2).sum() / ((near_lo - near_lo.mean()) ** 2).sum()
+    vector = _fit(Z, near_lo).coef_ @ cell["basis"]
+    return vector / np.linalg.norm(vector), float(r2)
+
+
+def without_direction(deltas, unit):
+    """Rows of `deltas` [n, d] with their component along the unit vector removed."""
+    return deltas - np.outer(deltas @ unit, unit)
+
+
+def basis_without(basis, unit):
+    """Orthonormal basis [k - 1, d] of the part of span(basis) [k, d] orthogonal to
+    `unit`'s projection onto it: the horizon subspace with the decision taken out."""
+    coords = basis @ unit
+    coords = coords / np.linalg.norm(coords)
+    # QR of [coords | identity]: the first column spans coords, the next k - 1 complete it
+    q, _ = np.linalg.qr(np.c_[coords, np.eye(len(coords))])
+    return q[:, 1:len(coords)].T @ basis
+
+
 def random_orthonormal(d, k, seed):
     rng = np.random.default_rng(seed)
     q, _ = np.linalg.qr(rng.normal(size=(d, k)))
@@ -343,3 +373,62 @@ def contrast(lo, regimes):
     if not ((regimes == "near").any() and (regimes == "both").any()):
         return float("nan")
     return float(lo[regimes == "near"].mean() - lo[regimes == "both"].mean())
+
+
+# --- E10: patching prompt positions while the model generates -------------------
+
+@contextmanager
+def prompt_patch(model, layer, positions, donor, basis=None):
+    """Within the block, every forward pass that processes a whole sequence (a
+    prefill, not a one-token decode step) has the output of decoder layer
+    `layer - 1` overwritten at the unpadded prompt positions `positions[row]` with
+    `donor[row]` [len(positions[row]), d]; with `basis` [k, d] (orthonormal rows)
+    only the component in its span is swapped: x + ((donor - x) B^T) B. Rows are
+    the batch rows in order, so one batch per block. Each row's left padding is
+    read from the attention mask of the pass, so the same block covers the
+    reasoning pass and the answer pass of `model_io._generate_rows`, whose
+    sequences have different lengths."""
+    if not 1 <= layer < len(model.model.layers):
+        raise ValueError(f"layer {layer}: editable hidden_states indices are 1..{len(model.model.layers) - 1}")
+    padding = {}
+
+    def read_padding(_module, _args, kwargs):
+        mask = kwargs.get("attention_mask")
+        if mask is None or mask.dim() != 2:
+            raise ValueError("prompt_patch needs the 2-D attention mask to locate each row's prompt")
+        padding["left"] = (mask == 0).sum(1).tolist()
+
+    def patch(_module, _inputs, out):
+        h = out[0] if isinstance(out, tuple) else out
+        if h.shape[1] == 1:   # a decode step: generated tokens are never patched
+            return out
+        if h.shape[0] != len(positions):
+            raise ValueError(f"batch of {h.shape[0]} rows, patch prepared for {len(positions)}")
+        h = h.clone()
+        for row, (pos, values) in enumerate(zip(positions, donor)):
+            index = torch.as_tensor(pos, device=h.device) + padding["left"][row]
+            x = h[row, index].float()
+            new = values.to(h.device, torch.float32)
+            if basis is not None:
+                b = basis.to(h.device, torch.float32)
+                new = x + ((new - x) @ b.T) @ b
+            h[row, index] = new.to(h.dtype)
+        return (h, *out[1:]) if isinstance(out, tuple) else h
+
+    handles = [model.model.register_forward_pre_hook(read_padding, with_kwargs=True),
+               model.model.layers[layer - 1].register_forward_hook(patch)]
+    try:
+        yield
+    finally:
+        for handle in handles:
+            handle.remove()
+
+
+def phrase_positions(tokenizer, text, horizon_text, marker="horizon: "):
+    """Token indices of the horizon phrase in the chat-templated `text`: the tokens
+    overlapping "<horizon_text>" right after `marker` (the bank's constraint line
+    reads "... for this time horizon: 3 weeks.")."""
+    start = text.index(marker + horizon_text) + len(marker)
+    end = start + len(horizon_text)
+    offsets = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)["offset_mapping"]
+    return [i for i, (a, b) in enumerate(offsets) if a < end and b > start]

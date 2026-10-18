@@ -208,3 +208,111 @@ def test_answer_pairs_cross_regimes_and_keep_the_near_label():
     assert len(pairs) == 5
     for r, d in pairs:
         assert regimes[r] != regimes[d] and near_labels[r] == near_labels[d]
+
+
+def test_decision_direction_recovers_a_planted_decision_inside_the_basis():
+    rng = np.random.default_rng(0)
+    basis = S.random_orthonormal(40, 4, seed=3)
+    coords = rng.normal(size=(300, 4))
+    X = coords @ basis + rng.normal(scale=0.01, size=(300, 40))
+    near_lo = 3 * coords[:, 1] - coords[:, 2]
+    cell = {"mean": np.zeros(40), "basis": basis}
+    u, r2 = S.decision_direction(X, near_lo, cell)
+    planted = (3 * basis[1] - basis[2]) / np.linalg.norm(3 * basis[1] - basis[2])
+    assert r2 > 0.99 and u @ planted > 0.999          # right direction and sign (raises the near log-odds)
+    assert np.allclose(np.linalg.norm(u), 1)
+
+
+def test_curve_splits_into_decision_part_and_the_rest():
+    rng = np.random.default_rng(1)
+    u = rng.normal(size=12)
+    u /= np.linalg.norm(u)
+    deltas = rng.normal(size=(5, 12))
+    rest = S.without_direction(deltas, u)
+    assert np.allclose(rest @ u, 0)
+    assert np.allclose(rest + np.outer(deltas @ u, u), deltas)
+
+
+def test_basis_without_drops_one_dimension_orthogonal_to_the_decision():
+    basis = S.random_orthonormal(30, 4, seed=2)
+    u = np.random.default_rng(3).normal(size=30)
+    u /= np.linalg.norm(u)
+    reduced = S.basis_without(basis, u)
+    assert reduced.shape == (3, 30)
+    assert np.allclose(reduced @ reduced.T, np.eye(3), atol=1e-10)    # orthonormal
+    assert np.allclose(reduced @ (basis.T @ (basis @ u)), 0, atol=1e-10)   # orthogonal to u's part in the span
+    assert np.allclose(reduced @ basis.T @ basis, reduced, atol=1e-10)   # still inside the span
+
+
+# --- E10: prompt_patch during generation ----------------------------------------
+
+def hidden_at(model, seq, layer):
+    """hidden_states[layer] of one unpadded sequence, [T, d]."""
+    _, hidden, _ = S.forward(model, "cpu", [seq], PAD, hidden=True)
+    return hidden[layer][0]
+
+
+def test_prompt_patch_with_own_states_changes_nothing(tiny):
+    layer, positions = 2, [[1, 2], [0], [3]]
+    own = [hidden_at(tiny, s, layer)[p] for s, p in zip(SEQS, positions)]
+    base, _, _ = S.forward(tiny, "cpu", SEQS, PAD)
+    with S.prompt_patch(tiny, layer, positions, own):
+        patched, _, _ = S.forward(tiny, "cpu", SEQS, PAD)
+    assert torch.allclose(base, patched, atol=1e-5)
+
+
+def test_prompt_patch_of_every_position_reproduces_the_donor_in_a_padded_batch(tiny):
+    # rows of different lengths, so the left padding differs per row
+    layer = 2
+    donors = [[s[0]] + [(t + 1) % 64 for t in s[1:]] for s in SEQS]
+    values = [hidden_at(tiny, d, layer) for d in donors]
+    with S.prompt_patch(tiny, layer, [list(range(len(s))) for s in SEQS], values):
+        patched, _, _ = S.forward(tiny, "cpu", SEQS, PAD)
+    donor_logits, _, _ = S.forward(tiny, "cpu", donors, PAD)
+    assert torch.allclose(patched, donor_logits, atol=1e-4)
+
+
+def test_prompt_patch_applies_to_the_prefill_and_not_to_decode_steps(tiny):
+    layer, seq = 2, SEQS[0]
+    donor = [seq[0]] + [(t + 1) % 64 for t in seq[1:]]
+    values = [hidden_at(tiny, donor, layer)]
+    calls = []
+    with S.prompt_patch(tiny, layer, [list(range(len(seq)))], values):
+        handle = tiny.model.layers[layer - 1].register_forward_hook(lambda m, i, o: calls.append(
+            (o[0] if isinstance(o, tuple) else o).shape[1]))
+        out = tiny.generate(input_ids=torch.tensor([seq]), attention_mask=torch.ones(1, len(seq), dtype=torch.long),
+                            max_new_tokens=3, do_sample=False, pad_token_id=PAD)
+        handle.remove()
+    donor_logits, _, _ = S.forward(tiny, "cpu", [donor], PAD)
+    assert calls == [len(seq), 1, 1]
+    assert out[0, len(seq)].item() == donor_logits[0].argmax().item()   # first token read from the patched prefill
+
+
+def test_subspace_patch_swaps_only_the_span_of_the_basis(tiny):
+    layer, seq = 2, SEQS[0]
+    donor = [seq[0]] + [(t + 1) % 64 for t in seq[1:]]
+    values = [hidden_at(tiny, donor, layer)]
+    everything = list(range(len(seq)))
+    with S.prompt_patch(tiny, layer, [everything], values, basis=torch.eye(32)):
+        full, _, _ = S.forward(tiny, "cpu", [seq], PAD)
+    donor_logits, _, _ = S.forward(tiny, "cpu", [donor], PAD)
+    assert torch.allclose(full, donor_logits, atol=1e-4)
+    # a basis orthogonal to every donor-recipient difference swaps nothing
+    diff = (values[0] - hidden_at(tiny, seq, layer)).numpy()
+    _, _, vt = np.linalg.svd(diff)
+    orthogonal = torch.tensor(vt[len(seq):len(seq) + 4], dtype=torch.float32)
+    base, _, _ = S.forward(tiny, "cpu", [seq], PAD)
+    with S.prompt_patch(tiny, layer, [everything], values, basis=orthogonal):
+        none, _, _ = S.forward(tiny, "cpu", [seq], PAD)
+    assert torch.allclose(none, base, atol=1e-4)
+
+
+def test_phrase_positions_cover_exactly_the_horizon_text(tok):
+    cfg = Settings(model="Qwen/Qwen3.5-0.8B", thinking="on", prefill="", choice_prefix="I choose:", bank="full")
+    from spar_horizon.model_io import chat_text
+    for rec in [r for r in build_full_prompts(n=60) if r["horizon"] is not None][:20]:
+        text = chat_text(tok, rec["prompt"], cfg)
+        ids = tok.encode(text, add_special_tokens=False)
+        positions = S.phrase_positions(tok, text, rec["horizon_text"])
+        assert positions == list(range(positions[0], positions[-1] + 1))
+        assert tok.decode(ids[positions[0]:positions[-1] + 1]).strip() == rec["horizon_text"]

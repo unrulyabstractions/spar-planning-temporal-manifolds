@@ -10,6 +10,7 @@ established, what is next. The rest is reference.
 | `06_results_probes_full.md` | E7 results on the full bank: where and in how many dimensions the horizon is readable |
 | `07_spec_steering.md` | Method and fixed success criteria of E8: patching, ablation, steering |
 | `08_results_steering.md` | E8 results: the decision reaches the answer slot from L24; probe-chosen cells are passengers; at L24 the curve moves the choice, the line does not |
+| `09_causal_tests_explained.md` | Walkthrough of E8 with figures: baselines, which prompts are patched, what mean ablation uses, and the horizon-vs-decision checks |
 | `history/` | Finished specs, superseded results and earlier plans; indexed at the end of `01_plan.md` |
 | `spar_horizon/` | The package: prompt banks, model I/O, extraction, probes, steering, run manifests |
 | `experiments/` | One CLI per experiment: `exp0_baseline.py` (generation and activations), `exp8_steering.py`; `exp1`-`exp6` are the starter-bank experiments |

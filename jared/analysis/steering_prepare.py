@@ -9,6 +9,13 @@ reasoning of its near- and both-regime prompts.
         --cells "off:suffix newline:16,off:pre-label:21,on:think close:19,on:pre-label:21"
     -> the first run's cells (07_spec_steering.md section 3)
 
+    python analysis/steering_prepare.py results/horizon --name decision_L24 --cells on:pre-label:24 --natural-only
+    -> fitted on natural think closes only, as in 07_spec_steering.md section 10
+
+Every cell also carries `decision`: the near-vs-far direction inside its horizon
+subspace (steering.decision_direction), so E8 can split the curve into its
+decision part and the rest.
+
 Needs only CPU, the run folders (exp0_*_think-off_full, exp0_*_think-on_full,
 gen_cache/) and the model's tokenizer.
 """
@@ -24,10 +31,11 @@ from transformers import AutoTokenizer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from horizon_shape import cell_data  # noqa: E402  (same folder)
+from steering_analysis import saved_decision  # noqa: E402  (same folder)
 from spar_horizon.banks import build_records  # noqa: E402
 from spar_horizon.config import Settings  # noqa: E402
 from spar_horizon.model_io import cache_load, label_ids, think_end_id  # noqa: E402
-from spar_horizon.steering import encode, fit_cell  # noqa: E402
+from spar_horizon.steering import decision_direction, encode, fit_cell  # noqa: E402
 
 # Second run (07_spec_steering.md section 9): the answer slot where patching says the decision lives
 CELLS = "off:pre-label:24,off:pre-label:27,off:pre-label:30,on:pre-label:24,on:pre-label:27,on:pre-label:30"
@@ -91,22 +99,29 @@ def cached_reasoning(cfg, records, selected, tokenizer):
     return arrays, missing
 
 
-def main(root, out_dir, cells_spec, name):
+def main(root, out_dir, cells_spec, name, natural_only=False):
     root = Path(root)
     cfg_on = run_settings(root, "on")
     records = build_records(cfg_on)
     selected = [i for i, r in enumerate(records) if r["regime"] in ("near", "both")]
     arrays, cells = {}, []
     for mode, label, layer in parse_cells(cells_spec):
-        z = np.load(next(root.glob(f"exp0_*_think-{mode}_full/activations.npz")))
-        X, log_h, _ = cell_data(z, label, layer)
-        cell = fit_cell(X, log_h)
+        run = next(root.glob(f"exp0_*_think-{mode}_full"))
+        z = np.load(run / "activations.npz")
+        X, log_h, forced = cell_data(z, label, layer)
+        _, near_lo, _ = saved_decision(run, z)
+        # forced closes separate perfectly from natural ones at these cells and their rate
+        # varies with the horizon, so directions fitted on all prompts partly read "was cut off"
+        keep = ~forced if natural_only else np.ones(len(log_h), bool)
+        cell = fit_cell(X[keep], log_h[keep])
+        cell["decision"], decision_r2 = decision_direction(X[keep], near_lo[keep], cell)
         key = f"{mode}|{label}|{layer}"
         for field, value in cell.items():
             arrays[f"{key}|{field}"] = np.asarray(value)
         cells.append({"mode": mode, "label": label, "layer": layer, "k": int(cell["basis"].shape[0]),
-                      "n": int(len(log_h))})
-        print(f"{key}: {len(log_h)} prompts, horizon-average basis k={cell['basis'].shape[0]}")
+                      "n": int(keep.sum()), "natural_only": natural_only, "decision_r2": decision_r2})
+        print(f"{key}: {keep.sum()} prompts{' (natural closes)' if natural_only else ''}, "
+              f"horizon-average basis k={cell['basis'].shape[0]}, near log-odds from the basis R² {decision_r2:.2f}")
     tokenizer = AutoTokenizer.from_pretrained(cfg_on.model)
     post, missing = cached_reasoning(cfg_on, records, selected, tokenizer)
     if post is not None:
@@ -129,5 +144,7 @@ if __name__ == "__main__":
     parser.add_argument("--out", type=Path, default=OUT, help=f"output folder (default {OUT})")
     parser.add_argument("--cells", default=CELLS, help='"mode:label:layer,..." (default: the answer slot at L24/27/30)')
     parser.add_argument("--name", default=NAME, help=f"suffix of the inputs file and of E8's output folder ({NAME})")
+    parser.add_argument("--natural-only", action="store_true",
+                        help="fit directions on prompts whose think block closed on its own")
     args = parser.parse_args()
-    main(args.root, args.out, args.cells, args.name)
+    main(args.root, args.out, args.cells, args.name, args.natural_only)

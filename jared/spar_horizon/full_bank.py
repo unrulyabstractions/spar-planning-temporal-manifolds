@@ -294,6 +294,17 @@ def regime(horizon_years, near_delay_years, far_delay_years):
     return "both"
 
 
+# The same duration in several units, for the unit test (E9): Alan's UNIT_REWRITES
+# (1 day to 100 years) plus sub-day sets, since half of our grid is below a day.
+UNIT_SETS: dict[str, tuple[str, ...]] = {
+    "10 minutes": ("600 seconds",),
+    "1 hour": ("60 minutes", "3600 seconds"),
+    "2 hours": ("120 minutes",),
+    "6 hours": ("360 minutes",),
+    "12 hours": ("720 minutes",),
+    **UNIT_REWRITES,
+}
+
 TRUTH = {"near": "near", "both": "far"}   # the rational choice when a payout counts only if its date is within the horizon
 
 

@@ -152,3 +152,72 @@ From the per-direction, per-alpha table in `exp8_Qwen3-8B_answer_slot/results.js
 ## 8. Next
 
 Thinking on only from 2026-10-14; the list is in `01_plan.md` §5.
+
+## 9. Third run: horizon or decision at L24 (2026-10-14)
+
+`exp8_Qwen3-8B_decision_L24/`, spec `07` §10; 37 min on a 4090. Thinking on,
+pre-label L24, directions refit on the 371 natural closes. The decision
+direction `u` (ridge from the 8-dim horizon subspace to the near log-odds)
+predicts the near log-odds at R² 0.86. Effects in units of C = 12.9.
+
+| | removed (ablation, k = 4) | toward rational, \|alpha\| = 2 |
+|---|---|---|
+| horizon subspace | 0.30 [0.26, 0.34] | curve 0.13 |
+| without `u` (3 dims) / curve without `u` | 0.11 [0.07, 0.15] | 0.07 [0.05, 0.09] |
+| `u` alone / decision part of the curve | 0.09 [0.08, 0.10] | 0.05 |
+| random | 0.00 | 0.01 |
+
+**Both criteria of `07` §10 pass.** The reading does not follow from them:
+
+- **Removing `u` does not remove the decision.** The subspace without `u`
+  still predicts the near log-odds at R² 0.52 (horizon unchanged at 0.85):
+  `u` is the ridge direction, not the whole decision content. "Beyond the
+  decision" is beyond one direction of it.
+- **The curve follows regime transitions, but mostly through the horizon,
+  not the prompt's delays.** By transition, the curve moves near->none -0.18,
+  near->both -0.15, both->near +0.14, and leaves near->near and both->both at
+  0.00-0.05: the pattern of real behavior (with thinking on, `none`-regime
+  prompts are answered like `both`: near log-odds -0.25 vs -0.78; `near` +12.2).
+  The pushed decision direction instead moves every prompt the same way
+  (+0.15 to +0.23 at -alpha). But the curve edit depends only on (horizon,
+  alpha), and so does the average decision at each horizon. Among prompts
+  given the identical edit, the part of the effect that follows each prompt's
+  own delays is 0.03 [0.00, 0.06] of the real regime-change effect, against
+  0.14 overall and 0.02 for the pure decision push.
+- **The mean difference steers backwards because of the median split, not
+  forced closes.** Refit on natural closes it still goes the wrong way. The
+  short half of the horizons is entirely `none`-regime (answered like
+  `both`), the long half holds every `near`-regime prompt, so long minus short
+  points toward "near".
+
+**Reading:** at the answer slot after reasoning, the horizon subspace is used,
+but what moves the choice there is mostly the average decision attached to
+each horizon; there is little sign of a horizon value being compared with
+this prompt's delays at L24. That comparison happens before the answer slot
+(during reasoning or earlier), which only steering before reasoning can test.
+
+## 10. E9: unit rewrites at the suffix (2026-10-14)
+
+`exp9_Qwen3-8B_units/`, spec `07` §11; 22 s of forward passes. 22 durations
+in 2-4 units each, in 24 contexts; analysis `analysis/units_analysis.py`
+(`results/horizon/analysis/units.*`). The originals match the saved E0
+activations (cosine 0.9999-1.0000 at every layer).
+
+- **R3 passes as fixed:** at the suffix newline, L16, the unit share of the
+  probe readout's variance is 0.02 (curve readout 0.03), and at most 0.08 from
+  L12 on at both suffix positions. The readout tracks the duration across
+  7 decades with slope 0.90.
+- **But the share hides shifts of a third of a decade.** Mean |shift| of a
+  rewrite from its canonical rendering is 0.30 decades, twice the grid
+  spacing (0.15) and about twice the probe's held-out error (RMSE 0.16): "1 century"
+  -0.80 (read as about 16 years), "600 seconds" and "3600 seconds" +0.74,
+  "7 days" -0.69 vs "1 week", "1 decade" -0.48, "720 minutes" +0.60. Neither
+  the numeral nor the unit size alone explains the shifts (they are nearly
+  collinear here; R² 0.10-0.39).
+- Units the bank never uses (decades, century) are read at the right order
+  of magnitude but short (-0.25 to -0.80).
+
+**Reading:** before reasoning the representation is mostly duration, not
+unit (R3), with unit- and numeral-dependent errors of about 0.3 decades. That
+bounds the "within-unit" worry from `06` §5 at the suffix: it is real but
+second order.

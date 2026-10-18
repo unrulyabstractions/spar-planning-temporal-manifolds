@@ -8,8 +8,14 @@ leave-one-horizon-out, for every layer at the positions in `positions()`
     python analysis/probe_dimensionality.py results/horizon --natural-only
     -> thinking on only, prompts whose think block closed on its own; files end in _natural
 
-Cells run in parallel across cores, one thread each; about 25 minutes for
-v3 (both modes, 37 layers) on 14 cores.
+    python analysis/probe_dimensionality.py results/horizon --modes on --layers 4,8,16 \
+        --positions "suffix newline,pre-label" --tag within
+    -> a subset of cells; files end in _within (and _natural_within with --natural-only)
+
+On the full bank every cell also gets within-unit R² (horizons that share a
+unit word, see probes.within_unit_r2). Cells run in parallel across cores,
+one thread each; about 25 minutes for v3 (both modes, 37 layers) on 14
+cores, about 3 minutes per cell on the full bank.
 """
 
 import argparse
@@ -26,10 +32,21 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from spar_horizon.full_bank import HORIZONS  # noqa: E402
 from spar_horizon.probes import KS, analyze_cell  # noqa: E402
 from spar_horizon.runs import load_activations  # noqa: E402
 
 LINEAR, MLP, CONTROL, CEILING = "#2a78d6", "#eb6834", "#9a9893", "#52514e"
+# log10 years of each full-bank horizon -> its unit word ("84 minutes" -> "minute")
+UNIT_BY_LOG_H = {round(float(np.log10(h.years)), 6): str(h).split()[-1].rstrip("s") for h in HORIZONS}
+
+
+def units_of(log_h):
+    """Unit word per prompt, or None when a horizon is not on the full-bank grid (the starter bank)."""
+    keys = [round(float(v), 6) for v in log_h]
+    if not all(k in UNIT_BY_LOG_H for k in keys):
+        return None
+    return np.array([UNIT_BY_LOG_H[k] for k in keys])
 
 
 def positions(meta):
@@ -46,19 +63,22 @@ def positions(meta):
     return out
 
 
-def run_mode(path, natural_only=False):
-    """Probe results for one run. `natural_only` drops prompts whose think
-    block was force-closed: the forced rate varies with the horizon, so they
-    can stand in for it."""
+def run_mode(path, natural_only=False, layers=None, labels=None):
+    """Probe results for one run, at every layer and position unless `layers` /
+    `labels` select some (skipped cells stay None). `natural_only` drops
+    prompts whose think block was force-closed: the forced rate varies with the
+    horizon, so they can stand in for it."""
     meta = load_activations(path)
     keep = ~np.isnan(meta["horizons"])
     if natural_only and meta["forced_mask"].size:
         keep &= ~meta["forced_mask"].astype(bool)
     y = np.log10(meta["horizons"][keep])
-    pos = positions(meta)
-    jobs = [(layer, label) for layer in range(len(meta["activations"])) for label in pos]
+    units = units_of(y)
+    pos = {label: index for label, index in positions(meta).items() if labels is None or label in labels}
+    layers = range(len(meta["activations"])) if layers is None else layers
+    jobs = [(layer, label) for layer in layers for label in pos]
     results = Parallel(n_jobs=-2, return_as="generator")(
-        delayed(analyze_cell)(meta["activations"][layer][keep][:, pos[label]], y) for layer, label in jobs)
+        delayed(analyze_cell)(meta["activations"][layer][keep][:, pos[label]], y, units) for layer, label in jobs)
     cells = {label: [None] * len(meta["activations"]) for label in pos}
     for (layer, label), res in tqdm(zip(jobs, results), total=len(jobs), desc=path.parent.name, unit="cell"):
         cells[label][layer] = res
@@ -67,7 +87,14 @@ def run_mode(path, natural_only=False):
 
 
 def best_layer(per_layer):
-    return int(np.argmax([c["best"] for c in per_layer]))
+    """Index of the computed layer with the highest best R²."""
+    return max((layer for layer, c in enumerate(per_layer) if c is not None), key=lambda layer: per_layer[layer]["best"])
+
+
+def best_within(cell, probe, k):
+    """Within-unit R² of `probe` at `k` components, the better of the two orderings."""
+    values = [cell["r2_within"][probe][order][KS.index(k)] for order in ("act", "cent")]
+    return max(v for v in values if not np.isnan(v))
 
 
 def summarize(results):
@@ -84,6 +111,17 @@ def summarize(results):
             lines.append(f"  {label:16} {layer:>5} {c['ceiling_interior']:>7.2f} {c['best']:>6.2f}  "
                          f"{str(k90['linear']['act']):>8} / {str(k90['linear']['cent']):<6}  "
                          f"{str(k90['mlp']['act']):>8} / {str(k90['mlp']['cent']):<6}  {control:>8.2f}")
+        if "r2_within" not in next(c for per_layer in r["cells"].values() for c in per_layer if c is not None):
+            continue
+        lines.append(f"\n  Within-unit R² (interior; a unit lookup scores 0), at the layer with the best within-unit ceiling;"
+                     f"\n  per k the better of the two PC orderings:")
+        lines.append(f"  {'position':16} {'layer':>5} {'ceiling':>7}   linear k=1/2/4/8          MLP k=1/2/4/8")
+        for label, per_layer in r["cells"].items():
+            layer = max((i for i, c in enumerate(per_layer) if c is not None),
+                        key=lambda i: per_layer[i]["ceiling_within"])
+            c = per_layer[layer]
+            curves = {probe: " ".join(f"{best_within(c, probe, k):5.2f}" for k in (1, 2, 4, 8)) for probe in ("linear", "mlp")}
+            lines.append(f"  {label:16} {layer:>5} {c['ceiling_within']:>7.2f}   {curves['linear']}   {curves['mlp']}")
     return "\n".join(lines)
 
 
@@ -128,10 +166,10 @@ def plot_k90(results, path):
     fig, axes = plt.subplots(len(results), 3, figsize=(15, 4.2 * len(results)), squeeze=False)
     for row, (mode, r) in zip(axes, results.items()):
         labels = list(r["cells"])
-        best = np.array([[c["best"] for c in r["cells"][lab]] for lab in labels])
+        best = np.array([[np.nan if c is None else c["best"] for c in r["cells"][lab]] for lab in labels])
         panels = [("best held-out R² (interior)", best, "Blues", (0, 1))]
         for probe, name in (("linear", "linear"), ("mlp", "MLP")):
-            k90 = np.array([[np.nan if c["k90"][probe]["act"] is None else c["k90"][probe]["act"]
+            k90 = np.array([[np.nan if c is None or c["k90"][probe]["act"] is None else c["k90"][probe]["act"]
                              for c in r["cells"][lab]] for lab in labels], float)
             panels.append((f"{name}: k to reach 90% of best", np.log2(k90), "Blues_r", (0, np.log2(max(KS)))))
         for ax, (title, data, cmap, (lo, hi)) in zip(row, panels):
@@ -151,17 +189,17 @@ def plot_k90(results, path):
     plt.close(fig)
 
 
-def main(root, natural_only=False):
+def main(root, natural_only=False, modes=("off", "on"), layers=None, labels=None, tag=""):
     root = Path(root)
     results = {}
     # forced closes exist only with thinking on, so the natural-only run skips thinking off
-    for mode in (("on",) if natural_only else ("off", "on")):
+    for mode in (("on",) if natural_only else modes):
         hits = sorted(root.glob(f"exp0_*_think-{mode}*/activations.npz"))
         if hits:
-            results[mode] = run_mode(hits[0], natural_only)
+            results[mode] = run_mode(hits[0], natural_only, layers, labels)
     out = root / "analysis"
     out.mkdir(exist_ok=True)
-    tag = "_natural" if natural_only else ""
+    tag = ("_natural" if natural_only else "") + (f"_{tag}" if tag else "")
     (out / f"probe_dimensionality{tag}.json").write_text(json.dumps(results, default=float))
     plot_curves(results, out / f"probe_curves{tag}.png")
     plot_k90(results, out / f"probe_k90{tag}.png")
@@ -176,5 +214,11 @@ if __name__ == "__main__":
     parser.add_argument("root", help="results folder holding exp0_*_think-<mode>*/activations.npz")
     parser.add_argument("--natural-only", action="store_true",
                         help="thinking on only, without force-closed prompts; writes *_natural files")
+    parser.add_argument("--modes", default="off,on", help="comma-separated thinking modes")
+    parser.add_argument("--layers", default=None, help="comma-separated layer indices (default: all)")
+    parser.add_argument("--positions", default=None, help="comma-separated position labels (default: all)")
+    parser.add_argument("--tag", default="", help="suffix for the output files, so a subset run keeps the full one")
     args = parser.parse_args()
-    main(args.root, args.natural_only)
+    main(args.root, args.natural_only, tuple(args.modes.split(",")),
+         [int(x) for x in args.layers.split(",")] if args.layers else None,
+         args.positions.split(",") if args.positions else None, args.tag)

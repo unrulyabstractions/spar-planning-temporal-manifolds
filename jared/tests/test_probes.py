@@ -81,3 +81,37 @@ def test_constant_cell_is_silent_and_unreadable():
         warnings.simplefilter("error", RuntimeWarning)
         out = P.probe_curves(X, y, ks=(1,), orders=("act",), probes=("linear",))
     assert out["ceiling_interior"] <= 0.0 and out["r2_interior"]["linear"]["act"][0] <= 0.0
+
+
+def test_within_unit_r2_is_zero_for_a_unit_lookup_and_one_for_a_perfect_probe():
+    y = np.repeat(np.arange(8.0), 3)
+    units = np.repeat(np.array(["minute", "hour"]), 12)
+    lookup = np.where(units == "minute", y[units == "minute"].mean(), y[units == "hour"].mean())
+    assert abs(P.within_unit_r2(y, lookup, units)) < 1e-12
+    assert P.within_unit_r2(y, y, units) == 1.0
+    # a constant offset per unit is not penalized: only the ordering and scale within a unit count
+    assert P.within_unit_r2(y, y + np.where(units == "hour", 5.0, -1.0), units) == 1.0
+
+
+def test_within_unit_r2_separates_magnitude_from_unit():
+    # planted: one direction carries the unit step, a second the magnitude within the unit;
+    # a probe on the unit direction alone scores high overall but 0 within units
+    y = horizons()
+    units = np.where(y < np.median(y), "short", "long")
+    unit_only = embed(np.c_[(units == "long").astype(float)], noise=0.01)
+    both = embed(np.c_[(units == "long").astype(float), y / 5], noise=0.01)
+    r_unit = P.probe_curves(unit_only, y, units, ks=(1,), orders=("act",), probes=("linear",), ceiling=False)
+    r_both = P.probe_curves(both, y, units, ks=(2,), orders=("act",), probes=("linear",), ceiling=False)
+    assert r_unit["r2_interior"]["linear"]["act"][0] > 0.6
+    assert r_unit["r2_within"]["linear"]["act"][0] < 0.05
+    assert r_both["r2_within"]["linear"]["act"][0] > 0.95
+
+
+def test_ridge_inner_cv_holds_out_whole_groups():
+    # with prompt-level LOO the near-duplicate prompts of a horizon favour a tiny penalty;
+    # the grouped inner CV must still run and fit with few groups
+    y = horizons(n_groups=3, per_group=4)
+    X = embed(y[:, None], d=20)
+    model = P.fit_ridge(X, y, np.round(y, 9))
+    assert model.alpha_ in P.ALPHAS
+    assert P.fit_ridge(X[:4], y[:4], np.round(y[:4], 9)).alpha_ in P.ALPHAS   # one group: falls back

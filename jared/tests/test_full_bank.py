@@ -97,3 +97,21 @@ def test_regime_boundaries():
     assert F.regime(0.25, 0.5, 10) == "none"
     assert F.regime(0.5, 0.5, 10) == "near"
     assert F.regime(10, 0.5, 10) == "both"
+
+
+def test_unit_sets_render_one_duration_in_different_units():
+    for duration, rewrites in F.UNIT_SETS.items():
+        canonical = Horizon.parse(duration)
+        units = {canonical.unit}
+        for text in rewrites:
+            h = Horizon.parse(text)
+            assert abs(math.log10(h.years / canonical.years)) < 0.05, text   # within ~12% ("4 weeks" for "1 month")
+            units.add(h.unit)
+        assert len(units) == 1 + len(rewrites), duration                   # every rendering is a different unit
+
+
+def test_render_variant_reproduces_the_prompt_and_swaps_only_the_horizon():
+    rec = next(r for r in F.build_full_prompts(n=40) if r["horizon"] is not None)
+    assert F.render_variant(rec) == rec["prompt"]
+    rewritten = F.render_variant({**rec, "horizon_text": "52 weeks"})
+    assert rewritten.replace("52 weeks", rec["horizon_text"]) == rec["prompt"]

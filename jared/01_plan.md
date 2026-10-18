@@ -14,7 +14,7 @@ representation, and what happens to it while the model reasons?
 |---|---|---|
 | R1 | Survives rewording (Alan's 4 constraint phrasings) | open on the full bank; starter bank, thinking off: transfer 0.99 |
 | R2 | Survives a domain change | deferred |
-| R3 | Encodes duration, not the unit word | open, and now the main threat to the probe results (§4) |
+| R3 | Encodes duration, not the unit word | passes at the suffix (unit share 0.02), with unit shifts of ~0.3 decades (§4) |
 | R4 | Invariant to option order, labels, rewards | thinking on: option order adds +2.5 near log-odds |
 | R5 | Causally used | partly: the decision reaches the answer slot from L24; curve steering at L24 moves it, the probe line does not; the horizon-vs-decision question is open (§4) |
 | R6 | Persists through reasoning | weak in the middle of the think block, re-formed at the close (§4) |
@@ -48,6 +48,8 @@ representation, and what happens to it while the model reasons?
 | E8 run 1: patching map (thinking off), 4 decodability-chosen cells: all null | 2026-10-11 | `exp8_Qwen3-8B_full/` | `08_results_steering.md` §1-3, spec `07_spec_steering.md` |
 | E8 run 2: answer-slot ablation and steering at L24/27/30, answer-slot patching across prompts, both modes | 2026-10-12 | `exp8_Qwen3-8B_answer_slot/` | `08_results_steering.md` §5 |
 | Horizon-vs-decision check on the answer-slot subspace (local) | 2026-10-12 | `analysis/steering_decision_check.*` | `08_results_steering.md` §6 |
+| E8 run 3: L24 curve split into decision direction and rest, natural closes | 2026-10-14 | `exp8_Qwen3-8B_decision_L24/` | `08_results_steering.md` §9 |
+| E9: unit rewrites at the suffix, 22 durations x 2-4 units x 24 contexts | 2026-10-14 | `exp9_Qwen3-8B_units/`, `analysis/units.*` | `08_results_steering.md` §10 |
 | Starter bank: v1 (thinking off, E0-E5), v3 (thinking on, E0, E6) | 2026-09 | `snapshots/v1_noprefill`, `snapshots/v3_think` | `history/` |
 
 ## 4. Established (Qwen3-8B, thinking on, full bank unless noted)
@@ -74,6 +76,10 @@ representation, and what happens to it while the model reasons?
   to the suffix one (cosine 0.09-0.15); the chosen label is readable from the
   suffix before reasoning at 0.91 (fixed delays, so label and horizon were confounded).
 
+- **Units (E9):** before reasoning the readout tracks duration across units
+  (unit share 0.02 at the suffix, L16), but a rewrite moves it by 0.30 decades
+  on average ("1 century" read as ~16 years, "3600 seconds" as ~5 hours).
+
 **Causal path**
 - The decision reaches the answer slot (pre-label `:`) at L22-24: patching
   that one position from a prompt in the other regime transfers 0.22 at L22,
@@ -94,6 +100,14 @@ representation, and what happens to it while the model reasons?
 - **Mean difference (CAA)** at L24 steers the wrong way (+0.13 C toward near
   at +1 decade). Suspected cause: long horizons are force-closed more often,
   so long-minus-short partly reads "was cut off".
+- **Run 3 (L24, natural closes):** the curve without the decision direction
+  still moves the choice (0.07 C) and its ablation removes 0.11 C, so the
+  pre-registered criteria pass, but the subspace without that direction still
+  predicts the decision at R² 0.52, and among prompts given the same edit the
+  effect barely follows each prompt's own delays (0.03 of a real regime
+  change, vs 0.02 for a pure decision push). At L24 the curve acts mostly as
+  the average decision per horizon. The mean difference steers backwards
+  because the short half of the horizons is all `none`-regime.
 - **Ablation at L27/L30** removes 0.74-0.83 C, but the subspace there decodes
   the a-vs-b decision at 0.95, so this says nothing about the horizon.
 
@@ -107,18 +121,17 @@ representation, and what happens to it while the model reasons?
    (`toward` in `exp8_Qwen3-8B_answer_slot/results.json`) by whether the
    shifted horizon crosses a delay. A horizon representation should change
    the choice only when it does.
-3. **Box, cached reasoning:** at L24, steer with the curve minus its
-   near-vs-far component, and with that component alone at matched norm;
-   directions refit on natural closes. Code gap: `exp8_steering.py --tests
-   answer` also builds the thinking-off set; it needs a mode filter.
+3. ~~Box: L24 curve split into decision and rest~~ done 2026-10-14 (`08` §9).
 4. **Box, regenerates reasoning (~1 h):** steer before reasoning, at the
    prompt positions after the horizon around L15-19 where the horizon flows
    in thinking-off patching, then let the model reason. This is the only test
-   of whether reasoning uses the horizon code. (Called T5 in `07` §8; T5 in
-   `07` §9 is the answer-slot patch. Rename it when specced.)
-5. **Representation tests at the suffix (forward pass only, no reasoning):**
-   E3 with Alan's unit rewrites (same duration, different unit), which is the
-   direct test of R3, and E2 with his 4 phrasings.
+   of whether reasoning uses the horizon code. Specced as E10 (`07` §12,
+   2026-10-18): patch the horizon phrase (all of it, or only its top-8
+   horizon subspace) at L12/L16, then generate. Built
+   (`experiments/exp10_patch_reasoning.py`); queued with the L22 run in
+   `queue.sh` (one E10 copy per GPU); awaiting Jared's smoke (`local_checks.py reason`).
+5. ~~E9 unit rewrites~~ done 2026-10-14 (`08` §10). Still open at the
+   suffix: E2 with Alan's 4 phrasings (forward pass only, minutes).
 
 ## 6. Decisions, dated
 

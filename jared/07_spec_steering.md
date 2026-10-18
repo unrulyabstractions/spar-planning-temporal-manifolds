@@ -218,3 +218,147 @@ Estimate on a 4090: thinking-off cells about 6 min, T5 about 2 min off and
 15-25 min per cell with the speedups (first run: 54 s per pass at batch 4 with
 all logits). About 1 to 1.5 hours in all. To shorten, drop a thinking-on layer:
 prepare with `--cells` and rerun `steering_prepare.py`.
+
+## 10. Third run: horizon or decision at the answer slot (fixed 2026-10-14, before the run)
+
+Thinking on only, on the cached reasoning. Question: at L24, where moving
+along the curve shifts the choice and the probe line does not, is the effect
+carried by the horizon content of the curve or by the near-vs-far decision it
+also contains (`08` §7: the L24 subspace decodes the near log-odds at 0.65)?
+
+- **Directions refit on natural closes only** (`steering_prepare.py
+  --natural-only`, 371 of 471 horizon prompts), since forced
+  closes separate perfectly at these cells and their rate varies with the horizon.
+- **Decision direction** `u`: ridge from the coordinates on the cell's
+  horizon-average basis (k = 8) to the saved near log-odds, mapped back to
+  the residual stream and normalized; inside the horizon subspace by
+  construction, so the curve splits exactly into its part along `u` and the rest.
+- **Steering** (alpha in {-2, -1, +1, +2} decades): the curve; the curve
+  without its `u` component; the `u` component alone (the two add up to the
+  curve); `u` itself at the curve's length; the mean difference (refit); one
+  random direction at the curve's length. The probe line is dropped (inert
+  at every cell so far).
+- **Ablation** at k = 4: the horizon subspace (reference), the same subspace
+  with `u` projected out (3 dimensions), `u` alone, 3 random 4-dim subspaces;
+  plus the horizon subspace at k = 1, 2, 8 as before.
+- **Cells:** pre-label L24 (main). Pre-label L22 as a second, optional run if
+  box time remains (the hand-off: answer-slot transfer 0.22 there).
+- Per-prompt effects and base log-odds are saved so every number can be
+  split into natural and forced closes afterwards.
+
+**Criteria** (all 176 near/both prompts; effects toward the rational answer
+at |alpha| = 2, both signs pooled, in units of C; 95% bootstrap intervals):
+
+- **Horizon beyond the decision is used (steering):** the curve without `u`
+  moves the choice by at least 0.05 toward the rational answer, interval
+  excluding 0, and by at least a third of the full curve's effect.
+- **Horizon beyond the decision is necessary (ablation):** ablating the
+  horizon subspace without `u` removes at least 0.1 of C, interval excluding
+  0, with every random subspace at most 0.05.
+- **Reading if both fail:** the L24 curve effect is the decision, and "curve
+  beats line" (`08` §5) does not show the horizon representation is used.
+
+Box command (from `jared/`, inside tmux), after `steering_prepare.py
+results/horizon --name decision_L24 --cells on:pre-label:24 --natural-only`:
+
+```
+/venv/main/bin/python experiments/exp8_steering.py --inputs steering/inputs_Qwen3-8B_decision_L24.npz \
+    --tests post --out /workspace/results/horizon 2>&1 | tee /workspace/results/horizon/logs/exp8_decision_L24.log
+```
+
+Estimate: 1 baseline + 9 ablation + 24 steering passes over the 176 cached
+traces at about 56 s each (run 2), about 33 minutes.
+
+## 11. Unit rewrites at the suffix, E9 (fixed 2026-10-14, before the run)
+
+R3: does the representation the probes read before reasoning track the
+duration or the unit word? On the full bank the unit word alone predicts a
+held-out horizon at R² 0.96 (`06` §5), so the probes cannot tell.
+
+- **Prompts** (`experiments/exp9_units.py`): 22 durations from 10 minutes to
+  100 years, each rendered in 2-4 units (`full_bank.UNIT_SETS`: Alan's
+  `UNIT_REWRITES` plus 5 sub-day sets; 62 renderings in all, including
+  "decades" and "century", which the bank never uses), placed in the same 24
+  full-bank prompts (delays, rewards, option order unchanged), plus each
+  prompt's original. 1,512 prompts, thinking-on template, one forward pass
+  to the end of the prompt, no reasoning.
+- **Kept:** hidden states at the suffix newline and the last suffix token,
+  every layer (about 1.8 GB). The originals are checked against the saved E0
+  activations of the same prompts.
+- **Analysis (local):** fit the ridge probe and the horizon-average curve on
+  the 471 main-bank prompts at each layer, apply them to the renderings.
+  Per duration, the spread of the readout across its units (averaged over
+  the 24 contexts) against the spread between durations.
+- **Criterion (R3, from `01_plan.md` §1):** at the suffix newline, L16
+  (the best layer in `06`), the unit share of the readout variance (within
+  durations, over units) is below 20% of the total over durations and
+  units. Also reported: the shift, in decades, between the units of one
+  duration (e.g. "12 months" read as how much longer than "1 year"), and
+  whether unseen units (decades, century) land at their duration.
+
+Box command (from `jared/`, inside tmux): `/venv/main/bin/python
+experiments/exp9_units.py --out /workspace/results/horizon`. Estimate: under
+5 minutes including the model load.
+
+## 12. E10: patch the horizon before reasoning, then let the model reason (drafted 2026-10-18)
+
+Status: built on the defaults proposed to Jared on 2026-10-17 ("can you start
+building that please"); the conditions below are open to change before the run.
+
+**Question.** Every causal result so far edits the answer slot after the
+reasoning is fixed (`09` §7). Does the reasoning *use* the horizon code the
+probes find in the prompt? If the horizon's prompt states are swapped for those
+of a horizon in the other regime, does the model reason its way to the other
+answer, as it would if the text said that horizon?
+
+**Pairs.** The T1 construction with the thinking-on template: each of the first
+96 near/both prompts (bank order) with a horizon from the other regime that
+tokenizes to the same length (`steering.crossing_pairs`, seed 0). Recipient =
+the prompt; donor = the same prompt with the other horizon in the text.
+
+**Positions.** The horizon phrase: the tokens of "<horizon text>" after
+"time horizon: ", in both prompts (1-3 tokens). `last` = the phrase's last token.
+
+**Layers.** L12 and L16. In thinking-off patching the horizon tokens still carry
+0.74-0.79 of the effect through L14 and start to hand it to the rest of the
+prompt from L15 (0.66 -> 0.41 over L15-19), so a patch confined to the phrase is
+informative only up to about L16.
+
+**Conditions** (greedy, think block force-closed at 3,072 as in E0; the patch is
+applied to every prefill pass, i.e. the reasoning pass and the answer pass, never
+to generated tokens):
+
+| name | edit | why |
+|---|---|---|
+| `recipient` | none | baseline, regenerated in this run (batch-noise check against the E0 cache) |
+| `donor text` | none, donor prompt | the real effect of the horizon change: the ceiling |
+| `full phrase L` | donor states at every phrase token | does the phrase carry the horizon into the reasoning |
+| `full last L` | donor state at the last phrase token | reference for the subspace patch at the same position |
+| `subspace last L` | swap only the top-8 horizon-average subspace at the last token: `x + ((x_donor - x) B^T) B` | is the low-dimensional code what the reasoning reads |
+| `random last L` | the same with a random 8-dim subspace | control |
+| `self last 16` | the recipient's own states (24 pairs) | plumbing: must match `recipient` up to batch noise |
+
+The subspace `B` is fitted in the same run: one forward pass over the 471
+horizon prompts (prompt only), hidden states at the last phrase token at L12
+and L16, top-8 PCs of the 48 horizon averages (`steering.fit_cell`).
+
+**Outcomes per pair:** near log-odds at the token before the label (one forward
+pass over the generated sequence with the same patch), the chosen label, forced
+close, think length, and whether the reasoning names the recipient's or the
+donor's horizon text. **Transfer** = `(LO_c - LO_recipient) / (LO_donor text -
+LO_recipient)` over pairs whose gap exceeds 1 log-odds, bootstrap 95% interval.
+
+**Criteria (fixed before the run):**
+- The subspace code is read by the reasoning: `subspace last` transfers at least
+  half of `full last` at the same layer, interval of the difference to `random
+  last` excluding 0, and `random last` transfers at most 0.1.
+- No pass/fail on `full phrase`: it locates whether the phrase still carries the
+  horizon into reasoning with thinking on.
+- Plumbing: `self last 16` changes the chosen label on at most 2 of 24 pairs.
+
+**Cost:** 96 x 2 + 96 x 8 + 24 = 984 generations; E0 took 10.7 s per prompt at
+batch 12, so about 3 hours on one 4090, plus a few minutes of extraction.
+Conditions run in priority order and each is saved when done, so a stopped run
+resumes. `queue.sh` runs one copy per GPU; the copies claim conditions one at a
+time (11 conditions, about 17 minutes each on one 4090), so 4 GPUs take about an
+hour and 6 about 40 minutes, with the L22 run (`07` §10) on one of them.
