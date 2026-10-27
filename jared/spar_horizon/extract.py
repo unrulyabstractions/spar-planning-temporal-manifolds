@@ -42,7 +42,7 @@ class Extraction:
     lead: np.ndarray = None          # per kept prompt
     keep_idx: np.ndarray = None      # [n_kept, n_positions] absolute token index
     keep_ids: np.ndarray = None      # [n_kept, n_positions] token id
-    label_logits: np.ndarray = None  # [n_kept, 2] logits of the a/b label ids at the prelabel token
+    label_logits: np.ndarray = None  # [n_kept, 2] logits of the a/b label ids at the prelabel token (form as written, see label_pair)
     think_text: list = field(default_factory=list)   # per kept prompt
     generations: list = field(default_factory=list)  # Generation per kept prompt (not saved)
 
@@ -76,13 +76,20 @@ def keep_positions(g, cfg, n_suffix, n_pre):
                  np.arange(g.answer_start, g.answer_start + cfg.n_response)]
 
 
+def label_pair(tokenizer, label_token, spaced, unspaced):
+    """The a/b ids in the form of the token the model wrote as its label: after a
+    markdown lead like ' **' the label is unspaced, and the spaced pair would be
+    the wrong logits."""
+    return spaced if tokenizer.decode([int(label_token)]).startswith(" ") else unspaced
+
+
 def extract(tokenizer, model, device, prompts, cfg, layers=None):
     """Generate every answer (batched), then one forward pass per prompt keeping
     hidden states at the positions described above. `layers` restricts which
     hidden_states indices are kept. Returns an Extraction."""
     n_suffix = suffix_length(tokenizer, prompts[0], cfg)
     end_id = tokenizer.convert_tokens_to_ids("<|im_end|>")
-    labels = label_ids(tokenizer, cfg=cfg)
+    spaced, unspaced = label_ids(tokenizer, cfg=cfg), label_ids(tokenizer)
     gens = generate_batch(tokenizer, model, device, prompts, cfg)
     n_think = len(cfg.think_fractions) if cfg.thinking == "on" else 0
     n_pre = 2 + len(prefill_ids(tokenizer, cfg)) if cfg.thinking == "on" else 0
@@ -119,6 +126,7 @@ def extract(tokenizer, model, device, prompts, cfg, layers=None):
         lead.append(g.lead)
         keep_idx.append(keep)
         keep_ids.append(g.ids[keep].cpu().numpy())
+        labels = label_pair(tokenizer, g.ids[start], spaced, unspaced)
         label_logits.append(out.logits[0, start - 1, list(labels)].float().cpu().numpy())
         think_text.append(g.think_text(tokenizer) if cfg.thinking == "on" else "")
     skipped = len(prompts) - sum(kept)

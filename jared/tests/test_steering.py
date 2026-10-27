@@ -158,6 +158,22 @@ def test_crossing_pairs_are_equal_length_horizon_only_and_cross_regimes(tok):
         assert groups[0][0] == "horizon" and groups[-1][1] == [len(p["recipient"]) - 1]
 
 
+def test_horizon_span_covers_the_whole_phrase_even_when_the_unit_is_shared(tok):
+    cfg = Settings(model="Qwen/Qwen3.5-0.8B", thinking="off", prefill="I choose:", bank="full")
+    records = build_full_prompts(n=120)
+    pairs = S.crossing_pairs(records, tok, cfg, random.Random(0), limit=40)
+    shared_unit = 0
+    for p in pairs:
+        start, end = p["span"]
+        recipient_horizon = records[p["record"]]["horizon_text"]
+        assert recipient_horizon in tok.decode(p["recipient"][start:end])
+        assert p["donor_horizon"] in tok.decode(p["donor"][start:end])
+        groups = dict(S.patch_groups(p, tok))
+        assert groups["horizon"] == list(range(start, end))
+        shared_unit += recipient_horizon.split()[-1] == p["donor_horizon"].split()[-1]
+    assert shared_unit > 0                               # "91 years" -> "16 years" shares " years"
+
+
 def test_per_row_labels_are_used(tiny):
     a = S.score(tiny, "cpu", SEQS[:2], [True, True], [(1, 2), (3, 4)], PAD, batch_size=2)
     b = [S.score(tiny, "cpu", [SEQS[0]], [True], [(1, 2)], PAD, 1)[0], S.score(tiny, "cpu", [SEQS[1]], [True], [(3, 4)], PAD, 1)[0]]
@@ -316,3 +332,38 @@ def test_phrase_positions_cover_exactly_the_horizon_text(tok):
         positions = S.phrase_positions(tok, text, rec["horizon_text"])
         assert positions == list(range(positions[0], positions[-1] + 1))
         assert tok.decode(ids[positions[0]:positions[-1] + 1]).strip() == rec["horizon_text"]
+
+
+def test_last_position_edits_through_the_prefix_cache_equal_full_passes(tiny):
+    """score_last_edits reuses one prefix cache for every edit; each result must equal
+    a full forward pass with the same edit, in any order, with left padding."""
+    near_first = [True, False, True]
+    last = [[len(s) - 1] for s in SEQS]
+    gen = torch.Generator().manual_seed(1)
+    delta = torch.randn(3, 32, generator=gen)
+    basis = torch.linalg.qr(torch.randn(32, 2, generator=gen))[0].T
+    mean = torch.randn(32, generator=gen)
+    donor = torch.randn(3, 32, generator=gen)
+    edits = [None, (1, lambda rows: S.Add(delta[rows])), (2, lambda rows: S.MeanAblate(mean, basis)),
+             (2, lambda rows: S.Replace(donor[rows])), None]
+    cached = S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=edits)
+    for e, spec in enumerate(edits):
+        if spec is None:
+            full = S.score(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2)
+        else:
+            full = S.score(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, layer=spec[0],
+                           positions=last, make_edit=spec[1])
+        np.testing.assert_allclose(cached[e], full, atol=1e-5)
+    reversed_order = S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=edits[::-1])
+    np.testing.assert_allclose(reversed_order[::-1], cached, atol=1e-5)
+
+
+def test_models_with_linear_attention_fall_back_to_full_passes(tiny, monkeypatch):
+    """A recurrent layer's cache cannot be cropped, so score_last_edits must not use it."""
+    monkeypatch.setattr(tiny.config, "layer_types", ["full_attention", "linear_attention", "full_attention"])
+    monkeypatch.setattr(tiny, "forward", lambda *a, **k: (_ for _ in ()).throw(AssertionError("prefix path used")))
+    calls = []
+    monkeypatch.setattr(S, "score", lambda *a, **k: calls.append(a) or np.zeros(len(a[2])))
+    out = S.score_last_edits(tiny, "cpu", SEQS, [True] * 3, ROWS, PAD, batch_size=2,
+                             edits=[None, (1, lambda rows: S.Add(torch.zeros(len(rows), 32)))])
+    assert out.shape == (2, 3) and len(calls) == 2

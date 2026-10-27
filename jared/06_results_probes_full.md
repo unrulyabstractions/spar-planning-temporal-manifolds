@@ -8,6 +8,18 @@ results/horizon` (spec `04_spec_probes.md`). Outputs in
 `results/horizon/analysis/`. Compare `history/05_results_probes_v3.md` (116-prompt
 starter bank, 16 horizons).
 
+**Superseded in part (2026-10-26), see `12_results_local_checks.md` §1 and §4.**
+The R² tables stand (reproduced within ±0.01). The readings do not all stand:
+- §2 "one curved direction" at the suffix holds on the 48 horizon averages
+  (within-unit 0.50 linear, borderline: 95% CI 0.20–0.67) but per prompt it
+  is mostly the unit word.
+- §2 pre-label thinking off "largely a staircase by unit": on the horizon
+  averages there is also a slope within each unit step (0.75–0.80).
+- §4 the thinking-on k = 2 arc at the answer slot loses 0.13–0.17 R² on
+  natural closes, so part of it is the forced-close signal.
+- §5's open items (grouped inner CV, within-unit R², natural closes only)
+  were done in `12`; grouping the inner CV changed R² by ≤ 0.02.
+
 Metric throughout: held-out R² of log horizon on interior horizons,
 leave-one-horizon-out (48 folds; each holds out every prompt at one horizon,
 3-18 prompts, median 10). The shuffled-horizon control is at most

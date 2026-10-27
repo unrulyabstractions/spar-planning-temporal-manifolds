@@ -9,15 +9,20 @@ established, what is next. The rest is reference.
 | `04_spec_probes.md` | Method of E7: linear vs MLP probes on the top-k PCs, leave-one-horizon-out |
 | `06_results_probes_full.md` | E7 results on the full bank: where and in how many dimensions the horizon is readable |
 | `07_spec_steering.md` | Method and fixed success criteria of E8: patching, ablation, steering |
-| `08_results_steering.md` | E8 results: the decision reaches the answer slot from L24; probe-chosen cells are passengers; at L24 the curve moves the choice, the line does not |
+| `08_results_steering.md` | E8 results: the decision reaches the answer slot from L24; probe-chosen cells are passengers; at L24 the curve moves the choice, the line does not; E10: before reasoning the subspace at the unit token swaps the unit the reasoning writes |
 | `09_causal_tests_explained.md` | Walkthrough of E8 with figures: baselines, which prompts are patched, what mean ablation uses, and the horizon-vs-decision checks |
+| `10_spec_scale_14b.md` | Spec and fixed criteria of E11: the 8B map on Qwen3-14B, thinking off and on |
+| `11_results_14b.md` | E11 results: stage order replicates; cross-model alignment and the answer-slot causal tests on 14B |
+| `12_results_local_checks.md` | Two local checks on saved activations: natural closes and within-unit R² (Check 1), horizon vs delay before the hand-off (Check 2) |
+| `13_evidence.md` | Evidence index: each claim we rely on, its strength, and the figure behind it |
+| `14_spec_unit_overlap.md` | Spec (approved 2026-10-25, 8B only): the unit-overlap bank, horizon vs unit word |
+| `queue*.sh` | Box queues as run: `queue_14b.sh`, `queue_14b_rest.sh` (E11), `queue_units.sh` (unit-overlap E0) |
 | `history/` | Finished specs, superseded results and earlier plans; indexed at the end of `01_plan.md` |
 | `spar_horizon/` | The package: prompt banks, model I/O, extraction, probes, steering, run manifests |
-| `experiments/` | One CLI per experiment: `exp0_baseline.py` (generation and activations), `exp8_steering.py`; `exp1`-`exp6` are the starter-bank experiments |
-| `analysis/` | Post-analysis on synced results: probes, horizon shape, steering inputs and analysis, the 3D explorer, `snapshot.py` |
+| `experiments/` | One CLI per experiment: `exp0_baseline.py` (generation and activations), `exp8_steering.py`, `exp9_units.py`, `exp10_patch_reasoning.py`, `coherence.py`, `warm_cache.py`, `check_prefix_cache.py` |
+| `analysis/` | Post-analysis on synced results: probes (`probe_dimensionality.py`, `probe_natural_within_unit.py`), horizon shape, steering inputs and analysis, `exp10_analysis.py`, 14B (`stage_markers.py`, `cross_model_alignment.py`), `regime_comparison.py`, units (`unit_readout.py`, `unit_overlap.py`), figures (`evidence_figures.py`, `presentation_figures.py`). The `r2` that E0 saves in each `activations.npz` uses a shuffled k-fold split, not leave-one-horizon-out, so it is optimistic; quote the probe scripts instead |
 | `tests/` | pytest: pure python, the real 0.8B tokenizer, a tiny random Qwen3 for the steering hooks |
 | `local_checks.py` | Model-backed checks on the 0.8B, run by Jared on the xpu env |
-| `snapshots/`, `starter/` | Frozen starter-bank runs (v1, v3); the original starter script |
 
 ## The prompt
 
@@ -47,7 +52,11 @@ after it, as Alan's parser does.
 The "suffix newline" probed in `06` is the `\n` after `<|im_end|>`.
 
 Think positions sit at fractions of each prompt's own think span; think@1
-is the last token before `</think>`. Regions are stored in `activations.npz`
+is the last token the model wrote in the block. On a natural close that is
+the `.\n` right before `</think>`; on a forced close it is wherever the cut
+fell, often mid-sentence, and `</think>` follows an appended `\n`. So think@1
+means different things in the two groups: split by `forced_mask` when
+reading it. Regions are stored in `activations.npz`
 and the manifest.
 
 ## Reasoning on the 8B
@@ -114,16 +123,20 @@ the port can change; paste the new line with `just new`. Generation tests are
 skipped on the box: bf16 batched greedy is not token-identical to
 single-prompt, so they are CPU tests (`local_checks.py`).
 
-## Snapshots
+## Removed starter-era material
 
-`analysis/snapshot.py results/horizon <name> --note "..."` freezes a run's
-derived data (PCA coordinates, sweeps, manifests, figures; no activations)
-into `snapshots/<name>/`; `--list` lists them. The explorer notebook reads a
-snapshot by name.
+Removed 2026-10-27; recover with `git checkout a93acf9 -- <path>`: the
+starter-bank experiments (`experiments/exp1`-`exp6`, `run_all.sh`,
+`think_budget.py`, `spar_horizon/attribution.py` and their tests), the
+starter-era analyses and 3D explorer (`analysis/think_probe.py`,
+`feature_dimensionality.py`, `cross_mode_transfer.py`, `pca3_explorer*`,
+`export_pca3.py`, `build_explorer.py`, `snapshot.py`, `horizon_geometry.*`,
+`build_notebook.py`, `SNAPSHOT.yaml`), the frozen v1/v3 runs (`snapshots/`)
+and the original starter script (`starter/`). The write-ups stay in `history/`.
 
 ## Lineage
 
-The original starter (`starter/`) distills the prior project
+The original starter (`starter/`, removed, see above) distills the prior project
 (`../../temporal-awareness/`, Rios-Sialer et al. 2026, Qwen3-4B-Instruct),
 which localized the horizon to late-layer attention (L21, L24) and steered it
 with CAA at L19-22. Alan (`../alan/`) and Augusto

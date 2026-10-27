@@ -98,27 +98,29 @@ is small and at thinking-on L24 goes the wrong way (-0.13).
 At the late answer slot the horizon averages differ partly because the
 decision differs by horizon, so the subspace could be the decision itself.
 From the saved activations and the a-vs-b label logits (5-fold CV R², top-4
-horizon-average PCs):
+horizon-average PCs, refit on each fold's training prompts; corrected
+2026-10-26, the first version fitted the PCs on all prompts including the
+test fold, which raised the thinking-on numbers by up to 0.16):
 
 | cell | horizon from subspace | horizon from the decision alone | subspace adds beyond the decision | a-vs-b decision from subspace | horizon within the same choice (near / far) |
 |---|---|---|---|---|---|
-| off L24 | 0.84 | 0.00 | +0.83 | 0.34 | 0.79 / 0.88 |
-| off L27 | 0.82 | 0.00 | +0.84 | 0.95 | 0.77 / 0.88 |
-| off L30 | 0.78 | 0.00 | +0.81 | 0.97 | 0.74 / 0.86 |
-| on L24 | 0.77 | 0.06 | +0.72 | 0.23 | 0.72 / 0.78 |
-| on L27 | 0.72 | 0.06 | +0.67 | 0.95 | 0.68 / 0.76 |
-| on L30 | 0.69 | 0.06 | +0.64 | 0.95 | 0.66 / 0.73 |
+| off L24 | 0.83 | 0.00 | +0.83 | 0.39 | 0.78 / 0.86 |
+| off L27 | 0.80 | 0.00 | +0.83 | 0.95 | 0.77 / 0.86 |
+| off L30 | 0.77 | 0.00 | +0.80 | 0.97 | 0.73 / 0.82 |
+| on L24 | 0.73 | 0.06 | +0.70 | 0.38 | 0.60 / 0.73 |
+| on L27 | 0.67 | 0.06 | +0.62 | 0.95 | 0.56 / 0.73 |
+| on L30 | 0.62 | 0.06 | +0.58 | 0.95 | 0.50 / 0.68 |
 
 - **The subspace carries real horizon information at every cell.** The
   decision itself predicts log horizon at 0.00-0.06 (it depends on the horizon
   relative to the delays, not on the horizon), yet the subspace predicts it at
-  0.69-0.84, adds 0.64-0.84 beyond the decision, and still separates horizons
-  among prompts that made the same choice.
+  0.62-0.83, adds 0.58-0.83 beyond the decision, and still separates horizons
+  among prompts that made the same choice (0.50-0.86).
 - **At L27 and L30 the subspace also contains the a-vs-b decision** (0.95-0.97).
   Ablating it removes the decision by construction, so the two "necessary"
   passes there (thinking on) do not show that the horizon is necessary.
-- **L24 is the clean cell.** The subspace is mostly horizon there (decision
-  0.23-0.34), ablating it removes 30-37% of the contrast with random at 0, and
+- **L24 is the cleanest cell.** The subspace is mostly horizon there (decision
+  0.38-0.39), ablating it removes 30-37% of the contrast with random at 0, and
   moving along the curve by 2 decades shifts the choice 39% (off) and 15% (on)
   of the contrast toward the rational answer, where the straight probe line
   does nothing. This is the first evidence that the horizon representation is
@@ -129,7 +131,7 @@ horizon-average PCs):
 From the per-direction, per-alpha table in `exp8_Qwen3-8B_answer_slot/results.json`:
 
 - **The L24 subspace carries the abstract decision too.** §6 reads L24 as
-  mostly horizon from the a-vs-b column (0.23-0.34), but the near-vs-far
+  mostly horizon from the a-vs-b column (0.38-0.39, per-fold PCs), but the near-vs-far
   log-odds decode from it at 0.64 (off) and 0.65 (on). L24 looks like the
   point where a near-vs-far preference exists before it is bound to a label.
   The curve is fitted on horizon averages, so it can include that preference
@@ -169,21 +171,31 @@ predicts the near log-odds at R² 0.86. Effects in units of C = 12.9.
 
 **Both criteria of `07` §10 pass.** The reading does not follow from them:
 
+- **The ablation rows are not a split of the ablated subspace (audit,
+  2026-10-26).** `u` is fitted in all 8 dims, ablation is judged on the top 4,
+  and only 0.25 of `u`'s squared norm lies in the top 4. "Without `u`" removes
+  the top 4 minus a direction that is not `u`; "`u` alone" ablates a direction
+  that is 75% outside the top 4. The steering rows (k = 8) do split exactly.
+
 - **Removing `u` does not remove the decision.** The subspace without `u`
   still predicts the near log-odds at R² 0.52 (horizon unchanged at 0.85):
   `u` is the ridge direction, not the whole decision content. "Beyond the
   decision" is beyond one direction of it.
-- **The curve follows regime transitions, but mostly through the horizon,
-  not the prompt's delays.** By transition, the curve moves near->none -0.18,
-  near->both -0.15, both->near +0.14, and leaves near->near and both->both at
-  0.00-0.05: the pattern of real behavior (with thinking on, `none`-regime
-  prompts are answered like `both`: near log-odds -0.25 vs -0.78; `near` +12.2).
-  The pushed decision direction instead moves every prompt the same way
-  (+0.15 to +0.23 at -alpha). But the curve edit depends only on (horizon,
+- **The curve follows some regime transitions, not all, mostly through the
+  horizon rather than the prompt's delays.** By transition (saved
+  `results.json`), the curve moves near->none -0.17, near->both -0.14,
+  both->near +0.11, and leaves near->near and both->both at 0.00-0.05. But it
+  also moves both->none by +0.14, where real behavior moves +0.04 (with
+  thinking on, `none`-regime prompts are answered like `both`: near log-odds
+  -0.25 vs -0.78; `near` +12.2), so it does not follow the pattern of real
+  behavior. The pushed decision direction instead moves every prompt the same
+  way (+0.15 to +0.23 at -alpha). The curve edit depends only on (horizon,
   alpha), and so does the average decision at each horizon. Among prompts
   given the identical edit, the part of the effect that follows each prompt's
   own delays is 0.03 [0.00, 0.06] of the real regime-change effect, against
-  0.14 overall and 0.02 for the pure decision push.
+  0.02 [0.01, 0.04] for the pure decision push. This check was added after
+  the criteria passed and cannot separate the two readings: the intervals
+  overlap, and the relevant ceiling is the curve's overall 0.14, not 1.
 - **The mean difference steers backwards because of the median split, not
   forced closes.** Refit on natural closes it still goes the wrong way. The
   short half of the horizons is entirely `none`-regime (answered like
@@ -191,9 +203,9 @@ predicts the near log-odds at R² 0.86. Effects in units of C = 12.9.
   points toward "near".
 
 **Reading:** at the answer slot after reasoning, the horizon subspace is used,
-but what moves the choice there is mostly the average decision attached to
-each horizon; there is little sign of a horizon value being compared with
-this prompt's delays at L24. That comparison happens before the answer slot
+and the curve's effect is consistent with the average decision attached to
+each horizon; the tests here cannot tell that apart from a horizon value
+being compared with this prompt's delays at L24 (see the two caveats above). That comparison happens before the answer slot
 (during reasoning or earlier), which only steering before reasoning can test.
 
 ## 10. E9: unit rewrites at the suffix (2026-10-14)
@@ -221,3 +233,79 @@ activations (cosine 0.9999-1.0000 at every layer).
 unit (R3), with unit- and numeral-dependent errors of about 0.3 decades. That
 bounds the "within-unit" worry from `06` §5 at the suffix: it is real but
 second order.
+
+## 11. E10: patching the horizon before reasoning (2026-10-18)
+
+`exp10_Qwen3-8B_reasoning/`, spec `07` §12; 2.7 h on 2 GPUs (with the L22
+run, §12). 96 pairs from the crossing pairs (seed 0), thinking on; the patch
+is applied in both prefill passes (reasoning and answer), never at decode
+steps. Analysis `analysis/exp10_analysis.py` (`results/horizon/analysis/exp10.*`,
+`figures/exp10_reasoning.png`). Transfer = (patched − recipient) /
+(donor text − recipient) in near log-odds, on the 88 pairs with a gap above
+1 log-odds.
+
+**Pre-registered criteria:** plumbing passes (self patch changes 0 of 24
+labels). Subspace read passes at L16 (subspace 0.54 vs full 0.59, random
+0.08) and fails at L12 only on "random ≤ 0.1" (subspace 0.85, full 0.71,
+random 0.20 [0.01, 0.41]). The random transfer at L12 comes from the 23
+same-unit pairs, whose gaps are small (median 4 log-odds vs 17 for pairs
+whose units differ), so a ratio of re-rolled reasoning is noisy there (0.57
+on same-unit, 0.07 on different-unit pairs). Counted by labels, random L12
+moves 6 of the 52 pairs the donor text flips, the subspace 29.
+
+**The patch swaps the unit, not the horizon.** The last token of the phrase
+is the unit word (" years"). Patching it, in full or only its top-8 horizon
+subspace, makes the reasoning write the recipient's number with the donor's
+unit in 70 of the 71 pairs whose units differ at L16 and 68 of 71 at L12
+(random 2 of 71). A hybrid can only show where the units differ; 25 of the 96
+pairs share a unit. Corrected 2026-10-26: this section first gave 71-73%,
+which divided by all 96 pairs.
+
+| condition | writes recipient, units differ / same | writes donor | hybrid, units differ (of 71) | follows donor (label flips, units differ) | same unit | changes label where donor text does not |
+|---|---|---|---|---|---|---|
+| donor text | 0.01 / 0.00 | 0.98 | 5 | 46/46 | 6/6 | 0/44 |
+| full phrase L16 / L12 | 0.03 / 0.00 | 0.99 | 4, 4 | 41/46, 41/46 | 2/6, 3/6 | 5/44, 8/44 |
+| full last L16 / L12 | 0.14, 0.03 / 1.00 | 0.05 | 70, 68 | 28/46, 30/46 | 0/6, 0/6 | 7/44, 6/44 |
+| subspace last L16 / L12 | 0.17, 0.04 / 1.00 | 0.05 | 70, 68 | 30/46, 29/46 | 0/6, 0/6 | 4/44, 5/44 |
+| random last L16 / L12 | 0.97 / 1.00 | 0.03 | 2, 2 | 8/46, 5/46 | 0/6, 1/6 | 7/44, 9/44 |
+
+Batch noise (the check `07` §12 asked for): rerunning the unpatched prompts
+in E10's batches changes 12 of the 96 labels against the E0 cache, so the
+"changes label" column has a floor of about 0.1 from batching alone.
+
+Example (`s0_000005`, "59 years" with donor "10 days", full last L16): "needs
+to choose between two investment options over a 59-day time horizon".
+The choice then follows the horizon the trace wrote. Where the units match,
+patching the unit token moves nothing (0 of 6 flips): the number is not
+carried there.
+
+Side effects: at L16 the model notices the conflict with the prompt text
+("Wait, the time horizon is 7 months? ... maybe a typo?" in 22-30% of
+traces vs 1% unpatched; 5-8% at L12), and more traces hit the 3,072-token
+cap (0.35-0.40 vs 0.26).
+
+**Reading:**
+- The top-8 horizon subspace at the unit token, L12-16, is causally the
+  unit: swapping 8 dims does what swapping the whole state does (hybrid
+  70 vs 70 of 71 at L16, flips 30 vs 28). A random 8-dim swap does nothing,
+  but it is a much smaller edit than the horizon-subspace swap (not
+  size-matched), so it is a weak control.
+- Reasoning uses it by reading it back as text: the trace writes a horizon
+  and the choice follows that horizon. This is a horizon representation, not
+  a decision one: the model reports it as the horizon, before any reasoning.
+- It says nothing about magnitude within a unit (the number), which is where
+  the "unit word alone gives R² 0.96" worry (`01` §4) sits. The test is the
+  same patch on the number tokens, or the subspace over the whole phrase, on
+  same-unit pairs.
+
+## 12. L22: horizon or decision one layer earlier (2026-10-18)
+
+`exp8_Qwen3-8B_decision_L22/`, same tests as §9 at pre-label L22; 41 min.
+All three criteria fail: ablating the top-4 horizon subspace removes 0.09
+[0.07, 0.10] of C (random 0.00; L24: 0.30), without `u` 0.03, `u` alone 0.03;
+the curve without `u` steers 0.02 (random 0.01). The mean difference steers
+0.08-0.11 (readout ±5-7 decades) and the decision direction 0.07-0.09. The
+horizon subspace at the answer slot carries little at L22 and what it
+carries is not separable from the decision, consistent with the decision
+arriving there at L22-24 (§5). (The run logs random controls only at k = 4,
+the size the criteria use.)

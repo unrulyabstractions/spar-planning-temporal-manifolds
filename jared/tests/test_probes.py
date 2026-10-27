@@ -107,6 +107,29 @@ def test_within_unit_r2_separates_magnitude_from_unit():
     assert r_both["r2_within"]["linear"]["act"][0] > 0.95
 
 
+
+def test_horizon_within_unit_r2_ignores_prompt_scatter_around_the_horizon_means():
+    # predictions whose horizon averages are exact but whose prompts scatter widely:
+    # the prompt-level score is far below 0, the horizon-average score is 1
+    y = np.repeat(np.arange(8.0), 20)
+    units = np.repeat(np.array(["minute", "hour"]), 80)
+    scatter = np.random.default_rng(0).normal(scale=3.0, size=(8, 20))
+    pred = y + (scatter - scatter.mean(1, keepdims=True)).ravel()
+    assert P.within_unit_r2(y, pred, units) < -1
+    assert abs(P.horizon_within_unit_r2(y, pred, units) - 1.0) < 1e-12
+    # a unit lookup still scores 0 at the horizon level
+    lookup = np.where(units == "minute", 1.5, 5.5)
+    assert abs(P.horizon_within_unit_r2(y, lookup, units)) < 1e-12
+
+def test_horizon_within_unit_r2_keeps_renderings_of_one_value_apart():
+    # "60 minutes" and "1 hour" are one value in two units: merging them would average the
+    # two units' predictions and score a perfect probe below 1
+    y = np.repeat(np.array([0.0, 1.0, 2.0, 2.0, 3.0, 4.0]), 5)
+    units = np.repeat(np.array(["minute", "minute", "minute", "hour", "hour", "hour"]), 5)
+    pred = y + np.where(units == "hour", 0.5, -0.5)
+    assert abs(P.horizon_within_unit_r2(y, pred, units) - 1.0) < 1e-12
+
+
 def test_ridge_inner_cv_holds_out_whole_groups():
     # with prompt-level LOO the near-duplicate prompts of a horizon favour a tiny penalty;
     # the grouped inner CV must still run and fit with few groups

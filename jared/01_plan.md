@@ -1,6 +1,8 @@
 # Plan and status: the time-horizon representation in Qwen3-8B, thinking on
 
-Last revised 2026-10-14. The question, what is done (§3: do not rerun it),
+Last revised 2026-10-26 (audit: §4 corrected, §6 lists what was struck). Qwen3-14B
+results are in `11`, the local checks in `12`, the graded claims in `13`.
+The question, what is done (§3: do not rerun it),
 what is established (§4), what is next (§5), and the dated decisions (§6).
 The previous version is `history/01_plan_2026-10-11.md`.
 
@@ -50,7 +52,12 @@ representation, and what happens to it while the model reasons?
 | Horizon-vs-decision check on the answer-slot subspace (local) | 2026-10-12 | `analysis/steering_decision_check.*` | `08_results_steering.md` §6 |
 | E8 run 3: L24 curve split into decision direction and rest, natural closes | 2026-10-14 | `exp8_Qwen3-8B_decision_L24/` | `08_results_steering.md` §9 |
 | E9: unit rewrites at the suffix, 22 durations x 2-4 units x 24 contexts | 2026-10-14 | `exp9_Qwen3-8B_units/`, `analysis/units.*` | `08_results_steering.md` §10 |
-| Starter bank: v1 (thinking off, E0-E5), v3 (thinking on, E0, E6) | 2026-09 | `snapshots/v1_noprefill`, `snapshots/v3_think` | `history/` |
+| E8 at L22, decision split | 2026-10-18 | `exp8_Qwen3-8B_decision_L22/` | `08_results_steering.md` §12 |
+| E10: patch before reasoning, 96 pairs | 2026-10-18 | `exp10_Qwen3-8B_reasoning/` | `08_results_steering.md` §11 |
+| E11: Qwen3-14B E0 both modes, E8 answer slot, probe line, coherence | 2026-10-20/21, rest 2026-10-24 | `exp0_Qwen3-14B_*`, `exp8_Qwen3-14B_*`, `coherence_Qwen3-14B_think-on_full/` | `11_results_14b.md`, `13_evidence.md` |
+| Local checks: natural closes and within-unit R², horizon vs delay | 2026-10-21 | `analysis/` | `12_results_local_checks.md` |
+| Unit-overlap bank E0, 8B both modes | 2026-10-25 | `exp0_Qwen3-8B_think-{on,off}_units/` | spec `14_spec_unit_overlap.md`; no results doc yet |
+| Starter bank: v1 (thinking off, E0-E5), v3 (thinking on, E0, E6) | 2026-09 | `snapshots/v1_noprefill`, `snapshots/v3_think` (removed 2026-10-27; in git at `a93acf9`) | `history/` |
 
 ## 4. Established (Qwen3-8B, thinking on, full bank unless noted)
 
@@ -61,12 +68,17 @@ representation, and what happens to it while the model reasons?
   held-out horizon predicted by the mean of training horizons with the same
   unit; no activations; 2026-10-13). Only the margin above 0.96 shows
   magnitude within a unit. The k = 1 linear probe at the suffix (0.90) is
-  below a unit lookup. The "one curved direction" reading in `06` is open
-  until within-unit R² is computed.
+  below a unit lookup. Within-unit R² (`12` §1): on the 48 horizon averages
+  the suffix k = 1 direction orders horizons within a unit at 0.50
+  (borderline, 95% CI 0.20–0.67, driven by the year horizons; MLP 0.75); per
+  prompt it is mostly the unit word. A leave-one-horizon-out unit lookup
+  scores about -0.25 within unit (averages and per prompt), not 0, so that is
+  the floor for "unit only".
 - In the middle of the think block the horizon is barely readable (R² 0.32 at
-  think@0.25, 0.28 at 0.5); it recovers at the last think token (0.81), the
-  `</think>` (0.96) and the pre-label token (0.98), in 2-4 curved
-  dimensions plus a long tail.
+  think@0.25, 0.28 at 0.5). On natural closes it is already back at the last
+  think token (0.96; 0.82 over all prompts, where forced think@1 is a
+  mid-sentence cut), and stays at the `</think>` (0.96) and the pre-label
+  token (0.98), in 2-4 curved dimensions plus a long tail.
 - Forced closes confound every thinking-on cell after the block: the top
   horizon-average component at `</think>` separates forced from natural
   closes with AUC 1.00 (0.88 at the pre-label token).
@@ -95,43 +107,60 @@ representation, and what happens to it while the model reasons?
   +0.15 at -2 decades). Two caveats from the 2026-10-13 review:
   near-regime prompts move toward far at both -2 and +2 decades (-0.14 each),
   so part of the effect is non-specific; and the L24 subspace decodes the
-  near-vs-far log-odds at R² 0.65 (the a-vs-b label only at 0.23), so the
+  near-vs-far log-odds at R² 0.65 (the a-vs-b label only at 0.38 with per-fold PCs), so the
   curve may carry the decision rather than the horizon.
 - **Mean difference (CAA)** at L24 steers the wrong way (+0.13 C toward near
   at +1 decade). Suspected cause: long horizons are force-closed more often,
   so long-minus-short partly reads "was cut off".
 - **Run 3 (L24, natural closes):** the curve without the decision direction
-  still moves the choice (0.07 C) and its ablation removes 0.11 C, so the
-  pre-registered criteria pass, but the subspace without that direction still
-  predicts the decision at R² 0.52, and among prompts given the same edit the
-  effect barely follows each prompt's own delays (0.03 of a real regime
-  change, vs 0.02 for a pure decision push). At L24 the curve acts mostly as
-  the average decision per horizon. The mean difference steers backwards
+  still moves the choice (0.07 C), so the pre-registered criteria pass. The
+  ablation split (0.11 without the direction, 0.09 for it alone) is not a
+  split: only 0.25 of the direction lies in the ablated top 4 (`08` §9). The
+  subspace without that direction still predicts the decision at R² 0.52.
+  The post-hoc within-edit check (0.03 of a real regime change vs 0.02 for a
+  pure decision push, overlapping intervals) cannot separate "horizon
+  compared with delays" from "average decision per horizon"; both readings
+  stay open. The mean difference steers backwards
   because the short half of the horizons is all `none`-regime.
+- **L22 (2026-10-18):** the same tests one layer earlier fail all three
+  criteria; ablating the horizon subspace removes 0.09 C (L24: 0.30).
+- **Before reasoning (E10, 2026-10-18):** swapping the top-8 horizon
+  subspace at the phrase's last token (the unit word) at L12/L16 makes the
+  reasoning write the recipient's number with the donor's unit in 68-70 of
+  the 71 pairs whose units differ ("59 years" read as "59 days"; random swap
+  2 of 71), and the choice follows: 29-30 of 46 label flips where units
+  differ (random 5-8), 0 of 6 where they match. (The earlier 71-73% divided by
+  all 96 pairs, including 25 that share a unit.) The subspace is causally the
+  unit, reasoning reads it back as a written horizon, and nothing here tests
+  magnitude within a unit. Two limits: the random swap is not size-matched to
+  the 8-dim subspace swap, and re-batching the unpatched prompts alone changes
+  12 of 96 labels against the E0 cache.
 - **Ablation at L27/L30** removes 0.74-0.83 C, but the subspace there decodes
   the a-vs-b decision at 0.95, so this says nothing about the horizon.
 
 ## 5. Next (proposed, thinking on only; each needs an approved spec before code)
 
-1. **Local, saved activations:** probes on natural closes only
-   (`probe_dimensionality.py --natural-only`, built, not run) and
-   within-unit R² at the suffix, `</think>` and pre-label cells, with the
-   ridge's inner CV grouped by horizon.
+1. ~~Local: natural closes only, within-unit R², grouped inner CV~~ done
+   2026-10-21 (`12` §1).
 2. **Local, saved E8 results:** split the per-prompt curve effects
    (`toward` in `exp8_Qwen3-8B_answer_slot/results.json`) by whether the
    shifted horizon crosses a delay. A horizon representation should change
    the choice only when it does.
 3. ~~Box: L24 curve split into decision and rest~~ done 2026-10-14 (`08` §9).
-4. **Box, regenerates reasoning (~1 h):** steer before reasoning, at the
-   prompt positions after the horizon around L15-19 where the horizon flows
-   in thinking-off patching, then let the model reason. This is the only test
-   of whether reasoning uses the horizon code. Specced as E10 (`07` §12,
-   2026-10-18): patch the horizon phrase (all of it, or only its top-8
-   horizon subspace) at L12/L16, then generate. Built
-   (`experiments/exp10_patch_reasoning.py`); queued with the L22 run in
-   `queue.sh` (one E10 copy per GPU); awaiting Jared's smoke (`local_checks.py reason`).
+4. ~~E10, patch before reasoning~~ done 2026-10-18 (`08` §11): the
+   last-token patch swaps the unit. Follow-up (box, ~30 min on 2 GPUs):
+   same-unit pairs only (e.g. "3 years" vs "39 years"), patching the number
+   tokens, and the top-8 subspace over the whole phrase. This is the causal
+   version of the within-unit question.
 5. ~~E9 unit rewrites~~ done 2026-10-14 (`08` §10). Still open at the
    suffix: E2 with Alan's 4 phrasings (forward pass only, minutes).
+6. **Box, from the 2026-10-26 audit** (each needs a spec):
+   - the decision split with the decision direction projected into the
+     ablated top k, so the three ablation rows split one subspace (8B L24,
+     14B off L27 first);
+   - T1 rerun with the fixed horizon span (whole phrase), to check the
+     `encode_end` / `spread_peak` markers behind S1;
+   - size-matched random controls for the E10 swap and for ablation.
 
 ## 6. Decisions, dated
 
@@ -153,6 +182,27 @@ representation, and what happens to it while the model reasons?
   record; nothing new runs in that mode. Cost: the prompt-side patching map
   (T1) exists only for thinking off, since patching prompt positions with
   thinking on changes the reasoning that follows.
+- **2026-10-20.** E11 (`10`): the 8B map on Qwen3-14B, both modes.
+- **2026-10-25.** Unit-overlap bank (`14`): 8B only, 14B dropped for now.
+- **2026-10-26. Audit of docs and code; struck or corrected:**
+  - "The suffix code is shared across models" (`11` §2, `13` C1): the null
+    permuted horizons across prompts, so it only tested same vs different
+    prompts. Against a null that keeps prompts grouped in both models it is
+    not significant.
+  - The decision-split ablation readings (`08` §9, `11` §3, `13` B2): the
+    decision direction lies mostly outside the ablated top k. Verdicts kept.
+  - "14B binds the label four layers after the hand-off, thinking off" (`11`
+    §1): 53 rows scored the wrong label tokens (`**b)**`); without them bind
+    is one layer after the hand-off, as on 8B.
+  - E10 "71-73%": wrong denominator; 96-99% over pairs whose units differ.
+  - The `08` §9 "within-edit" check as decisive: post hoc, inconclusive;
+    "follows the pattern of real behavior": not on both->none.
+  - think@1 "recovers" (0.81): 0.96 on natural closes.
+  - "Unit only" means within-unit R² near -0.25, not 0.
+  - Code fixed: label logits for unspaced labels, write-once reasoning cache,
+    E10 rates, T1 horizon span, per-fold refit in the decision check,
+    prompt-preserving alignment null on shared natural closes,
+    within-unit grouping by (value, unit).
 
 ## 7. Facts that constrain the design
 

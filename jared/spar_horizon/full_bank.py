@@ -7,7 +7,8 @@ copied from Alan's `../alan/ptm/prompts.py` (snapshot 2026-09-25) with the panda
 helpers dropped; `tests/test_full_bank.py` checks the copy against his output.
 Only `DatasetConfig.horizons` defaults differ: our 48-point log-spaced grid
 (30 seconds to 500 years, `HORIZONS`) replaces his 17-point one
-(`horizons.STANDARD_HORIZONS`).
+(`horizons.STANDARD_HORIZONS`). `DatasetConfig.rewrites` is ours too: the
+rendering table `unit_rewrite` draws from, by default his `UNIT_REWRITES`.
 
 Every sample is fully described by a `PromptSample` record; the rendered text is a
 pure function of that record and a `PromptFormat`. All parameters are stored as
@@ -209,6 +210,7 @@ class DatasetConfig:
     format: PromptFormat = field(default_factory=PromptFormat)
     randomize_order: bool = True
     unit_rewrite: bool = False                 # sample uniformly over (canonical horizon, rendering) incl. canonical
+    rewrites: dict = field(default_factory=lambda: UNIT_REWRITES)   # canonical text -> other renderings
     phrasing_ids: tuple[int, ...] = (0,)       # constraint phrasings to sample from
     paired: bool = False                       # emit EVERY rendering (and every phrasing) of each base sample, sharing pair_id
 
@@ -226,7 +228,7 @@ def generate(cfg: DatasetConfig) -> list[PromptSample]:
         else:
             hc = rng.choice(cfg.horizons)
             h_canon = str(hc)
-            renderings = [h_canon] + (list(UNIT_REWRITES.get(h_canon, ())) if cfg.unit_rewrite else [])
+            renderings = [h_canon] + (list(cfg.rewrites.get(h_canon, ())) if cfg.unit_rewrite else [])
             if cfg.paired:
                 variants = [(str(h), h.years, h.unit, h.value, phr)
                             for r in renderings for h in [Horizon.parse(r)] for phr in cfg.phrasing_ids]
@@ -344,3 +346,60 @@ def build_full_prompts(seed=0, n=500, limit=None):
         return records
     step = max(1, len(records) // limit)
     return records[::step][:limit]
+
+
+# --- the units bank (14_spec_unit_overlap.md) ---------------------------------
+# The same duration in its natural unit and in adjacent units, so that unit and
+# magnitude are no longer confounded: months then run from "2 months" to "708 months".
+
+MAX_RENDERED_VALUE = 1000   # no "15768000 seconds"
+MAX_RENDERING_ERROR = 0.10  # as natural_horizon's rounding
+
+
+def neighbour_renderings(h):
+    """Integer renderings of `h` in the units adjacent to its own in NATURAL_UNITS,
+    within 10% of its duration and from 1 to 1000."""
+    i = NATURAL_UNITS.index(h.unit)
+    out = []
+    for unit in (NATURAL_UNITS[i - 1] if i > 0 else None, NATURAL_UNITS[i + 1] if i + 1 < len(NATURAL_UNITS) else None):
+        if unit is None:
+            continue
+        value = round(h.years / UNIT_YEARS[unit])
+        if 1 <= value <= MAX_RENDERED_VALUE and abs(value * UNIT_YEARS[unit] / h.years - 1) <= MAX_RENDERING_ERROR:
+            out.append(str(Horizon(value, unit)))
+    return tuple(out)
+
+
+NEIGHBOUR_REWRITES: dict[str, tuple[str, ...]] = {
+    str(h): neighbour_renderings(h) for h in HORIZONS if neighbour_renderings(h)}
+UNIT_DURATIONS: tuple[Horizon, ...] = tuple(h for h in HORIZONS if str(h) in NEIGHBOUR_REWRITES)
+UNITS_BASE = 250   # base prompts; each is emitted once per rendering, ~520 prompts
+
+
+def build_units_prompts(seed=0, n_base=UNITS_BASE, limit=None):
+    """Paired records: `n_base` base prompts, each in every rendering of its duration,
+    sharing rewards, delays, order and labels. A base whose renderings fall in
+    different regimes (a rendering's rounding crosses a delay) is dropped, so a
+    pair differs in the phrase only. Extra keys: `pair_id`, `duration_id` (the
+    natural rendering), `rendered_unit`, `natural`. `limit` keeps evenly spaced
+    whole pairs, about `limit` records."""
+    cfg = DatasetConfig(n=8 * n_base, seed=seed, horizons=UNIT_DURATIONS, null_horizon_fraction=0.0,
+                        unit_rewrite=True, rewrites=NEIGHBOUR_REWRITES, paired=True)
+    pairs = {}
+    for s in generate(cfg):
+        rec = record(s)
+        rec.update(pair_id=s.pair_id, duration_id=s.horizon_canonical, rendered_unit=s.horizon_unit,
+                   natural=s.horizon_text == s.horizon_canonical)
+        pairs.setdefault(s.pair_id, []).append(rec)
+    by_duration = {str(h): [] for h in UNIT_DURATIONS}
+    for p in pairs.values():
+        if len(p) == 1 + len(NEIGHBOUR_REWRITES[p[0]["duration_id"]]) and len({r["regime"] for r in p}) == 1:
+            by_duration[p[0]["duration_id"]].append(p)
+    # round-robin over durations, so each gets n_base / 33 bases (uniform draws leave some with 3)
+    complete = [p for row in zip(*by_duration.values()) for p in row][:n_base]
+    if len(complete) < n_base:
+        raise ValueError(f"only {len(complete)} balanced pairs for n_base={n_base}")
+    if limit is not None:
+        n_pairs = max(1, limit // 2)
+        complete = complete[::max(1, len(complete) // n_pairs)][:n_pairs]
+    return [rec for p in complete for rec in p]

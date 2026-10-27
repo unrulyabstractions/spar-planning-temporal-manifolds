@@ -62,11 +62,32 @@ class Runner:
     def score(self, prompts, cell_label=None, layer=None, make_edit=None):
         """Near log-odds per prompt. A thinking-off set averages each prompt with its
         swapped twin; the same edit is applied to both."""
+        if make_edit is None:
+            # the unedited baseline goes through the same prefix-cache path as last-position
+            # edits, so their differences carry no cached-vs-full numerical offset
+            return self.score_many(prompts, "pre-label", None, [None])[0]
         out = []
         for variant in prompts["variants"]:
             positions = variant["positions"][cell_label] if make_edit is not None else None
             out.append(S.score(self.model, self.device, variant["ids"], variant["near_first"], variant["labels"],
                                self.pad_id, prompts["batch_size"], layer, positions, make_edit))
+        return np.mean(out, axis=0)
+
+    def score_many(self, prompts, cell_label, layer, make_edits):
+        """Near log-odds [len(make_edits), n], one row per edit at `layer` (None: no
+        edit). When the cell is every row's last position the edits share one prefix
+        pass per batch (S.score_last_edits); otherwise each edit is a full pass."""
+        out = []
+        for variant in prompts["variants"]:
+            positions = variant["positions"][cell_label]
+            if all(p == [len(seq) - 1] for p, seq in zip(positions, variant["ids"])):
+                out.append(S.score_last_edits(self.model, self.device, variant["ids"], variant["near_first"],
+                                              variant["labels"], self.pad_id, prompts["batch_size"],
+                                              [None if make is None else (layer, make) for make in make_edits]))
+            else:
+                out.append(np.stack([S.score(self.model, self.device, variant["ids"], variant["near_first"],
+                                             variant["labels"], self.pad_id, prompts["batch_size"], layer,
+                                             positions, make) for make in make_edits]))
         return np.mean(out, axis=0)
 
 
@@ -156,20 +177,21 @@ def run_ablate(runner, prompts, cell, regimes, base):
     mean = torch.tensor(cell["mean"], device=runner.device, dtype=torch.float32)
     available = [k for k in ABLATE_KS if k <= cell["basis"].shape[0]]
     cut = CUT_K[cell["mode"]] if CUT_K[cell["mode"]] in available else max(available)
-    out, per_prompt = {}, {}   # removed share per k and subspace; edited log-odds per prompt, "k|subspace"
+    subspaces = []   # (k, name, basis), all scored in one call so they share each batch's prefix pass
     for k in available:
-        bases = {"horizon": cell["basis"][:k]}
+        subspaces.append((k, "horizon", cell["basis"][:k]))
         if k == cut:
-            bases.update({f"random {s}": S.random_orthonormal(d, k, seed=s) for s in range(N_RANDOM_SUBSPACES)})
+            subspaces += [(k, f"random {s}", S.random_orthonormal(d, k, seed=s)) for s in range(N_RANDOM_SUBSPACES)]
             if "decision" in cell:
-                bases["horizon without decision"] = S.basis_without(cell["basis"][:k], cell["decision"])
-                bases["decision"] = cell["decision"][None, :]
-        out[k] = {}
-        for name, basis in bases.items():
-            edit = S.MeanAblate(mean, torch.tensor(basis, device=runner.device, dtype=torch.float32))
-            edited = runner.score(prompts, cell["label"], cell["layer"], lambda rows, e=edit: e)
-            out[k][name] = S.removed_fraction(base, edited, regimes)
-            per_prompt[f"{k}|{name}"] = edited.tolist()
+                subspaces += [(k, "horizon without decision", S.basis_without(cell["basis"][:k], cell["decision"])),
+                              (k, "decision", cell["decision"][None, :])]
+    edits = [S.MeanAblate(mean, torch.tensor(basis, device=runner.device, dtype=torch.float32))
+             for _, _, basis in subspaces]
+    edited_all = runner.score_many(prompts, cell["label"], cell["layer"], [lambda rows, e=e: e for e in edits])
+    out, per_prompt = {}, {}   # removed share per k and subspace; edited log-odds per prompt, "k|subspace"
+    for (k, name, _), edited in zip(subspaces, edited_all):
+        out.setdefault(k, {})[name] = S.removed_fraction(base, edited, regimes)
+        per_prompt[f"{k}|{name}"] = edited.tolist()
     return out, per_prompt
 
 
@@ -179,17 +201,17 @@ def run_steer(runner, prompts, cell, regimes, log_h, base, contrast):
     effect signed toward the rational answer (for the curve-vs-line criterion)."""
     out = {}
     regimes = np.asarray(regimes)
-    for direction in directions(cell):
-        out[direction] = {}
-        for alpha in ALPHAS:
-            deltas = delta_rows(cell, direction, alpha, log_h)
-            edited = runner.score(prompts, cell["label"], cell["layer"], adder(deltas, runner.device))
-            effect = (edited - base) / contrast
-            out[direction][alpha] = {"near": S.bootstrap_mean(effect[regimes == "near"]),
-                                     "both": S.bootstrap_mean(effect[regimes == "both"]),
-                                     "readout": float((deltas @ cell["w"]).mean()),
-                                     "toward": S.toward_rational(effect, regimes, alpha).tolist(),
-                                     "effect": effect.tolist()}
+    conditions = [(direction, alpha) for direction in directions(cell) for alpha in ALPHAS]
+    deltas = {c: delta_rows(cell, *c, log_h) for c in conditions}
+    edited_all = runner.score_many(prompts, cell["label"], cell["layer"],
+                                   [adder(deltas[c], runner.device) for c in conditions])
+    for (direction, alpha), edited in zip(conditions, edited_all):
+        effect = (edited - base) / contrast
+        out.setdefault(direction, {})[alpha] = {"near": S.bootstrap_mean(effect[regimes == "near"]),
+                                                "both": S.bootstrap_mean(effect[regimes == "both"]),
+                                                "readout": float((deltas[direction, alpha] @ cell["w"]).mean()),
+                                                "toward": S.toward_rational(effect, regimes, alpha).tolist(),
+                                                "effect": effect.tolist()}
     return out
 
 
@@ -213,16 +235,15 @@ def run_answer(runner, variant, regimes, near_labels, limit):
         same_near = [near_first[r] for r, _ in batch]
         donor_logits, captured = S.forward_capture_last(runner.model, runner.device, [ids[d] for _, d in batch],
                                                         runner.pad_id)
-        recipient_logits, _, _ = S.forward(runner.model, runner.device, recipient, runner.pad_id)
         lo_d = S.near_log_odds(donor_logits, same_near, [labels[d] for _, d in batch])
-        lo_r = S.near_log_odds(recipient_logits, same_near, [labels[r] for r, _ in batch])
+        # row 0: the unpatched recipient; row L: its last position replaced with the donor's at layer L
+        edits = [None] + [(layer, lambda rows, v=captured[layer - 1]: S.Replace(v[rows]))
+                          for layer in range(1, n_layers)]
+        scored = S.score_last_edits(runner.model, runner.device, recipient, same_near,
+                                    [labels[r] for r, _ in batch], runner.pad_id, len(batch), edits)
+        lo_r = scored[0]
         gaps[rows] = lo_d - lo_r
-        last = [[len(seq) - 1] for seq in recipient]
-        for layer in range(1, n_layers):
-            patched, _, _ = S.forward(runner.model, runner.device, recipient, runner.pad_id, layer=layer,
-                                      positions=last, edit=S.Replace(captured[layer - 1]))
-            lo_p = S.near_log_odds(patched, same_near, [labels[r] for r, _ in batch])
-            transfer[layer, rows] = (lo_p - lo_r) / (lo_d - lo_r)
+        transfer[1:, rows] = (scored[1:] - lo_r) / (lo_d - lo_r)
     used = np.abs(gaps) > MIN_PAIR_GAP
     return {"n_pairs": len(pairs), "n_used": int(used.sum()), "mean_gap": float(np.abs(gaps).mean()),
             "transfer": [S.bootstrap_mean(transfer[layer, used]) for layer in range(n_layers)]}
@@ -411,15 +432,16 @@ def main(args):
         for key, cell in cells.items():
             if cell["mode"] != mode:
                 continue
-            res = {}
+            res = results["cells"][key] = {}
             if "ablate" in cell_tests[mode]:
                 res["ablate"], res["ablate_per_prompt"] = timed(
                     f"{key} ablate", lambda: run_ablate(runner, prompts, cell, regimes, base))
+                # saved before steering, so a stopped run keeps the ablation
+                (out_dir / "results.json").write_text(json.dumps(results, default=float))
             if "steer" in cell_tests[mode]:
                 res["steer"] = timed(f"{key} steer",
                                      lambda: run_steer(runner, prompts, cell, regimes, log_h, base, contrast))
             res["verdicts"] = verdicts(mode, res)
-            results["cells"][key] = res
             print_cell(key, res, contrast)
             (out_dir / "results.json").write_text(json.dumps(results, default=float))   # incremental
     (out_dir / "results.json").write_text(json.dumps(results, default=float))

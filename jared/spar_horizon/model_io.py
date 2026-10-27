@@ -16,13 +16,17 @@ asks for `I choose: <a) or b)>`), the model writes the prefix itself and the
 label is located after it in a `cfg.answer_window`-token window, as Alan's
 parser reads it (`locate_label`).
 
-Generation is batched (left-padded, greedy) and verified token-identical to
-single-prompt generation. With `cfg.cache_dir` set, every prompt's
-`Generation` is stored under a key of the settings and its input ids, so a
-re-run skips generation; greedy decoding makes this exact.
+Generation is batched (left-padded, greedy). Batched bf16 greedy decoding is not
+bit-stable: padding and batch composition change low-order bits, so a prompt
+can come out differently than alone or in another batch. With `cfg.cache_dir`
+set, every prompt's `Generation` is stored under a key of the settings and its
+input ids, and a re-run reuses it instead of regenerating; the first stored
+generation wins and is never overwritten, so the saved activations and every
+later run read the same trace.
 """
 
 import hashlib
+import os
 from dataclasses import dataclass, fields
 from pathlib import Path
 
@@ -155,12 +159,23 @@ def cache_load(cfg, ids, system, device):
 
 
 def cache_store(cfg, ids, system, gen):
+    """Store `gen` unless the key already exists. Written to a temp file and hard-linked
+    into place, which fails if the target exists, so concurrent writers neither overwrite
+    an entry nor leave a partial file."""
     if not cfg.cache_dir:
         return
     d = Path(cfg.cache_dir)
     d.mkdir(parents=True, exist_ok=True)
-    np.savez(d / f"{cache_key(cfg, ids, system)}.npz", ids=gen.ids.cpu().numpy(), forced=gen.forced,
-             **{f: getattr(gen, f) for f in _INT_FIELDS})
+    target = d / f"{cache_key(cfg, ids, system)}.npz"
+    tmp = d / f"{target.name}.{os.getpid()}.tmp"
+    with open(tmp, "wb") as f:
+        np.savez(f, ids=gen.ids.cpu().numpy(), forced=gen.forced, **{k: getattr(gen, k) for k in _INT_FIELDS})
+    try:
+        os.link(tmp, target)
+    except FileExistsError:
+        pass
+    finally:
+        tmp.unlink()
 
 
 class _StepBar(StoppingCriteria):

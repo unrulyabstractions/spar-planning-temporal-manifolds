@@ -173,6 +173,49 @@ def score(model, device, id_lists, near_first, labels, pad_id, batch_size,
     return np.concatenate(out)
 
 
+@torch.no_grad()
+def score_last_edits(model, device, id_lists, near_first, labels, pad_id, batch_size, edits):
+    """Near log-odds [len(edits), n] for edits at the last position only. `edits`
+    holds (layer, make_edit) pairs, or None for the unedited sequences. A causal
+    model's states before the last position do not depend on an edit there, so
+    each batch's prefix (all but the last token) runs once and its key/value cache
+    serves every edit, which then costs a one-token pass. Equals score() per edit;
+    on ~2.5k-token reasoning traces this is the difference between hours and minutes.
+    Models with recurrent layers (linear attention) fall back to full passes: their
+    cache holds a running state that cannot be cropped back to the prefix."""
+    layer_types = getattr(model.config.get_text_config(), "layer_types", None) or ["full_attention"]
+    if any(t != "full_attention" for t in layer_types):
+        last = [[len(seq) - 1] for seq in id_lists]
+        return np.stack([score(model, device, id_lists, near_first, labels, pad_id, batch_size)
+                         if spec is None else
+                         score(model, device, id_lists, near_first, labels, pad_id, batch_size, spec[0], last, spec[1])
+                         for spec in edits])
+    out = np.zeros((len(edits), len(id_lists)))
+    one = torch.ones((1, 1), dtype=torch.bool, device=device)
+    for start in range(0, len(id_lists), batch_size):
+        rows = list(range(start, min(start + batch_size, len(id_lists))))
+        ids, attention, _ = pad_left([id_lists[r] for r in rows], pad_id)
+        if ids.shape[1] < 2:
+            raise ValueError("score_last_edits needs at least two tokens per sequence")
+        ids, attention = ids.to(device), attention.to(device)
+        position_ids = (attention.cumsum(-1) - 1).clamp(min=0)
+        cache = model(input_ids=ids[:, :-1], attention_mask=attention[:, :-1], position_ids=position_ids[:, :-1],
+                      use_cache=True, logits_to_keep=1).past_key_values
+        # left padding puts every row's last token in the last column: slot 0 of the one-token pass
+        index, mask = torch.zeros((len(rows), 1), dtype=torch.long, device=device), one.expand(len(rows), 1)
+        for e, spec in enumerate(edits):
+            context = nullcontext() if spec is None else edit_residual(model, spec[0], index, mask, spec[1](rows))
+            with context:
+                logits = model(input_ids=ids[:, -1:], attention_mask=attention, position_ids=position_ids[:, -1:],
+                               past_key_values=cache, use_cache=True, logits_to_keep=1).logits[:, -1].float()
+            # drop the edited last token, so the next edit sees only the prefix; a negative count,
+            # since newer transformers reject crop() to a positive length
+            cache.crop(-1)
+            out[e, start:start + len(rows)] = near_log_odds(logits, [near_first[r] for r in rows],
+                                                            [labels[r] for r in rows])
+    return out
+
+
 def gather(hidden, positions, offsets):
     """Values of one layer's hidden states [B, T, d] at per-row unpadded positions,
     flattened in the order edit_residual selects them (for Replace)."""
@@ -268,8 +311,8 @@ def encode(tokenizer, prompt, cfg):
 def crossing_pairs(records, tokenizer, cfg, rng, limit):
     """For each near- or both-regime record, the same prompt with a horizon from
     the other of those two regimes and the same token length. Returns dicts
-    with recipient/donor ids, the record index, the donor horizon, the horizon
-    token span (start, end) and the prompt end (first template-suffix token)."""
+    with recipient/donor ids, the record index, the donor horizon, the span
+    (start, end) of the horizon phrase in both prompts and the prompt end (first template-suffix token)."""
     n_suffix = suffix_length(tokenizer, records[0]["prompt"], cfg)
     pairs = []
     for i, rec in enumerate(records):
@@ -278,15 +321,18 @@ def crossing_pairs(records, tokenizer, cfg, rng, limit):
             continue
         other = "both" if here == "near" else "near"
         recipient = encode(tokenizer, rec["prompt"], cfg)
+        recipient_phrase = phrase_positions(tokenizer, chat_text(tokenizer, rec["prompt"], cfg), rec["horizon_text"])
         options = [h for h in HORIZONS if regime(h.years, rec["near_delay_years"], rec["far_delay_years"]) == other]
         rng.shuffle(options)
         for h in options:
-            donor = encode(tokenizer, render_variant({**rec, "horizon_text": str(h)}), cfg)
+            donor_prompt = render_variant({**rec, "horizon_text": str(h)})
+            donor = encode(tokenizer, donor_prompt, cfg)
             if len(donor) != len(recipient):
                 continue
-            differ = [p for p, (a, b) in enumerate(zip(recipient, donor)) if a != b]
+            # the whole phrase, not just the tokens that differ: "91 years" -> "16 years" shares " years"
+            phrase = recipient_phrase + phrase_positions(tokenizer, chat_text(tokenizer, donor_prompt, cfg), str(h))
             pairs.append({"recipient": recipient, "donor": donor, "record": i, "donor_horizon": str(h),
-                          "span": (differ[0], differ[-1] + 1), "prompt_end": len(recipient) - n_suffix})
+                          "span": (min(phrase), max(phrase) + 1), "prompt_end": len(recipient) - n_suffix})
             break
         if len(pairs) >= limit:
             break

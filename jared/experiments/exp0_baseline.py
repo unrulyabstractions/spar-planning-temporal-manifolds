@@ -152,7 +152,8 @@ def run(cfg, out=None, skip_behavior=False):
     rows = []
     for r, a, k in zip(records, ext.answers, ext.kept):
         row = {"horizon": r["horizon"], "prompt": r["prompt"], "answer": a,
-               **{k: r[k] for k in ("near_label", "regime", "truth", "sample_uid") if k in r}}
+               **{k: r[k] for k in ("near_label", "regime", "truth", "sample_uid",
+                                    "pair_id", "duration_id", "rendered_unit", "natural") if k in r}}
         if k:
             forced, tl, tt = next(kept_rows)
             row.update(label=(a.strip()[:1] if a else None), forced=bool(forced), think_len=int(tl),

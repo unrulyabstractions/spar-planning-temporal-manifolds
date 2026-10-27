@@ -20,7 +20,8 @@ class Settings:
     answer_window: int = 48         # tokens generated after the turn (or the think close) when the
                                     # label is located by choice_prefix rather than pinned by prefill
     bank: str = "starter"           # "starter" (the 116-prompt starter bank) | "full" (Alan's generator)
-    n_prompts: int = 500            # full bank size
+                                    # | "units" (full-bank prompts paired across units, 14_spec_unit_overlap.md)
+    n_prompts: int = 500            # full bank size (the units bank has its own, UNITS_BASE pairs)
     limit: int | None = None        # prompt-bank subset for smoke tests
     seed: int = 0
     think_fractions: tuple = (0.25, 0.5, 1.0)  # kept positions inside the think block, as fractions
@@ -33,8 +34,8 @@ class Settings:
     def __post_init__(self):
         if self.thinking not in ("on", "off"):
             raise ValueError(f"thinking must be 'on' or 'off', got {self.thinking!r}")
-        if self.bank not in ("starter", "full"):
-            raise ValueError(f"bank must be 'starter' or 'full', got {self.bank!r}")
+        if self.bank not in ("starter", "full", "units"):
+            raise ValueError(f"bank must be 'starter', 'full' or 'units', got {self.bank!r}")
         if self.prefill and self.choice_prefix:
             raise ValueError("prefill and choice_prefix are exclusive: the label is either pinned or located")
         self.think_fractions = tuple(float(f) for f in self.think_fractions)

@@ -301,7 +301,7 @@ On the top-4 horizon-subspace coordinates, 5-fold cross-validated ridge R²:
   cannot explain, and at L27/30 it also holds the choice almost perfectly.
 - **What it cannot show:** which of the two contents the model *uses*.
 - At L24, the near-vs-far preference decodes at 0.65 even though the a-vs-b
-  label decodes at only 0.23. L24 looks like the point where a preference
+  label decodes at only 0.38 (0.23 before the per-fold refit). L24 looks like the point where a preference
   exists before it is bound to a label (`08` §7).
 
 ### 6.2 Split the subspace along a decision direction (run 3, pre-registered in `07` §10)
@@ -310,8 +310,10 @@ On the top-4 horizon-subspace coordinates, 5-fold cross-validated ridge R²:
 - A ridge regression from the 8 subspace coordinates to each prompt's saved
   near log-odds (371 natural closes), mapped back to the residual stream and
   normalized.
-- It lies inside the subspace, so the curve splits exactly into
-  `curve = (curve along u) + (curve without u)`.
+- It lies inside the 8-dim subspace, so the curve splits exactly into
+  `curve = (curve along u) + (curve without u)`. The ablation is judged on
+  the top 4 only, and just 0.25 of `u` lies there, so the ablation rows
+  ("without u", "u alone") do not split the ablated subspace (`08` §9).
 - Cross-validated R² of the near log-odds from the subspace: 0.86.
 
 **Edits:**
@@ -353,7 +355,8 @@ in units of C (e.g. `near -> both` = -1.01, `both -> near` = +1.01,
   `near -> both` -0.14, `both -> near` +0.11.
 - Leaves it nearly alone where the regime stays: `near -> near` -0.02,
   `both -> both` 0.00.
-- That is the pattern of real behavior, at about a seventh of its size.
+- But `both -> none` moves +0.14, where real behavior moves +0.04. So it
+  matches real behavior on some transitions, not all.
 
 **Pure decision push `u`:**
 - Moves prompts by alpha's sign, whatever the transition.
@@ -366,7 +369,9 @@ horizon. The curve could reproduce this pattern by carrying "the average
 decision at each horizon" without looking at any prompt's delays. §6.4
 separates the two.
 
-### 6.4 The decisive check: within identical edits
+### 6.4 A post-hoc check: within identical edits
+
+Added after the `07` §10 criteria had passed; not pre-registered.
 
 **Idea:** take all prompts that received **exactly the same edit** (same
 horizon, same alpha). Their edits are identical vectors, so any difference in
@@ -405,9 +410,15 @@ mixed transitions):
   show a small within-edit slope because prompts that already sit far from 0
   respond differently (saturation), not because of their delays.
 
-So at L24 after reasoning, steering mostly moves *the average decision
-attached to each horizon*. There is little sign of a horizon value that the
-model compares with this prompt's delays at that layer.
+- The check cannot separate the two readings: the curve's 0.030 [0.000,
+  0.061] and the pure push's 0.020 [0.007, 0.036] overlap, and the right
+  ceiling for the curve is its own overall 0.137, not 1 (0.030 is about a
+  fifth of it). The curve without `u` keeps 0.033 [0.003, 0.063], an
+  interval above 0.
+
+So at L24 after reasoning, steering is consistent with moving *the average
+decision attached to each horizon*, and also with a small part that follows
+this prompt's delays; this check does not decide between them.
 
 ### 6.5 Side result: why the mean difference steers backwards
 

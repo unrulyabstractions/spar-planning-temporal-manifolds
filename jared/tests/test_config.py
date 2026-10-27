@@ -21,6 +21,7 @@ def test_bad_fractions_raise(bad):
 def test_bank_tag_and_validation():
     assert Settings().tag == "Qwen3-8B_think-on"
     assert Settings(bank="full", prefill="", choice_prefix="I choose:").tag == "Qwen3-8B_think-on_full"
+    assert Settings(bank="units", prefill="", choice_prefix="I choose:").tag == "Qwen3-8B_think-on_units"
     with pytest.raises(ValueError):
         Settings(bank="alan")
     with pytest.raises(ValueError):

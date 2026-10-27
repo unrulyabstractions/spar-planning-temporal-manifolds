@@ -115,3 +115,63 @@ def test_render_variant_reproduces_the_prompt_and_swaps_only_the_horizon():
     assert F.render_variant(rec) == rec["prompt"]
     rewritten = F.render_variant({**rec, "horizon_text": "52 weeks"})
     assert rewritten.replace("52 weeks", rec["horizon_text"]) == rec["prompt"]
+
+
+# --- the units bank (14_spec_unit_overlap.md) ---
+
+def test_full_bank_is_unchanged_by_the_units_bank():
+    """sha1 of the 500 full-bank records at a93acf9, before DatasetConfig.rewrites existed."""
+    import hashlib
+    records = F.build_full_prompts()
+    assert hashlib.sha1(json.dumps(records, sort_keys=True).encode()).hexdigest() == \
+        "bb53819cf546b9bcd38f0553d0c30809d86b5dfc"
+
+
+def test_neighbour_renderings_follow_the_spec():
+    assert len(F.UNIT_DURATIONS) == 33
+    assert Counter(len(v) for v in F.NEIGHBOUR_REWRITES.values()) == {1: 31, 2: 2}
+    assert F.NEIGHBOUR_REWRITES["8 weeks"] == ("2 months", "56 days")
+    assert F.NEIGHBOUR_REWRITES["15 months"] == ("65 weeks",)
+    for natural, others in F.NEIGHBOUR_REWRITES.items():
+        h = Horizon.parse(natural)
+        units = F.NATURAL_UNITS
+        for text in others:
+            r = Horizon.parse(text)
+            assert r.value == int(r.value) and 1 <= r.value <= 1000
+            assert abs(r.years / h.years - 1) <= 0.10
+            assert abs(units.index(r.unit) - units.index(h.unit)) == 1
+
+
+def test_units_bank_pairs_differ_only_in_the_horizon_phrase():
+    records = F.build_units_prompts()
+    pairs = {}
+    for r in records:
+        pairs.setdefault(r["pair_id"], []).append(r)
+    assert len(pairs) == F.UNITS_BASE
+    per_duration = Counter(p[0]["duration_id"] for p in pairs.values())
+    assert set(per_duration) == {str(h) for h in F.UNIT_DURATIONS} and max(per_duration.values()) - min(per_duration.values()) <= 1
+    for p in pairs.values():
+        assert len(p) == 1 + len(F.NEIGHBOUR_REWRITES[p[0]["duration_id"]])
+        assert sum(r["natural"] for r in p) == 1
+        assert len({r["regime"] for r in p}) == 1
+        assert len({r["rendered_unit"] for r in p}) == len(p)
+        # substitute inside the constraint line only: the horizon text can also be a delay ("5 years")
+        without_horizon = {"\n".join(line.replace(r["horizon_text"], "<h>") if line.startswith("CONSTRAINT:") else line
+                                     for line in r["prompt"].split("\n")) for r in p}
+        assert len(without_horizon) == 1
+
+
+def test_units_bank_limit_keeps_whole_pairs():
+    records = F.build_units_prompts(limit=8)
+    counts = Counter(r["pair_id"] for r in records)
+    assert len(counts) == 4
+    assert all(n == 1 + len(F.NEIGHBOUR_REWRITES[r["duration_id"]]) for r in records for n in [counts[r["pair_id"]]])
+
+
+def test_build_records_routes_the_units_bank_with_full_bank_variants():
+    from spar_horizon.banks import build_records, variant_builder
+    from spar_horizon.config import Settings
+    cfg = Settings(bank="units", prefill="", choice_prefix="I choose:", limit=8)
+    records = build_records(cfg)
+    assert all(r["pair_id"] and r["duration_id"] and r["rendered_unit"] for r in records)
+    assert variant_builder(cfg)(records[0]) == records[0]["prompt"]

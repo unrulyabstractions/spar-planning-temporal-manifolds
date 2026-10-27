@@ -99,6 +99,21 @@ def within_unit_r2(y, pred, units, mask=None):
     return float(1 - ((y_dev - pred_dev) ** 2).sum() / (y_dev ** 2).sum())
 
 
+def horizon_within_unit_r2(y, pred, units, mask=None):
+    """`within_unit_r2` on the per-horizon means of target and predictions. The
+    prompt-level score counts each prompt's scatter around its horizon's mean
+    prediction as error against the small within-unit spread of the target, so
+    it can sit far below 0 while the horizon averages are well ordered; this
+    asks only whether the averages are."""
+    if mask is not None:
+        y, pred, units = y[mask], pred[mask], units[mask]
+    # "60 minutes" and "1 hour" share a value but not a rendering: average each (value, unit) alone
+    renderings = sorted(set(zip(np.round(y, 9), units)))
+    rows = [(np.round(y, 9) == value) & (units == unit) for value, unit in renderings]
+    return within_unit_r2(np.array([y[r].mean() for r in rows]), np.array([pred[r].mean() for r in rows]),
+                          np.array([unit for _, unit in renderings]))
+
+
 def probe_curves(X, y, units=None, ks=KS, orders=ORDERS, probes=PROBES, ceiling=True):
     """Leave-one-horizon-out R² for every (probe, order, k), on all prompts and
     on interior horizons only. Holding out one of the two extreme horizons is
@@ -108,7 +123,8 @@ def probe_curves(X, y, units=None, ks=KS, orders=ORDERS, probes=PROBES, ceiling=
     NaN. Returns {"r2": {probe: {order: [per k]}}, "r2_interior": same,
     "ceiling", "ceiling_interior": full-dim ridge R², or None without
     `ceiling`}; with `units` also "r2_within" and "ceiling_within"
-    (`within_unit_r2` on interior horizons). Single-threaded: the problems are
+    (`within_unit_r2` on interior horizons) and their horizon-average versions
+    "r2_within_horizon", "ceiling_within_horizon" (`horizon_within_unit_r2`). Single-threaded: the problems are
     tiny and parallelism belongs one level up, across cells."""
     with threadpool_limits(1):
         return _probe_curves(X, y, units, ks, orders, probes, ceiling)
@@ -142,6 +158,8 @@ def _probe_curves(X, y, units, ks, orders, probes, ceiling):
     if units is not None:
         out["r2_within"] = table(lambda pred: within_unit_r2(y, pred, units, interior))
         out["ceiling_within"] = within_unit_r2(y, full, units, interior) if ceiling else None
+        out["r2_within_horizon"] = table(lambda pred: horizon_within_unit_r2(y, pred, units, interior))
+        out["ceiling_within_horizon"] = horizon_within_unit_r2(y, full, units, interior) if ceiling else None
     return out
 
 

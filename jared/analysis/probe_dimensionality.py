@@ -8,6 +8,9 @@ leave-one-horizon-out, for every layer at the positions in `positions()`
     python analysis/probe_dimensionality.py results/horizon --natural-only
     -> thinking on only, prompts whose think block closed on its own; files end in _natural
 
+    python analysis/probe_dimensionality.py results/horizon --model Qwen/Qwen3-14B --tag 14b
+    -> another model's runs (default Qwen/Qwen3-8B); the tag keeps the 8B files
+
     python analysis/probe_dimensionality.py results/horizon --modes on --layers 4,8,16 \
         --positions "suffix newline,pre-label" --tag within
     -> a subset of cells; files end in _within (and _natural_within with --natural-only)
@@ -61,6 +64,12 @@ def positions(meta):
         out["think close"] = regions["pre"][0]
     out["pre-label"] = regions["prelabel"][0]
     return out
+
+
+def run_file(root, mode, model="Qwen/Qwen3-8B"):
+    """The activations of `model`'s E0 run for `mode` under `root`, or None; a results folder can hold several models."""
+    hits = sorted(Path(root).glob(f"exp0_{model.split('/')[-1]}_think-{mode}*/activations.npz"))
+    return hits[0] if hits else None
 
 
 def run_mode(path, natural_only=False, layers=None, labels=None):
@@ -189,14 +198,14 @@ def plot_k90(results, path):
     plt.close(fig)
 
 
-def main(root, natural_only=False, modes=("off", "on"), layers=None, labels=None, tag=""):
+def main(root, natural_only=False, modes=("off", "on"), layers=None, labels=None, tag="", model="Qwen/Qwen3-8B"):
     root = Path(root)
     results = {}
     # forced closes exist only with thinking on, so the natural-only run skips thinking off
     for mode in (("on",) if natural_only else modes):
-        hits = sorted(root.glob(f"exp0_*_think-{mode}*/activations.npz"))
-        if hits:
-            results[mode] = run_mode(hits[0], natural_only, layers, labels)
+        path = run_file(root, mode, model)
+        if path:
+            results[mode] = run_mode(path, natural_only, layers, labels)
     out = root / "analysis"
     out.mkdir(exist_ok=True)
     tag = ("_natural" if natural_only else "") + (f"_{tag}" if tag else "")
@@ -218,7 +227,8 @@ if __name__ == "__main__":
     parser.add_argument("--layers", default=None, help="comma-separated layer indices (default: all)")
     parser.add_argument("--positions", default=None, help="comma-separated position labels (default: all)")
     parser.add_argument("--tag", default="", help="suffix for the output files, so a subset run keeps the full one")
+    parser.add_argument("--model", default="Qwen/Qwen3-8B", help="which model's runs to read; add --tag to keep another model's files apart")
     args = parser.parse_args()
     main(args.root, args.natural_only, tuple(args.modes.split(",")),
          [int(x) for x in args.layers.split(",")] if args.layers else None,
-         args.positions.split(",") if args.positions else None, args.tag)
+         args.positions.split(",") if args.positions else None, args.tag, args.model)

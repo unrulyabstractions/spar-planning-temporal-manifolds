@@ -26,6 +26,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.decomposition import PCA
 from sklearn.linear_model import RidgeCV
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
@@ -38,6 +39,7 @@ JARED = Path(__file__).resolve().parent.parent
 INPUTS = JARED / "steering" / "inputs_Qwen3-8B_answer_slot.npz"
 RUNS = {"first": "exp8_Qwen3-8B_full", "second": "exp8_Qwen3-8B_answer_slot"}
 K = 4
+NORMAL_LEAD = 3
 BLUE, ORANGE, AQUA, GRAY, INK = "#2a78d6", "#eb6834", "#1baf7a", "#9a9893", "#52514e"
 
 
@@ -54,11 +56,15 @@ def cv_r2(features, target, folds=5, seed=0):
 
 def saved_decision(run, z):
     """The decision per horizon prompt of a saved E0 run (rows as in cell_data):
-    a-vs-b log-odds, near-vs-far log-odds, chose_near."""
+    a-vs-b log-odds, near-vs-far log-odds, chose_near. Rows whose lead is not NORMAL_LEAD
+    have NaN log-odds: runs saved before extract.label_pair read the spaced ' a'/' b' logits
+    there, but after a markdown lead like `**b)**` the label is unspaced, so those logits are
+    for the wrong token pair. Callers drop the NaN rows."""
     answers = json.loads((run / "answers.json").read_text())
     keep = ~np.isnan(z["horizons"])
     rows = [a for a, k in zip(answers, keep) if k]
     ab = z["label_logits"][keep, 0] - z["label_logits"][keep, 1]
+    ab[z["lead"][keep] != NORMAL_LEAD] = np.nan
     near_is_a = np.array([r["near_label"] == "a" for r in rows])
     near = np.where(near_is_a, ab, -ab)
     chose_near = np.array([r["label"] == r["near_label"] for r in rows])
@@ -72,26 +78,56 @@ def answer_slot(root, mode, layer, cell):
     z = np.load(run / "activations.npz")
     X, log_h, _ = cell_data(z, "pre-label", layer)
     ab, near, chose_near = saved_decision(run, z)
+    valid = np.isfinite(ab)
     Z = (X - cell["mean"]) @ cell["basis"][:K].T
-    return Z, log_h, ab, near, chose_near
+    return Z[valid], log_h[valid], ab[valid], near[valid], chose_near[valid]
+
+
+def answer_slot_activations(root, mode, layer):
+    """The activations X [n, d] behind answer_slot's rows."""
+    run = root / f"exp0_Qwen3-8B_think-{mode}_full"
+    z = np.load(run / "activations.npz")
+    X, _, _ = cell_data(z, "pre-label", layer)
+    ab, _, _ = saved_decision(run, z)
+    return X[np.isfinite(ab)]
+
+
+def cv_r2_refit_subspace(X, log_h, target, extra=None, folds=5, seed=0):
+    """cv_r2 on the top-K PCs of the horizon averages (as fit_cell), refit inside each fold on its
+    training prompts only, so the test prompts never shape the subspace. `extra` columns are
+    appended to the PC coordinates."""
+    pred = np.empty(len(target))
+    for train, test in KFold(folds, shuffle=True, random_state=seed).split(X):
+        mean = X[train].mean(0)
+        groups = np.round(log_h[train], 9)
+        averages = np.stack([X[train][groups == h].mean(0) - mean for h in np.unique(groups)])
+        basis = PCA(n_components=K).fit(averages).components_
+        features = (X - mean) @ basis.T
+        if extra is not None:
+            features = np.c_[features, extra]
+        scaler = StandardScaler().fit(features[train])
+        model = RidgeCV(alphas=np.logspace(-3, 4, 15)).fit(scaler.transform(features[train]), target[train])
+        pred[test] = model.predict(scaler.transform(features[test]))
+    return float(1 - ((target - pred) ** 2).sum() / ((target - target.mean()) ** 2).sum())
 
 
 def decision_check(root, cells):
     out = {}
-    for key, cell in cells.items():
+    for key in cells:
         mode, _, layer = key.split("|")
-        Z, log_h, ab, near, chose_near = answer_slot(root, mode, int(layer), cell)
+        X = answer_slot_activations(root, mode, int(layer))
+        _, log_h, ab, near, chose_near = answer_slot(root, mode, int(layer), cells[key])
         decision = np.c_[ab, near]
         r2_dec = cv_r2(decision, log_h)
         out[key] = {
             "n": int(len(log_h)), "chose_near": int(chose_near.sum()),
-            "horizon_from_subspace": cv_r2(Z, log_h),
+            "horizon_from_subspace": cv_r2_refit_subspace(X, log_h, log_h),
             "horizon_from_decision": r2_dec,
-            "horizon_gain_beyond_decision": cv_r2(np.c_[Z, decision], log_h) - r2_dec,
-            "ab_from_subspace": cv_r2(Z, ab),
-            "near_from_subspace": cv_r2(Z, near),
-            "horizon_within_chose_near": cv_r2(Z[chose_near], log_h[chose_near]),
-            "horizon_within_chose_far": cv_r2(Z[~chose_near], log_h[~chose_near]),
+            "horizon_gain_beyond_decision": cv_r2_refit_subspace(X, log_h, log_h, extra=decision) - r2_dec,
+            "ab_from_subspace": cv_r2_refit_subspace(X, log_h, ab),
+            "near_from_subspace": cv_r2_refit_subspace(X, log_h, near),
+            "horizon_within_chose_near": cv_r2_refit_subspace(X[chose_near], log_h[chose_near], log_h[chose_near]),
+            "horizon_within_chose_far": cv_r2_refit_subspace(X[~chose_near], log_h[~chose_near], log_h[~chose_near]),
         }
     return out
 

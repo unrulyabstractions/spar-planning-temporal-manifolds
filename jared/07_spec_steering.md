@@ -233,6 +233,9 @@ also contains (`08` §7: the L24 subspace decodes the near log-odds at 0.65)?
   horizon-average basis (k = 8) to the saved near log-odds, mapped back to
   the residual stream and normalized; inside the horizon subspace by
   construction, so the curve splits exactly into its part along `u` and the rest.
+  (Audit note, 2026-10-26: this holds for the k = 8 steering, not for the
+  ablation, which is judged on the top 4 / top 2, where only part of `u` lies;
+  see `08` §9.)
 - **Steering** (alpha in {-2, -1, +1, +2} decades): the curve; the curve
   without its `u` component; the `u` component alone (the two add up to the
   curve); `u` itself at the curve's length; the mean difference (refit); one

@@ -16,6 +16,7 @@ held-out R² printed in each title comes from probe_dimensionality.json.
     -> <root>/analysis/horizon_shape.png
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -29,7 +30,7 @@ from scipy.stats import spearmanr
 from sklearn.decomposition import PCA
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from probe_dimensionality import positions  # noqa: E402  (same folder)
+from probe_dimensionality import positions, run_file  # noqa: E402  (same folder)
 from spar_horizon.probes import fit_predict  # noqa: E402
 from spar_horizon.runs import REGIONS  # noqa: E402
 
@@ -132,13 +133,13 @@ def plot_cell(fig, axes, mode, label, layer, X, y, forced, results):
     ax.set_title("path of the 48 horizon averages", fontsize=8)
 
 
-def main(root):
+def main(root, model="Qwen/Qwen3-8B"):
     root = Path(root)
     summary = root / "analysis" / "probe_dimensionality.json"
     results = json.loads(summary.read_text()) if summary.exists() else None
     fig = plt.figure(figsize=(16, 4.6 * len(CELLS)))
     for row, (mode, label, layer) in enumerate(CELLS):
-        z = np.load(next(root.glob(f"exp0_*_think-{mode}*/activations.npz")))
+        z = np.load(run_file(root, mode, model))
         X, y, forced = cell_data(z, label, layer)
         axes = [fig.add_subplot(len(CELLS), 3, 3 * row + 1), fig.add_subplot(len(CELLS), 3, 3 * row + 2),
                 fig.add_subplot(len(CELLS), 3, 3 * row + 3, projection="3d")]
@@ -160,4 +161,8 @@ def main(root):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("root")
+    parser.add_argument("--model", default="Qwen/Qwen3-8B")
+    args = parser.parse_args()
+    main(args.root, args.model)

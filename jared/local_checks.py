@@ -7,6 +7,8 @@
     ~/miniconda3/envs/intel_ai/bin/python local_checks.py decision   # E8 horizon/decision split, thinking on (after smoke)
     ~/miniconda3/envs/intel_ai/bin/python local_checks.py units      # E9 unit rewrites, one context
     ~/miniconda3/envs/intel_ai/bin/python local_checks.py reason     # E10 patch before reasoning, 4 pairs
+    ~/miniconda3/envs/intel_ai/bin/python local_checks.py prefix     # E8 prefix-cache scoring vs full passes
+    ~/miniconda3/envs/intel_ai/bin/python local_checks.py unitbank   # E0 on the units bank, both modes, 8 prompts
 
 Runs, with whichever python launched this file:
   1. tests/test_generation.py (batched-vs-single parity, force-close, layouts, cache; starter bank)
@@ -21,6 +23,12 @@ Runs, with whichever python launched this file:
   6. E9 (07 section 11): the unit renderings in one context, forward pass only
   7. E10 (07 section 12): every condition on 4 pairs with a 32-token think budget
      (plumbing only; the self-patch control should leave the labels unchanged)
+  8. E8's shared-prefix scoring against one full pass per edit, on Qwen3-0.6B in
+     bfloat16 (the 0.8B has linear-attention layers, where E8 falls back to full
+     passes, so steps 4-5 do not exercise the cache)
+  9. E0 on the 0.8B on the units bank (14_spec_unit_overlap.md), thinking off and
+     on, 4 pairs; then every answers.json row must carry its pair labels (and, thinking
+     off, a located label)
 and prints one line per step plus the answer-token line of each smoke.
 """
 
@@ -31,6 +39,17 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 MODEL = "Qwen/Qwen3.5-0.8B"
+CHECK_UNITS = """
+import json
+for mode in ("off", "on"):
+    rows = json.load(open(f"out/exp0_Qwen3.5-0.8B_think-{mode}_units/answers.json"))
+    # a 32-token think budget can leave the 0.8B without a label, so labels are required thinking off only
+    bad = [r["prompt"][-80:] for r in rows
+           if not (r.get("pair_id") and r.get("duration_id") and (r.get("label") or mode == "on"))]
+    print(f"units bank {mode}: {len(rows)} rows, {len({r['pair_id'] for r in rows})} pairs, "
+          f"{len(bad)} without pair labels or a located label")
+    assert not bad, bad
+"""
 STEPS = {
     "tests": [[sys.executable, "-m", "pytest", "-q", "tests/test_generation.py"]],
     "smoke": [
@@ -59,6 +78,14 @@ STEPS = {
         [sys.executable, "experiments/exp10_patch_reasoning.py", "--model", MODEL, "--pairs", "4", "--self-pairs", "2",
          "--max-think-tokens", "32", "--batch-size", "4", "--score-batch-size", "4", "--out", "out"],
     ],
+    "prefix": [[sys.executable, "experiments/check_prefix_cache.py"]],
+    "unitbank": [
+        [sys.executable, "experiments/exp0_baseline.py", "--model", MODEL, "--thinking", "off",
+         "--bank", "units", "--limit", "8", "--no-cache", "--out", "out"],
+        [sys.executable, "experiments/exp0_baseline.py", "--model", MODEL, "--thinking", "on",
+         "--bank", "units", "--limit", "8", "--max-think-tokens", "32", "--skip-behavior", "--no-cache", "--out", "out"],
+        [sys.executable, "-c", CHECK_UNITS],
+    ],
 }
 
 
@@ -71,7 +98,8 @@ def run(cmd):
                                                                      "cached reasoning", "T1:", "T5", "necessary",
                                                                      "sufficient_line", "curve_beats_line", "horizon_beyond_decision",
                                                                      "ablate_beyond_decision", "prompts:", "wrote", "transfer",
-                                                                     "subspace read", "plumbing", "4 pairs"))
+                                                                     "subspace read", "plumbing", "4 pairs", "prefix cache",
+                                                                     "units bank"))
             or " passed" in l or " failed" in l or "Error" in l]
     print("\n".join(tail[-14:]))
     status = "ok" if p.returncode == 0 else f"FAILED (exit {p.returncode})"
