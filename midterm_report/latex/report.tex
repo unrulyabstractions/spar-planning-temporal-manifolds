@@ -1,0 +1,275 @@
+% SPAR Midterm Report: Planning Temporal Manifolds
+%
+% Compile: latexmk -pdf report.tex
+%     or:  pdflatex report && bibtex report && pdflatex report && pdflatex report
+% Overleaf: zip this folder and use New Project > Upload Project.
+
+\documentclass[midterm]{sparreport}
+
+% Sorts and compresses citation numbers: [3, 5--7] rather than [7, 3, 6, 5].
+\usepackage{cite}
+
+% Left-aligned paragraph column, used by the two tables.
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% ============================================================================
+% METADATA
+% ============================================================================
+\title{Planning Temporal Manifolds}
+
+\author{
+  \textbf{Shantanu Darveshi}\\
+  \texttt{shantanu.darveshi@gmail.com}
+  \and
+  \textbf{Jared Eng-Denbaars}\\
+  \texttt{jengdenbaars@gmail.com}
+  \and
+  \textbf{Alan McIntyre}\\
+  \texttt{alan@codereclaimers.com}
+  \and
+  \textbf{Augusto Nicola}\\
+  \texttt{auguston64@gmail.com}
+  \and
+  \textbf{Ian Rios-Sialer}\\
+  \texttt{iansebas@umich.edu}
+  \and
+  \textbf{Soham Takawadekar}\\
+  \texttt{sohamtakawadekar17@outlook.com}
+}
+
+\sparround{Fall 2026}
+
+% ============================================================================
+% DOCUMENT BEGINS
+% ============================================================================
+\begin{document}
+
+\maketitle
+
+% ============================================================================
+% ABSTRACT (template target: 100-200 words)
+% ============================================================================
+\begin{abstract}
+Language models increasingly give advice on decisions whose right answer depends on the time horizon being considered. We ask whether a model's planning horizon can be steered precisely, and whether that steering carries over from templated tasks to realistic advice. On investment decisions of increasing realism, we compare linear steering vectors with steering along a nonlinear temporal manifold. We verify both methods on prompts with known answers before applying them to free-text and open-ended requests. This report presents our experimental design and evaluation framework.
+\end{abstract}
+
+% Keywords are optional in the template and absent from the draft. Suggestion:
+% \keywords{temporal preference \and activation steering \and representation manifolds \and language models \and AI safety}
+
+% ============================================================================
+% INTRODUCTION (template target: 100-350 words)
+% ============================================================================
+\section{Introduction}
+
+When an agent weighs options, the choice often turns on the temporal scope it uses to score consequences: a cost that is unacceptable over a week can be correct over a decade, and the reverse. This makes time preference fundamental not only to planning but to cooperation and trust. Thus, we find the study of temporal planning in models to be relevant to alignment research.
+
+Our theory of change consists of developing a greater understanding of how modern LLMs represent and use temporal information. More specifically, our hypothesis can be phrased as: can we steer the behaviour of temporally coherent models in simulations of realistic scenarios? Crucially, this hypothesis encodes two important claims:
+\begin{itemize}
+  \item Models display coherent decision-making under our analytical framework, and also
+  \item Steering techniques prove effective in changing the behaviour of models, whilst maintaining rationale.
+\end{itemize}
+
+Specifically, our contributions aim to improve the understanding of models' behaviour when under linear (steering vectors,~\cite{turner2023steering,panickssery2024steering}) and non-linear steering techniques (manifold-based analysis,~\cite{raval2026curveball,li2026steering}). We contrast these interventions with increasingly realistic prompts and tasks.
+
+% ============================================================================
+% RELATED WORK
+% ============================================================================
+\section{Related Work}
+
+Our work is framed strongly by the direct precedent of our mentor's prior work \cite{riossialer2026temporal}, which set the baseline framework by causally localizing temporal preference as structures in activation space with non-linear geometry in simplified prompts. This project consists of a near-direct extension, specifically by expanding on prompt realism for generality.
+
+The methodology of study presented is heavily based on key insights from previous findings: firstly, the fact that LLMs encode temporal and spatial coordinates as non-linear geometric objects~\cite{gurnee2024language,engels2025not,modell2025origins,tiblias2026hypothesis} is our main driver for searching for manifolds in activation space. Secondly, we pay special attention to studying the coherence in model decisions based on evidence from previous experiments stating that LLMs fail at temporal reasoning tasks, even when encoding relevant notions~\cite{wang2024tram,fatemi2024test,liu2025time,wallat2025study,herel2024time,sehgal2026real}. Lastly, our steering efforts are motivated by recent advances such as representation engineering~\cite{zou2023representation}.
+
+% ============================================================================
+% HYPOTHESES
+% ============================================================================
+\section{Hypotheses}
+
+\begin{enumerate}
+  \item \textbf{Steering vectors obtained from long-term prompt responses should reproduce this preference in other contexts.} Possible evidence includes using activation vectors from one task to steer in another, transferring the steering effect. Other comparisons, such as high cosine similarity between vectors extracted from different tasks, could also support this.
+  \item \textbf{Steering along a nonlinear temporal manifold shifts temporal behaviour more accurately than linear techniques.} Following previous work, we believe modelling temporal preferences using manifolds will yield clearer behavioural shifts than traditional steering counterparts. Evidence here is based on comparing the effect on model answers after applying steering over the fitted temporal manifold. Furthermore, confirming that small changes in position along the fitted manifold correspond to magnitude changes supports this.
+\end{enumerate}
+
+% ============================================================================
+% METHODS (template target: 200-500 words)
+% ============================================================================
+\section{Methods}
+
+\paragraph{Tasks and data.} All prompts are investment decisions, at increasing levels of realism. Structured prompts present a templated binary choice with a known correct answer: an option pays off within a stated planning horizon or it doesn't. Horizons span 48 log-spaced values from 30 seconds to 500 years. Realistic prompts move toward how human users ask for advice in everyday model usage. First, they state the horizon in free-text scenarios (``I need the money for a house deposit in 2 years''). Then, the horizon is implied rather than explicit (``I'm retiring next spring''). Finally, they ask for open-ended answers such as a portfolio allocation or a bond duration. Based on early experimental results, option order and labels are randomized throughout. Experiments run on open-weight reasoning models from the Qwen3 and Gemma~4 families.
+
+\paragraph{Steering methods.} We record activations at the answer position and average them per horizon. A linear direction (CAA) is the mean of long-horizon activations minus the mean of short-horizon ones. A nonlinear method fits a smooth manifold curve through the per-horizon means in a low-dimensional principal subspace. It steers by sliding an activation along this curve by a target shift in log-time, so the activation stays on the manifold. Controls are random directions and a reward-contrast direction, both matched in norm.
+
+\paragraph{Verification.} On held-out structured prompts, each method must shift the horizon the model acts on, read from where its choice switches, in both option orders and beyond the controls.
+
+\paragraph{Linear vs manifold (H2).} At matched norms, we compare how closely the realized horizon shift tracks the intended one. We also test whether small moves along the curve produce proportionally small behavioural changes, and how coherence degrades with distance from the manifold.
+
+\paragraph{Transfer (H1).} We apply vectors fitted on structured prompts to each realism level. We also measure cosine similarity with vectors extracted at that level. The readout is the horizon of the recommended action, compared against rewriting the prompt with a longer stated horizon.
+
+We report coherence, refusal and format-failure rates at every strength.
+
+\vspace{1em}
+
+\Cref{app:details} gives the full details: prompts, realism tiers, steering, verification, metrics and roadmap.
+
+% ============================================================================
+% PROGRESS (template: "Preliminary Results", target 200-500 words)
+% ============================================================================
+\section{Progress}
+
+The project's progress during the past weeks has included exploratory research involving extensions of our mentor's previous work.
+
+We first replicated the ordered horizon geometry across six models, keeping in mind that being readable does not mean being used: simple text parsing already recovers explicit horizons, and reward size was decodable in four models yet changed choices in only one.
+
+We therefore moved from readout to intervention. Two behavioural studies shaped the design: unit-mismatched investment prompts have known correct answers, which models reach when thinking is enabled, and a phrasing study showed which prompt effects must be controlled. The direction carrying the horizon also changes across turns and during reasoning, so one fixed vector may not suffice. These results provide us with a roadmap of confounds in prompt structure to be aware of.
+
+% Numbers read off Jared's Week 5 slide (alan/progress-20261018.md); to be confirmed with Jared before submitting.
+In a preliminary pilot on Qwen3-8B, moving along the temporal curve at layer 24 shifted choices toward the rational answer by 0.15 of the contrast with thinking on (0.39 with thinking off), whereas a straight probe direction moved them by at most 0.015 and random directions by at most 0.03. This serves as our support for testing H2.
+
+% ============================================================================
+% NEXT STEPS AND BUDGET (template target: 150-400 words)
+% ============================================================================
+\section{Next Steps and Budget}
+
+We propose a tiered budget. Each tier adds a milestone to the one before it. Most of the cost at every tier is GPU time for running $\sim$30B-parameter reasoning models with steering. API costs for generating and judging prompts are small and grow with how much realistic data we build.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Proposed budget tiers.}
+  \label{tab:budget}
+  \small
+  \begin{tabular}{L{0.8in}L{0.95in}L{1.8in}L{1.3in}L{0.75in}}
+    \toprule
+    \textbf{Tier} & \textbf{Milestone} & \textbf{What it adds} & \textbf{Claims supported} & \textbf{Estimated cost} \\
+    \midrule
+    \textbf{1. Core} & Verified horizon steering & Gate and calibration on structured prompts; linear vs manifold comparison on held-out horizons. One model. & Whether a time-horizon direction exists, and H2 & \textbf{\$\_\_\_\_} \\
+    \addlinespace
+    \textbf{2. Transfer} & Steering on realistic advice & Free-text and implicit-horizon prompts (T1--T2), with generation and judging. & H1 for binary and multi-option choices & \textbf{+\$\_\_\_\_} \\
+    \addlinespace
+    \textbf{3. Full scope} & Open-ended advice and replication & Open-ended answers (T3) and replication on a second model family. & H1 in the realistic target setting; generality across models & \textbf{+\$\_\_\_\_} \\
+    \addlinespace
+    \textbf{4. Stretch} & Robustness and extensions & Multi-turn robustness, durations outside planning, additional model sizes. & Robustness beyond the core claims & \textbf{+\$\_\_\_\_} \\
+    \midrule
+    & & & Cumulative total (through Tier 3) & \textbf{\$\_\_\_\_} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================================
+% REFERENCES (before the appendix, as in the draft)
+% ============================================================================
+\bibliographystyle{plain}
+\bibliography{references}
+
+% ============================================================================
+% APPENDIX A
+% ============================================================================
+\appendix
+
+\section{Experimental Details and Roadmap}
+\label{app:details}
+
+\subsection{Structured prompts}
+\label{app:structured}
+
+\begin{itemize}
+  \item Bank: 500 investment prompts (seed 0): 471 state a horizon, 29 don't (null control).
+  \item Horizon: one of 48 log-spaced values from 30 seconds to 500 years, written in natural units (``84 minutes'', ``15 months'').
+  \item Options: the near option pays \$1k--100k after 1 week to 1 year. The far option pays the near reward $\times\ \{2, 5, 10, 25, 50\}$ after 2--50 years. Option order is randomized.
+  \item Regimes: neither option pays within the horizon, only the near one does, both do, or no horizon is given.
+  \item Template variation: 4 phrasings of the constraint line, unit rewrites, and two label styles (a/b, 1/2).
+  \item Verification grid: a separate set of prompts with matched units, around the boundary where the correct answer flips ($H/D \in [0.35, 2.8]$, where $H$ is the stated horizon and $D$ is the far option's delay). It does not overlap with the extraction prompts.
+\end{itemize}
+
+Sample prompt ($H/D = 0.8$, correct answer a):
+
+\begin{quote}
+  \small\ttfamily\raggedright
+  SITUATION: Plan for the future of the household.\\
+  TASK: You, the head of the household, are tasked to choose the best investment:\\
+  \hspace*{1ex}a) 10,000 dollars in 1 year.\\
+  \hspace*{1ex}b) 50,000 dollars in 10 years.\\
+  OBJECTIVE: Think deeply about which option is preferable.\\
+  CONSTRAINT: You must select the option that provides the greatest benefit for this time horizon: 8 years.\\
+  ACTION: Select one of the two options. Provide reasoning.\\
+  FORMAT: I choose: <a) or b)>. My reasoning: <1-3 sentences>
+\end{quote}
+
+\subsection{Realism tiers (all investment)}
+\label{app:tiers}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Realism tiers.}
+  \label{tab:tiers}
+  \small
+  \begin{tabular}{L{0.8in}L{0.9in}L{0.7in}L{1.2in}L{1.95in}}
+    \toprule
+    Tier & Horizon cue & Answer & Readout & Example \\
+    \midrule
+    T0 Structured & Explicit constraint line & a/b & Switch point & \ref{app:structured} \\
+    \addlinespace
+    T1 Free-text & Explicit, in prose & a/b & Choice probability & ``I need the money for a house deposit in 2 years. 2-year CD or 20-year index fund?'' \\
+    \addlinespace
+    T2 Implicit & Inferred & a/b, then 4/8 options & Expected horizon & ``This is for my grandkids' education.'' \\
+    \addlinespace
+    T3 Open-ended & Inferred & Free-form & Scalar from answer (equity share, bond duration) & ``How should I allocate my savings? I'm retiring next spring.'' \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item T1--T2: about 200 items each, generated with Haiku 4.5, checked by GPT-5.6 Luna, with a sample hand-audited.
+  \item Risk: crossed with horizon, so that ``long'' does not always mean ``safe''.
+\end{itemize}
+
+\subsection{Activations and steering}
+\label{app:steering}
+
+\begin{itemize}
+  \item Extraction site: residual stream at the answer-label token, at a layer fixed before evaluation. We will choose the layers based on results from prior work, locating the causal effect peaks at 0.61--0.69 of depth. ($\sim$0.7 of model depth; L24 on Qwen3-8B)
+  \item CAA: mean of long-horizon activations ($H/D \geq 4$) minus mean of short-horizon ones ($H/D \leq 1/4$), normalized. Strength is set as a fraction of the typical activation norm at that layer.
+  \item Manifold curve: PCA on the per-horizon mean activations (top 3--8 components). We fit a smooth curve through them, indexed by log-time $t$. To steer, each token is projected onto the curve ($\hat{t}$) and moved to the curve point at $\hat{t} + \Delta$ (clamped to the observed range), leaving the rest of the activation unchanged. $\Delta$ is measured in decades.
+  \item Positions: all tokens, as in prior work. Steering only generated tokens is run as a check.
+  \item Statistics: repeated $k$-fold cross-validation grouped by prompt configuration, so paraphrases of one item never fall on both sides of a split.
+\end{itemize}
+
+\subsection{Verification and calibration}
+\label{app:verification}
+
+\begin{itemize}
+  \item Switch point $s$: the stated $H/D$ at which the model's choice flips from the near option to the far one. The acted-on horizon is $H^* = H / s$, so the steering effect is $\Delta \log H^* = -\Delta \log s$.
+  \item Pass criteria:
+  \begin{enumerate}
+    \item The shift in $\Delta \log H^*$ exceeds the 95th percentile of the random directions and also exceeds the reward-contrast direction.
+    \item The shift has the same sign in both option orders.
+    \item Steering does not move the model's reward-indifference point on prompts where both options pay off within the horizon.
+  \end{enumerate}
+  \item Calibration: $\alpha_k$ is the strength at which the model acts on a horizon $k$ times longer (default $k = 2$). It is fixed here, separately for each steering direction, and never retuned on realistic prompts.
+\end{itemize}
+
+\subsection{Metrics}
+\label{app:metrics}
+
+\begin{itemize}
+  \item Expected horizon: $E[\log h] = \sum_i p_i \log h_i$ over the options. This is graded and works for 2, 4 and 8 options.
+  \item Transfer efficiency: $S / R$, with a cluster-bootstrap 95\% CI. $S$ is the shift produced by steering at $\alpha_k$. $R$ is the shift produced by rewriting the prompt with a horizon $k$ times longer.
+  \item H2 precision: realized vs intended shift at matched norm. We also measure whether behavioural change is monotonic in $\Delta$, and coherence as a function of distance to the curve.
+  \item Health: coherence (LLM judge, validated on $\sim$50 hand labels), refusal, format failure and truncation at every strength. Broken outputs are counted as outcomes, not dropped.
+  \item Baseline: prompting the model to ``focus on the long term''.
+\end{itemize}
+
+\subsection{Roadmap}
+\label{app:roadmap}
+
+\begin{enumerate}
+  \item Pipeline: debug locally on a small Qwen3.
+  \item Extract and verify: gate and calibration on structured prompts. If the gate fails, stop before building realistic data.
+  \item H2: compare linear and manifold steering on held-out horizons.
+  \item H1: apply to T0 template variants (gate: $\geq 0.8$ of the in-template effect), then T1 $\rightarrow$ T2 $\rightarrow$ T3.
+  \item Replicate: second model family, same rules, no new sweep.
+  \item Stretch: multi-turn robustness (steer only the reply to ``are you sure?''); duration outside planning (``the movie lasted 3 hours'').
+\end{enumerate}
+
+Models: headline Gemma~4 31B, replication Qwen3-8B, Qwen3-14B, Qwen3.5-27B and Qwen3-32B. Thinking is on, with a token cap.
+
+\end{document}
