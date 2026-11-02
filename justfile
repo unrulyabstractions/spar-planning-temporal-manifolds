@@ -28,7 +28,8 @@ ssh *ARGS:
 tunnel:
     @{{vast}} tunnel
 
-# Ship this project to /workspace/SPAR/ on the box. Local outputs (out/) stay home.
+# Ship this project to /workspace/SPAR/ on the box, then install jared/requirements.txt
+# into the image's python. Local outputs (out/) stay home.
 push:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -38,6 +39,12 @@ push:
       --exclude '.env' --exclude '.git' --exclude '.state' --exclude '.claude' \
       --exclude '.ipynb_checkpoints' \
       -e "ssh -p $port" {{quote(project)}} "root@$host:/workspace/SPAR/"
+    echo ">> installing jared/requirements.txt on the box"
+    # Pin the image's torch so nothing in requirements can upgrade it and break CUDA
+    # (as provision.sh does). A no-op in seconds when everything is already installed.
+    ssh -p "$port" "root@$host" 'cd /workspace/SPAR/{{project}}/jared && \
+      /venv/main/bin/python -m pip install -q -r requirements.txt \
+        "torch==$(/venv/main/bin/python -c "import torch; print(torch.__version__)")"'
 
 # Preview what `just push` would send, without sending it.
 push-dry:
