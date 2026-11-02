@@ -129,26 +129,26 @@ In a preliminary pilot on Qwen3-8B, moving along the temporal curve at layer 24 
 % ============================================================================
 \section{Next Steps and Budget}
 
-We propose a tiered budget. Each tier adds a milestone to the one before it. Most of the cost at every tier is GPU time for running $\sim$30B-parameter reasoning models with steering. API costs for generating and judging prompts are small and grow with how much realistic data we build.
+We propose a tiered budget. Each tier adds a milestone to the one before it. Most of the cost at every tier is GPU time for running $\sim$30B-parameter reasoning models with steering. API costs for generating and judging prompts are small (\$5--60 per tier). The estimates in \cref{tab:budget} multiply the generations each tier needs (prompts $\times$ steering settings) by the measured cost of one thinking-on generation: about 13\,s for Gemma~4 31B and 30\,s for a 27B Qwen model on one A100 80\,GB, rented at \$0.9--1.4 per hour. The ranges allow for steered traces running up to 1.8 times longer and for 20--70\% overhead (setup, reruns, idle time); the first figure is the central estimate. With our confirmed budget of \$800, Tier~1 fits with margin even at the high end, and Tiers~1--2 fit at the central estimate (\$540). Tier~3 would need further funding or a reduced replication. Batching that does not wait for the longest trace in each batch, which we have not yet tested, could lower all figures.
 
 \begin{table}[htbp]
   \centering
   \caption{Proposed budget tiers.}
   \label{tab:budget}
   \small
-  \begin{tabular}{L{0.8in}L{0.95in}L{1.8in}L{1.3in}L{0.75in}}
+  \begin{tabular}{L{0.75in}L{0.95in}L{1.7in}L{1.25in}L{0.9in}}
     \toprule
     \textbf{Tier} & \textbf{Milestone} & \textbf{What it adds} & \textbf{Claims supported} & \textbf{Estimated cost} \\
     \midrule
-    \textbf{1. Core} & Verified horizon steering & Gate and calibration on structured prompts; linear vs manifold comparison on held-out horizons. One model. & Whether a time-horizon direction exists, and H2 & \textbf{\$\_\_\_\_} \\
+    \textbf{1. Core} & Verified horizon steering & Gate and calibration on structured prompts; linear vs manifold comparison on held-out horizons. One model. & Whether a time-horizon direction exists, and H2 & \textbf{\$160}\newline(\$75--310) \\
     \addlinespace
-    \textbf{2. Transfer} & Steering on realistic advice & Free-text and implicit-horizon prompts (T1--T2), with generation and judging. & H1 for binary and multi-option choices & \textbf{+\$\_\_\_\_} \\
+    \textbf{2. Transfer} & Steering on realistic advice & Free-text and implicit-horizon prompts (T1--T2), with generation and judging. & H1 for binary and multi-option choices & \textbf{+\$380}\newline(\$185--750) \\
     \addlinespace
-    \textbf{3. Full scope} & Open-ended advice and replication & Open-ended answers (T3) and replication on a second model family. & H1 in the realistic target setting; generality across models & \textbf{+\$\_\_\_\_} \\
+    \textbf{3. Full scope} & Open-ended advice and replication & Open-ended answers (T3) and replication on a second model family. & H1 in the realistic target setting; generality across models & \textbf{+\$870}\newline(\$425--1,700) \\
     \addlinespace
-    \textbf{4. Stretch} & Robustness and extensions & Multi-turn robustness, durations outside planning, additional model sizes. & Robustness beyond the core claims & \textbf{+\$\_\_\_\_} \\
+    \textbf{4. Stretch} & Robustness and extensions & Multi-turn robustness, durations outside planning, additional model sizes. & Robustness beyond the core claims & \textbf{+\$540}\newline(\$260--1,060) \\
     \midrule
-    & & & Cumulative total (through Tier 3) & \textbf{\$\_\_\_\_} \\
+    & & & Cumulative total (through Tier 3) & \textbf{\$1,410}\newline(\$685--2,760) \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -248,7 +248,7 @@ The four phrasings of the CONSTRAINT line, with \texttt{\{H\}} the rendered hori
 \end{table}
 
 \begin{itemize}
-  \item T1--T2: about 200 items each, generated with Haiku 4.5, checked by GPT-5.6 Luna, with a sample hand-audited.
+  \item T1--T2: about 200 items each, generated with Haiku 5.5, checked by GPT-5.6 Luna, with a sample hand-audited.
   \item Investment risk is crossed with horizon, so that ``long'' does not always mean ``safe''.
   \item Every option in T1--T2 carries a duration $h_i$, which the expected-horizon readout uses (\cref{app:metrics}).
 \end{itemize}
