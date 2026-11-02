@@ -178,11 +178,39 @@ def run_condition(name, layer, where, edit, pairs, ctx):
                      "forced": g.forced, "think_len": g.think_len,
                      "names_recipient": names_horizon(think, p["rec"]["horizon_text"]),
                      "names_donor": names_horizon(think, p["donor_horizon"])})
+    return {"name": name, "layer": layer, "positions": where, "edit": edit, "rows": rows}, generation_arrays(generations)
+
+
+def run_claimed(out_dir, name, run):
+    """Run one condition (`run()` returns its record and arrays) and save it as
+    conditions/<name>.json and .npz, unless it is finished or another worker claimed
+    it. Returns whether it ran."""
+    file = out_dir / "conditions" / f"{name.replace(' ', '_')}.json"
+    if file.exists():
+        return False
+    # several workers (one per GPU) share the queue: the first to create the lock runs the condition
+    try:
+        file.with_suffix(".lock").mkdir()
+    except FileExistsError:
+        return False
+    t0 = time.time()
+    stamp(f"{name} ...")
+    result, arrays = run()
+    result["seconds"] = round(time.time() - t0, 1)
+    np.savez(file.with_suffix(".npz"), **arrays)
+    # write then rename: other workers read every finished condition for the summary
+    file.with_suffix(".tmp").write_text(json.dumps(result))
+    file.with_suffix(".tmp").replace(file)
+    stamp(f"{name} done in {result['seconds']} s")
+    return True
+
+
+def generation_arrays(generations):
+    """The generated ids of one condition, concatenated, with offsets and positions."""
     lengths = [len(g.ids) for g in generations]
-    arrays = {"ids": np.concatenate([g.ids.cpu().numpy() for g in generations]).astype(np.int32),
-              "offsets": np.r_[0, np.cumsum(lengths)], "answer_start": [g.answer_start for g in generations],
-              "prompt_len": [g.prompt_len for g in generations]}
-    return {"name": name, "layer": layer, "positions": where, "edit": edit, "rows": rows}, arrays
+    return {"ids": np.concatenate([g.ids.cpu().numpy() for g in generations]).astype(np.int32),
+            "offsets": np.r_[0, np.cumsum(lengths)], "answer_start": [g.answer_start for g in generations],
+            "prompt_len": [g.prompt_len for g in generations]}
 
 
 def summarize(results):
@@ -290,24 +318,8 @@ def main(args):
     if args.only:
         todo = [c for c in todo if c[0] in args.only.split(";")]
     for name, layer, where, edit in todo:
-        file = out_dir / "conditions" / f"{name.replace(' ', '_')}.json"
-        if file.exists():
-            continue
-        # several workers (one per GPU) share the queue: the first to create the lock runs the condition
-        try:
-            file.with_suffix(".lock").mkdir()
-        except FileExistsError:
-            continue
-        t0 = time.time()
-        stamp(f"{name} ...")
-        result, arrays = run_condition(name, layer, where, edit, pairs, ctx)
-        result["seconds"] = round(time.time() - t0, 1)
-        np.savez(file.with_suffix(".npz"), **arrays)
-        # write then rename: other workers read every finished condition for the summary
-        file.with_suffix(".tmp").write_text(json.dumps(result))
-        file.with_suffix(".tmp").replace(file)
-        stamp(f"{name} done in {result['seconds']} s")
-        report(out_dir, name)
+        if run_claimed(out_dir, name, lambda: run_condition(name, layer, where, edit, pairs, ctx)):
+            report(out_dir, name)
     report(out_dir)
     stamp(f"wrote {out_dir}")
 

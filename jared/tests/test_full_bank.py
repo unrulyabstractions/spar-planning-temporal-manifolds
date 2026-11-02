@@ -5,6 +5,7 @@ import math
 from collections import Counter
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from spar_horizon import full_bank as F
@@ -175,3 +176,144 @@ def test_build_records_routes_the_units_bank_with_full_bank_variants():
     records = build_records(cfg)
     assert all(r["pair_id"] and r["duration_id"] and r["rendered_unit"] for r in records)
     assert variant_builder(cfg)(records[0]) == records[0]["prompt"]
+
+
+def test_crossed_renderings_follow_the_spec():
+    assert str(F.crossed_rendering(1.0, "days")) == "365 days"          # 365.25: within 1% of an integer
+    assert str(F.crossed_rendering(Horizon(1, "weeks").years, "hours")) == "168 hours"
+    assert str(F.crossed_rendering(Horizon(8, "weeks").years, "months")) == "1.8 months"
+    assert str(F.crossed_rendering(Horizon(30, "seconds").years, "minutes")) == "0.5 minutes"
+    assert F.crossed_rendering(Horizon(30, "seconds").years, "hours") is None   # 0.0083 hours
+    assert F.crossed_rendering(500.0, "months") is None                         # 6000 months
+    per_duration = [F.crossed_renderings(h.years) for h in F.HORIZONS]
+    assert sum(map(len, per_duration)) == 133
+    assert Counter(map(len, per_duration)) == {1: 5, 2: 14, 3: 16, 4: 13}
+    for h, rs in zip(F.HORIZONS, per_duration):
+        assert str(h) in {str(r) for r in rs}                           # the natural rendering is one of them
+        assert len({r.unit for r in rs}) == len(rs)
+        assert all(0.1 <= r.value <= 1000 and abs(r.years / h.years - 1) <= 0.05 for r in rs)
+
+
+def test_feasible_regimes_at_the_ends_of_the_grid():
+    log = lambda h: Horizon.parse(h).log10_years
+    assert F.feasible_regimes(log("30 seconds")) == ["none"]            # a near delay can reach 1 minute
+    assert F.feasible_regimes(log("108 seconds")) == ["none", "near"]
+    assert F.feasible_regimes(log("1 years")) == ["none", "near", "both"]
+    assert F.feasible_regimes(log("500 years")) == ["near", "both"]     # none needs a far delay past 1000 years
+
+
+def crossed_bases(**kw):
+    bases = {}
+    for r in F.build_crossed_prompts(**kw):
+        bases.setdefault(r["pair_id"], []).append(r)
+    return bases
+
+
+def test_crossed_bank_bases_differ_only_in_the_horizon_phrase():
+    bases = crossed_bases()
+    assert len(bases) == 48 * F.CROSSED_PER_DURATION
+    assert set(Counter(b[0]["duration_id"] for b in bases.values()).values()) == {F.CROSSED_PER_DURATION}
+    for b in bases.values():
+        renderings = F.crossed_renderings(Horizon.parse(b[0]["duration_id"]).years)
+        assert [r["horizon_text"] for r in b] == [str(r) for r in renderings]
+        assert sum(r["natural"] for r in b) == 1
+        assert len({r["regime"] for r in b}) == 1
+        without_horizon = {"\n".join(line.replace(r["horizon_text"], "<h>") if line.startswith("CONSTRAINT:") else line
+                                     for line in r["prompt"].split("\n")) for r in b}
+        assert len(without_horizon) == 1
+
+
+def test_crossed_bank_delays_sit_at_the_spec_margins():
+    lo, hi = F.DELAY_LIMITS
+    rounding = 0.03                                                     # 2 significant figures move a delay < 0.022 decades
+    for r in F.build_crossed_prompts():
+        h, near, far = (math.log10(y) for y in (r["horizon"], r["near_delay_years"], r["far_delay_years"]))
+        assert lo <= r["near_delay_years"] < r["far_delay_years"] <= hi
+        assert min(abs(near - h), abs(far - h)) >= F.MIN_DISTANCE
+        margin, gap = {"none": (near - h, far - near), "near": (h - near, None), "both": (h - far, far - near)}[r["regime"]]
+        assert F.MARGIN[0] - rounding <= margin <= F.MARGIN[1] + rounding
+        if gap is not None:
+            assert F.GAP[0] - 2 * rounding <= gap <= F.GAP[1] + 2 * rounding
+        if r["regime"] == "near":
+            assert F.MARGIN[0] - rounding <= far - h <= F.MARGIN[1] + rounding
+
+
+def test_crossed_bank_gives_every_duration_each_feasible_regime():
+    bases = crossed_bases()
+    for h in F.HORIZONS:
+        regimes = Counter(b[0]["regime"] for b in bases.values() if b[0]["duration_id"] == str(h))
+        assert set(regimes) == set(F.feasible_regimes(h.log10_years))
+        assert max(regimes.values()) - min(regimes.values()) <= F.CROSSED_PER_DURATION - len(regimes) + 1
+    overall = Counter(b[0]["regime"] for b in bases.values())
+    assert max(overall.values()) - min(overall.values()) <= 16          # the edges lose regimes, the rest rotate
+
+
+def test_crossed_bank_delay_renderings_are_crossed_with_the_horizon_units():
+    records = F.build_crossed_prompts()
+    near_units = {Horizon.parse(r["delays"][0]).unit for r in records}
+    assert near_units == set(F.NATURAL_UNITS)
+    pairs = Counter((r["rendered_unit"], Horizon.parse(r["delays"][0]).unit) for r in records)
+    assert len(pairs) >= 30                                             # of 49 unit pairs; many are infeasible by magnitude
+
+
+def test_realism_labels():
+    day, month, week = (Horizon(1, u).years for u in ("days", "months", "weeks"))
+    assert F.realism_labels(0.5 * day, 1.0)["delay_scale"] == "minutes-hours"
+    assert F.realism_labels(day, 1.0)["delay_scale"] == "days-weeks"
+    assert F.realism_labels(month, 1.0)["delay_scale"] == "months-years"
+    assert F.realism_labels(week, 50.0)["alan_range"] and not F.realism_labels(0.9 * week, 2.0)["alan_range"]
+    assert not F.realism_labels(1.0, 51.0)["alan_range"]
+
+
+def test_crossed_bank_limit_keeps_whole_bases():
+    full = crossed_bases()
+    records = F.build_crossed_prompts(limit=8)
+    assert 4 <= len(records) <= 16
+    counts = Counter(r["pair_id"] for r in records)
+    assert all(n == len(full[p]) for p, n in counts.items())
+
+
+def test_fill_bank_fills_the_old_banks_regime_gaps():
+    old = Counter((r.get("duration_id") or r["horizon_text"], r["regime"]) for r in F.old_bank_records())
+    plan = F.fill_plan()
+    assert len(plan) == 72 * F.FILL_PER_CELL
+    assert all(old[(str(h), name)] < F.FILL_MIN_OLD for h, name in plan)
+    fill = [r for r in F.build_fill_prompts() if not r["anchor"]]
+    bases = Counter((r["duration_id"], r["regime"]) for r in fill if r["natural"])
+    # pooled, every feasible (duration, regime) cell has 3 old prompts or 2 fill bases
+    for h in F.HORIZONS:
+        for name in F.feasible_regimes(h.log10_years):
+            assert old[(str(h), name)] >= F.FILL_MIN_OLD or bases[(str(h), name)] == F.FILL_PER_CELL
+
+
+def test_fill_bank_decorrelates_delays_from_the_horizon_only_when_pooled():
+    def corr(records):
+        return np.corrcoef(np.log10([r["horizon"] for r in records]),
+                           np.log10([r["near_delay_years"] for r in records]))[0, 1]
+    old = F.old_bank_records()
+    fill = [r for r in F.build_fill_prompts() if not r["anchor"]]
+    assert corr(fill) > 0.8 and abs(corr(old)) < 0.2 and corr(old + fill) < 0.4
+
+
+def test_fill_anchors_are_old_prompts_unchanged():
+    records = F.build_fill_prompts()
+    anchors = [r for r in records if r["anchor"]]
+    assert len({r["pair_id"] for r in anchors}) == F.ANCHOR_FULL + F.ANCHOR_PAIRS
+    old = {r["sample_uid"]: r for r in F.build_full_prompts() + F.build_units_prompts()}
+    for r in anchors:
+        assert r["prompt"] == old[r["sample_uid"]]["prompt"] and r["regime"] == old[r["sample_uid"]]["regime"]
+        assert sum(a["natural"] for a in anchors if a["pair_id"] == r["pair_id"]) == 1
+    fill_uids = [r["sample_uid"] for r in records if not r["anchor"]]
+    assert len(set(fill_uids)) == len(fill_uids) and not set(fill_uids) & set(old)
+
+
+def test_fill_bank_routes_through_settings_with_an_anchor_in_the_smoke():
+    from spar_horizon.banks import build_records, variant_builder
+    from spar_horizon.config import Settings
+    cfg = Settings(bank="fill", prefill="", choice_prefix="I choose:", limit=8)
+    records = build_records(cfg)
+    assert 4 <= len(records) <= 16 and any(r["anchor"] for r in records) and not all(r["anchor"] for r in records)
+    keys = ("pair_id", "duration_id", "rendered_unit", "natural", "delay_scale", "alan_range", "anchor")
+    assert all(k in r for r in records for k in keys)
+    assert all(variant_builder(cfg)(r) == r["prompt"] for r in records)
+    assert cfg.tag == "Qwen3-8B_think-on_fill"

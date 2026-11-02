@@ -19,9 +19,10 @@ def parse_args(description, extra=None):
     p.add_argument("--limit", type=int, default=None, help="prompt subset for smoke tests")
     p.add_argument("--max-think-tokens", type=int, default=Settings.max_think_tokens)
     p.add_argument("--batch-size", type=int, default=Settings.batch_size)
-    p.add_argument("--bank", choices=["starter", "full", "units"], default=Settings.bank,
+    p.add_argument("--bank", choices=["starter", "full", "units", "fill"], default=Settings.bank,
                    help="starter: the 116-prompt starter bank; full: Alan's generator (default prefill off, "
-                        "label located after 'I choose:'); units: full-bank prompts paired across units")
+                        "label located after 'I choose:'); units: full-bank prompts paired across units; "
+                        "fill: crossed-unit prompts in the old banks' regime gaps, plus anchors")
     p.add_argument("--n-prompts", type=int, default=Settings.n_prompts, help="full bank size")
     p.add_argument("--behavior-n", type=int, default=None,
                    help="run the order/label stability tests on this many evenly spaced prompts (default: all)")
@@ -37,7 +38,7 @@ def parse_args(description, extra=None):
     args = p.parse_args()
     fractions = tuple(float(f) for f in args.think_fractions.split(",") if f)
     cache = None if args.no_cache else str(out_base(args.out) / "gen_cache")
-    generated = args.bank in ("full", "units")   # Alan's template: the model writes "I choose:" itself
+    generated = args.bank in ("full", "units", "fill")   # Alan's template: the model writes "I choose:" itself
     prefill = args.prefill if args.prefill is not None else ("" if generated else Settings.prefill)
     choice_prefix = "I choose:" if generated and not prefill else ""
     cfg = Settings(model=args.model, thinking=args.thinking, limit=args.limit,

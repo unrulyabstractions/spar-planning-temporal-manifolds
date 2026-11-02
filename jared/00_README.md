@@ -16,6 +16,14 @@ established, what is next. The rest is reference.
 | `12_results_local_checks.md` | Two local checks on saved activations: natural closes and within-unit R² (Check 1), horizon vs delay before the hand-off (Check 2) |
 | `13_evidence.md` | Evidence index: each claim we rely on, its strength, and the figure behind it |
 | `14_spec_unit_overlap.md` | Spec (approved 2026-10-25, 8B only): the unit-overlap bank, horizon vs unit word |
+| `15_spec_crossing.md` | Spec (draft, on hold behind `16`): is curve steering horizon-specific? Delay-crossing split and boundary ladder |
+| `16_spec_pristine_manifold.md` | Spec (approved 2026-10-27): a horizon manifold free of unit, regime, forced closes; crossed bank outline |
+| `17_results_pristine.md` | E13 prototype on the 8B units bank: the fit cleans the suffix, the answer slot only on averages |
+| `18_results_overnight.md` | Overnight confound sweep on saved runs (8B, 14B): near-delay pull and number line before reasoning; regime mostly probe absorption at 8B L16 / 14B L20 |
+| `19_results_fill.md` | Fill bank pooled with the old 8B runs: anchors pass off and at the on suffix only; regime both cancels rather than vanishes; old-run curves misread delays outside Alan's range by ~2 decades |
+| `20_results_overnight_fill.md` | Second overnight: delay magnitude, not crossing, moves the suffix code; pooled effects ⟂ is the delay-free axis; code barely predicts choice; stage A/B ready |
+| `21_spec_phrase_steering.md` | Spec (run 2026-10-31): E14, thinking-on steering at the horizon phrase with per-prompt targets across a delay (none/both → near and reverses) |
+| `22_results_phrase_steering.md` | E14 results: H1-H3 fail. The steer at the horizon phrase is read as a discrete text change (a digit edit in the same unit, or a unit-word swap on short up-steps), rarely crossing a delay; the pristine curve is a written-number direction by construction (unit explains 88% of log duration). Where the stated horizon lands (none→near) the choice follows at about two thirds of a donor patch |
 | `queue*.sh` | Box queues as run: `queue_14b.sh`, `queue_14b_rest.sh` (E11), `queue_units.sh` (unit-overlap E0) |
 | `history/` | Finished specs, superseded results and earlier plans; indexed at the end of `01_plan.md` |
 | `spar_horizon/` | The package: prompt banks, model I/O, extraction, probes, steering, run manifests |
@@ -111,8 +119,7 @@ Rent the box in the vast.ai console, then from `spar-planning-temporal-manifolds
 
 ```
 just new ssh -p 41234 root@ssh5.vast.ai -L 8080:localhost:8080   # the console's ssh line, pasted
-just push                                                        # ships this project, not out/
-just ssh "cd /workspace/SPAR/spar-planning-temporal-manifolds/jared && /venv/main/bin/python -m pip install -r requirements.txt"
+just push                                                        # ships this project, not out/, then installs requirements.txt
 just sync      # results into SPAR/results/
 just stop      # or: just down
 ```

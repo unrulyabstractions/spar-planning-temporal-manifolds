@@ -304,6 +304,19 @@ def test_prompt_patch_applies_to_the_prefill_and_not_to_decode_steps(tiny):
     assert out[0, len(seq)].item() == donor_logits[0].argmax().item()   # first token read from the patched prefill
 
 
+def test_prompt_patch_of_one_row_needs_no_mask_and_a_batch_does(tiny):
+    layer, seq = 2, SEQS[0]
+    donor = [seq[0]] + [(t + 1) % 64 for t in seq[1:]]
+    values = [hidden_at(tiny, donor, layer)]
+    with S.prompt_patch(tiny, layer, [list(range(len(seq)))], values):
+        patched = tiny(input_ids=torch.tensor([seq])).logits[0, -1]   # no attention mask, as on the box
+    donor_logits, _, _ = S.forward(tiny, "cpu", [donor], PAD)
+    assert torch.allclose(patched, donor_logits[0], atol=1e-4)
+    with pytest.raises(ValueError, match="2-D attention mask"):
+        with S.prompt_patch(tiny, layer, [[0], [0]], values * 2):
+            tiny(input_ids=torch.tensor([seq, seq]))
+
+
 def test_subspace_patch_swaps_only_the_span_of_the_basis(tiny):
     layer, seq = 2, SEQS[0]
     donor = [seq[0]] + [(t + 1) % 64 for t in seq[1:]]
@@ -367,3 +380,86 @@ def test_models_with_linear_attention_fall_back_to_full_passes(tiny, monkeypatch
     out = S.score_last_edits(tiny, "cpu", SEQS, [True] * 3, ROWS, PAD, batch_size=2,
                              edits=[None, (1, lambda rows: S.Add(torch.zeros(len(rows), 32)))])
     assert out.shape == (2, 3) and len(calls) == 2
+
+
+def confounded_bank(seed=0, d=40, noise=0.05):
+    """Activations with a planted duration curve (2 dims), a unit effect that leans into
+    the curve's plane, and regime and forced effects. Units track the duration but
+    overlap, as on the units bank: each duration comes in its two neighbouring units."""
+    rng = np.random.default_rng(seed)
+    q = np.linalg.qr(rng.normal(size=(d, 6)))[0].T   # orthonormal directions
+    durations = np.linspace(0, 3, 13)                 # log10 duration grid
+    unit_dir = 0.6 * q[0] + 0.8 * q[2]                # half inside the curve plane (q0, q1)
+    rows = []
+    for i, h in enumerate(durations):
+        for unit in (i // 3, i // 3 + 1):             # 5 units, each spanning ~4 durations
+            for _ in range(6):
+                rows.append((h, unit, rng.integers(3), rng.random() < 0.3 * h / 3))
+    log_h = np.array([r[0] for r in rows])
+    unit = np.array([r[1] for r in rows])
+    regime_ = np.array([r[2] for r in rows])
+    forced = np.array([r[3] for r in rows])
+    X = (np.outer(log_h, q[0]) + np.outer(np.sin(log_h), q[1]) + np.outer(unit, unit_dir)
+         + np.outer(regime_, q[3]) + np.outer(forced, 2 * q[4]) + noise * rng.normal(size=(len(rows), d)))
+    return X, log_h, {"unit": unit, "regime": regime_, "forced": forced}, q, unit_dir
+
+
+def test_duration_effects_read_the_duration_and_not_the_unit():
+    X, log_h, factors, q, unit_dir = confounded_bank()
+    clean = S.fit_duration_effects(X, log_h, factors, k_max=2)
+    naive = S.fit_cell(X, log_h, k_max=2)
+    # same duration, next unit up: a pristine readout does not move
+    same_duration = log_h == log_h[0]
+    low, high = same_duration & (factors["unit"] == 0), same_duration & (factors["unit"] == 1)
+    for cell, ok in ((clean, True), (naive, False)):
+        readout = S.curve_readout(cell, X)
+        gap = abs(readout[high].mean() - readout[low].mean())
+        assert (gap < 0.05) == ok, gap
+    # the estimated factor effects are projected out exactly; the planted ones up to noise
+    for name in factors:
+        assert np.abs(clean["basis"] @ clean["factors"][name][1].T).max() < 1e-8
+    assert np.abs(clean["basis"] @ unit_dir).max() < 0.02
+    assert np.abs(clean["basis"] @ q[4]).max() < 0.02
+    # the duration curve survives: the readout tracks log duration
+    assert np.corrcoef(S.curve_readout(clean, X), log_h)[0, 1] > 0.95
+
+
+def test_duration_effects_report_factor_levels_and_effects():
+    # low noise: units far apart are linked only through a chain of overlaps, so their
+    # estimates collect the noise of every link
+    X, log_h, factors, q, unit_dir = confounded_bank(noise=0.01)
+    clean = S.fit_duration_effects(X, log_h, factors)
+    levels, effects = clean["factors"]["unit"]
+    assert list(levels) == [0, 1, 2, 3, 4, 5] and effects.shape == (5, X.shape[1])
+    # unit k relative to unit 0 is k * unit_dir
+    assert np.allclose(effects @ unit_dir, [1, 2, 3, 4, 5], atol=0.05)
+
+
+def test_duration_effects_refuse_a_factor_collinear_with_duration():
+    X, log_h, factors, _, _ = confounded_bank()
+    with pytest.raises(ValueError, match="not separable"):
+        S.fit_duration_effects(X, log_h, {"copy of duration": np.round(log_h, 3)})
+
+
+def test_curve_readout_on_the_curve_returns_its_horizon():
+    X, log_h, _ = planted()
+    cell = S.fit_cell(X, log_h)
+    on_curve = cell["mean"] + cell["curve_coords"] @ cell["basis"]
+    assert np.allclose(S.curve_readout(cell, on_curve), cell["curve_logh"], atol=0.01)
+
+
+def test_duration_effects_separate_a_delay_that_tracks_the_horizon_in_part_of_the_bank():
+    # pooled banks: in one half the delay is independent of the horizon (old banks), in the
+    # other it sits about a decade past it (fill bank); a planted delay direction must be
+    # recovered and kept out of the curve, and a fit without the covariate leans into it
+    rng = np.random.default_rng(0)
+    d = 30
+    q = np.linalg.qr(rng.normal(size=(d, 3)))[0].T
+    log_h = np.repeat(np.linspace(-2, 2, 9), 20)
+    delay = np.where(np.arange(len(log_h)) % 2, rng.uniform(-2, 2, len(log_h)), log_h + 1 + 0.2 * rng.normal(size=len(log_h)))
+    X = np.outer(log_h, q[0]) + np.outer(np.cos(log_h), q[1]) + np.outer(delay, q[2]) + 0.05 * rng.normal(size=(len(log_h), d))
+    cell = S.fit_duration_effects(X, log_h, {}, k_max=2, covariates={"delay": delay})
+    assert np.allclose(cell["covariates"]["delay"], q[2], atol=0.02)
+    assert np.abs(cell["basis"] @ cell["covariates"]["delay"]).max() < 1e-8
+    without = S.fit_duration_effects(X, log_h, {}, k_max=2, orthogonal=False)
+    assert np.abs(without["basis"] @ q[2]).max() > 0.2

@@ -41,7 +41,7 @@ from threadpoolctl import threadpool_limits
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from probe_dimensionality import positions  # noqa: E402  (same folder)
-from spar_horizon.full_bank import NATURAL_UNITS  # noqa: E402
+from spar_horizon.full_bank import NATURAL_UNITS, natural_horizon  # noqa: E402
 from spar_horizon.probes import fit_ridge, horizon_within_unit_r2, r2, within_unit_r2  # noqa: E402
 from spar_horizon.runs import REGIONS  # noqa: E402
 from spar_horizon.steering import bootstrap_mean  # noqa: E402
@@ -155,25 +155,41 @@ def behavior(near_log_odds, chose_near, pairs, natural, units, natural_units):
 
 # --- reading the run --------------------------------------------------------------------
 
-def load_run(root, mode):
-    """The run's activation file and per-kept-prompt labels, or None."""
-    run = root / f"exp0_{MODEL}_think-{mode}_units"
+def single_rendering(row):
+    """Pair labels for a full-bank row: one natural rendering, its own pair."""
+    h = natural_horizon(row["horizon"])
+    return {"pair_id": row["sample_uid"], "duration_id": str(h), "rendered_unit": h.unit, "natural": True}
+
+
+def load_run(root, mode, bank="units", model=MODEL):
+    """The run's activation file and per-kept-prompt labels, or None. `bank` is "units"
+    or "fill" (paired banks) or "full", whose prompts are single natural renderings,
+    each its own pair. Rows without a horizon (the full bank's null prompts) are
+    dropped; labels["rows"] indexes the kept rows in the activation file."""
+    run = root / f"exp0_{model}_think-{mode}_{bank}"
     if not (run / "activations.npz").exists():
         return None
     z = np.load(run / "activations.npz")
     rows = [r for r in json.loads((run / "answers.json").read_text()) if "think_len" in r]   # kept prompts
     if len(rows) != len(z["horizons"]):
         raise ValueError(f"{run}: {len(rows)} kept answers but {len(z['horizons'])} activation rows")
+    keep = np.array([i for i, r in enumerate(rows) if r["horizon"] is not None])
+    rows = [rows[i] if "pair_id" in rows[i] else {**rows[i], **single_rendering(rows[i])} for i in keep]
     natural_unit = {r["pair_id"]: r["rendered_unit"] for r in rows if r["natural"]}
     ab = z["label_logits"][:, 0] - z["label_logits"][:, 1]
-    labels = {"y": np.log10(z["horizons"]),
+    labels = {"y": np.log10(z["horizons"][keep]),
               "durations": np.array([r["duration_id"] for r in rows]),
               "units": np.array([r["rendered_unit"] for r in rows]),
               "natural_units": np.array([natural_unit[r["pair_id"]] for r in rows]),
               "pairs": np.array([r["pair_id"] for r in rows]),
               "natural": np.array([r["natural"] for r in rows]),
-              "near_log_odds": np.where([r["near_label"] == "a" for r in rows], ab, -ab),
-              "chose_near": np.array([r["label"] == r["near_label"] for r in rows])}
+              "sample_uids": np.array([r["sample_uid"] for r in rows]),
+              "regime": np.array([r["regime"] for r in rows]),
+              "forced": np.array([bool(r.get("forced", False)) for r in rows]),
+              "near_log_odds": np.where([r["near_label"] == "a" for r in rows], ab[keep], -ab[keep]),
+              "chose_near": np.array([r["label"] == r["near_label"] for r in rows]),
+              "anchor": np.array([bool(r.get("anchor", False)) for r in rows]),
+              "rows": keep}
     return z, labels
 
 

@@ -12,6 +12,11 @@ Inputs come from analysis/steering_prepare.py. Tests:
   answer  T5  answer-slot patching across prompts, per layer, both modes
 Cells whose inputs carry a `decision` direction (steering_prepare.py, 07 section 10)
 are steered and ablated along the horizon/decision split instead of the probe line.
+Cells from the pooled banks (steering_prepare.py --pooled, 16_spec_pristine_manifold.md
+§5 stage A) carry a `factor_span` and are steered along the effects curve, its
+invariant and in-span parts, U and two random directions, and not ablated; per
+direction the effect toward the rational answer is reported, thinking on on
+rendering averages. The spec fixes no pass/fail criterion for them.
 Thinking off is teacher-forced through "I choose:" and each prompt is averaged
 with its option-swapped twin. Writes <out>/exp8_<inputs name>/results.json
 (e.g. exp8_Qwen3-8B_answer_slot) and prints the success criteria of the spec,
@@ -46,6 +51,9 @@ DIRECTIONS = ("line", "curve", "mean difference", "random 0", "random 1")
 # so far and is dropped; the curve is split into its decision part and the rest
 DECISION_DIRECTIONS = ("curve", "curve without decision", "decision part of curve", "decision",
                        "mean difference", "random 0")
+# for cells from the pooled banks (16_spec_pristine_manifold.md §5): the effects curve, its
+# parts outside and inside the span of the factor effects (they add up to it), and U
+PRISTINE_DIRECTIONS = ("effects curve", "invariant part", "in-span part", "unit U", "random 0", "random 1")
 N_RANDOM_SUBSPACES = 3
 MAX_PAIRS = 96
 MAX_ANSWER_PAIRS = {"off": 96, "on": 64}   # thinking-on pairs cost ~2.5k-token passes per layer
@@ -99,12 +107,35 @@ def load_inputs(path):
     cells = {}
     for c in meta["cells"]:
         key = f"{c['mode']}|{c['label']}|{c['layer']}"
-        names = ("mean", "w", "basis", "curve_logh", "curve_coords", "caa") + (
-            ("decision",) if f"{key}|decision" in z.files else ())
+        names = ("mean", "w", "basis", "curve_logh", "curve_coords", "caa") + tuple(
+            name for name in ("decision", "factor_span", "unit_direction") if f"{key}|{name}" in z.files)
         cells[key] = {**c, **{name: z[f"{key}|{name}"] for name in names}, "b": float(z[f"{key}|b"])}
     names = ("ids", "offsets", "close", "think_len", "forced", "labels", "record")
     post = {name: z[f"post|{name}"] for name in names} if meta["n_post"] else None
     return meta, cells, post
+
+
+def selected_records(meta):
+    """The inputs' prompt records, in their order. Pooled inputs name each record's
+    bank and the settings its run was built with; older inputs are all full bank."""
+    if "bank_settings" in meta:
+        banks, settings = meta["selected_banks"], meta["bank_settings"]
+    else:
+        banks = ["full"] * len(meta["selected"])
+        settings = {"full": {k: meta[k] for k in ("n_prompts", "seed", "limit")}}
+    built = {bank: build_records(Settings(bank=bank, **settings[bank])) for bank in set(banks)}
+    records = [built[bank][i] for bank, i in zip(banks, meta["selected"])]
+    if [r["sample_uid"] for r in records] != meta["sample_uids"]:
+        raise ValueError("the prompt bank differs from the one the inputs were prepared on")
+    return records
+
+
+def suffix_newlines(ids, tokenizer, n_suffix):
+    """Per row, [position] of the newline after <|im_end|>: the suffix newline cell."""
+    newline = [[len(seq) - n_suffix + 1] for seq in ids]
+    if any(tokenizer.decode([seq[p[0]]]) != "\n" for seq, p in zip(ids, newline)):
+        raise ValueError("the token after <|im_end|> is not a newline; the suffix layout changed")
+    return newline
 
 
 def off_prompts(records, tokenizer, cfg, batch_size):
@@ -115,9 +146,7 @@ def off_prompts(records, tokenizer, cfg, batch_size):
     variants = []
     for swap in (False, True):
         ids = [S.encode(tokenizer, render_variant(r, swap=True) if swap else r["prompt"], cfg) for r in records]
-        newline = [[len(seq) - n_suffix + 1] for seq in ids]
-        if any(tokenizer.decode([seq[p[0]]]) != "\n" for seq, p in zip(ids, newline)):
-            raise ValueError("the token after <|im_end|> is not a newline; the suffix layout changed")
+        newline = suffix_newlines(ids, tokenizer, n_suffix)
         variants.append({"ids": ids, "labels": labels,
                          "near_first": [(r["near_label"] == "a") != swap for r in records],
                          "positions": {"suffix newline": newline, "pre-label": [[len(seq) - 1] for seq in ids]}})
@@ -137,6 +166,8 @@ def on_prompts(post, records, batch_size):
 
 
 def directions(cell):
+    if "factor_span" in cell:
+        return PRISTINE_DIRECTIONS
     return DECISION_DIRECTIONS if "decision" in cell else DIRECTIONS
 
 
@@ -145,8 +176,13 @@ def delta_rows(cell, direction, alpha, log_h):
     curve of horizon averages). Every direction moves each row as far as the
     curve does, so they differ in direction only, except the two parts of the
     curve, which add up to it."""
-    if direction == "curve":
+    if direction in ("curve", "effects curve"):
         return S.curve_delta(cell, log_h, alpha)
+    if direction == "in-span part":
+        return S.span_part(S.curve_delta(cell, log_h, alpha), cell["factor_span"])
+    if direction == "invariant part":
+        step = S.curve_delta(cell, log_h, alpha)
+        return step - S.span_part(step, cell["factor_span"])
     if direction == "curve without decision":
         return S.without_direction(S.curve_delta(cell, log_h, alpha), cell["decision"])
     if direction == "decision part of curve":
@@ -159,6 +195,8 @@ def delta_rows(cell, direction, alpha, log_h):
         vector = cell["w"]
     elif direction == "mean difference":
         vector = cell["caa"]
+    elif direction == "unit U":
+        vector = cell["unit_direction"]
     else:   # "random <seed>"
         vector = np.random.default_rng(int(direction.split()[1])).normal(size=len(cell["w"]))
     return S.matched_deltas(cell, vector, alpha, log_h)
@@ -307,6 +345,27 @@ def verdicts(mode, cell_results):
     return out
 
 
+def toward_by_direction(steer, renderings=None):
+    """Per direction and |alpha|: the mean effect toward the rational answer [95% CI],
+    both signs pooled. With `renderings` (thinking on, 16 §5) the prompts' effects are
+    first averaged per rendering, so the CI resamples renderings."""
+    out = {}
+    for direction, by_alpha in steer.items():
+        for size in (1, 2):
+            values = [np.asarray(by_alpha[alpha]["toward"]) for alpha in (-size, size)]
+            if renderings is not None:
+                values = [rendering_means(v, renderings) for v in values]
+            out.setdefault(direction, {})[size] = S.bootstrap_mean(np.concatenate(values))
+    return out
+
+
+def rendering_means(values, renderings):
+    """Mean of `values` per rendering, over the rows where it is defined (not NaN)."""
+    values, renderings = np.asarray(values, float), np.asarray(renderings)
+    defined = ~np.isnan(values)
+    return np.array([values[defined & (renderings == r)].mean() for r in np.unique(renderings[defined])])
+
+
 def toward_at_2(steer, direction):
     """Per-prompt effect toward the rational answer at |alpha| = 2, both signs pooled."""
     return np.concatenate([np.asarray(steer[direction][a]["toward"]) for a in (-2, 2)])
@@ -347,6 +406,10 @@ def print_cell(key, result, contrast):
         cells = "  ".join(f"a={a:+d}: near {v['near'][0]:+.2f} both {v['both'][0]:+.2f} (readout {v['readout']:+.1f})"
                           for a, v in by_alpha.items())
         print(f"  steer {direction:23} {cells}")
+    for direction, by_size in result.get("toward", {}).items():
+        print(f"  toward rational {direction:15} " + "  ".join(
+            f"|a|={size}: {v[0]:+.2f} [{v[1]:+.2f}, {v[2]:+.2f}]" for size, v in by_size.items())
+            + ("  (rendering averages)" if result.get("toward_on_renderings") else ""))
     for name, v in result.get("verdicts", {}).items():
         print(f"  {name:18} {'PASS' if v['pass'] else 'fail'}  {{{', '.join(f'{k}: {x:.2f}' if isinstance(x, float) else f'{k}: {x}' for k, x in v.items() if k != 'pass')}}}")
 
@@ -355,10 +418,7 @@ def main(args):
     meta, cells, post = load_inputs(args.inputs)
     cfg = Settings(model=meta["model"], thinking="off", prefill="I choose:", bank="full", n_prompts=meta["n_prompts"],
                    seed=meta["seed"], limit=meta["limit"], batch_size=args.batch_size)
-    records_all = build_records(cfg)
-    records = [records_all[i] for i in meta["selected"]]
-    if [r["sample_uid"] for r in records] != meta["sample_uids"]:
-        raise ValueError("the prompt bank differs from the one the inputs were prepared on")
+    records = selected_records(meta)
     if args.limit:
         records = records[:args.limit]
         if post is not None:
@@ -433,7 +493,8 @@ def main(args):
             if cell["mode"] != mode:
                 continue
             res = results["cells"][key] = {}
-            if "ablate" in cell_tests[mode]:
+            # stage A of 16 §5 steers the pooled cells only
+            if "ablate" in cell_tests[mode] and "factor_span" not in cell:
                 res["ablate"], res["ablate_per_prompt"] = timed(
                     f"{key} ablate", lambda: run_ablate(runner, prompts, cell, regimes, base))
                 # saved before steering, so a stopped run keeps the ablation
@@ -441,6 +502,10 @@ def main(args):
             if "steer" in cell_tests[mode]:
                 res["steer"] = timed(f"{key} steer",
                                      lambda: run_steer(runner, prompts, cell, regimes, log_h, base, contrast))
+                if "factor_span" in cell:
+                    res["toward_on_renderings"] = mode == "on"
+                    res["toward"] = toward_by_direction(
+                        res["steer"], [r["horizon_text"] for r in rows] if mode == "on" else None)
             res["verdicts"] = verdicts(mode, res)
             print_cell(key, res, contrast)
             (out_dir / "results.json").write_text(json.dumps(results, default=float))   # incremental

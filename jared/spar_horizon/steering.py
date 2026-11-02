@@ -246,6 +246,84 @@ def fit_cell(X, log_h, k_max=8):
             "caa": X[log_h >= median].mean(0) - X[log_h < median].mean(0)}
 
 
+def fit_duration_effects(X, log_h, factors, k_max=8, orthogonal=True, covariates=None):
+    """`fit_cell`'s curve without the confounds (16_spec_pristine_manifold.md §2).
+
+    Least squares X ≈ duration + Σ factors + Σ covariates: durations and factors
+    one-hot, with every duration a level and the first level of each factor dropped.
+    `factors` maps a name to per-row labels (unit, regime, forced, option order);
+    `covariates` maps a name to per-row numbers entering linearly (log delays, which
+    the pooled banks vary independently of the horizon). A horizon average mixes in
+    whatever moves with the horizon; a duration effect is each duration's
+    fitted activation with the factors held at their sample average. The basis is
+    the top-k PCs of those effects. With `orthogonal`, the span of the factor
+    effects is first projected out, so that a prompt's coordinates do not move
+    with its unit, regime or delays; the cost is any duration signal inside that span.
+
+    Returns the `fit_cell` keys the curve needs (mean, basis, curve_logh,
+    curve_coords), `factors`: name -> (levels, effects [levels - 1, d], relative
+    to the first level), `covariates`: name -> effect per unit [d], and
+    `factor_span`: orthonormal rows [m, d] spanning the factor and covariate effects."""
+    horizons, duration_row = np.unique(np.round(log_h, 9), return_inverse=True)
+    columns, levels_by_factor = [np.eye(len(horizons))[duration_row]], {}
+    for name, labels in factors.items():
+        levels, level_row = np.unique(np.asarray(labels), return_inverse=True)
+        columns.append(np.eye(len(levels))[level_row][:, 1:])
+        levels_by_factor[name] = levels
+    covariates = covariates or {}
+    for values in covariates.values():
+        values = np.asarray(values, dtype=float)
+        columns.append((values - values.mean())[:, None])
+    design = np.hstack(columns)
+    if np.linalg.matrix_rank(design) < design.shape[1]:
+        raise ValueError("duration and factors are not separable: some factor level is collinear with the durations")
+    coef = np.linalg.lstsq(design, X, rcond=None)[0]
+    n = len(horizons)
+    factor_coef = coef[n:]
+    mean = X.mean(0)
+    averages = coef[:n] + design[:, n:].mean(0) @ factor_coef - mean
+    span = np.linalg.qr(factor_coef.T)[0]   # [d, m]; m = 0 without factor columns
+    shape = averages - (averages @ span) @ span.T if orthogonal else averages
+    basis = PCA(n_components=min(k_max, n - 1)).fit(shape).components_
+    effects, start = {}, 0
+    for name, levels in levels_by_factor.items():
+        effects[name] = (levels, factor_coef[start:start + len(levels) - 1])
+        start += len(levels) - 1
+    slopes = {name: factor_coef[start + i] for i, name in enumerate(covariates)}
+    return {"mean": mean, "basis": basis, "curve_logh": horizons, "curve_coords": averages @ basis.T,
+            "factors": effects, "covariates": slopes, "factor_span": span.T}
+
+
+def span_part(deltas, span):
+    """Rows of `deltas` [n, d] projected onto the span of the orthonormal rows of
+    `span` [m, d]. With the fit's factor span, a step along the effects curve splits
+    into this in-span part and the rendering-invariant rest (16_spec_pristine_manifold.md §5)."""
+    return (deltas @ span.T) @ span
+
+
+def unit_direction(cell, factor="unit"):
+    """Unit vector [d]: the first principal component of a factor's level effects
+    (the dropped first level at zero, so the choice of reference does not matter),
+    oriented along the cell's curve from its shortest to its longest duration, so
+    that a positive step means "longer" as it does for the other directions."""
+    _, effects = cell["factors"][factor]
+    levels = np.vstack([np.zeros(effects.shape[1]), effects])
+    component = PCA(n_components=1).fit(levels).components_[0]
+    along = (cell["curve_coords"][-1] - cell["curve_coords"][0]) @ cell["basis"]
+    return component if component @ along >= 0 else -component
+
+
+def curve_readout(cell, X, points=2001):
+    """log10 horizon per row of X [n, d]: the nearest point of the interpolated curve
+    to the row's coordinates on the cell's basis."""
+    grid, coords = cell["curve_logh"], cell["curve_coords"]
+    fine = np.linspace(grid[0], grid[-1], points)
+    path = np.stack([np.interp(fine, grid, coords[:, j]) for j in range(coords.shape[1])], 1)
+    Z = (X - cell["mean"]) @ cell["basis"].T
+    nearest = ((Z[:, None, :] - path[None]) ** 2).sum(-1).argmin(1)
+    return fine[nearest]
+
+
 def curve_delta(cell, log_h, alpha):
     """Per-row displacement [n, d] along the curve of horizon averages, from each
     row's horizon to that horizon + alpha decades (clamped at the curve's ends)."""
@@ -424,12 +502,13 @@ def contrast(lo, regimes):
 # --- E10: patching prompt positions while the model generates -------------------
 
 @contextmanager
-def prompt_patch(model, layer, positions, donor, basis=None):
+def prompt_patch(model, layer, positions, donor, basis=None, add=False):
     """Within the block, every forward pass that processes a whole sequence (a
     prefill, not a one-token decode step) has the output of decoder layer
     `layer - 1` overwritten at the unpadded prompt positions `positions[row]` with
     `donor[row]` [len(positions[row]), d]; with `basis` [k, d] (orthonormal rows)
-    only the component in its span is swapped: x + ((donor - x) B^T) B. Rows are
+    only the component in its span is swapped: x + ((donor - x) B^T) B; with `add`,
+    donor[row] is added instead (a steering step, E13 stage B). Rows are
     the batch rows in order, so one batch per block. Each row's left padding is
     read from the attention mask of the pass, so the same block covers the
     reasoning pass and the answer pass of `model_io._generate_rows`, whose
@@ -438,11 +517,18 @@ def prompt_patch(model, layer, positions, donor, basis=None):
         raise ValueError(f"layer {layer}: editable hidden_states indices are 1..{len(model.model.layers) - 1}")
     padding = {}
 
-    def read_padding(_module, _args, kwargs):
+    def read_padding(_module, args, kwargs):
         mask = kwargs.get("attention_mask")
-        if mask is None or mask.dim() != 2:
+        if mask is not None and mask.dim() == 2:
+            padding["left"] = (mask == 0).sum(1).tolist()
+            return
+        # A batch of one row is never padded, and generate on the box (CUDA) passes no 2-D
+        # mask for it (E14 crashed on the last, one-prompt batch of a condition).
+        ids = kwargs.get("input_ids")
+        rows = (ids if ids is not None else kwargs.get("inputs_embeds", args[0] if args else None)).shape[0]
+        if rows != 1:
             raise ValueError("prompt_patch needs the 2-D attention mask to locate each row's prompt")
-        padding["left"] = (mask == 0).sum(1).tolist()
+        padding["left"] = [0]
 
     def patch(_module, _inputs, out):
         h = out[0] if isinstance(out, tuple) else out
@@ -455,7 +541,9 @@ def prompt_patch(model, layer, positions, donor, basis=None):
             index = torch.as_tensor(pos, device=h.device) + padding["left"][row]
             x = h[row, index].float()
             new = values.to(h.device, torch.float32)
-            if basis is not None:
+            if add:
+                new = x + new
+            elif basis is not None:
                 b = basis.to(h.device, torch.float32)
                 new = x + ((new - x) @ b.T) @ b
             h[row, index] = new.to(h.dtype)

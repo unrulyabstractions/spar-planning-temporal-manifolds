@@ -57,6 +57,8 @@ representation, and what happens to it while the model reasons?
 | E11: Qwen3-14B E0 both modes, E8 answer slot, probe line, coherence | 2026-10-20/21, rest 2026-10-24 | `exp0_Qwen3-14B_*`, `exp8_Qwen3-14B_*`, `coherence_Qwen3-14B_think-on_full/` | `11_results_14b.md`, `13_evidence.md` |
 | Local checks: natural closes and within-unit R², horizon vs delay | 2026-10-21 | `analysis/` | `12_results_local_checks.md` |
 | Unit-overlap bank E0, 8B both modes | 2026-10-25 | `exp0_Qwen3-8B_think-{on,off}_units/` | spec `14_spec_unit_overlap.md`; no results doc yet |
+| Pristine steering stage A (answer slot, fixed α) and stage B (suffix, thinking on) | 2026-10-30 | `exp8_Qwen3-8B_pristine/`, `exp13_Qwen3-8B_pristine_suffix/`, `analysis/crossing_split_pristine.*` | `22_results_phrase_steering.md` §1, spec `16` §5 |
+| E14: steering at the horizon phrase, thinking on, 4 transitions x 38 conditions | 2026-10-31 | `exp14_Qwen3-8B_phrase/` | `22_results_phrase_steering.md`, spec `21_spec_phrase_steering.md` |
 | Starter bank: v1 (thinking off, E0-E5), v3 (thinking on, E0, E6) | 2026-09 | `snapshots/v1_noprefill`, `snapshots/v3_think` (removed 2026-10-27; in git at `a93acf9`) | `history/` |
 
 ## 4. Established (Qwen3-8B, thinking on, full bank unless noted)
@@ -203,6 +205,12 @@ representation, and what happens to it while the model reasons?
     E10 rates, T1 horizon span, per-fold refit in the decision check,
     prompt-preserving alignment null on shared natural closes,
     within-unit grouping by (value, unit).
+- **2026-10-30.** E14 (`21`): thinking-on steering moves to the horizon phrase,
+  with a target per prompt that crosses a delay (log-midpoint), along the
+  pooled manifold, with the donor patch as the ceiling.
+- **2026-11-01.** E14 (`22`): H1-H3 fail. Post hoc measures (first stated
+  horizon, choice by where it lands) were added to `exp14_analysis.py`, labelled
+  post hoc and gating nothing. The pre-registered H1 measure was kept as written.
 
 ## 7. Facts that constrain the design
 

@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import math
 import random
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -403,3 +404,225 @@ def build_units_prompts(seed=0, n_base=UNITS_BASE, limit=None):
         n_pairs = max(1, limit // 2)
         complete = complete[::max(1, len(complete) // n_pairs)][:n_pairs]
     return [rec for p in complete for rec in p]
+
+
+# --- the crossed bank (16_spec_pristine_manifold.md §4) -----------------------
+# Every duration in every unit whose value lies in 0.1-1000, so that unit and magnitude
+# are crossed rather than adjacent; delays sit at random log margins from the horizon,
+# so every regime occurs at every duration. Results on it are ours, not a replication:
+# the delays no longer follow Alan's grids.
+
+CROSSED_VALUES = (0.1, 1000)
+EXACT_INTEGER = 0.01                                # "365 days" for 365.25, not "370 days"
+DELAY_LIMITS = (UNIT_YEARS["minutes"], 1000.0)      # years
+MARGIN = (0.2, 1.5)                                 # decades from the horizon to the nearer delay
+GAP = (0.3, 2.0)                                    # decades between the delays, when both are on one side
+MIN_DISTANCE = 0.2                                  # decades between any rendered delay and any horizon rendering
+CROSSED_PER_DURATION = 4                            # 192 bases, ~530 prompts
+CROSSED_REGIMES = ("none", "near", "both")
+MAX_DRAWS = 10_000
+
+
+def crossed_rendering(years, unit):
+    """`years` in `unit`, or None outside 0.1-1000: the integer when it is within 1%,
+    else 2 significant figures ("0.5 years", "1.8 months")."""
+    value = years / UNIT_YEARS[unit]
+    if not CROSSED_VALUES[0] <= value <= CROSSED_VALUES[1]:
+        return None
+    integer = round(value)
+    if integer >= 1 and abs(integer / value - 1) <= EXACT_INTEGER:
+        return Horizon(integer, unit)
+    return Horizon(float(f"{value:.2g}"), unit)
+
+
+def crossed_renderings(years):
+    """Every rendering of `years` in NATURAL_UNITS, largest unit first."""
+    return tuple(r for unit in NATURAL_UNITS for r in [crossed_rendering(years, unit)] if r is not None)
+
+
+def delays_for(log_h, regime_name, margin, other_margin, gap):
+    """(near, far) delays in log10 years at the given margins from the horizon."""
+    if regime_name == "none":
+        return log_h + margin, log_h + margin + gap
+    if regime_name == "near":
+        return log_h - margin, log_h + other_margin
+    return log_h - margin - gap, log_h - margin
+
+
+def feasible_regimes(log_h):
+    """The regimes for which some margins within MARGIN and GAP put both delays inside
+    the limits (at 30 seconds only none: its near delay can reach 1 minute)."""
+    lo, hi = (math.log10(y) for y in DELAY_LIMITS)
+    fits = {"none": max(MARGIN[0], lo - log_h) <= min(MARGIN[1], hi - log_h - GAP[0]),
+            "near": log_h - lo >= MARGIN[0] and hi - log_h >= MARGIN[0],
+            "both": log_h - MARGIN[0] - GAP[0] >= lo and max(MARGIN[0], log_h - hi) <= MARGIN[1]}
+    return [name for name in CROSSED_REGIMES if fits[name]]
+
+
+def realism_labels(near_years, far_years):
+    """Labels only (Jared, 2026-10-27): how odd the payout dates read for an investment."""
+    if near_years < UNIT_YEARS["days"]:
+        scale = "minutes-hours"
+    elif near_years < UNIT_YEARS["months"]:
+        scale = "days-weeks"
+    else:
+        scale = "months-years"
+    alan = all(UNIT_YEARS["weeks"] <= y <= 50 for y in (near_years, far_years))
+    return {"delay_scale": scale, "alan_range": alan}
+
+
+def draw_crossed_delays(rng, renderings, regime_name):
+    """Rendered (near, far) delays for `regime_name`, redrawn until both lie within the
+    limits and at least MIN_DISTANCE decades from every horizon rendering, so rounding
+    never moves a rendering into another regime."""
+    log_h = math.log10(renderings[0].years)
+    lo, hi = DELAY_LIMITS
+    for _ in range(MAX_DRAWS):
+        near, far = delays_for(log_h, regime_name, rng.uniform(*MARGIN), rng.uniform(*MARGIN), rng.uniform(*GAP))
+        if not (math.log10(lo) <= near and far <= math.log10(hi)):
+            continue
+        delays = [rng.choice(crossed_renderings(10 ** d)) for d in (near, far)]
+        if all(lo <= d.years <= hi and abs(math.log10(d.years / r.years)) >= MIN_DISTANCE
+               for d in delays for r in renderings):
+            return delays
+    raise ValueError(f"no {regime_name} delays for {renderings[0]} in {MAX_DRAWS} draws")
+
+
+def crossed_plan(per_duration=CROSSED_PER_DURATION):
+    """(duration, regime) for each base of the standalone crossed bank. Regimes are
+    assigned, not drawn: four uniform draws leave most durations without one regime,
+    so each duration takes every feasible regime in turn, starting one further along
+    CROSSED_REGIMES at each duration, so the extra bases rotate."""
+    plan = []
+    for j, h in enumerate(HORIZONS):
+        feasible = feasible_regimes(h.log10_years)
+        rotated = [name for name in CROSSED_REGIMES[j % 3:] + CROSSED_REGIMES[:j % 3] if name in feasible]
+        plan += [(h, rotated[b % len(rotated)]) for b in range(per_duration)]
+    return plan
+
+
+def emit_crossed(plan, seed, prefix):
+    """One base per (duration, regime) in `plan`, as a list of records per base: the base
+    emitted once per rendering of its duration, sharing delays, rewards, order and
+    labels. Extra keys: `pair_id`, `duration_id` (the natural rendering),
+    `rendered_unit`, `natural`, `delay_scale`, `alan_range`."""
+    rng = random.Random(seed)
+    fmt = PromptFormat()
+    bases = []
+    for i, (h, regime_name) in enumerate(plan):
+        renderings = crossed_renderings(h.years)
+        near, far = draw_crossed_delays(rng, renderings, regime_name)
+        short_reward = rng.choice(SHORT_REWARDS)
+        long_reward = short_reward * rng.choice(REWARD_MULTIPLIERS)
+        short_first = rng.random() < 0.5
+        base = []
+        for k, r in enumerate(renderings):
+            s = PromptSample(sample_uid=f"{prefix}{seed}_{i:04d}_{k}", domain="investment", horizon_text=str(r),
+                             horizon_years=r.years, short_reward=float(short_reward), short_delay_text=str(near),
+                             short_delay_years=near.years, long_reward=float(long_reward),
+                             long_delay_text=str(far), long_delay_years=far.years, short_first=short_first,
+                             label_a="a)", label_b="b)", format_name=fmt.name, horizon_canonical=str(h),
+                             horizon_unit=r.unit, horizon_value=r.value, phrasing_id=0,
+                             pair_id=f"{prefix}{seed}_{i:04d}")
+            s.text = fmt.render(s)
+            s.prompt_id = hashlib.sha1(s.text.encode()).hexdigest()[:12]
+            rec = record(s)
+            rec.update(pair_id=s.pair_id, duration_id=str(h), rendered_unit=r.unit, natural=str(r) == str(h),
+                       **realism_labels(near.years, far.years))
+            base.append(rec)
+        bases.append(base)
+    return bases
+
+
+def evenly_spaced_bases(bases, limit):
+    """Evenly spaced whole bases, about `limit` records; all of them when `limit` is None."""
+    if limit is None:
+        return bases
+    n_records = sum(len(b) for b in bases)
+    n_bases = max(1, limit * len(bases) // n_records)
+    return bases[::max(1, len(bases) // n_bases)][:n_bases]
+
+
+def build_crossed_prompts(seed=0, per_duration=CROSSED_PER_DURATION, limit=None):
+    """The standalone crossed bank: `per_duration` bases at each of the 48 durations
+    (`crossed_plan`). `limit` keeps evenly spaced whole bases, about `limit` records."""
+    bases = emit_crossed(crossed_plan(per_duration), seed, "x")
+    return [rec for base in evenly_spaced_bases(bases, limit) for rec in base]
+
+
+# --- the fill bank (16_spec_pristine_manifold.md §4, Jared 2026-10-29) --------
+# The crossed generator restricted to the (duration, regime) cells the old full and
+# units banks leave nearly empty, pooled with those runs: their delays are independent
+# of the horizon, which the crossed bank's are not (corr +0.85).
+
+FILL_MIN_OLD = 3          # a (duration, regime) cell with fewer old prompts is filled
+FILL_PER_CELL = 2
+ANCHOR_FULL = 12          # old full-bank prompts re-run, to check the runs can be pooled
+ANCHOR_PAIRS = 6          # old units-bank pairs re-run
+
+
+def old_bank_records():
+    """The old 8B runs' prompts with a horizon: the full bank, then the units bank."""
+    return [r for r in build_full_prompts() + build_units_prompts() if r["horizon"] is not None]
+
+
+def fill_plan(per_cell=FILL_PER_CELL, min_old=FILL_MIN_OLD):
+    """(duration, regime) for each fill base: `per_cell` bases in every feasible cell
+    with fewer than `min_old` old prompts."""
+    old = Counter((r.get("duration_id") or r["horizon_text"], r["regime"]) for r in old_bank_records())
+    return [(h, name) for h in HORIZONS for name in feasible_regimes(h.log10_years)
+            if old[(str(h), name)] < min_old for _ in range(per_cell)]
+
+
+def fill_anchors():
+    """Evenly spaced old prompts to re-run, as bases: ANCHOR_FULL full-bank prompts and
+    ANCHOR_PAIRS units-bank pairs, keeping their sample_uids. Full-bank prompts get the
+    paired keys as one-rendering bases (they are in natural units)."""
+    full = [r for r in build_full_prompts() if r["horizon"] is not None]
+    bases = []
+    for r in full[::len(full) // ANCHOR_FULL][:ANCHOR_FULL]:
+        h = Horizon.parse(r["horizon_text"])
+        bases.append([{**r, "pair_id": r["sample_uid"], "duration_id": str(h), "rendered_unit": h.unit,
+                       "natural": True}])
+    pairs = {}
+    for r in build_units_prompts():
+        pairs.setdefault(r["pair_id"], []).append(r)
+    pairs = list(pairs.values())
+    bases += pairs[::len(pairs) // ANCHOR_PAIRS][:ANCHOR_PAIRS]
+    return [[{**r, **realism_labels(r["near_delay_years"], r["far_delay_years"]), "anchor": True} for r in base]
+            for base in bases]
+
+
+def build_fill_prompts(seed=0, per_cell=FILL_PER_CELL, limit=None):
+    """The fill bank (`fill_plan`, extra key `anchor` False) followed by the anchors
+    (`anchor` True). `limit` keeps evenly spaced whole bases of each, in proportion."""
+    fill = [[{**r, "anchor": False} for r in base] for base in emit_crossed(fill_plan(per_cell), seed, "f")]
+    anchors = fill_anchors()
+    if limit is not None:
+        n_fill = sum(map(len, fill))
+        share = n_fill / (n_fill + sum(map(len, anchors)))
+        fill = evenly_spaced_bases(fill, max(1, round(limit * share)))
+        anchors = evenly_spaced_bases(anchors, max(1, limit - round(limit * share)))
+    return [rec for base in fill + anchors for rec in base]
+
+
+def crossed_mix(records):
+    """The achieved mix, for the generator's report: regimes per duration third, with the
+    realism labels, and the durations whose regime mix is not all three."""
+    third = {str(h): f"{i * 3 // len(HORIZONS) + 1}/3" for i, h in enumerate(HORIZONS)}
+    bases = {r["pair_id"]: r for r in records}.values()
+    lines = [f"{len(records)} prompts, {len(bases)} bases, "
+             f"{sum(r['regime'] in ('near', 'both') for r in records)} near/both prompts",
+             f"{'third':6s} {'regime':7s} {'bases':>6s} " + " ".join(f"{s:>14s}" for s in
+                                                                 ("minutes-hours", "days-weeks", "months-years"))
+             + f" {'alan_range':>11s}"]
+    for t in ("1/3", "2/3", "3/3"):
+        for name in CROSSED_REGIMES:
+            group = [b for b in bases if third[b["duration_id"]] == t and b["regime"] == name]
+            scales = [sum(b["delay_scale"] == s for b in group) for s in ("minutes-hours", "days-weeks", "months-years")]
+            lines.append(f"{t:6s} {name:7s} {len(group):6d} " + " ".join(f"{n:14d}" for n in scales)
+                         + f" {sum(b['alan_range'] for b in group):11d}")
+    partial = {h: sorted({b["regime"] for b in bases if b["duration_id"] == str(h)}) for h in HORIZONS}
+    lines.append("durations without all three regimes: " + ", ".join(
+        f"{h} {'/'.join(names)}" for h, names in partial.items() if len(names) < 3))
+    return "\n".join(lines)

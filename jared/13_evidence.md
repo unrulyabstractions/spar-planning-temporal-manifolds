@@ -193,6 +193,49 @@ Supported (exploratory control).**
 
 ![regime shift and choice](../../results/horizon/analysis/evidence_regime.png)
 
+## G. Does steering the horizon change the thinking-on choice? (E14, 2026-11-01)
+
+**G1. Where an up-step moves the stated horizon, the choice moves as the unsteered model would at that horizon.
+Observed, correlational (8B, one run, post hoc; parser audited 79/80 by a blind reader).**
+- The donor patch at L16 puts a target-regime horizon in 104 of 104 traces and moves near log-odds +9.9 [8.3, 11.7].
+- Natural closes, near log-odds change against what the behaviour map predicts from the stated horizon alone:
+
+  | case | observed | predicted | random, same prompts |
+  |---|---|---|---|
+  | none → near, landed (13 prompts) | +11.5 | +10.9 | +0.1 |
+  | near → both, moved within its regime (12 prompts) | +4.3 | +4.3 | |
+  | near → both, landed | +6.3 | +18.9 | |
+  | near → none, moved | +1.1 | −2.1 | |
+
+- The none → near landings are all unit swaps. At the pre-registered L16 alone they reach about half the prediction
+  (+4.9 against +9.4).
+- The steer is also present when the answer is scored, so the written horizon is not shown to cause the choice.
+- Numbers: `22` §2.
+
+![E14 stated horizon and choice](../../results/horizon/exp14_Qwen3-8B_phrase/summary.png)
+
+**G2. Steering along the pristine curve at the phrase fails H1–H3 as pre-registered. The stated horizon moves
+specifically but saturates. Against.**
+- On the 104 donor prompts the steer moves near log-odds +1.4, against the donor's +9.9. H2: +1.80 [0.58, 2.98],
+  against a bar of 2.88.
+- The steer moves the stated horizon on 55 prompts (L14–18), always toward the target; random 0 of 384.
+  - **Within the unit:** about one decade whatever the step size, often as a digit edit (6 → 66 months).
+  - **Further:** only by swapping to a longer unit from horizons of 4 months or less. These swaps follow the
+    up-direction: on none → near at L16, steer 11/32, invariant 14/32, opposite 1, random 0.
+- Landing was rare: 16 of 128 at L16.
+- Numbers: `22` §1, §4.
+
+**G3. The pristine curve is a written-number direction by construction. Supported (property of the fit).**
+- The unit word accounts for 88% of the variance of log duration in the fit's prompts. With the unit as a separate
+  term, the curve is fitted from the variation within a unit, where duration is the written number.
+- At L16 (cross-fitted), the steer explains R² 0.02 of a real horizon-text change at the unit token. With the fit's
+  unit term added it explains 0.78.
+- This describes the vector. It does not by itself explain the model's response: same-unit prompts barely moved, and
+  the invariant part also swapped units.
+- Numbers: `22` §3.
+
+![E14 geometry](../../results/horizon/exp14_Qwen3-8B_phrase/geometry.png)
+
 ## F. Not covered by a figure
 
 - **Behavior and coherence** (`11` §4):
