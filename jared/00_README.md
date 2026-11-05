@@ -114,19 +114,21 @@ change. Its command, for reference: `python experiments/exp0_baseline.py
 
 ## Shipping
 
-Rent the box in the vast.ai console, then from `spar-planning-temporal-manifolds/`
-(`just` lists the verbs):
+From this checkout or any worktree of it (`just` lists the verbs; SPAR-level
+ones like `up` fall through to `SPAR/justfile`):
 
 ```
-just new ssh -p 41234 root@ssh5.vast.ai -L 8080:localhost:8080   # the console's ssh line, pasted
-just push                                                        # ships this project, not out/, then installs requirements.txt
+just up 2h     # rent + provision; 2h is the expected use, written to the instance label
+just push      # ships this checkout to /workspace/SPAR/spar-planning-temporal-manifolds/, not out/, then installs requirements.txt
 just sync      # results into SPAR/results/
-just stop      # or: just down
+just down      # sync, then destroy (or: just stop, to keep the disk)
 ```
 
-`just new` stores the host and port and matches them to an instance on the
-vast.ai account, so `status`, `stop` and `down` work too. After `just resume`
-the port can change; paste the new line with `just new`. Generation tests are
+Run experiments on the box inside tmux, so they outlive the ssh session. One
+box serves every session: check `just status` before renting, and
+`just ssh "tmux ls; nvidia-smi"` before `down`. For a box rented in the
+console, `just new <its ssh line>` tracks it instead of `up`. After
+`just resume` the port can change; paste the new line with `just new`. Generation tests are
 skipped on the box: bf16 batched greedy is not token-identical to
 single-prompt, so they are CPU tests (`local_checks.py`).
 

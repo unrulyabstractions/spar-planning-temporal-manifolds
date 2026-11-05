@@ -1,15 +1,28 @@
 # spar-planning-temporal-manifolds -- box verbs for this project.
-# Run `just` with no argument to see this list. Start every session with
+# Run `just` with no argument to see this list. Get a box with
+#
+#   just up 2h        # rent + provision; 2h is the expected use, shown in its label
+#
+# or, for a box rented in the vast.ai console, paste its ssh line:
 #
 #   just new ssh -p 41234 root@ssh5.vast.ai -L 8080:localhost:8080
 #
-# pasting the ssh line from the vast.ai console (quotes optional). Every other
-# verb then uses that box. They are the SPAR root verbs (../justfile), run
-# through the same ../infra/vast.sh, except `push`, which ships this project.
+# Every other verb then uses that box. They are the SPAR root verbs
+# (SPAR/justfile), run through the same SPAR/infra/vast.sh, except `push`,
+# which ships this checkout.
+#
+# Verbs not defined here (up, label, search, doctor, vastai, adopt, services,
+# test) fall through to SPAR/justfile and run from SPAR/, so they work from
+# jared/ and from worktrees too. `just --list` shows only this file's verbs.
 
-vast := "bash " + quote(justfile_directory() / ".." / "infra" / "vast.sh")
-spar := justfile_directory() / ".."
-project := file_name(justfile_directory())
+set fallback := true
+
+# SPAR/ is the nearest ancestor holding infra/vast.sh: the parent of the main
+# checkout, or several levels up from a worktree under .claude/worktrees/.
+spar := shell('d="$1"; while [ "$d" != / ] && [ ! -f "$d/infra/vast.sh" ]; do d="$(dirname "$d")"; done; echo "$d"', justfile_directory())
+vast := "bash " + quote(spar / "infra" / "vast.sh")
+# Where this project lives on the box, whichever checkout or worktree ships it.
+box_project := "/workspace/SPAR/spar-planning-temporal-manifolds"
 
 default:
     @just --list
@@ -28,21 +41,22 @@ ssh *ARGS:
 tunnel:
     @{{vast}} tunnel
 
-# Ship this project to /workspace/SPAR/ on the box, then install jared/requirements.txt
-# into the image's python. Local outputs (out/) stay home.
+# Ship this checkout to /workspace/SPAR/spar-planning-temporal-manifolds/ on the
+# box, then install jared/requirements.txt into the image's python. Local
+# outputs (out/) stay home.
 push:
     #!/usr/bin/env bash
     set -euo pipefail
-    cd {{quote(spar)}}
     read -r host port <<<"$({{vast}} hostport)"
-    rsync -avzR --exclude '.venv' --exclude '__pycache__' --exclude 'results' --exclude 'jared/out/' \
+    rsh="$({{vast}} rsh)"
+    rsync -avz --mkpath --exclude '.venv' --exclude '__pycache__' --exclude 'results' --exclude 'jared/out/' \
       --exclude '.env' --exclude '.git' --exclude '.state' --exclude '.claude' \
       --exclude '.ipynb_checkpoints' \
-      -e "ssh -p $port" {{quote(project)}} "root@$host:/workspace/SPAR/"
+      -e "$rsh" {{quote(justfile_directory() + "/")}} "root@$host:{{box_project}}/"
     echo ">> installing jared/requirements.txt on the box"
     # Pin the image's torch so nothing in requirements can upgrade it and break CUDA
     # (as provision.sh does). A no-op in seconds when everything is already installed.
-    ssh -p "$port" "root@$host" 'cd /workspace/SPAR/{{project}}/jared && \
+    {{vast}} ssh 'cd {{box_project}}/jared && \
       /venv/main/bin/python -m pip install -q -r requirements.txt \
         "torch==$(/venv/main/bin/python -c "import torch; print(torch.__version__)")"'
 
@@ -50,12 +64,12 @@ push:
 push-dry:
     #!/usr/bin/env bash
     set -euo pipefail
-    cd {{quote(spar)}}
     read -r host port <<<"$({{vast}} hostport)"
-    rsync -avzRn --stats --exclude '.venv' --exclude '__pycache__' --exclude 'results' --exclude 'jared/out/' \
+    rsh="$({{vast}} rsh)"
+    rsync -avzn --stats --mkpath --exclude '.venv' --exclude '__pycache__' --exclude 'results' --exclude 'jared/out/' \
       --exclude '.env' --exclude '.git' --exclude '.state' --exclude '.claude' \
       --exclude '.ipynb_checkpoints' \
-      -e "ssh -p $port" {{quote(project)}} "root@$host:/workspace/SPAR/" | tail -n 15
+      -e "$rsh" {{quote(justfile_directory() + "/")}} "root@$host:{{box_project}}/" | tail -n 15
 
 # Pull the box's /workspace/results/ into SPAR/results/.
 sync:
