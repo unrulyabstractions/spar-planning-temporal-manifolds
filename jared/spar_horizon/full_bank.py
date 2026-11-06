@@ -21,6 +21,7 @@ import hashlib
 import math
 import random
 from collections import Counter
+from itertools import zip_longest
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -626,3 +627,148 @@ def crossed_mix(records):
     lines.append("durations without all three regimes: " + ", ".join(
         f"{h} {'/'.join(names)}" for h, names in partial.items() if len(names) < 3))
     return "\n".join(lines)
+
+
+# --- the choice banks (18_spec_multichoice.md, 26_spec_overnight_choice_scan.md §6) ---
+# k options, half near (one shared delay) and half far (one shared delay), one principal for
+# all options, so the half is decided by the horizon and the option within the half by the return.
+
+CHOICE_BANKS = {"choice4": (4, False), "choice8": (8, False), "choice4_roi": (4, True), "choice8_roi": (8, True)}
+CHOICE_PER_DURATION = 2                                 # one near and one both base: ~250 prompts per bank
+CHOICE_REGIMES = ("near", "both")
+NEAR_RETURNS = (2, 4, 6, 8, 10, 12, 15, 20)             # percent
+FAR_RETURNS = (50, 75, 100, 150, 200, 300, 400, 500)
+NUMBER_WORDS = {4: "four", 8: "eight"}
+LETTERS = "abcdefgh"
+
+
+def choice_labels(k):
+    return tuple(LETTERS[:k])
+
+
+def choice_prompt_text(options, horizon_text, principal, roi_explicit):
+    """Alan's template for the options as listed (dicts with `label`, `payout`, `delay_text`),
+    shown as `a)` ... . Only the TASK line differs between the implicit and the explicit ROI."""
+    fmt, d = PromptFormat(), DOMAINS["investment"]
+    shown = [f"{o['label']})" for o in options]
+    task = (f"have {principal:,} {d.reward_unit} to invest and are tasked to {d.task}:" if roi_explicit
+            else f"are tasked to {d.task}:")
+    lines = [f"{fmt.situation_marker} {d.situation}", f"{fmt.task_marker} You, {d.role}, {task}"]
+    lines += [f"{lab} {o['payout']:,} {d.reward_unit} in {o['delay_text']}." for lab, o in zip(shown, options)]
+    lines += [f"{fmt.objective_marker} {fmt.objective_text}",
+              f"{fmt.constraint_marker} {fmt.constraint_text.format(horizon=horizon_text)}",
+              f"{fmt.action_marker} Select one of the {NUMBER_WORDS[len(options)]} options. Provide reasoning.",
+              f"{fmt.format_marker} {fmt.choice_prefix} <{', '.join(shown[:-1])} or {shown[-1]}>. "
+              f"{fmt.reasoning_prefix} <1-3 sentences>"]
+    return "\n".join(lines)
+
+
+def choice_variant(rec, swap=False, labels=None):
+    """The record's prompt with the options in reverse order (`swap`) and/or labelled 1..k
+    (`labels` given; its values are ignored, a choice bank has k labels, not two)."""
+    options = rec["options"][::-1] if swap else rec["options"]
+    if labels is not None:
+        options = [{**o, "label": str(i + 1)} for i, o in enumerate(options)]
+    return choice_prompt_text(options, rec["horizon_text"], rec["principal"], rec["roi_explicit"])
+
+
+def van_der_corput(i):
+    """The i-th point of the base-2 van der Corput sequence in [0, 1): 0, .5, .25, .75, .125, ..."""
+    x, scale = 0.0, 0.5
+    while i:
+        x += (i & 1) * scale
+        i >>= 1
+        scale /= 2
+    return x
+
+
+def choice_plan(per_duration):
+    """(duration, regime) for each base, in run order. The durations are those where both
+    regimes are feasible; a duration's bases alternate near / both, starting with the other
+    regime at the next duration. Within a regime the durations come in van der Corput order
+    and the two regimes alternate, so every prefix of the list covers the duration range
+    and both regimes evenly."""
+    kept = [h for h in HORIZONS if {"near", "both"} <= set(feasible_regimes(h.log10_years))]
+    by_regime = {name: [] for name in CHOICE_REGIMES}
+    for j, h in enumerate(kept):
+        for b in range(per_duration):
+            by_regime[CHOICE_REGIMES[(b + j) % 2]].append((b // 2, van_der_corput(j), h))
+    queues = [[(h, name) for _, _, h in sorted(by_regime[name], key=lambda t: t[:2])] for name in CHOICE_REGIMES]
+    return [item for pair in zip_longest(*queues) for item in pair if item is not None]
+
+
+def truth_positions(rng, k, n):
+    """`n` positions in 0..k-1 as consecutive random permutations, so counts differ by at most 1."""
+    out = []
+    while len(out) < n:
+        block = list(range(k))
+        rng.shuffle(block)
+        out += block
+    return out[:n]
+
+
+def choice_base(rng, h, regime_name, k, roi_explicit, truth_pos):
+    """One base: horizon renderings, delays, principal, returns and option order (all drawn
+    from `rng`; `roi_explicit` only changes the text, so ROI twins share every draw)."""
+    renderings = crossed_renderings(h.years)
+    near, far = draw_crossed_delays(rng, renderings, regime_name)
+    principal = rng.choice(SHORT_REWARDS)
+    half = k // 2
+    options = []
+    for name, delay, returns in (("near", near, NEAR_RETURNS), ("far", far, FAR_RETURNS)):
+        ordered = sorted(rng.sample(returns, half), reverse=True)
+        options += [{"payout": principal * (100 + r) // 100, "return_pct": r, "delay_text": str(delay),
+                     "delay_years": delay.years, "half": name, "rank_in_half": rank + 1}
+                    for rank, r in enumerate(ordered)]
+    truth_half = TRUTH[regime_name]
+    truth = next(o for o in options if o["half"] == truth_half and o["rank_in_half"] == 1)
+    rest = [o for o in options if o is not truth]
+    rng.shuffle(rest)
+    shown = rest[:truth_pos] + [truth] + rest[truth_pos:]
+    for label, o in zip(choice_labels(k), shown):
+        o["label"] = label
+    return renderings, near, far, principal, shown, truth
+
+
+def emit_choice(k, roi_explicit, seed, per_duration, limit):
+    rng = random.Random(f"choice{k}-{seed}")
+    plan = choice_plan(per_duration)
+    positions = {name: truth_positions(rng, k, sum(r == name for _, r in plan)) for name in CHOICE_REGIMES}
+    taken = dict.fromkeys(CHOICE_REGIMES, 0)
+    records = []
+    for i, (h, regime_name) in enumerate(plan):
+        pos = positions[regime_name][taken[regime_name]]
+        taken[regime_name] += 1
+        renderings, near, far, principal, shown, truth = choice_base(rng, h, regime_name, k, roi_explicit, pos)
+        in_half = sorted((o for o in shown if o["half"] == truth["half"]), key=lambda o: o["rank_in_half"])
+        base = []
+        for j, r in enumerate(renderings):
+            text = choice_prompt_text(shown, str(r), principal, roi_explicit)
+            reg = regime(r.years, near.years, far.years)
+            assert reg == regime_name
+            base.append({
+                "prompt": text, "horizon": r.years, "horizon_text": str(r),
+                "near_delay_years": near.years, "far_delay_years": far.years, "regime": reg, "truth": TRUTH[reg],
+                "sample_uid": f"c{k}_{seed}_{i:04d}_{j}", "prompt_id": hashlib.sha1(text.encode()).hexdigest()[:12],
+                "domain": "investment", "phrasing_id": 0,
+                "pair_id": f"c{k}_{seed}_{i:04d}", "duration_id": str(h), "rendered_unit": r.unit,
+                "natural": str(r) == str(h), **realism_labels(near.years, far.years),
+                "n_options": k, "principal": principal, "roi_explicit": roi_explicit,
+                "options": [dict(o) for o in shown], "labels": [o["label"] for o in shown],
+                "near_labels": [o["label"] for o in shown if o["half"] == "near"],
+                "far_labels": [o["label"] for o in shown if o["half"] == "far"],
+                "truth_label": truth["label"], "gap_in_half": in_half[0]["payout"] / in_half[1]["payout"]})
+        records.append(base)
+        if limit is not None and sum(map(len, records)) >= limit:
+            break
+    return records
+
+
+def build_choice_prompts(k, roi_explicit=False, seed=0, per_duration=CHOICE_PER_DURATION, limit=None):
+    """The k-option bank (k = 4 or 8) as records, in run order: `per_duration` bases at each
+    duration where both `near` and `both` are feasible, each emitted once per rendering of its
+    duration. `limit` keeps the first whole bases until there are at least `limit` records. The RNG is the
+    bank's own, so the other banks are untouched. See `choice_plan` for the order."""
+    if k not in NUMBER_WORDS:
+        raise ValueError(f"k must be 4 or 8, got {k}")
+    return [rec for base in emit_choice(k, roi_explicit, seed, per_duration, limit) for rec in base]

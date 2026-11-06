@@ -492,6 +492,13 @@ def varying_factors(columns):
             if any(len(np.unique(values[columns["duration"] == d])) > 1 for d in np.unique(columns["duration"]))}
 
 
+def fit_phrase_cell(X, columns, factors):
+    """The pooled duration-effects fit of one cell (16 §2, §4): X [n, d] against the rows'
+    durations, `factors`, and the log near and far delays as covariates."""
+    return fit_duration_effects(X.astype(np.float64), columns["duration"], factors, orthogonal=False,
+                                covariates={"log near delay": columns["log_near"], "log far delay": columns["log_far"]})
+
+
 def transition_target(target_regime, log_near, log_far):
     """The horizon (log10 years) a prompt is steered to: the log-midpoint of the delays for
     near, one decade past the far delay for both, one decade under the near delay for none."""
@@ -645,10 +652,7 @@ def phrase_main(directory, per_transition=32, seed=0, allow_short=False, prompts
     fits = {}
     for layer in PHRASE_LAYERS:
         for role in PHRASE_ROLES:
-            X = z[f"L{layer}|{role}"].astype(np.float64)
-            fits[layer, role] = fit_duration_effects(X, columns["duration"], factors, orthogonal=False,
-                                                     covariates={"log near delay": columns["log_near"],
-                                                                 "log far delay": columns["log_far"]})
+            fits[layer, role] = fit_phrase_cell(z[f"L{layer}|{role}"], columns, factors)
             print(f"fit L{layer} {role}: k={fits[layer, role]['basis'].shape[0]}", flush=True)
     grid = fits[PHRASE_LAYERS[0], PHRASE_ROLES[0]]["curve_logh"]
     curve_range = (grid[0], grid[-1])

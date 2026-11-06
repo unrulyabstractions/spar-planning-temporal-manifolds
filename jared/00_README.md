@@ -24,6 +24,7 @@ established, what is next. The rest is reference.
 | `20_results_overnight_fill.md` | Second overnight: delay magnitude, not crossing, moves the suffix code; pooled effects ⟂ is the delay-free axis; code barely predicts choice; stage A/B ready |
 | `21_spec_phrase_steering.md` | Spec (run 2026-10-31): E14, thinking-on steering at the horizon phrase with per-prompt targets across a delay (none/both → near and reverses) |
 | `22_results_phrase_steering.md` | E14 results: H1-H3 fail. The steer at the horizon phrase is read as a discrete text change (a digit edit in the same unit, or a unit-word swap on short up-steps), rarely crossing a delay; the pristine curve is a written-number direction by construction (unit explains 88% of log duration). Where the stated horizon lands (none→near) the choice follows at about two thirds of a donor patch |
+| `26_spec_overnight_choice_scan.md`, `26_results_overnight_choice_scan.md` | Spec and results (2026-11-06): 4- and 8-choice banks (accuracy, forced closes, activation structure) and the 2-choice phrase-steering scan (34 of 40 cells, none reach the report line; random controls match the manifold) |
 | `queue*.sh` | Box queues as run: `queue_14b.sh`, `queue_14b_rest.sh` (E11), `queue_units.sh` (unit-overlap E0) |
 | `history/` | Finished specs, superseded results and earlier plans; indexed at the end of `01_plan.md` |
 | `spar_horizon/` | The package: prompt banks, model I/O, extraction, probes, steering, run manifests |

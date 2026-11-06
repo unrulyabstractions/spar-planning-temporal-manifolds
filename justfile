@@ -17,6 +17,11 @@
 
 set fallback := true
 
+# What `push` leaves home: every dotfile and dot-directory (.git, .env, .claude, .venv, shell rc files),
+# caches and results, local smoke outputs, and the sibling projects (alan/, relevance_aware_decoder/,
+# PromptDefinitions/), which jared/ does not import at run time.
+push_excludes := "--exclude '.*' --exclude '__pycache__' --exclude 'results' --exclude '/jared/out/' --exclude '/alan/' --exclude '/relevance_aware_decoder/' --exclude '/PromptDefinitions/'"
+
 # SPAR/ is the nearest ancestor holding infra/vast.sh: the parent of the main
 # checkout, or several levels up from a worktree under .claude/worktrees/.
 spar := shell('d="$1"; while [ "$d" != / ] && [ ! -f "$d/infra/vast.sh" ]; do d="$(dirname "$d")"; done; echo "$d"', justfile_directory())
@@ -49,9 +54,7 @@ push:
     set -euo pipefail
     read -r host port <<<"$({{vast}} hostport)"
     rsh="$({{vast}} rsh)"
-    rsync -avz --mkpath --exclude '.venv' --exclude '__pycache__' --exclude 'results' --exclude 'jared/out/' \
-      --exclude '.env' --exclude '.git' --exclude '.state' --exclude '.claude' \
-      --exclude '.ipynb_checkpoints' \
+    rsync -avz --mkpath {{push_excludes}} \
       -e "$rsh" {{quote(justfile_directory() + "/")}} "root@$host:{{box_project}}/"
     echo ">> installing jared/requirements.txt on the box"
     # Pin the image's torch so nothing in requirements can upgrade it and break CUDA
@@ -66,9 +69,7 @@ push-dry:
     set -euo pipefail
     read -r host port <<<"$({{vast}} hostport)"
     rsh="$({{vast}} rsh)"
-    rsync -avzn --stats --mkpath --exclude '.venv' --exclude '__pycache__' --exclude 'results' --exclude 'jared/out/' \
-      --exclude '.env' --exclude '.git' --exclude '.state' --exclude '.claude' \
-      --exclude '.ipynb_checkpoints' \
+    rsync -avzn --stats --mkpath {{push_excludes}} \
       -e "$rsh" {{quote(justfile_directory() + "/")}} "root@$host:{{box_project}}/" | tail -n 15
 
 # Pull the box's /workspace/results/ into SPAR/results/.

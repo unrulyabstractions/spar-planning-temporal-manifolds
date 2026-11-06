@@ -27,12 +27,38 @@ from spar_horizon.runs import Manifest, resolve_out_dir, save_activations
 
 EXP = "exp0"
 MIN_NONFORCED = 8   # fewer non-forced prompts than this and the split sweeps are all nan
+ANSWER_FIELDS = ("near_label", "regime", "truth", "sample_uid", "pair_id", "duration_id", "rendered_unit", "natural",
+                 "delay_scale", "alan_range", "anchor", "options", "labels", "near_labels", "far_labels",
+                 "truth_label", "n_options", "principal", "roi_explicit", "gap_in_half")
 LABEL_POSITIONS = ("suffix probe pos", "think@1.0", "pre-label", "answer (ceiling)")
 
 
 def label_positions(ext, probe_pos):
     """Kept-layout indices of the four positions the label probe compares."""
     return [probe_pos, ext.regions["think"][1] - 1, ext.regions["prelabel"][0], ext.regions["answer"][0]]
+
+
+def label_probe_target(records, answers):
+    """1 per answered prompt that chose the second option (a/b banks) or a near-half
+    option (choice banks, which have `near_labels`), the label probe's binary target."""
+    return np.array([a.strip()[:1] in r["near_labels"] if "near_labels" in r else a.strip().startswith("b")
+                     for r, a in zip(records, answers) if a is not None], int)
+
+
+def answer_rows(records, answers, kept, kept_info):
+    """The rows of answers.json: every record's fields and answer, plus label, forced and
+    think text for the kept ones. `kept_info` yields (forced, think_len, think_text) per kept prompt."""
+    kept_rows = iter(kept_info)
+    rows = []
+    for r, a, k in zip(records, answers, kept):
+        row = {"horizon": r["horizon"], "prompt": r["prompt"], "answer": a,
+               **{f: r[f] for f in ANSWER_FIELDS if f in r}}
+        if k:
+            forced, tl, tt = next(kept_rows)
+            row.update(label=(a.strip()[:1] if a else None), forced=bool(forced), think_len=int(tl),
+                       think_text=tt)
+        rows.append(row)
+    return rows
 
 
 def _peak(curve):
@@ -57,7 +83,7 @@ def run(cfg, out=None, skip_behavior=False):
     print(f"{len(records)} prompts ({cfg.bank} bank), model {cfg.model}, thinking {cfg.thinking}")
     tokenizer, model, device = load_model(cfg)
     with manifest.phase("generate + extract"):
-        ext = extract(tokenizer, model, device, [r["prompt"] for r in records], cfg)
+        ext = extract(tokenizer, model, device, [r["prompt"] for r in records], cfg, records=records)
 
     horizons = [r["horizon"] for r, k in zip(records, ext.kept) if k]
     has_horizon = np.array([h is not None for h in horizons])
@@ -128,7 +154,7 @@ def run(cfg, out=None, skip_behavior=False):
         dense_panel(dense, ext.think_len, has_horizon, log_horizons, ext.forced_mask,
                     out_dir / "dense_track.png",
                     f"{cfg.model}: probe reading at every think token, layer {probe_layer}")
-        y = np.array([a.strip().startswith("b") for a in ext.answers if a is not None], int)
+        y = label_probe_target(records, ext.answers)
         positions = label_positions(ext, probe_pos)
         with manifest.phase("label probe"):
             acc = label_probe_sweep(ext.activations, y, positions)
@@ -148,18 +174,7 @@ def run(cfg, out=None, skip_behavior=False):
 
     save_activations(out_dir / "activations.npz", ext, horizons, rho=rho, r2=r2, far_delay_years=far,
                      **extra)
-    kept_rows = iter(zip(ext.forced_mask, ext.think_len, ext.think_text))
-    rows = []
-    for r, a, k in zip(records, ext.answers, ext.kept):
-        row = {"horizon": r["horizon"], "prompt": r["prompt"], "answer": a,
-               **{k: r[k] for k in ("near_label", "regime", "truth", "sample_uid",
-                                    "pair_id", "duration_id", "rendered_unit", "natural",
-                                    "delay_scale", "alan_range", "anchor") if k in r}}
-        if k:
-            forced, tl, tt = next(kept_rows)
-            row.update(label=(a.strip()[:1] if a else None), forced=bool(forced), think_len=int(tl),
-                       think_text=tt)
-        rows.append(row)
+    rows = answer_rows(records, ext.answers, ext.kept, zip(ext.forced_mask, ext.think_len, ext.think_text))
     (out_dir / "answers.json").write_text(json.dumps(rows, indent=1))
 
     manifest.add(base_behavior=base_behavior(records, ext.answers))

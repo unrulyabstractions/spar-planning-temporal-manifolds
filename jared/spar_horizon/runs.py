@@ -146,7 +146,7 @@ def load_activations(path):
             continue
         out[k] = z[k]
     if "region_suffix" in z.files:
-        out["regions"] = {r: tuple(int(x) for x in z[f"region_{r}"]) for r in REGIONS}
+        out["regions"] = {r: tuple(int(x) for x in z[f"region_{r}"]) for r in (*REGIONS, "prompt") if f"region_{r}" in z.files}
     else:
         out["regions"] = legacy_regions(out["n_suffix"], len(out["tokens"]))
     if "think_fractions" not in z.files:

@@ -59,6 +59,8 @@ representation, and what happens to it while the model reasons?
 | Unit-overlap bank E0, 8B both modes | 2026-10-25 | `exp0_Qwen3-8B_think-{on,off}_units/` | spec `14_spec_unit_overlap.md`; no results doc yet |
 | Pristine steering stage A (answer slot, fixed α) and stage B (suffix, thinking on) | 2026-10-30 | `exp8_Qwen3-8B_pristine/`, `exp13_Qwen3-8B_pristine_suffix/`, `analysis/crossing_split_pristine.*` | `22_results_phrase_steering.md` §1, spec `16` §5 |
 | E14: steering at the horizon phrase, thinking on, 4 transitions x 38 conditions | 2026-10-31 | `exp14_Qwen3-8B_phrase/` | `22_results_phrase_steering.md`, spec `21_spec_phrase_steering.md` |
+| 4- and 8-choice banks (implicit ROI, 246 prompts each), behavior plus reduced activations and structure probes, thinking on | 2026-11-06 | `exp0_Qwen3-8B_think-on_choice{4,8}/` | `26_results_overnight_choice_scan.md` §1, spec `26_spec_overnight_choice_scan.md` |
+| Phrase-steering scan (L10/14/18/22/26 x number, unit, suffix, answer x manifold, random; 10 prompts per cell): 34 of 40 cells, L26 incomplete; no cell reaches excess ≥ 4 | 2026-11-06 | `exp15_Qwen3-8B_scan/` | `26_results_overnight_choice_scan.md` §2 |
 | Starter bank: v1 (thinking off, E0-E5), v3 (thinking on, E0, E6) | 2026-09 | `snapshots/v1_noprefill`, `snapshots/v3_think` (removed 2026-10-27; in git at `a93acf9`) | `history/` |
 
 ## 4. Established (Qwen3-8B, thinking on, full bank unless noted)
@@ -211,6 +213,10 @@ representation, and what happens to it while the model reasons?
 - **2026-11-01.** E14 (`22`): H1-H3 fail. Post hoc measures (first stated
   horizon, choice by where it lands) were added to `exp14_analysis.py`, labelled
   post hoc and gating nothing. The pre-registered H1 measure was kept as written.
+- **2026-11-06.** Overnight run (`26`): choice4 and choice8 banks run with reduced activations. The scan
+  stopped at 34 of 40 cells (L26 has only the number-token pair); the screen found no cell at excess ≥ 4,
+  and random controls matched the manifold cells. Extras were not run. Follow-ups, each needing a spec:
+  the L26 gap, explicit-ROI banks, a probe of the choice banks with the regime held fixed.
 
 ## 7. Facts that constrain the design
 
