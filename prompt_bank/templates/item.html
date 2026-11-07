@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{# One prompt: its text and parameters, each checker's report, each baseline response, and review forms. #}
+{% block title %}{{ rec.uid }}{% endblock %}
+
+{% macro review_block(target, label) %}
+  {# Everyone's current judgement of `target`, and the form to add or change yours. #}
+  {% set by = notes.get((rec.uid, target), {}) %}
+  <div id="{{ target }}">
+    <h4>Reviews of the {{ label }}</h4>
+    {% for who, n in by.items() %}
+      <div><strong>{{ who }}</strong>: <span class="{{ 'bad' if n.verdict == 'problem' else ('good' if n.verdict == 'ok' else 'warn') }}">{{ n.verdict }}</span>
+        <span class="muted">{{ n.time }}</span>{% if n.note %}: {{ n.note }}{% endif %}</div>
+    {% else %}<div class="muted">No reviews yet.</div>{% endfor %}
+    {% if me %}
+    <form method="post" action="{{ url_for('annotate') }}">
+      <input type="hidden" name="uid" value="{{ rec.uid }}">
+      <input type="hidden" name="target" value="{{ target }}">
+      <input type="hidden" name="query" value="{{ query }}">
+      {% set mine = by.get(me) %}
+      {% for v in verdicts %}
+        <label><input type="radio" name="verdict" value="{{ v }}" required
+               {% if mine and mine.verdict == v %}checked{% endif %}> {{ v }}</label>
+      {% endfor %}
+      <textarea name="note" placeholder="Note (optional): what is wrong, or why you are unsure">{{ mine.note if mine else "" }}</textarea>
+      <button>Save as {{ me }}</button>
+    </form>
+    {% else %}<p class="warn">Choose your name at the top of the page to record a review.</p>{% endif %}
+  </div>
+{% endmacro %}
+
+{% block content %}
+<p>
+  <a href="{{ url_for('index') }}?{{ query }}">← list</a>
+  {% if neighbours.prev %} · <a href="{{ url_for('item', uid=neighbours.prev) }}?{{ query }}">‹ {{ neighbours.prev }}</a>{% endif %}
+  {% if neighbours.next %} · <a href="{{ url_for('item', uid=neighbours.next) }}?{{ query }}">{{ neighbours.next }} ›</a>{% endif %}
+  {% if position %}<span class="muted"> · {{ position }} of {{ n_filtered }} in this filter</span>{% endif %}
+</p>
+<h2>{{ rec.uid }} <span class="muted">{{ rec.tier }} · {{ rec.split }}</span></h2>
+
+<div class="panel">
+  <h3>Prompt (exactly as the model sees it)</h3>
+  <pre>{{ rec.text }}</pre>
+  <div class="grid">
+    <span class="muted">horizon</span><span>{{ rec.horizon or "none (null control)" }}
+      {% if rec.rewritten %}<span class="muted"> rewritten from {{ rec.horizon_grid_value }}</span>{% endif %}
+      {% if rec.horizon_years %}<span class="muted"> ≈ {{ "%.4g"|format(rec.horizon_years) }} years</span>{% endif %}</span>
+    <span class="muted">near option</span><span>{{ "{:,}".format(rec.near.reward) }} dollars in {{ rec.near.delay }} (label {{ rec.near_label }})</span>
+    <span class="muted">far option</span><span>{{ "{:,}".format(rec.far.reward) }} dollars in {{ rec.far.delay }} (label {{ rec.far_label }}; × {{ rec.reward_multiplier }})</span>
+    <span class="muted">regime</span><span>{{ rec.regime }}{% if rec.horizon_equals_a_delay %} <span class="warn">(the horizon equals a delay; counted as paying off)</span>{% endif %}</span>
+    <span class="muted">correct answer</span><span>{{ rec.correct_label or "none" }}{% if rec.correct_option %} ({{ rec.correct_option }} option){% endif %}</span>
+    {% if rec.h_over_far_delay %}<span class="muted">horizon / far delay</span><span>{{ "%.3f"|format(rec.h_over_far_delay) }}</span>{% endif %}
+    <span class="muted">CONSTRAINT phrasing</span><span>{{ rec.phrasing_id if rec.phrasing_id is not none else "—" }}{% if phrasing %} <span class="muted">"{{ phrasing }}"</span>{% endif %}</span>
+    {% if rec.pair_id %}<span class="muted">pair</span><span>{{ rec.pair_id }}</span>{% endif %}
+  </div>
+  {{ review_block("prompt", "prompt") }}
+</div>
+
+{% for c in checkers %}
+  {% set row = c.rows.get(rec.uid) %}{% set s = checker_status(row) %}
+  <div class="panel">
+    <h3>Checker <code>{{ c.name }}</code>:
+      <span class="{{ 'good' if s == 'agree' else ('muted' if s == 'missing' else 'bad') }}">{{ s }}</span>
+      {% if row and row.verdict %}· verdict <span class="{{ 'warn' if row.verdict == 'problem' else 'good' }}">{{ row.verdict }}</span>{% endif %}</h3>
+    {% if row %}
+      <div class="grid">
+        <span class="muted">checker's answer</span><span>{{ row.checker_answer if row.checker_answer is not none else "—" }}</span>
+        <span class="muted">generator's answer</span><span>{{ row.generator_answer }}</span>
+        {% if row.parse_error %}<span class="muted">unreadable</span><span class="bad">{{ row.parse_error }}</span>{% endif %}
+        {% if row.request_error %}<span class="muted">request failed</span><span class="bad">{{ row.request_error }}</span>{% endif %}
+      </div>
+      {% if row.problems %}<h4>Problems reported</h4><ul>
+        {% for p in row.problems %}<li><strong>{{ p.category }}</strong>: {{ p.detail }}</li>{% endfor %}</ul>{% endif %}
+      <details><summary>Raw reply ({{ row.n_generated }} tokens{% if row.hit_token_cap %}, <span class="bad">hit the token cap</span>{% endif %})</summary>
+        <pre>{{ row.raw_answer or "(no answer)" }}</pre>
+        {% if row.thinking %}<h4>Thinking</h4><pre>{{ row.thinking }}</pre>{% endif %}
+      </details>
+    {% else %}<p class="muted">Not checked.</p>{% endif %}
+  </div>
+{% endfor %}
+
+{% for r in runs %}
+  {% set row = r.rows.get(rec.uid) %}{% set s = run_status(row) %}
+  <div class="panel">
+    <h3>Baseline <code>{{ r.name }}</code>:
+      <span class="{{ 'good' if s == 'correct' else ('muted' if s in ('missing', 'answered') else 'bad') }}">{{ s }}</span></h3>
+    {% if row %}
+      <div class="grid">
+        <span class="muted">parsed choice</span><span>{{ row.choice_label or "—" }}{% if row.chosen_option %} ({{ row.chosen_option }} option){% endif %}
+          <span class="muted">· parser status {{ row.parse_status }}, {{ row.n_choice_mentions }} "I choose" statement(s)</span></span>
+        <span class="muted">tokens</span><span>{{ row.n_generated }}{% if row.hit_token_cap %} <span class="bad">(hit the cap)</span>{% endif %} · {{ row.seconds }} s</span>
+      </div>
+      <h4>Answer</h4><pre>{{ row.answer if row.answer is not none else "(thinking never closed: no answer)" }}</pre>
+      {% if row.thinking %}<details><summary>Thinking ({{ row.thinking|length }} characters)</summary><pre>{{ row.thinking }}</pre></details>{% endif %}
+      {{ review_block(r.name, "response from " ~ r.name) }}
+    {% else %}<p class="muted">No response in this run.</p>{% endif %}
+  </div>
+{% endfor %}
+{% endblock %}
