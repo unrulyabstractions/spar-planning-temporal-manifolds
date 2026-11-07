@@ -5,8 +5,10 @@
 
 Run it after generate.py (prompts and checks) and baseline.py (responses). It shows:
 
-* a table of every prompt with filters (split, regime, unit, checker disagreements, wrong or unparsed
-  answers, your own review status, text search);
+* a table of every prompt with filters (split, regime, unit, checker disagreements and problem categories,
+  wrong or unparsed answers, your own review status, text search over prompts and checker comments);
+* a checker feedback page: every problem a checker reported, grouped by category, with how each category
+  spreads over regimes, units, phrasings and label styles;
 * for one prompt: its text and parameters, each checker's report, each baseline run's thinking, answer and
   parsed choice, and forms to record your judgement of the prompt and of each response.
 
@@ -21,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -29,7 +32,7 @@ from urllib.parse import urlencode
 from flask import Flask, abort, redirect, render_template, request, url_for
 
 from pbank.annotations import VERDICTS, add_annotation, current_annotations
-from pbank.checker import latest_by_uid
+from pbank.checker import PROBLEM_CATEGORIES, latest_by_uid, normalize_answer
 from pbank.provenance import PACKAGE_DIR
 from pbank.records import PromptRecord, load_prompts, prompts_sha256, read_jsonl
 from pbank.t0 import CONSTRAINT_PHRASINGS
@@ -99,12 +102,36 @@ def run_status(row: Optional[dict]) -> str:
     return "correct" if row["correct"] else "incorrect"
 
 
+def checker_problems(checkers: list[Source], uid: str) -> list[dict]:
+    """Every problem any checker reported for one prompt: [{"checker", "category", "detail"}, ...]."""
+    return [{"checker": c.name, "category": p.get("category", "other"), "detail": p.get("detail", "")}
+            for c in checkers for p in (c.rows.get(uid) or {}).get("problems", [])]
+
+
+def generator_within_horizon(rec: PromptRecord) -> list[str]:
+    """The labels of the options that pay off within the horizon, by the generator's rule (to set beside the
+    checker's `options_within_horizon`)."""
+    return {"near_only": [rec.near_label], "both": [rec.near_label, rec.far_label]}.get(rec.regime, [])
+
+
+def option_for_checker_label(rec: PromptRecord, label: str) -> Optional[str]:
+    """"near" or "far" for an option label as a checker wrote it ("b)", "b" or "(B)"), or None if it is neither."""
+    key = normalize_answer(str(label))
+    return {normalize_answer(rec.near_label): "near", normalize_answer(rec.far_label): "far"}.get(key)
+
+
+def same_labels(a: list, b: list) -> bool:
+    """Whether two lists name the same options, ignoring order and label punctuation ("a)" == "a")."""
+    return sorted(normalize_answer(str(x)) for x in a) == sorted(normalize_answer(str(x)) for x in b)
+
+
 FILTERS = {   # name -> (label, choices); the first choice means "no filter"
     "split": ("Split", ["all", "extraction", "verification"]),
     "regime": ("Regime", ["all", "none", "near_only", "both", "no_horizon"]),
     "unit": ("Horizon unit", ["all", "seconds", "minutes", "hours", "days", "weeks", "months", "years", "none"]),
     "rewritten": ("Unit rewrite", ["all", "yes", "no"]),
     "checker": ("Checker", ["all", "any issue", "disagree", "flagged a problem", "unreadable"]),
+    "problem": ("Checker problem", ["all", "any"] + list(PROBLEM_CATEGORIES)),
     "run": ("Baseline", ["all", "any issue", "incorrect", "unparsed", "truncated"]),
     "review": ("My review", ["all", "not reviewed by me", "reviewed by me", "marked problem by anyone"]),
 }
@@ -143,6 +170,10 @@ def matches(rec: PromptRecord, f: dict, checkers: list[Source], runs: list[Sourc
                  "flagged a problem": any(r and r.get("verdict") == "problem" for r in rows)}
         if not (any(found.values()) if f["checker"] == "any issue" else found[f["checker"]]):
             return False
+    if f["problem"] != "all":
+        categories = {p["category"] for p in checker_problems(checkers, rec.uid)}
+        if not (categories if f["problem"] == "any" else f["problem"] in categories):
+            return False
     if f["run"] != "all":
         statuses = {run_status(r.rows.get(rec.uid)) for r in runs}
         wanted = {"incorrect", "unparsed", "truncated"} if f["run"] == "any issue" else {f["run"]}
@@ -154,8 +185,40 @@ def matches(rec: PromptRecord, f: dict, checkers: list[Source], runs: list[Sourc
               "marked problem by anyone": bool(s.get("problem"))}[f["review"]]
         if not ok:
             return False
+    # Free text: the prompt id, the prompt text, or anything a checker wrote about the prompt.
     q = f.get("q", "").strip().lower()
-    return not q or q in rec.uid.lower() or q in rec.text.lower()
+    return (not q or q in rec.uid.lower() or q in rec.text.lower()
+            or any(q in p["detail"].lower() for p in checker_problems(checkers, rec.uid)))
+
+
+def feedback_summary(records: list[PromptRecord], checker: Source) -> dict:
+    """Everything the feedback page shows for one checker: how its answers compare with the generator's, and
+    every problem it reported, grouped by category, with how each category spreads over regimes, horizon
+    units, CONSTRAINT phrasings and label styles (a problem concentrated in one of these is probably caused
+    by the template, not by one prompt)."""
+    statuses = Counter(checker_status(checker.rows.get(r.uid)) for r in records)
+    verdicts = Counter((checker.rows.get(r.uid) or {}).get("verdict") or "none" for r in records)
+    categories: dict[str, dict] = {}
+    for rec in records:
+        for p in (checker.rows.get(rec.uid) or {}).get("problems", []):
+            cat = categories.setdefault(p.get("category", "other"), {
+                "items": [], "prompts": set(), "regime": Counter(), "unit": Counter(), "phrasing": Counter(),
+                "labels": Counter()})
+            cat["items"].append({"rec": rec, "detail": p.get("detail", "")})
+            if rec.uid not in cat["prompts"]:        # spread counts each prompt once per category
+                cat["prompts"].add(rec.uid)
+                cat["regime"][rec.regime] += 1
+                cat["unit"][rec.horizon_unit or "none"] += 1
+                cat["phrasing"]["none" if rec.phrasing_id is None else str(rec.phrasing_id)] += 1
+                cat["labels"]["/".join(rec.labels)] += 1
+    ordered = dict(sorted(categories.items(), key=lambda kv: -len(kv[1]["prompts"])))
+    # Denominators for the spread tables: how many prompts of the bank have each value.
+    totals = {"regime": Counter(r.regime for r in records),
+              "unit": Counter(r.horizon_unit or "none" for r in records),
+              "phrasing": Counter("none" if r.phrasing_id is None else str(r.phrasing_id) for r in records),
+              "labels": Counter("/".join(r.labels) for r in records)}
+    return {"statuses": statuses, "verdicts": verdicts, "categories": ordered, "totals": totals,
+            "n_checked": sum(r.uid in checker.rows for r in records)}
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -186,7 +249,18 @@ def create_app(bank_dir: Path, runs_dir: Path, reviewers: list[str]) -> Flask:
     @app.context_processor
     def common():
         return {"reviewers": reviewers, "me": request.cookies.get(REVIEWER_COOKIE, ""), "bank_name": bank_dir.name,
-                "checkers": checkers, "runs": runs, "checker_status": checker_status, "run_status": run_status}
+                "checkers": checkers, "runs": runs, "checker_status": checker_status, "run_status": run_status,
+                "checker_problems": lambda uid: checker_problems(checkers, uid),
+                "generator_within_horizon": generator_within_horizon, "same_labels": same_labels,
+                "option_for_checker_label": option_for_checker_label}
+
+    @app.get("/feedback")
+    def feedback():
+        """Every problem a checker reported, grouped by category (one checker at a time)."""
+        name = request.args.get("checker") or (checkers[0].name if checkers else "")
+        checker = next((c for c in checkers if c.name == name), None)
+        summary = feedback_summary(records, checker) if checker else None
+        return render_template("feedback.html", checker=checker, summary=summary, total=len(records))
 
     @app.get("/")
     def index():

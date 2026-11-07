@@ -148,6 +148,7 @@ def append_jsonl(path: Path, rows: Iterable[dict]) -> None:
 
 def read_jsonl(path: Path) -> list[dict]:
     """All rows of a JSON Lines file ([] if it does not exist)."""
+    path = Path(path)
     if not path.exists():
         return []
     with path.open() as f:

@@ -62,14 +62,32 @@
       <span class="{{ 'good' if s == 'agree' else ('muted' if s == 'missing' else 'bad') }}">{{ s }}</span>
       {% if row and row.verdict %}· verdict <span class="{{ 'warn' if row.verdict == 'problem' else 'good' }}">{{ row.verdict }}</span>{% endif %}</h3>
     {% if row %}
-      <div class="grid">
-        <span class="muted">checker's answer</span><span>{{ row.checker_answer if row.checker_answer is not none else "—" }}</span>
-        <span class="muted">generator's answer</span><span>{{ row.generator_answer }}</span>
-        {% if row.parse_error %}<span class="muted">unreadable</span><span class="bad">{{ row.parse_error }}</span>{% endif %}
-        {% if row.request_error %}<span class="muted">request failed</span><span class="bad">{{ row.request_error }}</span>{% endif %}
-      </div>
       {% if row.problems %}<h4>Problems reported</h4><ul>
-        {% for p in row.problems %}<li><strong>{{ p.category }}</strong>: {{ p.detail }}</li>{% endfor %}</ul>{% endif %}
+        {% for p in row.problems %}<li><span class="tag">{{ p.category }}</span> {{ p.detail }}</li>{% endfor %}</ul>
+      {% elif row.parsed %}<p class="good">No problems reported.</p>{% endif %}
+      {% if row.parse_error %}<p class="bad">Unreadable reply: {{ row.parse_error }}</p>{% endif %}
+      {% if row.request_error %}<p class="bad">Request failed: {{ row.request_error }}</p>{% endif %}
+      {% if row.parsed %}
+        {# The checker read the prompt text only; set what it read beside what the generator knows. #}
+        {% set p = row.parsed %}
+        <h4>How the checker read the prompt</h4>
+        <table class="spread">
+          <tr><th></th><th>checker</th><th>generator</th></tr>
+          <tr><td class="muted">horizon</td><td>{{ p.stated_horizon }}</td><td>{{ rec.horizon or "none" }}</td></tr>
+          {% for o in p.options %}
+          <tr><td class="muted">option {{ o.label }}</td><td>{{ o.payout }}, {{ o.timing }}</td>
+            {% set which = option_for_checker_label(rec, o.label) %}
+            <td>{% if which == "near" %}{{ "{:,}".format(rec.near.reward) }} dollars in {{ rec.near.delay }} (near)
+                {% elif which == "far" %}{{ "{:,}".format(rec.far.reward) }} dollars in {{ rec.far.delay }} (far)
+                {% else %}<span class="bad">no such label</span>{% endif %}</td></tr>
+          {% endfor %}
+          {% set gen_within = generator_within_horizon(rec) %}
+          <tr><td class="muted">pay off within the horizon</td><td>{{ p.options_within_horizon|join(", ") or "none" }}</td>
+            <td class="{{ '' if same_labels(p.options_within_horizon, gen_within) else 'bad' }}">{{ gen_within|join(", ") or "none" }}</td></tr>
+          <tr><td class="muted">correct answer</td><td>{{ row.checker_answer }}</td>
+            <td class="{{ 'good' if row.agrees else 'bad' }}">{{ row.generator_answer }}</td></tr>
+        </table>
+      {% endif %}
       <details><summary>Raw reply ({{ row.n_generated }} tokens{% if row.hit_token_cap %}, <span class="bad">hit the token cap</span>{% endif %})</summary>
         <pre>{{ row.raw_answer or "(no answer)" }}</pre>
         {% if row.thinking %}<h4>Thinking</h4><pre>{{ row.thinking }}</pre>{% endif %}

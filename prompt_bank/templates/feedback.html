@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{# Every problem one checker reported, grouped by category, with how each category spreads over the bank. #}
+{% block title %}Checker feedback{% endblock %}
+
+{% macro spread(cat, key, label) %}
+  {# How many of the prompts flagged in this category have each value of `key`, out of all prompts with it. #}
+  <table class="spread">
+    <tr><th>{{ label }}</th><th>flagged</th><th>of</th><th>share</th></tr>
+    {% for value, n in cat[key].most_common() %}
+      {% set of = summary.totals[key][value] %}
+      <tr><td>{{ value }}</td><td>{{ n }}</td><td>{{ of }}</td><td>{{ "%.0f%%"|format(100 * n / of) }}</td></tr>
+    {% endfor %}
+  </table>
+{% endmacro %}
+
+{% block content %}
+<h2>Checker feedback</h2>
+{% if not checkers %}
+  <p class="muted">No checker has been run on this bank yet (generate.py --checker ...).</p>
+{% else %}
+  {% if checkers|length > 1 %}
+  <form method="get">Checker:
+    <select name="checker" onchange="this.form.submit()">
+      {% for c in checkers %}<option {% if c.name == checker.name %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+  </form>
+  {% endif %}
+  <p><code>{{ checker.name }}</code> checked {{ summary.n_checked }} of {{ total }} prompts.
+    Its answer agrees with the generator's on <span class="good">{{ summary.statuses.agree }}</span>,
+    <a href="{{ url_for('index', checker='disagree') }}">disagrees on <span class="bad">{{ summary.statuses.disagree }}</span></a>,
+    unreadable {{ summary.statuses.unreadable }}.
+    Verdict "problem" on <a href="{{ url_for('index', checker='flagged a problem') }}">{{ summary.verdicts.problem }}</a>
+    prompts, "ok" on {{ summary.verdicts.ok }}.</p>
+  <p class="muted">A category concentrated in one regime, unit, phrasing or label style usually points at the template
+    rather than at one prompt. The shares below are flagged prompts out of all prompts with that value.</p>
+
+  {% for name, cat in summary.categories.items() %}
+  <div class="panel">
+    <h3><span class="tag">{{ name }}</span> {{ cat.prompts|length }} prompts, {{ cat["items"]|length }} reports
+      · <a href="{{ url_for('index', problem=name) }}">show these prompts in the list</a></h3>
+    <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+      {{ spread(cat, "regime", "regime") }}
+      {{ spread(cat, "phrasing", "phrasing") }}
+      {{ spread(cat, "unit", "horizon unit") }}
+      {{ spread(cat, "labels", "labels") }}
+    </div>
+    <details><summary>All {{ cat["items"]|length }} reports</summary>
+      <table>
+        <tr><th>id</th><th>regime</th><th>horizon</th><th>phrasing</th><th>what the checker said</th></tr>
+        {% for item in cat["items"] %}
+        <tr><td><a href="{{ url_for('item', uid=item.rec.uid) }}">{{ item.rec.uid }}</a></td>
+          <td>{{ item.rec.regime }}</td><td>{{ item.rec.horizon or "—" }}</td>
+          <td>{{ item.rec.phrasing_id if item.rec.phrasing_id is not none else "—" }}</td>
+          <td>{{ item.detail }}</td></tr>
+        {% endfor %}
+      </table>
+    </details>
+  </div>
+  {% else %}
+  <p class="good">No problems reported.</p>
+  {% endfor %}
+{% endif %}
+{% endblock %}

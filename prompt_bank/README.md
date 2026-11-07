@@ -172,8 +172,14 @@ read), `n_generated`, `hit_token_cap`, `seconds`.
 ## Reviewing
 
 Start `review.py`, choose your name in the drop-down (names come from `reviewers.txt`; there is no login), and
-use the filters to work through a slice: for example *Checker: disagree*, *Baseline: incorrect*, or *My review:
-not reviewed by me*. On each prompt you can judge the prompt itself and each model's response separately. Your
+use the filters to work through a slice: for example *Checker: disagree*, *Checker problem: ambiguity*,
+*Baseline: incorrect*, or *My review: not reviewed by me*. The text box also searches what the checker wrote.
+
+The **Checker feedback** page (link at the top) shows every problem a checker reported, grouped by category.
+For each category it tabulates how the flagged prompts spread over regimes, CONSTRAINT phrasings, horizon units
+and label styles, as a share of all prompts with that value: a problem concentrated in one phrasing or regime is
+usually caused by the template rather than by one prompt. On a prompt's own page, the checker's reading (the
+horizon it saw, each option, which options pay off in time, its answer) is set beside the generator's. On each prompt you can judge the prompt itself and each model's response separately. Your
 judgements go to `data/<bank>/reviews/<your-name>.jsonl`; commit that file to share them. One file per reviewer
 means reviews from several people merge without conflicts. The page listens on 127.0.0.1 only.
 
