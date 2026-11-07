@@ -37,6 +37,12 @@
            border: 1px solid var(--warn); color: var(--warn); }
     .feedback { font-size: 12px; max-width: 420px; }
     .spread td, .spread th { padding: 1px 8px; font-size: 12px; }
+    /* Small count tables (feedback page): sized to their content rather than the page, with the same column
+       widths in every table so that they line up side by side; numbers right-aligned. */
+    .counts-row { display: flex; flex-wrap: wrap; gap: 8px 32px; align-items: flex-start; }  /* no stretching */
+    table.counts { width: auto; }
+    table.counts th:first-child, table.counts td:first-child { width: 7.5em; }
+    table.counts th:not(:first-child), table.counts td:not(:first-child) { width: 4em; text-align: right; }
   </style>
 </head>
 <body>

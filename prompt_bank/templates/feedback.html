@@ -4,7 +4,7 @@
 
 {% macro spread(cat, key, label) %}
   {# How many of the prompts flagged in this category have each value of `key`, out of all prompts with it. #}
-  <table class="spread">
+  <table class="spread counts">
     <tr><th>{{ label }}</th><th>flagged</th><th>of</th><th>share</th></tr>
     {% for value, n in cat[key].most_common() %}
       {% set of = summary.totals[key][value] %}
@@ -38,7 +38,7 @@
   <div class="panel">
     <h3><span class="tag">{{ name }}</span> {{ cat.prompts|length }} prompts, {{ cat["items"]|length }} reports
       · <a href="{{ url_for('index', problem=name) }}">show these prompts in the list</a></h3>
-    <div style="display: flex; flex-wrap: wrap; gap: 24px;">
+    <div class="counts-row">
       {{ spread(cat, "regime", "regime") }}
       {{ spread(cat, "phrasing", "phrasing") }}
       {{ spread(cat, "unit", "horizon unit") }}
