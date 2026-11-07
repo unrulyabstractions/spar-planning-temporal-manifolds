@@ -15,7 +15,8 @@ uv sync --all-extras                                   # once: creates .venv (to
 
 # 1. Build the bank and have a second model check every prompt
 .venv/bin/python generate.py --out data/t0_s0                                   # checker: local Qwen3.5-27B
-.venv/bin/python generate.py --out data/t0_s0 --checker openrouter:anthropic/claude-haiku-5.5
+.venv/bin/python generate.py --out data/t0_s0 --checker anthropic:claude-haiku-5-5            # Anthropic API
+.venv/bin/python generate.py --out data/t0_s0 --checker openrouter:anthropic/claude-haiku-5.5  # OpenRouter
 .venv/bin/python generate.py --out data/t0_s0 --checker none                    # build only: no GPU, no API
 
 # 2. Run a model, unsteered, on every prompt (thinking on, greedy, 8,192-token cap)
@@ -32,9 +33,14 @@ deterministic and a no-op when the prompts already exist, and checks and baselin
 **Where to run what.** Building and reviewing need only a laptop. A local checker or baseline needs a GPU that
 holds the model in bf16: Gemma 4 31B-it is 62.6 GB of weights and Qwen3.5-27B is 55.6 GB, so both need an
 A100/H100 80 GB (on Vast.ai). The 2026-10-17 pilot measured Gemma at about 13 s per prompt at batch 4 on one A100,
-so the 700 prompts take about 2.5 GPU-hours. Hosted checkers run through [OpenRouter](https://openrouter.ai) and
-need `OPENROUTER_API_KEY` in the environment; model ids are listed at <https://openrouter.ai/api/v1/models>
-(for example `anthropic/claude-haiku-5.5`, `openai/gpt-5.6-luna`).
+so the 700 prompts take about 2.5 GPU-hours.
+
+**Hosted checkers** run either through the Anthropic API (`anthropic:<id>`, Claude models only, ids such as
+`claude-haiku-5-5`; key `ANTHROPIC_API_KEY`) or through [OpenRouter](https://openrouter.ai) (`openrouter:<id>`,
+any provider, ids such as `anthropic/claude-haiku-5.5` or `openai/gpt-5.6-luna` from
+<https://openrouter.ai/api/v1/models>; key `OPENROUTER_API_KEY`). Keys are taken from the environment, or else
+from a `.env` file (`NAME=value` lines) in `prompt_bank/` or the repository root. Both locations are git-ignored;
+never commit a key. Checking all 700 prompts with Haiku 5.5 costs well under a dollar.
 
 ## What is in the bank
 
@@ -126,8 +132,10 @@ Its answer is compared with the generator's (`agrees`). **A disagreement means o
 cases need a look: the generator may have a bug, or the prompt may read ambiguously enough to mislead a careful
 reader. Nothing is removed from the bank automatically.
 
-`local:<Hugging Face id>` runs a local model with thinking on; `openrouter:<OpenRouter id>` runs a hosted model at
-`--reasoning-effort medium`, with the JSON schema enforced by the provider. Both receive the same instructions.
+`local:<Hugging Face id>` runs a local model with thinking on. `anthropic:<id>` and `openrouter:<id>` run a hosted
+model at `--reasoning-effort medium`, with the JSON schema enforced by the provider; Claude models through the
+Anthropic API use adaptive thinking and return a *summary* of their reasoning, which the review page shows. All
+backends receive the same instructions. A Claude refusal is recorded as a failed request and retried on the next run.
 
 ## Files
 
@@ -190,7 +198,8 @@ model before relying on its counts.** The review page shows the raw answer next 
 | `pbank/t0.py` | the T0 template and the two prompt sets |
 | `pbank/checker.py` | the checker's instructions, schema, reading its reply, running it |
 | `pbank/local_model.py` | a local Hugging Face model: batched greedy generation, thinking split |
-| `pbank/hosted_model.py` | a hosted model through OpenRouter, same interface |
+| `pbank/hosted_model.py` | a hosted model through the Anthropic API or OpenRouter, same interface |
+| `pbank/env.py` | API keys from a git-ignored `.env` file |
 | `pbank/answers.py` | reading and scoring the model's choice |
 | `pbank/annotations.py` | human review judgements |
 | `pbank/provenance.py` | code commit and timestamps for output files |
@@ -205,6 +214,7 @@ No GPU or network needed. Covered: the grid against the report's Table 2 value b
 byte for byte; bank composition, determinism and the regime of every prompt recomputed from its text fields;
 rewrites (tolerance, cap, regime preservation); null twins; the verification grid (range, matched units, no ties,
 paired orders, no overlap with the extraction split); the decision rule including ties; the answer parser; the
-checker's reply handling and resume/retry logic (with a fake model); the thinking split with the real Gemma 4 and
+checker's reply handling and resume/retry logic (with a fake model); the Anthropic request and reply mapping,
+refusals and API errors (with a fake client) and the `.env` loader; the thinking split with the real Gemma 4 and
 Qwen3.5 tokenizers (skipped if they are not cached); and the review page end to end with Flask's test client.
 `-s` shows each test's diagnostic output.

@@ -12,7 +12,10 @@ local = [                  # running a local Hugging Face model (checker or base
     "accelerate>=1.0",
     "flash-linear-attention>=0.5.2",   # fast kernels for Qwen3.5's linear-attention layers
 ]
-hosted = ["openai>=1.50"]      # hosted models (Claude, GPT) through OpenRouter's OpenAI-compatible API
+hosted = [                     # hosted models: OpenRouter (OpenAI-compatible API) or Anthropic directly
+    "openai>=1.50",
+    "anthropic>=0.70",
+]
 review = ["flask>=3.0"]        # the review web UI
 dev = ["pytest>=8"]
 

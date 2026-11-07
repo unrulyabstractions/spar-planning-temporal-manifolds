@@ -15,8 +15,9 @@ either the generator or the checker is wrong about that prompt, and both cases n
 to reviewers next to the prompt. Nothing is filtered out of the bank automatically.
 
 Checkers: a local Hugging Face model (`local:<model id>`, default `local:Qwen/Qwen3.5-27B`, thinking on) or a
-hosted one through OpenRouter (`openrouter:<model id>`, e.g. `openrouter:anthropic/claude-haiku-5.5`). Both get
-the identical prompt; the hosted one is also given the JSON schema so its provider can enforce it.
+hosted one, through OpenRouter (`openrouter:<model id>`, e.g. `openrouter:anthropic/claude-haiku-5.5`) or through
+the Anthropic API (`anthropic:<model id>`, e.g. `anthropic:claude-haiku-5-5`). All get the identical prompt; a
+hosted one is also given the JSON schema so its provider can enforce it.
 """
 
 from __future__ import annotations
@@ -177,16 +178,29 @@ def latest_by_uid(rows: list[dict]) -> dict[str, dict]:
     return {row["uid"]: row for row in rows}
 
 
+HOSTED_BACKENDS = ("openrouter", "anthropic")
+
+
+def parse_checker_spec(checker: str) -> tuple[str, str]:
+    """'anthropic:claude-haiku-5-5' -> ('anthropic', 'claude-haiku-5-5'); the backend must be known."""
+    backend, sep, model_id = checker.partition(":")
+    if not sep or not model_id or backend not in ("local",) + HOSTED_BACKENDS:
+        raise ValueError(f"checker must be 'local:<Hugging Face id>', 'openrouter:<OpenRouter id>' or "
+                         f"'anthropic:<Claude model id>', got {checker!r}")
+    return backend, model_id
+
+
 def load_model(checker: str, *, reasoning_effort: Optional[str]):
-    """The model behind a checker spec "local:<hf id>" or "openrouter:<openrouter id>"."""
-    backend, _, model_id = checker.partition(":")
+    """The model behind a checker spec (see parse_checker_spec). `reasoning_effort` applies to hosted models."""
+    backend, model_id = parse_checker_spec(checker)
     if backend == "local":
         from .local_model import LocalChatModel
         return LocalChatModel(model_id)
     if backend == "openrouter":
         from .hosted_model import OpenRouterModel
         return OpenRouterModel(model_id, reasoning_effort=reasoning_effort)
-    raise ValueError(f"checker must be 'local:<model id>' or 'openrouter:<model id>', got {checker!r}")
+    from .hosted_model import AnthropicModel
+    return AnthropicModel(model_id, effort=reasoning_effort)
 
 
 def run_checker(records: list[PromptRecord], checker: str, out_path: Path, *, model=None, batch_size: int = 8,
@@ -198,7 +212,7 @@ def run_checker(records: list[PromptRecord], checker: str, out_path: Path, *, mo
     Resumable: prompts whose latest row in `out_path` succeeded are skipped; prompts whose request failed are
     retried. A resume with different settings is refused, so one file never mixes settings. Pass `model` to
     reuse an already-loaded model (tests pass a fake one)."""
-    hosted = checker.startswith("openrouter:")
+    hosted = parse_checker_spec(checker)[0] in HOSTED_BACKENDS
     # Everything that changes what the checker writes. (Batch size matters for local models only: batching
     # can change greedy generation on near-tied steps.)
     settings = {"checker": checker, "instructions": CHECKER_INSTRUCTIONS, "max_new_tokens": max_new_tokens,

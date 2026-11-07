@@ -1,7 +1,8 @@
 """Step 1 of 3: build a prompt bank, then have a checker model review every prompt.
 
     python generate.py --out data/t0_s0                                        # build + check (local Qwen3.5-27B)
-    python generate.py --out data/t0_s0 --checker openrouter:anthropic/claude-haiku-5.5   # check with Haiku
+    python generate.py --out data/t0_s0 --checker anthropic:claude-haiku-5-5   # Haiku, Anthropic API
+    python generate.py --out data/t0_s0 --checker openrouter:anthropic/claude-haiku-5.5   # Haiku, OpenRouter
     python generate.py --out data/t0_s0 --checker none                         # build only (no GPU, no API)
 
 What it writes (see README.md for every field):
@@ -91,12 +92,14 @@ def main() -> None:
     p.add_argument("--tier", default="T0", choices=["T0"], help="only T0 exists until the T0 gate passes")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--checker", default=DEFAULT_CHECKER,
-                   help="'local:<Hugging Face id>', 'openrouter:<OpenRouter id>', or 'none' (default: %(default)s)")
+                   help="'local:<Hugging Face id>', 'openrouter:<OpenRouter id>', 'anthropic:<Claude model id>', "
+                        "or 'none' (default: %(default)s). Hosted keys come from the environment or a .env file.")
     p.add_argument("--checker-batch-size", type=int, default=8,
                    help="prompts per generate() call (local) or per round of concurrent requests (hosted)")
     p.add_argument("--checker-max-new-tokens", type=int, default=8192)
     p.add_argument("--checker-no-thinking", action="store_true", help="local checker: turn thinking mode off")
-    p.add_argument("--reasoning-effort", default="medium", help="hosted checker: reasoning effort (default medium)")
+    p.add_argument("--reasoning-effort", default="medium",
+                   help="hosted checker: reasoning effort, e.g. low | medium | high (default %(default)s)")
     p.add_argument("--limit", type=int, help="check only the first N prompts (smoke tests)")
     args = p.parse_args()
 
