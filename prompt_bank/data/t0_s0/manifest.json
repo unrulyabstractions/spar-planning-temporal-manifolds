@@ -1,0 +1,78 @@
+{
+  "tier": "T0",
+  "prompts_sha256": "75901a42a31fc674e490561cfccca428199f5196eaa6bef79c34aa4af60d32d9",
+  "created_utc": "2026-11-07T14:11:37Z",
+  "code_commit": "120d3a765fcfb565908f415790c12d00428c5e1b",
+  "extraction_config": {
+    "seed": 0,
+    "n_with_horizon": 471,
+    "n_null": 29,
+    "null_twins": true,
+    "rewrite_tolerance": 0.02,
+    "rewrite_max_value": 1000
+  },
+  "verification_config": {
+    "seed": 0,
+    "n_items": 100,
+    "ratio_span": 2.8,
+    "decimals": 2
+  },
+  "counts": {
+    "extraction": {
+      "prompts": 500,
+      "regime": {
+        "both": 86,
+        "none": 279,
+        "near_only": 106,
+        "no_horizon": 29
+      },
+      "horizon_unit": {
+        "years": 80,
+        "minutes": 84,
+        "seconds": 61,
+        "months": 55,
+        "days": 62,
+        "hours": 87,
+        "weeks": 42,
+        "none": 29
+      },
+      "rewritten": 172,
+      "horizon_equals_a_delay": 5,
+      "phrasing_id": {
+        "0": 115,
+        "3": 123,
+        "2": 114,
+        "1": 119,
+        "None": 29
+      },
+      "labels": {
+        "a)/b)": 250,
+        "1)/2)": 250
+      },
+      "near_first": 233
+    },
+    "verification": {
+      "prompts": 200,
+      "regime": {
+        "near_only": 100,
+        "both": 100
+      },
+      "horizon_unit": {
+        "years": 200
+      },
+      "rewritten": 0,
+      "horizon_equals_a_delay": 0,
+      "phrasing_id": {
+        "0": 68,
+        "3": 42,
+        "2": 38,
+        "1": 52
+      },
+      "labels": {
+        "a)/b)": 100,
+        "1)/2)": 100
+      },
+      "near_first": 100
+    }
+  }
+}
