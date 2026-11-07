@@ -24,6 +24,7 @@ def parse_args(description, extra=None):
                    help="starter: the 116-prompt starter bank; full: Alan's generator (default prefill off, "
                         "label located after 'I choose:'); units: full-bank prompts paired across units; "
                         "fill: crossed-unit prompts in the old banks' regime gaps, plus anchors; "
+                        "implied: anchor phrases instead of durations, with explicit twins; "
                         "choice4/choice8 (+ _roi): k-option investment banks, same prefill rule as full")
     p.add_argument("--n-prompts", type=int, default=Settings.n_prompts, help="full bank size")
     p.add_argument("--behavior-n", type=int, default=None,
@@ -40,7 +41,7 @@ def parse_args(description, extra=None):
     args = p.parse_args()
     fractions = tuple(float(f) for f in args.think_fractions.split(",") if f)
     cache = None if args.no_cache else str(out_base(args.out) / "gen_cache")
-    generated = args.bank in ("full", "units", "fill", *CHOICE_BANKS)   # Alan's template: the model writes "I choose:" itself
+    generated = args.bank in ("full", "units", "fill", "implied", *CHOICE_BANKS)   # Alan's template: the model writes "I choose:" itself
     prefill = args.prefill if args.prefill is not None else ("" if generated else Settings.prefill)
     choice_prefix = "I choose:" if generated and not prefill else ""
     cfg = Settings(model=args.model, thinking=args.thinking, limit=args.limit,

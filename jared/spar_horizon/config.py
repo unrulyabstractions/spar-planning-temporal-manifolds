@@ -6,7 +6,7 @@ import torch
 
 from .full_bank import CHOICE_BANKS
 
-BANKS = ("starter", "full", "units", "fill", *CHOICE_BANKS)
+BANKS = ("starter", "full", "units", "fill", "implied", *CHOICE_BANKS)
 
 
 @dataclass
@@ -27,6 +27,8 @@ class Settings:
                                     # | "units" (full-bank prompts paired across units, 14_spec_unit_overlap.md)
                                     # | "fill" (crossed-unit prompts in the old banks' regime gaps, plus anchors,
                                     #   16_spec_pristine_manifold.md §4)
+                                    # | "implied" (anchor phrases instead of durations, with explicit twins,
+                                    #   29_spec_implied_horizon_side.md)
                                     # | "choice4" | "choice8" | "choice4_roi" | "choice8_roi" (k-option
                                     #   investment banks, 18_spec_multichoice.md)
     n_prompts: int = 500            # full bank size (the units bank has its own, UNITS_BASE pairs)
