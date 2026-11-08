@@ -2,25 +2,19 @@
 the invariant / in-span split, U, the stage A and B prompt selections, pooled inputs
 in E8, the additive prompt patch, and stage B's summary. No model download."""
 
-import sys
-from pathlib import Path
-
 import numpy as np
 import pytest
 import torch
 from transformers import Qwen3Config, Qwen3ForCausalLM
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "analysis"))
-sys.path.insert(0, str(ROOT / "experiments"))
-
-from exp8_steering import PRISTINE_DIRECTIONS, delta_rows, selected_records, toward_by_direction  # noqa: E402
-from exp13_suffix_steer import chose_near, names_duration, summarize  # noqa: E402
-from steering_prepare import (concatenate_reasoning, pristine_cell, split_summary, stage_a_rows,  # noqa: E402
-                              stage_b_rows, steerable)
-from spar_horizon import steering as S  # noqa: E402
-from spar_horizon.banks import build_records  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
+from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import (PRISTINE_DIRECTIONS, delta_rows, selected_records,
+                                                                          toward_by_direction)
+from pipeline.s2_steering.experiments.manifold_steer.exp13_suffix_steer import chose_near, names_duration, summarize
+from pipeline.s1_data_vectors.analysis.steering_prepare import (
+    concatenate_reasoning, pristine_cell, split_summary, stage_a_rows, stage_b_rows, steerable)
+from spar_horizon import steering as S
+from spar_horizon.banks import build_records
+from spar_horizon.config import Settings
 
 THETA = np.pi / 3   # angle between the planted duration axis and the unit direction
 

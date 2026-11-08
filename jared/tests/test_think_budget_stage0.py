@@ -3,18 +3,15 @@ cached Qwen3.5-0.8B tokenizer): loop flag, last committed label, ids from the ca
 the predictions."""
 
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import think_budget_stage0 as stage0  # noqa: E402
-from spar_horizon import model_io as M  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from test_exp14_states import GENERATION, tok  # noqa: E402,F401
+import pipeline.s2_steering.analysis.think_budget_stage0 as stage0
+from spar_horizon import model_io as M
+from spar_horizon.config import Settings
+from test_exp14_states import GENERATION, tok  # noqa: F401
 
 LABELS = ["a", "b", "c", "d"]
 OPTIONS = [{"label": lab, "half": half, "rank_in_half": rank}

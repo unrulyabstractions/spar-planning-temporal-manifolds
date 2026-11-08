@@ -1,16 +1,12 @@
 """P0, C1, C2, C3 of 28_spec_choice4_side.md on hand-made rows, and the chunk reading."""
 
 import json
-import sys
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import exp17_think_budget as exp17  # noqa: E402
-import think_budget_summary as summary  # noqa: E402
-from think_budget_stage0 import accuracy, position_stats  # noqa: E402
+import pipeline.s2_steering.experiments.think_budget.exp17_think_budget as exp17
+import pipeline.s2_steering.analysis.think_budget_summary as summary
+from pipeline.s2_steering.analysis.think_budget_stage0 import accuracy, position_stats
 
 LABELS = ["a", "b", "c", "d"]
 INFO = {"a": ["near", 1], "b": ["near", 2], "c": ["far", 1], "d": ["far", 2]}

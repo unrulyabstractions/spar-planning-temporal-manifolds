@@ -4,19 +4,16 @@ resume, donor positions. Inputs are built here, following the interfaces doc."""
 
 import argparse
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import exp14_phrase_steer as steer  # noqa: E402
-from exp10_patch_reasoning import states_at  # noqa: E402
-from exp14_phrase_states import record_phrase  # noqa: E402
-from spar_horizon import steering as S  # noqa: E402
-from test_exp14_states import BANK_SETTINGS, GENERATION, MODEL, bank_records, cfg, tiny, tok  # noqa: E402,F401
+import pipeline.s2_steering.experiments.manifold_steer.exp14_phrase_steer as steer
+from pipeline.s2_steering.experiments.patch.exp10_patch_reasoning import states_at
+from pipeline.s1_data_vectors.experiments.exp14_phrase_states import record_phrase
+from spar_horizon import steering as S
+from test_exp14_states import BANK_SETTINGS, GENERATION, MODEL, bank_records, cfg, tiny, tok  # noqa: F401
 
 D = 32
 TRANSITIONS = ("both-near", "near-both")

@@ -2,16 +2,13 @@
 criteria C0-C4, the probe readout with a planted signal, the audit sample, and an empty run."""
 
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import implied_summary as S  # noqa: E402
-from spar_horizon.full_bank import natural_horizon  # noqa: E402
-from spar_horizon.implied_bank import build_implied_prompts  # noqa: E402
+import pipeline.s2_steering.analysis.implied_summary as S
+from spar_horizon.full_bank import natural_horizon
+from spar_horizon.implied_bank import build_implied_prompts
 
 D = 8
 LAYERS = (16, 20, 24)

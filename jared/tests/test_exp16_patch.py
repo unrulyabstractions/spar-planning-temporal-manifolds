@@ -1,26 +1,22 @@
 """Phrase number-patch driver on a tiny random-weight Qwen3 and the cached Qwen3.5-0.8B tokenizer:
 unit order, which token positions each patch touches (and nothing else), the subspace and step
 arithmetic, the rerun's order, claim and resume. Inputs are built here in the format
-analysis/patch_prepare.py writes."""
+pipeline/s1_data_vectors/analysis/patch_prepare.py writes."""
 
 import argparse
 import json
-import sys
 from contextlib import nullcontext
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import exp16_phrase_patch as patch  # noqa: E402
-from exp14_phrase_states import record_phrase  # noqa: E402
-from exp10_patch_reasoning import states_at  # noqa: E402
-from patch_summary import planned_units  # noqa: E402
-from spar_horizon import steering as S  # noqa: E402
-from test_exp14_states import BANK_SETTINGS, GENERATION, MODEL, bank_records, cfg, tiny, tok  # noqa: E402,F401
+import pipeline.s2_steering.experiments.patch.exp16_phrase_patch as patch
+from pipeline.s1_data_vectors.experiments.exp14_phrase_states import record_phrase
+from pipeline.s2_steering.experiments.patch.exp10_patch_reasoning import states_at
+from pipeline.s2_steering.analysis.patch_summary import planned_units
+from spar_horizon import steering as S
+from test_exp14_states import BANK_SETTINGS, GENERATION, MODEL, bank_records, cfg, tiny, tok  # noqa: F401
 
 D = 32
 N = 4
