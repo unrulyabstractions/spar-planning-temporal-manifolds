@@ -29,6 +29,7 @@ established, what is next. The rest is reference.
 | `25_spec_arithmetic_mediation.md` | Spec (draft 2026-11-03, not approved): does the arithmetic decide the both-regime choice? On-policy resampling, arithmetic insertion, rate-anchored prompt |
 | `26_spec_overnight_choice_scan.md`, `26_results_overnight_choice_scan.md` | Spec and results (2026-11-06): 4- and 8-choice banks (accuracy, forced closes, activation structure) and the 2-choice phrase-steering scan (34 of 40 cells, none reach the report line; random controls match the manifold) |
 | `27_spec_phrase_number_patch.md`, `28_spec_choice4_side.md`, `29_spec_implied_horizon_side.md`, `30_results_overnight_patch_budget_implied.md` | Specs and results (2026-11-07): the number is read at the horizon's number tokens (donor patch 24/24, manifold step 3/24); +3,072 think tokens close about 63% of forced choice4/8 traces, loops stay open; implied horizons (reference check failed, provisional) |
+| `31_goals_next_specs.md` | Goals to spec next (not approved): linear steer at the number tokens, a direction fitted from donor differences, layer sweep, manifold-fit fixes, side-experiment follow-ups, housekeeping |
 | `queue*.sh` | Box queues as run: `queue_14b.sh`, `queue_14b_rest.sh` (E11), `queue_units.sh` (unit-overlap E0) |
 | `history/` | Finished specs, superseded results and earlier plans; indexed at the end of `01_plan.md` |
 | `spar_horizon/` | The package: prompt banks, model I/O, extraction, probes, steering, run manifests |

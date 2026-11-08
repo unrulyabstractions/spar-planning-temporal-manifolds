@@ -233,6 +233,8 @@ representation, and what happens to it while the model reasons?
   `local_checks.py` (see `../../CLAUDE.md`).
 - The unit word grows with the duration by design, so unit and log horizon
   are confounded on the bank (unit explains 0.97 of log horizon).
+  Consequence (30, addendum): the pooled fit's unit adjustment creates the PC1 slope of the manifold (raw per-horizon
+  means are flat, fitted slope -9.7 per decade); same-unit steps are unaffected.
 
 ## 8. Deferred
 

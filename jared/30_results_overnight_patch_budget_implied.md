@@ -71,3 +71,38 @@ late-slot pick bias: choice4 excess-late +0.33 -> +0.03), and partly loops that 
 - Promote C0 failure of 29 into a decision: rewrite the explicit twins or relax the reference check?
 - Better direction for 27: fit from donor differences at the number tokens (the donor patch works, the pooled manifold does not).
 - Uncommitted: all of 27/28/29 code, tests and this note; `infra/vast.sh` duration filter.
+
+## Addendum (2026-11-08): what the manifold figures show, and what 27 adds to E14
+
+Figures: `results/horizon/exp16_Qwen3-8B_patch/figures/` (`analysis/patch_figures.py`): where/layer grid, choice shift
+per pair, the manifold curve, all 8 manifold directions.
+
+**Worth noting: the manifold's PC1 slope is made by the unit adjustment, not by the states.**
+The pooled L16 number-token fit (`steering.fit_duration_effects`) holds unit, regime, option order and delays at their
+sample average. Per-horizon raw means on PC1 have a slope of -0.18 per decade; the fitted curve has -9.7. Of that slope,
+-9.40 per decade comes from the unit factor alone (unit effects on PC1 run from -49 for seconds to +25 for years, against
+a raw span of -13 to +9). Unit and horizon are confounded on the bank (`01_plan.md` §7: unit explains 0.97 of log
+horizon), so "average the unit out" shifts short horizons up and long ones down by construction; the unit effects
+are identified only from the few durations written under several unit wordings (up to four). The number tokens come before
+the unit word, so a "unit effect" on them is something that tracks the unit (digits, magnitude), not a read of the word;
+untested. Consequences: the plotted PC1 trend overstates what the model's states do. The patch steps are not affected:
+both horizons of a pair share the unit, so the offset cancels (step length 18.5 fitted vs 22.8 raw means over the 24 pairs,
+cosine median 0.99, min 0.71). Anything that uses the absolute curve across units (the scan's targets, cross-unit steps)
+inherits the confound.
+
+**Periodicity.** Lomb-Scargle with a shuffle null on the maximum power over periods 0.4-4.5 decades: PC2 shows no
+significant period (p 0.97 fitted, 0.52 raw means) although it looks sinusoidal; PC5 has one at 0.95 decades
+(p 0.009 fitted, 0.005 raw means; about 0.015-0.03 after correcting for the three PCs tried), present in the raw means,
+so not an artefact of the adjustment. A period of one decade fits a state that depends on the number's leading digits;
+not tested (next: label PC5 by leading digit, split-half refit).
+
+**What 27 adds to E14's donor patch** (E14: whole-phrase donor patch at L16, 104/104 traces write a target-regime
+horizon, +9.9 near log-odds; but 95 of 104 donors changed the unit, so unit and number moved together):
+- It separates number from unit. Same-unit pairs: number tokens alone 24/24, unit token alone 0/24 (E10 had patched the
+  unit-word position with the top-8 subspace only).
+- It adds depth for the number tokens (L12, L16, L22 all 24/24); E14 was L16 only.
+- It adds the controls E14 lacked: self patch, rerun noise floor, in-span random, top-8 subspace (20/24).
+- It gives the scan (26) the positive control it was missing: the same manifold step at the number tokens writes the donor's
+  number in 3/24 against 24/24 for the donor states, so the scan's null was the direction, not the placement.
+It does not show where the choice is computed (a patch that makes the trace write another horizon moves the choice, as
+in E14), and it is 24 pairs. 28 and 29 do not extend the patching: 28 is about forced closes, 29 about implied horizons.
