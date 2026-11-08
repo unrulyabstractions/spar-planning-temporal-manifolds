@@ -1,8 +1,8 @@
 # Results: E13 prototype, a unit-free horizon manifold on the 8B units bank (2026-10-27)
 
 Spec: `16_spec_pristine_manifold.md` §3. Saved activations only:
-- `analysis/pristine_manifold.py` → `results/horizon/analysis/pristine_manifold.{json,txt,png}`;
-- `analysis/written_unit.py` → `written_unit.json`.
+- `pipeline/s1_data_vectors/analysis/pristine_manifold.py` → `results/horizon/analysis/pristine_manifold.{json,txt,png}`;
+- `pipeline/s3_analysis/by_datatype/written_unit.py` → `written_unit.json`.
 
 Post hoc in one respect: the P1 definition changed after the first two cells were
 seen (§3, decision needed).

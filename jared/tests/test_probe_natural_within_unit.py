@@ -1,14 +1,10 @@
 """The natural-closes / within-unit driver: run lookup by model, and its table and figure on a planted cell."""
 
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import probe_natural_within_unit as D  # noqa: E402
-from probe_dimensionality import run_file  # noqa: E402
-from spar_horizon.probes import analyze_cell  # noqa: E402
+from pipeline.s1_data_vectors.analysis import probe_natural_within_unit as D
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import run_file
+from spar_horizon.probes import analyze_cell
 
 
 def test_run_file_picks_the_requested_model(tmp_path):

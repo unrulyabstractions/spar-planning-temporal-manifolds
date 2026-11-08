@@ -20,7 +20,7 @@ both models (one shared prompt set, so the two models' averages are over the sam
 decode_peak: the layer whose ridge on the prompt-level top-8 horizon-average PCs predicts log horizon
 best under leave-one-horizon-out (the PCs are refitted on each fold's training horizons).
 
-    python analysis/cross_model_alignment.py results/horizon
+    python -m pipeline.s1_data_vectors.analysis.cross_model_alignment results/horizon
     -> <root>/analysis/cross_model_alignment.json and cka_heatmap_<position>_<mode>.png
 """
 
@@ -41,11 +41,10 @@ from sklearn.model_selection import LeaveOneGroupOut
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from horizon_shape import cell_data  # noqa: E402  (same folder)
-from probe_dimensionality import units_of  # noqa: E402
-from spar_horizon.probes import r2, within_unit_r2  # noqa: E402
-from stage_markers import MODELS, exp0_run, handoff, n_layers  # noqa: E402
+from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import units_of
+from spar_horizon.probes import r2, within_unit_r2
+from pipeline.s1_data_vectors.analysis.stage_markers import MODELS, exp0_run, handoff, n_layers
 
 POSITIONS = ("suffix newline", "pre-label")
 MODES = ("off", "on")

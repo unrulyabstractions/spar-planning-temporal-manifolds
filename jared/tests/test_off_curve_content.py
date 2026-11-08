@@ -1,10 +1,7 @@
-import sys
-from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-from off_curve_content import center_within, shuffle_within, within_r  # noqa: E402
+from pipeline.s1_data_vectors.analysis.off_curve_content import center_within, shuffle_within, within_r
 
 
 def test_center_within_removes_group_means():

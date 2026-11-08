@@ -11,10 +11,10 @@ natural-only run uses the same layer. The 14B pick scores each layer with the li
 alone, no full-dimension ceiling and a few k (`SWEEP_KS`): the full analysis takes about 8 min a
 cell on d = 5120, which across 41 layers is hours.
 
-    python analysis/probe_natural_within_unit.py results/horizon
+    python -m pipeline.s1_data_vectors.analysis.probe_natural_within_unit results/horizon
     -> <root>/analysis/probe_natural_within_unit.json, .png, .txt
 
-    python analysis/probe_natural_within_unit.py results/horizon --levels
+    python -m pipeline.s1_data_vectors.analysis.probe_natural_within_unit results/horizon --levels
     -> <root>/analysis/probe_within_levels.json, .txt: within-unit R² per prompt and on
        the horizon averages (`probes.horizon_within_unit_r2`) at the layers the run above
        picked (plus 14B suffix newline L20), in 06's ordering, without the ceiling
@@ -22,7 +22,6 @@ cell on d = 5120, which across 41 layers is hours.
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import matplotlib
@@ -33,10 +32,9 @@ import numpy as np
 from joblib import Parallel, delayed
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from horizon_shape import cell_data  # noqa: E402  (same folder)
-from probe_dimensionality import LINEAR, MLP, run_file, units_of  # noqa: E402
-from spar_horizon.probes import KS, analyze_cell, probe_curves  # noqa: E402
+from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import LINEAR, MLP, run_file, units_of
+from spar_horizon.probes import KS, analyze_cell, probe_curves
 
 MODELS = {"Qwen/Qwen3-8B": 36, "Qwen/Qwen3-14B": 40}   # decoder layers; hidden states are L0..L<n>
 CELLS = (("on", "suffix newline"), ("on", "suffix last"), ("on", "think close"),

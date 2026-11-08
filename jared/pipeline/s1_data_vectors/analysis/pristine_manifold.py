@@ -24,7 +24,7 @@ against the true log duration t, in percent: 10^|r - t| - 1 (2x or 1/2x is 100%)
                     the largest of the three; <= 0.60
 k = 2, 4, 8; judged at k = 4. CIs resample base prompts (P1 systematic: durations).
 
-    python analysis/pristine_manifold.py /home/Jared/SPAR/results/horizon [pooled]
+    python -m pipeline.s1_data_vectors.analysis.pristine_manifold /home/Jared/SPAR/results/horizon [pooled]
     -> <root>/analysis/pristine_manifold{,_pooled,_pooled_fill}.{json,txt,png}
 The bank defaults to the units bank (the prototype). "pooled" (16 §4) fits the old full
 and units runs with the fill run, adding the log near and far delays as covariates;
@@ -49,16 +49,15 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import cross_val_predict
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from off_curve_content import center_within  # noqa: E402  (same folder)
-from probe_dimensionality import positions  # noqa: E402  (same folder)
-from unit_overlap import MODEL, load_run, pair_shifts  # noqa: E402  (same folder)
-from written_unit import run_records  # noqa: E402  (same folder)
-from spar_horizon.full_bank import NATURAL_UNITS  # noqa: E402
-from spar_horizon.horizons import Horizon  # noqa: E402
-from spar_horizon.probes import within_unit_r2  # noqa: E402
-from spar_horizon.runs import REGIONS  # noqa: E402
-from spar_horizon.steering import curve_readout, fit_duration_effects  # noqa: E402
+from pipeline.s1_data_vectors.analysis.off_curve_content import center_within
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
+from pipeline.s3_analysis.by_datatype.unit_overlap import MODEL, load_run, pair_shifts
+from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.full_bank import NATURAL_UNITS
+from spar_horizon.horizons import Horizon
+from spar_horizon.probes import within_unit_r2
+from spar_horizon.runs import REGIONS
+from spar_horizon.steering import curve_readout, fit_duration_effects
 
 LAYERS = (16, 22, 24, 27)
 POSITIONS = {"off": ("suffix newline", "pre-label"), "on": ("suffix newline", "think close", "pre-label")}
@@ -450,7 +449,7 @@ def main(root, bank="units"):
         fold_of = dict(zip(pair_ids, np.random.default_rng(0).permutation(len(pair_ids)) % 2))
         folds = np.array([fold_of[p] for p in labels["pairs"]])
         X = cell_matrix(parts[mode], position, layer)
-        # the written-unit side view exists for the units bank only (analysis/written_unit.py)
+        # the written-unit side view exists for the units bank only (pipeline/s3_analysis/by_datatype/written_unit.py)
         same_main = written_same_main(root, labels) if mode == "on" and bank == "units" else None
         measures = cell_measures(X, labels, folds, same_main, rng, pooled)
         measures["verdicts"] = verdicts(measures)

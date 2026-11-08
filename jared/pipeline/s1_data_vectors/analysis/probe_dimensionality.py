@@ -2,16 +2,16 @@
 leave-one-horizon-out, for every layer at the positions in `positions()`
 (spec: 04_spec_probes.md; the probes are in spar_horizon/probes.py).
 
-    python analysis/probe_dimensionality.py results/horizon_v3_think
+    python -m pipeline.s1_data_vectors.analysis.probe_dimensionality results/horizon_v3_think
     -> <root>/analysis/probe_dimensionality.json, probe_curves.png, probe_k90.png
 
-    python analysis/probe_dimensionality.py results/horizon --natural-only
+    python -m pipeline.s1_data_vectors.analysis.probe_dimensionality results/horizon --natural-only
     -> thinking on only, prompts whose think block closed on its own; files end in _natural
 
-    python analysis/probe_dimensionality.py results/horizon --model Qwen/Qwen3-14B --tag 14b
+    python -m pipeline.s1_data_vectors.analysis.probe_dimensionality results/horizon --model Qwen/Qwen3-14B --tag 14b
     -> another model's runs (default Qwen/Qwen3-8B); the tag keeps the 8B files
 
-    python analysis/probe_dimensionality.py results/horizon --modes on --layers 4,8,16 \
+    python -m pipeline.s1_data_vectors.analysis.probe_dimensionality results/horizon --modes on --layers 4,8,16 \
         --positions "suffix newline,pre-label" --tag within
     -> a subset of cells; files end in _within (and _natural_within with --natural-only)
 
@@ -23,7 +23,6 @@ cores, about 3 minutes per cell on the full bank.
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import matplotlib
@@ -34,10 +33,9 @@ import numpy as np
 from joblib import Parallel, delayed
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from spar_horizon.full_bank import HORIZONS  # noqa: E402
-from spar_horizon.probes import KS, analyze_cell  # noqa: E402
-from spar_horizon.runs import load_activations  # noqa: E402
+from spar_horizon.full_bank import HORIZONS
+from spar_horizon.probes import KS, analyze_cell
+from spar_horizon.runs import load_activations
 
 LINEAR, MLP, CONTROL, CEILING = "#2a78d6", "#eb6834", "#9a9893", "#52514e"
 # log10 years of each full-bank horizon -> its unit word ("84 minutes" -> "minute")

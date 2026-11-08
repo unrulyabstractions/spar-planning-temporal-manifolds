@@ -83,7 +83,7 @@ Same `step`/`.done` resume as `queue_14b_rest.sh`, with a download step first. T
 Local, before the box (handed to you via `local_checks.py`): a 0.6B smoke on 8 units-bank
 prompts, which checks the rendering, the pair labels and that the label slot is found.
 
-## 4. Analyses (local, saved activations; `analysis/unit_overlap.py`)
+## 4. Analyses (local, saved activations; `pipeline/s3_analysis/by_datatype/unit_overlap.py`)
 
 These are readings, not pass/fail (as for `10`). For each of the two 8B mode cells, at
 suffix newline, think close (thinking on) and pre-label, at every layer:
@@ -138,7 +138,7 @@ Expected, from `08` §10 and `12` §1:
    a model run.
 3. A 0.6B smoke added to `local_checks.py`, which you run.
 4. `queue_units.sh`, dry-run with stubs as for `queue_14b_rest.sh`.
-5. `analysis/unit_overlap.py` (§4.1–4.5) with tests on synthetic data: a planted duration code
+5. `pipeline/s3_analysis/by_datatype/unit_overlap.py` (§4.1–4.5) with tests on synthetic data: a planted duration code
    and a planted unit code must come out as each.
 6. After the box run: results doc `15_results_unit_overlap.md` and an entry in
    `13_evidence.md`.

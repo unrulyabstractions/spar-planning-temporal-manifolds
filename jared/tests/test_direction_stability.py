@@ -1,13 +1,9 @@
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import direction_stability as ds  # noqa: E402
-from synthetic_pooled import synthetic_pooled  # noqa: E402
+from pipeline.s1_data_vectors.analysis import direction_stability as ds
+from synthetic_pooled import synthetic_pooled
 
 
 def pooled_directions(X, data):

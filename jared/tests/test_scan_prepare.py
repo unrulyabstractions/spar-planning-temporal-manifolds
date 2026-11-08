@@ -3,20 +3,15 @@ alignment by sample_uid (and its failures), the prompts, the steps and their ran
 forced factor at the answer slot, and merging the phrase states files. No E0 files or model."""
 
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "analysis"))
-
-import scan_prepare as prep  # noqa: E402
-from exp8_steering import selected_records  # noqa: E402
-from steering_prepare import phrase_columns  # noqa: E402
-from test_phrase_prepare import D, MODEL, planted_curve, prompts_meta, tok  # noqa: E402,F401
-from spar_horizon.steering import curve_delta  # noqa: E402
+from pipeline.s1_data_vectors.analysis import scan_prepare as prep
+from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
+from pipeline.s1_data_vectors.analysis.steering_prepare import phrase_columns
+from test_phrase_prepare import D, MODEL, planted_curve, prompts_meta, tok  # noqa: F401
+from spar_horizon.steering import curve_delta
 
 LAYERS = (18, 14, 22)    # L14 and L18 in states.npz, L22 in a layer-specific file
 

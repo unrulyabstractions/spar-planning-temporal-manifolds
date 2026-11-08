@@ -1,7 +1,6 @@
 """Bank names, run tag, record path of answers.json and label parsing for the choice banks."""
 
 import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -10,10 +9,8 @@ from spar_horizon.banks import build_records, variant_builder
 from spar_horizon.behavior import parse_choice
 from spar_horizon.config import Settings
 from spar_horizon.full_bank import CHOICE_BANKS, choice_variant, render_variant
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import common  # noqa: E402
-import exp0_baseline  # noqa: E402
+from pipeline.s1_data_vectors.experiments import common
+from pipeline.s1_data_vectors.experiments import exp0_baseline
 
 MODEL = "Qwen/Qwen3.5-0.8B"
 

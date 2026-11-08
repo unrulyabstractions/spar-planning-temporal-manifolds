@@ -6,7 +6,7 @@ thinking-on generation is still filling the cache. Only the swapped and
 relabeled variants are generated, so it never regenerates or rewrites a base
 generation E0 is about to use.
 
-    CUDA_VISIBLE_DEVICES=1 python experiments/coherence.py --model Qwen/Qwen3-14B --thinking on --bank full \
+    CUDA_VISIBLE_DEVICES=1 python -m pipeline.s1_data_vectors.experiments.coherence --model Qwen/Qwen3-14B --thinking on --bank full \
         --out /workspace/results/horizon --behavior-n 80
 
 Writes <out>/coherence_<model>_think-<mode>_full/coherence.json.
@@ -15,7 +15,7 @@ Writes <out>/coherence_<model>_think-<mode>_full/coherence.json.
 import json
 from collections import Counter
 
-from common import parse_args
+from pipeline.s1_data_vectors.experiments.common import parse_args
 from spar_horizon.banks import build_records, variant_builder
 from spar_horizon.behavior import behavior
 from spar_horizon.model_io import cache_load, chat_text, load_model

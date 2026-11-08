@@ -4,13 +4,13 @@ E0 reads the cache once when it starts, so start the shards together, wait for
 all of them, then run E0 itself: it finds every prompt cached and only does
 the forward passes.
 
-    CUDA_VISIBLE_DEVICES=0 python experiments/warm_cache.py --model Qwen/Qwen3-14B --thinking on --bank full --shard 0/2
-    CUDA_VISIBLE_DEVICES=1 python experiments/warm_cache.py --model Qwen/Qwen3-14B --thinking on --bank full --shard 1/2
+    CUDA_VISIBLE_DEVICES=0 python -m pipeline.s1_data_vectors.experiments.warm_cache --model Qwen/Qwen3-14B --thinking on --bank full --shard 0/2
+    CUDA_VISIBLE_DEVICES=1 python -m pipeline.s1_data_vectors.experiments.warm_cache --model Qwen/Qwen3-14B --thinking on --bank full --shard 1/2
 
 Takes the same arguments as exp0_baseline.py, so the cache keys match.
 """
 
-from common import parse_args
+from pipeline.s1_data_vectors.experiments.common import parse_args
 from spar_horizon.banks import build_records
 from spar_horizon.model_io import cache_load, chat_text, generate_batch, load_model
 from spar_horizon.runs import stamp

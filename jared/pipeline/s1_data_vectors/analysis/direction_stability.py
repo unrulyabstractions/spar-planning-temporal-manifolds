@@ -20,7 +20,7 @@ the in-span share of the effects step (mean |in-span|² / |step|²), and the sha
 factor's own span. Two random directions
 in 4,096 dimensions have |cosine| about 0.016.
 
-    python analysis/direction_stability.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s1_data_vectors.analysis.direction_stability /home/Jared/SPAR/results/horizon
     -> <root>/analysis/direction_stability.{json,txt}
 
 Reads saved activations only; runs no model.
@@ -32,12 +32,11 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import FEATURES, base_folds, cell_matrix, dataset  # noqa: E402  (same folder)
-from pristine_confounds import unit_names  # noqa: E402  (same folder)
-from pristine_manifold import subset  # noqa: E402  (same folder)
-from spar_horizon.horizons import Horizon  # noqa: E402
-from spar_horizon.steering import curve_delta, fit_duration_effects, span_part, unit_direction  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import FEATURES, base_folds, cell_matrix, dataset
+from pipeline.s1_data_vectors.analysis.pristine_confounds import unit_names
+from pipeline.s1_data_vectors.analysis.pristine_manifold import subset
+from spar_horizon.horizons import Horizon
+from spar_horizon.steering import curve_delta, fit_duration_effects, span_part, unit_direction
 
 MODEL = "Qwen3-8B"
 POOLED_BANKS = ("full", "units", "fill")

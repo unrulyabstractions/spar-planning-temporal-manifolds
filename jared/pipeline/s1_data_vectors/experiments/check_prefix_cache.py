@@ -3,9 +3,9 @@ log-odds as one full forward pass per edit, on a real model in its real dtype?
 On the tiny float32 test model they agree to 1e-5; in bfloat16 the cached and
 full passes round differently, and this measures by how much.
 
-    python experiments/check_prefix_cache.py                        # Qwen3-0.6B (all full attention)
-    python experiments/check_prefix_cache.py --model Qwen/Qwen3-8B
-    python experiments/check_prefix_cache.py --float32               # the logic alone, without bf16 rounding
+    python -m pipeline.s1_data_vectors.experiments.check_prefix_cache                        # Qwen3-0.6B (all full attention)
+    python -m pipeline.s1_data_vectors.experiments.check_prefix_cache --model Qwen/Qwen3-8B
+    python -m pipeline.s1_data_vectors.experiments.check_prefix_cache --float32               # the logic alone, without bf16 rounding
 
 Short rows are thinking-off full-bank prompts teacher-forced through "I choose:";
 long rows join several of them, to reach the ~2.5k tokens of a reasoning trace.
@@ -15,16 +15,14 @@ effects of interest are ~1 log-odds and up).
 
 import argparse
 import sys
-from pathlib import Path
 
 import numpy as np
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from spar_horizon import steering as S  # noqa: E402
-from spar_horizon.banks import build_records  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.model_io import label_ids, load_model  # noqa: E402
+from spar_horizon import steering as S
+from spar_horizon.banks import build_records
+from spar_horizon.config import Settings
+from spar_horizon.model_io import label_ids, load_model
 
 
 def main():

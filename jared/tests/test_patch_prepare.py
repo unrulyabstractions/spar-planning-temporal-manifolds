@@ -3,22 +3,17 @@ same-unit crossing pairs, their balance and order, the steps and their random tw
 planted over real bank records. The 0.8B tokenizer is the only download."""
 
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "analysis"))
-
-import patch_prepare as prep  # noqa: E402
-from exp8_steering import selected_records  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.full_bank import HORIZONS, regime, render_variant  # noqa: E402
-from spar_horizon.steering import span_part  # noqa: E402
-from steering_prepare import steerable  # noqa: E402
-from test_phrase_prepare import GENERATION, prompts_meta, tok, write_states  # noqa: E402,F401
+from pipeline.s1_data_vectors.analysis import patch_prepare as prep
+from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
+from spar_horizon.config import Settings
+from spar_horizon.full_bank import HORIZONS, regime, render_variant
+from spar_horizon.steering import span_part
+from pipeline.s1_data_vectors.analysis.steering_prepare import steerable
+from test_phrase_prepare import GENERATION, prompts_meta, tok, write_states  # noqa: F401
 
 PAIRS = 4
 

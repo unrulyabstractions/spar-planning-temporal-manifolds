@@ -22,7 +22,7 @@ Scores: pooled within-horizon Pearson r of leave-one-horizon-out ridge predictio
     a control for "any 3 directions of the residual stream";
   - the full residual stream (ridge, CV penalty): the ceiling at this cell.
 
-    python analysis/off_curve_content.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s1_data_vectors.analysis.off_curve_content /home/Jared/SPAR/results/horizon
     -> <root>/analysis/off_curve_content.json, and a table on stdout
 
 Reads the saved activations only; runs no model. Post hoc (not pre-registered).
@@ -30,20 +30,18 @@ Reads the saved activations only; runs no model. Post hoc (not pre-registered).
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 from sklearn.linear_model import Ridge, RidgeCV
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from horizon_shape import cell_data  # noqa: E402  (same folder)
-from regime_comparison import reduce_to_span  # noqa: E402  (same folder)
-from steering_analysis import saved_decision  # noqa: E402  (same folder)
-from steering_prepare import run_dir, run_settings  # noqa: E402  (same folder)
-from spar_horizon.banks import build_records  # noqa: E402
-from spar_horizon.steering import basis_without, decision_direction, fit_cell, random_orthonormal  # noqa: E402
+from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
+from pipeline.s3_analysis.by_label.regime_comparison import reduce_to_span
+from pipeline.s2_steering.analysis.steering_analysis import saved_decision
+from pipeline.s1_data_vectors.analysis.steering_prepare import run_dir, run_settings
+from spar_horizon.banks import build_records
+from spar_horizon.steering import basis_without, decision_direction, fit_cell, random_orthonormal
 
 LAYERS = {"Qwen3-8B": list(range(14, 36, 2)) + [21, 23, 25], "Qwen3-14B": list(range(15, 40, 2)) + [26, 28, 30]}
 TARGETS = ("log far", "log near", "regime", "near log-odds", "a-vs-b log-odds", "near is a", "log think length")

@@ -32,7 +32,7 @@ probes, except where §5 needs them.
 | `bind` | first layer where the a/b decision decodes at CV R² >= 0.9 from the top-4 horizon-average PCs at pre-label | 27 / 27 | 0.75 |
 | `decode_peak` | best-R² layer per position (`06` §1) | per position | |
 
-`analysis/stage_markers.py` (§6) computes these from saved results. Its
+`pipeline/s1_data_vectors/analysis/stage_markers.py` (§6) computes these from saved results. Its
 first check is that it reproduces this table from the 8B folders, and it
 interpolates transfer between layers to give fractional crossings.
 
@@ -116,9 +116,9 @@ activations at the matching position (`../relevance_aware_decoder/`).
    fast tokenizer-only test.
 2. **`steering_prepare.py` off-only cells.** Step B can start T1 before the
    thinking-on E0 finishes. Check whether it needs both run folders today.
-3. **`analysis/stage_markers.py`.** Computes the markers of §2 for any model
+3. **`pipeline/s1_data_vectors/analysis/stage_markers.py`.** Computes the markers of §2 for any model
    and reproduces the 8B table.
-4. **`analysis/cross_model_alignment.py`.** Layer x layer CKA, shuffle null,
+4. **`pipeline/s1_data_vectors/analysis/cross_model_alignment.py`.** Layer x layer CKA, shuffle null,
    Procrustes readout, within-unit version, rank order; S2 and S3 verdicts
    printed. Unit tests on synthetic data (a known rotation and rescale of one
    manifold must give CKA 1 and readout R² 1; independent noise must fall

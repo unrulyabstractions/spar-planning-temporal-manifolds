@@ -2,8 +2,8 @@
 
 Box run 2026-10-20/21 (2 GPUs), `queue_14b.sh`; spec and fixed criteria:
 `10_spec_scale_14b.md`. Results in `results/horizon/exp{0,8}_Qwen3-14B_*`,
-`coherence_Qwen3-14B_think-on_full/`; analysis `analysis/stage_markers.py`,
-`analysis/cross_model_alignment.py` (outputs in `results/horizon/analysis/`).
+`coherence_Qwen3-14B_think-on_full/`; analysis `pipeline/s1_data_vectors/analysis/stage_markers.py`,
+`pipeline/s1_data_vectors/analysis/cross_model_alignment.py` (outputs in `results/horizon/analysis/`).
 
 **Run later (2026-10-24, `queue_14b_rest.sh`, shared-prefix scoring):** the
 thinking-on cells at L30 and L33 (`exp8_Qwen3-14B_on_L30_L33/`) and the probe

@@ -1,9 +1,9 @@
 """E14 step 1: hidden states at the horizon phrase of the pooled thinking-on prompts
 (21_spec_phrase_steering.md §7). One prompt-only forward pass per prompt, no generation.
 
-    python experiments/exp14_phrase_states.py --prompts steering/phrase_prompts_Qwen3-8B.json \\
+    python -m pipeline.s1_data_vectors.experiments.exp14_phrase_states --prompts steering/phrase_prompts_Qwen3-8B.json \\
         --out /workspace/results/horizon
-    python experiments/exp14_phrase_states.py --prompts steering/phrase_prompts_Qwen3-8B.json \\
+    python -m pipeline.s1_data_vectors.experiments.exp14_phrase_states --prompts steering/phrase_prompts_Qwen3-8B.json \\
         --model Qwen/Qwen3.5-0.8B --limit 8 --batch-size 4 --out out      # local smoke (plumbing only)
 
 The phrase has two roles: "number" is the mean over all its tokens but the last
@@ -19,20 +19,17 @@ which has its own skip rule (26_spec_overnight_choice_scan.md §2).
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from exp8_steering import selected_records  # noqa: E402  (same folder)
-from exp10_patch_reasoning import states_at  # noqa: E402
-from spar_horizon import steering as S  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.model_io import chat_text, load_model  # noqa: E402
-from spar_horizon.runs import code_hash, out_base, stamp  # noqa: E402
+from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
+from pipeline.s2_steering.experiments.patch.exp10_patch_reasoning import states_at
+from spar_horizon import steering as S
+from spar_horizon.config import Settings
+from spar_horizon.model_io import chat_text, load_model
+from spar_horizon.runs import code_hash, out_base, stamp
 
 LAYERS = (12, 14, 16, 18)   # L12 is kept for a follow-up; the steering fits use L14, L16, L18
 ROLES = ("number", "unit")

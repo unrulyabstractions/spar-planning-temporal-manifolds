@@ -16,7 +16,7 @@ Saved states and traces only; runs no model.
 4. Step size: the share of effects traces whose first stated horizon moved toward the target, by step size
    (decades), in thirds per direction.
 
-    python analysis/exp14_geometry.py /home/Jared/SPAR/results/horizon/exp14_Qwen3-8B_phrase
+    python -m pipeline.s1_data_vectors.analysis.exp14_geometry /home/Jared/SPAR/results/horizon/exp14_Qwen3-8B_phrase
     -> <dir>/geometry.json, geometry.txt, geometry.png
 """
 
@@ -26,12 +26,10 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import exp14_analysis as ea  # noqa: E402  (same folder)
-from spar_horizon.horizons import UNIT_YEARS, canonical_unit  # noqa: E402
-from spar_horizon.steering import curve_delta, fit_duration_effects, span_part  # noqa: E402
-from written_unit import durations  # noqa: E402  (same folder)
+from pipeline.s3_analysis.by_label import exp14_analysis as ea
+from spar_horizon.horizons import UNIT_YEARS, canonical_unit
+from spar_horizon.steering import curve_delta, fit_duration_effects, span_part
+from pipeline.s3_analysis.by_datatype.written_unit import durations
 
 LAYER = 16
 UP = ("none-near", "near-both")      # transitions whose target is a longer horizon
@@ -112,7 +110,7 @@ def thirds(size, value):
 
 def load_fit_inputs(directory):
     """States, the pooled records' columns and the E14 prompts, as steering_prepare --phrase saw them."""
-    from steering_prepare import OUT, phrase_columns, selected_records, varying_factors   # heavy imports
+    from pipeline.s1_data_vectors.analysis.steering_prepare import OUT, phrase_columns, selected_records, varying_factors   # heavy imports
 
     inputs = json.loads((directory / "inputs.json").read_text())
     z = np.load(directory / "states.npz")

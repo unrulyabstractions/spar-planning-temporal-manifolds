@@ -10,7 +10,7 @@ sections 2 and 5, S1 and S5), from saved results only.
 Layers are hidden_states indices; relative depth = layer / number of decoder layers. A fractional layer
 is the linear interpolation of the 0.5 (or 0.9) crossing between neighbouring layers.
 
-    python analysis/stage_markers.py results/horizon
+    python -m pipeline.s1_data_vectors.analysis.stage_markers results/horizon
     -> <root>/analysis/stage_markers.json and stage_markers.png
 """
 
@@ -25,9 +25,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from horizon_shape import cell_data, horizon_components  # noqa: E402  (same folder)
-from steering_analysis import cv_r2, saved_decision  # noqa: E402
+from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data, horizon_components
+from pipeline.s2_steering.analysis.steering_analysis import cv_r2, saved_decision
 
 MODELS = ("Qwen3-8B", "Qwen3-14B")
 PATCH_RUN = {"Qwen3-8B": "exp8_Qwen3-8B_full", "Qwen3-14B": "exp8_Qwen3-14B_patch"}

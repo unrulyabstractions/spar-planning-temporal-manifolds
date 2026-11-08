@@ -2,25 +2,25 @@
 directions fitted on a run's saved activations, and the cached thinking-on
 reasoning of its near- and both-regime prompts.
 
-    python analysis/steering_prepare.py results/horizon
+    python -m pipeline.s1_data_vectors.analysis.steering_prepare results/horizon
     -> jared/steering/inputs_Qwen3-8B_answer_slot.npz and .json   (shipped to the box by `just push`)
 
-    python analysis/steering_prepare.py results/horizon --name first_run \
+    python -m pipeline.s1_data_vectors.analysis.steering_prepare results/horizon --name first_run \
         --cells "off:suffix newline:16,off:pre-label:21,on:think close:19,on:pre-label:21"
     -> the first run's cells (07_spec_steering.md section 3)
 
-    python analysis/steering_prepare.py results/horizon --name decision_L24 --cells on:pre-label:24 --natural-only
+    python -m pipeline.s1_data_vectors.analysis.steering_prepare results/horizon --name decision_L24 --cells on:pre-label:24 --natural-only
     -> fitted on natural think closes only, as in 07_spec_steering.md section 10
 
-    python analysis/steering_prepare.py results/horizon --model Qwen/Qwen3-14B --name patch \
+    python -m pipeline.s1_data_vectors.analysis.steering_prepare results/horizon --model Qwen/Qwen3-14B --name patch \
         --cells off:pre-label:27 --no-reasoning
     -> thinking-off inputs only, before the thinking-on run exists (10_spec_scale_14b.md section 3)
 
-    python analysis/steering_prepare.py results/horizon --pooled
+    python -m pipeline.s1_data_vectors.analysis.steering_prepare results/horizon --pooled
     -> inputs_Qwen3-8B_pristine: stage A of 16_spec_pristine_manifold.md §5, the effects
        curve at the off suffix L16, off pre-label L22/L24 and on pre-label L22/L24
 
-    python analysis/steering_prepare.py results/horizon --pooled --stage-b
+    python -m pipeline.s1_data_vectors.analysis.steering_prepare results/horizon --pooled --stage-b
     -> inputs_Qwen3-8B_pristine_suffix: stage B, the on suffix L16, for exp13_suffix_steer.py
 
 With --pooled the cells come from the pooled banks (full, units and fill, whichever
@@ -34,11 +34,11 @@ lie in Alan's range (1 week - 50 years; Jared, 2026-10-30): stage A those in the
 and both regimes, stage B two per duration in any regime, with their E0 outcome as the
 baseline. Prints, per cell, how the effects step splits.
 
-    python analysis/steering_prepare.py results/horizon --phrase-prompts
+    python -m pipeline.s1_data_vectors.analysis.steering_prepare results/horizon --phrase-prompts
     -> steering/phrase_prompts_Qwen3-8B.json: the pooled thinking-on prompts whose horizon-phrase
        states E14 extracts (21_spec_phrase_steering.md); needs no activations
 
-    python analysis/steering_prepare.py --phrase <exp14 folder> [--per-transition 32] [--seed 0]
+    python -m pipeline.s1_data_vectors.analysis.steering_prepare --phrase <exp14 folder> [--per-transition 32] [--seed 0]
     -> <folder>/inputs.npz, inputs.json and fit_report.txt: the pooled fit at the phrase tokens
        (L14, L16, L18 x number, unit), the drawn prompts with their targets, and the steps
 
@@ -60,17 +60,15 @@ from pathlib import Path
 import numpy as np
 from transformers import AutoTokenizer
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-from exp8_steering import selected_records  # noqa: E402
-from horizon_shape import cell_data  # noqa: E402  (same folder)
-from steering_analysis import saved_decision  # noqa: E402  (same folder)
-from spar_horizon.banks import build_records  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.full_bank import HORIZONS, natural_horizon, regime, render_variant  # noqa: E402
-from spar_horizon.horizons import Horizon  # noqa: E402
-from spar_horizon.model_io import cache_load, chat_text, label_ids, think_end_id  # noqa: E402
-from spar_horizon.steering import (curve_delta, decision_direction, encode, fit_cell,  # noqa: E402
+from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
+from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
+from pipeline.s2_steering.analysis.steering_analysis import saved_decision
+from spar_horizon.banks import build_records
+from spar_horizon.config import Settings
+from spar_horizon.full_bank import HORIZONS, natural_horizon, regime, render_variant
+from spar_horizon.horizons import Horizon
+from spar_horizon.model_io import cache_load, chat_text, label_ids, think_end_id
+from spar_horizon.steering import (curve_delta, decision_direction, encode, fit_cell,
                                    fit_duration_effects, phrase_positions, span_part, unit_direction)
 
 # Second run (07_spec_steering.md section 9): the answer slot where patching says the decision lives
@@ -86,7 +84,7 @@ STAGE_B_PER_DURATION = 2
 # the generation settings a stage B trace must share with E0's for E0 to be its baseline
 GENERATION_KEYS = ("model", "thinking", "n_response", "max_think_tokens", "prefill", "choice_prefix",
                    "answer_window")
-OUT = Path(__file__).resolve().parent.parent / "steering"
+OUT = Path(__file__).resolve().parents[3] / "steering"
 
 
 def parse_cells(text):
@@ -326,7 +324,7 @@ def pooled_main(root, out_dir, cells_spec, name, model, stage_b=False):
     Every cell is fitted on the pooled banks (Jared, 2026-10-30), so a mode whose fill
     anchors do not match the old runs at the suffix (pristine_manifold.gated_jobs) stops it."""
     # imported here: pristine_manifold imports off_curve_content, which imports this module
-    from pristine_manifold import (POOLED_BANKS, anchor_check, cell_matrix, fit_columns, gated_jobs, load_parts,
+    from pipeline.s1_data_vectors.analysis.pristine_manifold import (POOLED_BANKS, anchor_check, cell_matrix, fit_columns, gated_jobs, load_parts,
                                    pooled_labels)
 
     root = Path(root)
@@ -438,7 +436,7 @@ def phrase_prompts_main(root, out_dir, model):
     """steering/phrase_prompts_<model>.json: every record with a horizon (anchors left out)
     of each pooled bank whose thinking-on run exists, in the shape E8's selected_records reads."""
     # imported here: pristine_manifold imports off_curve_content, which imports this module
-    from pristine_manifold import POOLED_BANKS
+    from pipeline.s1_data_vectors.analysis.pristine_manifold import POOLED_BANKS
 
     root = Path(root)
     banks = [b for b in POOLED_BANKS
@@ -592,7 +590,7 @@ def phrase_cell_report(layer, role, cell, X, columns, steps, transition_of):
     """Fit size, factor span and the effects steps' lengths and in-span share, with the
     regime AUC of the fit's first JUDGED_K coordinates (P4; P1-P3 need written traces and
     forced closes, which exist only after reasoning)."""
-    from pristine_manifold import JUDGED_K, regime_auc   # imported here: see phrase_prompts_main
+    from pipeline.s1_data_vectors.analysis.pristine_manifold import JUDGED_K, regime_auc   # imported here: see phrase_prompts_main
 
     in_span = (span_part(steps, cell["factor_span"]) ** 2).sum(1) / (steps ** 2).sum(1)
     length = np.linalg.norm(steps, axis=1)

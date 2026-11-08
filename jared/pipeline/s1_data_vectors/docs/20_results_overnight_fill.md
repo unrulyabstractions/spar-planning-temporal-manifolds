@@ -39,7 +39,7 @@ in Alan's range (1 week – 50 years).
 
 ## 2. Pooling every cell (Jared's decision)
 
-`gated_jobs` (`analysis/pristine_manifold.py`) now pools all of a mode's cells when its
+`gated_jobs` (`pipeline/s1_data_vectors/analysis/pristine_manifold.py`) now pools all of a mode's cells when its
 suffix anchors match (median gap ≤ 0.1 at every suffix layer). Thinking-on traces do
 not reproduce under a different batch, so the trace cells cannot test the run setup
 (`19` §2). Its test was rewritten for the new rule (a requirement change, not a
@@ -61,7 +61,7 @@ regime both +0.55* and forced +0.21*; delays, order and unit are ≤ 0.10.
 
 ## 3. Step or slope at the delay crossing
 
-`analysis/delay_step.py`; figures `delay_step_fill.png`, `delay_step_pooled.png`.
+`pipeline/s3_analysis/by_label/delay_step.py`; figures `delay_step_fill.png`, `delay_step_pooled.png`.
 
 Model, fixed before fitting: within bank × duration, readout = duration mean +
 Σ over the near and far delay of [slope·m + hinge·max(m, 0) + step·1(m < 0)] + order +
@@ -112,7 +112,7 @@ matched horizons, so any other bank difference would be absorbed into it.
 
 ## 4. Which axis carries horizon and not delay
 
-`analysis/axis_delay_purity.py`, `axis_delay_purity.png`. Candidates: (a) old-runs
+`pipeline/s3_analysis/by_label/axis_delay_purity.py`, `axis_delay_purity.png`. Candidates: (a) old-runs
 effects curve, (b) pooled effects curve, (c) pooled effects ⟂, (d) fill-only effects ⟂.
 "Step" = decades of near / far delay contained in a one-decade horizon step along the
 axis (held-out, within duration) — what steering along the axis would add.
@@ -145,7 +145,7 @@ separately.
 
 ## 5. Does the code predict the choice?
 
-`analysis/choice_from_code.py`, `choice_from_code.png`. Linear probability of choosing
+`pipeline/s3_analysis/by_label/choice_from_code.py`, `choice_from_code.png`. Linear probability of choosing
 near on the cross-fitted effects ⟂ residual (readout − true log horizon), fixed effects
 duration × regime × bank, controls for delays, rewards, forced, order (× bank, × regime).
 Thinking off on all banks (n = 1,386); thinking on on the old banks (n = 986; the fill is
@@ -172,8 +172,8 @@ but α = 1 is 3–4 SD beyond the natural spread along these directions (0.26–
 
 ## 6. Steering directions and what is ready
 
-`analysis/steering_prepare.py --pooled [--stage-b]`, `experiments/exp8_steering.py`
-(stage A), `experiments/exp13_suffix_steer.py` (stage B), `queue_pristine_steer.sh`.
+`pipeline/s1_data_vectors/analysis/steering_prepare.py --pooled [--stage-b]`, `pipeline/s2_steering/experiments/ablate_steer/exp8_steering.py`
+(stage A), `pipeline/s2_steering/experiments/manifold_steer/exp13_suffix_steer.py` (stage B), `queue_pristine_steer.sh`.
 Inputs: `steering/inputs_Qwen3-8B_pristine{,_suffix}.{npz,json}`. 1,386 prompts in the fit
 (anchors out), all cells pooled; the factor span is 11-D thinking off, 12-D on.
 
@@ -186,7 +186,7 @@ Inputs: `steering/inputs_Qwen3-8B_pristine{,_suffix}.{npz,json}`. 1,386 prompts 
 | A: on pre-label L24 | 7.33 / 4.86 / 5.44 | 0.54 | +0.60 / +0.55 / +0.32 / −0.10 |
 | B: on suffix L16 | 1.57 / 1.00 / 1.20 | 0.61 | +0.78 / +0.63 / +0.50 / +0.10 |
 
-Stability (`analysis/direction_stability.py`; effects / invariant / in-span / U):
+Stability (`pipeline/s1_data_vectors/analysis/direction_stability.py`; effects / invariant / in-span / U):
 
 | cell | fold 0 vs 1 | old vs pooled |
 |---|---|---|
@@ -223,7 +223,7 @@ From `jared/`, on the xpu env, in order:
 Then on the box, after `just push` (the inputs ship in `steering/`):
 ```
 cd /workspace/SPAR/spar-planning-temporal-manifolds/jared
-tmux new -s steer 'bash queue_pristine_steer.sh; bash'
+tmux new -s steer 'bash pipeline/s2_steering/queues/queue_pristine_steer.sh; bash'
 ```
 Smoke notes: the 0.8B smoke pools full + units only (`anchor_check` reads the 8B
 folders); a 32-token think budget can make "forced" collinear with a duration and the
@@ -242,14 +242,14 @@ checks plumbing, not crossings.
 
 ## Files
 
-New: `analysis/delay_step.py`, `analysis/axis_delay_purity.py`,
-`analysis/choice_from_code.py`, `analysis/direction_stability.py`,
-`experiments/exp13_suffix_steer.py`, `queue_pristine_steer.sh`, tests
+New: `pipeline/s3_analysis/by_label/delay_step.py`, `pipeline/s3_analysis/by_label/axis_delay_purity.py`,
+`pipeline/s3_analysis/by_label/choice_from_code.py`, `pipeline/s1_data_vectors/analysis/direction_stability.py`,
+`pipeline/s2_steering/experiments/manifold_steer/exp13_suffix_steer.py`, `queue_pristine_steer.sh`, tests
 `test_delay_step.py`, `test_axis_delay_purity.py`, `test_choice_from_code.py`,
 `test_direction_stability.py`, `test_pristine_steering.py`, `synthetic_pooled.py`.
-Changed: `analysis/pristine_manifold.py` (gate), `analysis/delay_margin.py` (optional
-`bins`), `analysis/steering_prepare.py`, `experiments/exp8_steering.py`,
-`experiments/exp10_patch_reasoning.py` (shared claim loop, behaviour unchanged),
+Changed: `pipeline/s1_data_vectors/analysis/pristine_manifold.py` (gate), `pipeline/s3_analysis/by_label/delay_margin.py` (optional
+`bins`), `pipeline/s1_data_vectors/analysis/steering_prepare.py`, `pipeline/s2_steering/experiments/ablate_steer/exp8_steering.py`,
+`pipeline/s2_steering/experiments/patch/exp10_patch_reasoning.py` (shared claim loop, behaviour unchanged),
 `spar_horizon/steering.py` (`span_part`, `unit_direction`, `factor_span`, additive
 `prompt_patch`), `local_checks.py` (`pooledbank`, `stagea`, `stageb`), 16 §6 task 7 note.
 Outputs in `results/horizon/analysis/`. Minor: recomputing `realism_labels` from

@@ -1,17 +1,12 @@
 """Run-folder selection in analysis/steering_prepare.py: one results folder holds
 the 8B and 14B runs side by side (10_spec_scale_14b.md section 3)."""
 
-import sys
-from pathlib import Path
-
 import numpy as np
 import pytest
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-
-from steering_prepare import main, matches_e0, run_dir  # noqa: E402
-from spar_horizon.model_io import Generation  # noqa: E402
+from pipeline.s1_data_vectors.analysis.steering_prepare import main, matches_e0, run_dir
+from spar_horizon.model_io import Generation
 
 
 def finished_run(root, name):

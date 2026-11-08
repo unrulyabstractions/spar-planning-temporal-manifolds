@@ -2,7 +2,7 @@
 manifold per (layer, position), and per-prompt steps for the scan's 10 prompts. A screen, not a
 test: nothing here or in the driver makes a significance claim.
 
-    python analysis/scan_prepare.py --phrase-dir results/horizon/exp14_Qwen3-8B_phrase \\
+    python -m pipeline.s1_data_vectors.analysis.scan_prepare --phrase-dir results/horizon/exp14_Qwen3-8B_phrase \\
         --e0-root results/horizon
     -> results/horizon/exp15_Qwen3-8B_scan/{inputs.json, inputs.npz, fit_report.txt}
 
@@ -37,18 +37,16 @@ cell. Written as step|L{layer}|{kind}|{position} [n, d] in inputs.npz.
 
 import argparse
 import json
-import sys
 from itertools import zip_longest
 from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-from exp8_steering import selected_records  # noqa: E402
-from steering_prepare import (OUT, TRANSITIONS, draw_prompts, fit_phrase_cell, phrase_cell_report,  # noqa: E402
-                              phrase_columns, random_like, steerable, transition_target, varying_factors)
-from spar_horizon.steering import curve_delta  # noqa: E402
+from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
+from pipeline.s1_data_vectors.analysis.steering_prepare import (
+    OUT, TRANSITIONS, draw_prompts, fit_phrase_cell, phrase_cell_report, phrase_columns, random_like,
+    steerable, transition_target, varying_factors)
+from spar_horizon.steering import curve_delta
 
 SCAN_LAYERS = (18, 14, 22, 10, 26)           # run order: the most motivated layers first
 POSITIONS = ("number", "unit", "suffix", "answer")
@@ -64,13 +62,13 @@ class E0Source:
     position name of the activation file and layer, the stacked activations in the labels' order."""
 
     def __init__(self, parts):
-        from pristine_manifold import pooled_labels   # imported here: pristine_manifold imports steering_prepare
+        from pipeline.s1_data_vectors.analysis.pristine_manifold import pooled_labels   # imported here: pristine_manifold imports steering_prepare
 
         self.parts = parts
         self.labels = pooled_labels(parts)
 
     def matrix(self, position, layer):
-        from pristine_manifold import cell_matrix
+        from pipeline.s1_data_vectors.analysis.pristine_manifold import cell_matrix
 
         return cell_matrix(self.parts, position, layer)
 
@@ -78,7 +76,7 @@ class E0Source:
 def load_e0(root, model, layers):
     """The pooled E0 runs of `model` ("Qwen3-8B") under `root`, after the fill anchor check
     at the suffix newline of each layer (as steering_prepare.pooled_main). Returns (source, anchors)."""
-    from pristine_manifold import anchor_check, gated_jobs, load_parts
+    from pipeline.s1_data_vectors.analysis.pristine_manifold import anchor_check, gated_jobs, load_parts
 
     parts = load_parts(Path(root), "on", "pooled", model)
     gate = [("on", "suffix newline", layer) for layer in layers]

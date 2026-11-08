@@ -1,14 +1,10 @@
 """Shared CLI for every experiment script."""
 
 import argparse
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from spar_horizon.config import BANKS, Settings  # noqa: E402
-from spar_horizon.full_bank import CHOICE_BANKS  # noqa: E402
-from spar_horizon.runs import out_base  # noqa: E402
+from spar_horizon.config import BANKS, Settings
+from spar_horizon.full_bank import CHOICE_BANKS
+from spar_horizon.runs import out_base
 
 
 def parse_args(description, extra=None):

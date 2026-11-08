@@ -9,8 +9,8 @@
 # finished steps. Does not stop the box.
 #
 #   cd /workspace/SPAR/spar-planning-temporal-manifolds/jared
-#   SMOKE=1 bash queue_14b.sh          # 6 prompts into $OUT/smoke_14b/, to time it and check shapes
-#   tmux new -s queue 'bash queue_14b.sh; bash'
+#   SMOKE=1 bash pipeline/s1_data_vectors/queues/queue_14b.sh          # 6 prompts into $OUT/smoke_14b/, to time it and check shapes
+#   tmux new -s queue 'bash pipeline/s1_data_vectors/queues/queue_14b.sh; bash'
 #
 # Watch: tail -f /workspace/results/horizon/logs/queue_14b.log
 
@@ -62,17 +62,17 @@ on_gpu() {   # on_gpu <gpu> <command...>
 e0() {   # e0 <gpu> <mode>; thinking on skips the order/label stability tests, as in run_all.sh
     local skip=()
     [ "$2" = on ] && skip=(--skip-behavior)
-    step "e0_$2" on_gpu "$1" $PY experiments/exp0_baseline.py --model $MODEL --thinking "$2" --bank full \
+    step "e0_$2" on_gpu "$1" $PY -m pipeline.s1_data_vectors.experiments.exp0_baseline --model $MODEL --thinking "$2" --bank full \
         --out "$OUT" "${LIMIT[@]}" "${skip[@]}"
 }
 
 prepare() {   # prepare <name> <cells> [extra flags]
-    step "prepare_$1" $PY analysis/steering_prepare.py "$OUT" --model $MODEL --out "$INPUTS" --name "$1" \
+    step "prepare_$1" $PY -m pipeline.s1_data_vectors.analysis.steering_prepare "$OUT" --model $MODEL --out "$INPUTS" --name "$1" \
         --cells "$2" "${@:3}"
 }
 
 exp8() {   # exp8 <gpu> <inputs name> <tests>
-    step "exp8_$2" on_gpu "$1" $PY experiments/exp8_steering.py --inputs "$INPUTS/inputs_${NAME}_$2.npz" \
+    step "exp8_$2" on_gpu "$1" $PY -m pipeline.s2_steering.experiments.ablate_steer.exp8_steering --inputs "$INPUTS/inputs_${NAME}_$2.npz" \
         --tests "$3" --out "$OUT" "${LIMIT[@]}"
 }
 

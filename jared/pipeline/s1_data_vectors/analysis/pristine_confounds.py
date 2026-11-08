@@ -12,7 +12,7 @@ and the same within-duration regression on all features, in equivalent decades. 
 feature the fit includes should read about 0; one it does not include (rewards, think
 length) shows what is left.
 
-    python analysis/pristine_confounds.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s1_data_vectors.analysis.pristine_confounds /home/Jared/SPAR/results/horizon
     -> <root>/analysis/pristine_confounds{,_fill}.{json,txt}
 """
 
@@ -22,10 +22,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import FEATURES, base_folds, calibration, cell_matrix, dataset, fe_regression  # noqa: E402
-from pristine_manifold import POOLED_BANKS, anchor_check, cross_fit, gated_jobs, load_parts  # noqa: E402
-from spar_horizon.horizons import UNIT_YEARS, Horizon  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import FEATURES, base_folds, calibration, cell_matrix, dataset, fe_regression
+from pipeline.s1_data_vectors.analysis.pristine_manifold import POOLED_BANKS, anchor_check, cross_fit, gated_jobs, load_parts
+from spar_horizon.horizons import UNIT_YEARS, Horizon
 
 K = 4
 CELLS = [("on", "suffix newline", 16), ("on", "suffix newline", 24), ("on", "pre-label", 22),

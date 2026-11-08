@@ -1,7 +1,11 @@
 """E0 for the k-option choice banks: chunked, resumable, reduced activation set.
 
-    python experiments/exp0_choice.py --model Qwen/Qwen3-8B --bank choice4 --batch-size 12
-    python experiments/exp0_choice.py --bank choice4 --assemble        # no model: only answers.json + manifest
+    python -m pipeline.s1_data_vectors.experiments.exp0_choice --model Qwen/Qwen3-8B --bank choice4 --batch-size 12
+    python -m pipeline.s1_data_vectors.experiments.exp0_choice --bank choice4 --assemble        # no model: only answers.json + manifest
+    python -m pipeline.s1_data_vectors.experiments.exp0_choice --model Qwen/Qwen3.5-0.8B --bank choice8 --limit 8 --chunk-size 4 \\
+        --max-think-tokens 32 --batch-size 4 --out out/smoke                                        # the queue's smoke
+
+Run from jared/. The box runs it through pipeline/s1_data_vectors/queues/queue_multichoice.sh.
 
 The bank's records (already in a balanced order, so any prefix of chunks is balanced over
 duration and regime) are cut into consecutive chunks of `--chunk-size`. Each chunk is generated
@@ -9,7 +13,7 @@ and extracted on its own and written to `<run dir>/chunks/chunk_NNN.npz` (activa
 `--layers`, keyed by hidden_states index, the kept layout including the `prompt` region of
 `spar_horizon.extract`, and the per-prompt arrays) and `chunk_NNN.json` (the answers.json rows),
 each through a temp file and a rename, the json last. A rerun skips finished chunks, so a killed run
-loses at most the chunk in flight. No PC sweeps, probes or plots here: `analysis/choice_structure.py`
+loses at most the chunk in flight. No PC sweeps, probes or plots here: `pipeline/s3_analysis/by_label/choice_structure.py`
 reads the chunks. After the last chunk (or with --assemble, for whatever chunks exist) the
 chunks are joined into `answers.json` and `manifest.json` (chunks done, forced-close rate and
 `multichoice_behavior` over the kept prompts of the finished chunks).
@@ -21,8 +25,8 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-from common import parse_args
-from exp0_baseline import answer_rows
+from pipeline.s1_data_vectors.experiments.common import parse_args
+from pipeline.s1_data_vectors.experiments.exp0_baseline import answer_rows
 from spar_horizon.banks import build_records
 from spar_horizon.behavior import multichoice_behavior
 from spar_horizon.extract import extract

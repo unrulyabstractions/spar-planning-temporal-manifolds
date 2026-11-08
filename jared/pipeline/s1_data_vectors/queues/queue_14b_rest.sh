@@ -10,7 +10,7 @@
 # finished steps. Does not stop the box.
 #
 #   cd /workspace/SPAR/spar-planning-temporal-manifolds/jared
-#   tmux new -s rest 'bash queue_14b_rest.sh; bash'
+#   tmux new -s rest 'bash pipeline/s1_data_vectors/queues/queue_14b_rest.sh; bash'
 
 set -u
 PY=${PY:-/venv/main/bin/python}
@@ -40,7 +40,7 @@ step() {   # step <name> <command...>: run once, log to <name>.log, mark <name>.
 }
 
 exp8() {   # exp8 <gpu> <inputs name> <tests>
-    step "exp8_14B_$2" env CUDA_VISIBLE_DEVICES="$1" $PY experiments/exp8_steering.py \
+    step "exp8_14B_$2" env CUDA_VISIBLE_DEVICES="$1" $PY -m pipeline.s2_steering.experiments.ablate_steer.exp8_steering \
         --inputs "steering/inputs_Qwen3-14B_$2.npz" --tests "$3" --out "$OUT"
 }
 

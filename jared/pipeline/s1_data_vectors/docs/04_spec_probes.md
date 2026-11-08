@@ -62,7 +62,7 @@ For each (layer, position) cell, after the fact, on saved activations (CPU):
 
 ## 4. Output
 
-`analysis/probe_dimensionality.py <run root>` writes
+`pipeline/s1_data_vectors/analysis/probe_dimensionality.py <run root>` writes
 `<root>/analysis/probe_dimensionality.json` and a figure: R² against k for
 selected cells (linear vs MLP, both orderings, control), and per mode a
 layer × position map of `k90` for each probe.

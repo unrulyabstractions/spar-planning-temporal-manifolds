@@ -12,13 +12,12 @@ Thinking-on prompts whose reasoning was force-closed are drawn as crosses.
 The probes drawn here are fitted on all prompts, for display only; the
 held-out R² printed in each title comes from probe_dimensionality.json.
 
-    python analysis/horizon_shape.py results/horizon
+    python -m pipeline.s1_data_vectors.analysis.horizon_shape results/horizon
     -> <root>/analysis/horizon_shape.png
 """
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import matplotlib
@@ -29,10 +28,9 @@ import numpy as np
 from scipy.stats import spearmanr
 from sklearn.decomposition import PCA
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from probe_dimensionality import positions, run_file  # noqa: E402  (same folder)
-from spar_horizon.probes import fit_predict  # noqa: E402
-from spar_horizon.runs import REGIONS  # noqa: E402
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions, run_file
+from spar_horizon.probes import fit_predict
+from spar_horizon.runs import REGIONS
 
 CELLS = (("on", "suffix newline", 16), ("off", "pre-label", 21), ("on", "pre-label", 21), ("on", "think close", 19))
 LINEAR, MLP, PROMPT, PATH = "#2a78d6", "#eb6834", "#9a9893", "#0b0b0b"

@@ -1,18 +1,13 @@
 """Synthetic checks of analysis/cross_model_alignment.py: a rotated, rescaled, re-embedded copy of a
 manifold aligns perfectly, independent noise does not."""
 
-import sys
-from pathlib import Path
-
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-
-from cross_model_alignment import (cka_null, first_aligned_coordinate, cross_model_readout,  # noqa: E402
-                                   label_shuffle_null, linear_cka, remove_unit_means, s2_summary,
-                                   shuffle_p_value, unit_lookup_r2)
-from probe_dimensionality import UNIT_BY_LOG_H  # noqa: E402
+from pipeline.s1_data_vectors.analysis.cross_model_alignment import (
+    cka_null, first_aligned_coordinate, cross_model_readout, label_shuffle_null, linear_cka,
+    remove_unit_means, s2_summary, shuffle_p_value, unit_lookup_r2)
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import UNIT_BY_LOG_H
 
 H = 48
 

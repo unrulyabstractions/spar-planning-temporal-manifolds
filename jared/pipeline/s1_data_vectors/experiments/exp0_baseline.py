@@ -1,6 +1,11 @@
 """E0: the starter experiment on any model, with the horizon probe and 3D PCA.
 
-    python experiments/exp0_baseline.py --model Qwen/Qwen3-8B --thinking off --limit 12
+    python -m pipeline.s1_data_vectors.experiments.exp0_baseline --model Qwen/Qwen3-8B --thinking off --limit 12   # smoke
+    python -m pipeline.s1_data_vectors.experiments.exp0_baseline --model Qwen/Qwen3-8B --thinking on --bank full --out /workspace/results/horizon
+    python -m pipeline.s1_data_vectors.experiments.exp0_baseline --model Qwen/Qwen3-8B --thinking on --bank units --skip-behavior --out /workspace/results/horizon
+
+Run from jared/. The box runs it through pipeline/s1_data_vectors/queues/queue_14b.sh (full bank) and queue_units.sh
+(units, fill).
 
 Writes to the run dir: geometry_2d.png, geometry_3d.png (and the horizon/far-
 delay ratio versions), activations.npz (all layers, probe direction, tracks),
@@ -13,7 +18,7 @@ import json
 
 import numpy as np
 
-from common import parse_args
+from pipeline.s1_data_vectors.experiments.common import parse_args
 from spar_horizon.banks import build_records, variant_builder
 from spar_horizon.behavior import base_behavior, behavior
 from spar_horizon.extract import dense_track, extract

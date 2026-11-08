@@ -3,7 +3,7 @@
 Box run 2026-10-04 (4090, batch 12): E0 on the full bank, 500 prompts per
 mode, 471 with a horizon over 48 log-spaced horizons (30 s to 500 y), option
 delays and order randomized. Thinking on: 124 min, 103/500 force-closed,
-median think length 1,748. Probes run locally, `analysis/probe_dimensionality.py
+median think length 1,748. Probes run locally, `pipeline/s1_data_vectors/analysis/probe_dimensionality.py
 results/horizon` (spec `04_spec_probes.md`). Outputs in
 `results/horizon/analysis/`. Compare `history/05_results_probes_v3.md` (116-prompt
 starter bank, 16 horizons).
@@ -112,7 +112,7 @@ one to quote.
   ordering within a unit is weaker (weeks not ordered). Separating unit from
   duration needs the same horizon in different units: E3 on the full bank
   with Alan's unit rewrites. Figure: `results/horizon/analysis/horizon_shape.png`
-  (`analysis/horizon_shape.py`).
+  (`pipeline/s1_data_vectors/analysis/horizon_shape.py`).
 - **What "decodable from one component" means at the suffix.** The horizon
   averages lie mostly along one direction (55% of their variance; ordering
   rho 0.99 with log horizon), with spacing that shrinks toward long horizons

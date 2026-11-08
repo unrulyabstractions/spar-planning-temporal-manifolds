@@ -7,8 +7,8 @@
 # steps. Does not stop the box.
 #
 #   cd /workspace/SPAR/spar-planning-temporal-manifolds/jared
-#   tmux new -s units 'bash queue_units.sh; bash'
-#   tmux new -s fill 'BANK=fill bash queue_units.sh; bash'
+#   tmux new -s units 'bash pipeline/s1_data_vectors/queues/queue_units.sh; bash'
+#   tmux new -s fill 'BANK=fill bash pipeline/s1_data_vectors/queues/queue_units.sh; bash'
 
 set -u
 PY=${PY:-/venv/main/bin/python}
@@ -40,9 +40,9 @@ step() {   # step <name> <command...>: run once, log to <name>.log, mark <name>.
     fi
 }
 
-e0_on() { step ${BANK}_e0_on env CUDA_VISIBLE_DEVICES="$1" $PY experiments/exp0_baseline.py --model $MODEL \
+e0_on() { step ${BANK}_e0_on env CUDA_VISIBLE_DEVICES="$1" $PY -m pipeline.s1_data_vectors.experiments.exp0_baseline --model $MODEL \
     --thinking on --bank $BANK --batch-size "$ON_BATCH" --skip-behavior --out "$OUT"; }
-e0_off() { step ${BANK}_e0_off env CUDA_VISIBLE_DEVICES="$1" $PY experiments/exp0_baseline.py --model $MODEL \
+e0_off() { step ${BANK}_e0_off env CUDA_VISIBLE_DEVICES="$1" $PY -m pipeline.s1_data_vectors.experiments.exp0_baseline --model $MODEL \
     --thinking off --bank $BANK --out "$OUT"; }
 
 log "queue on $N GPU(s), out $OUT"

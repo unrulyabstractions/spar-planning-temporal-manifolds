@@ -3,25 +3,21 @@ eligibility, the stratified draw, opposite steps, the step kinds and donors, on 
 planted over real bank records. The 0.8B tokenizer is the only download."""
 
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 from transformers import AutoTokenizer
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "analysis"))
-
-from steering_prepare import (PHRASE_LAYERS, TRANSITIONS, allocate, eligible_rows, opposite_targets,  # noqa: E402
-                              phrase_columns, phrase_main, steerable, stratified_draw, transition_target)
-from exp8_steering import selected_records  # noqa: E402
-from spar_horizon.banks import build_records  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.full_bank import regime  # noqa: E402
-from spar_horizon.horizons import Horizon  # noqa: E402
-from spar_horizon.model_io import chat_text  # noqa: E402
-from spar_horizon.steering import phrase_positions, span_part  # noqa: E402
+from pipeline.s1_data_vectors.analysis.steering_prepare import (
+    PHRASE_LAYERS, TRANSITIONS, allocate, eligible_rows, opposite_targets, phrase_columns, phrase_main,
+    steerable, stratified_draw, transition_target)
+from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
+from spar_horizon.banks import build_records
+from spar_horizon.config import Settings
+from spar_horizon.full_bank import regime
+from spar_horizon.horizons import Horizon
+from spar_horizon.model_io import chat_text
+from spar_horizon.steering import phrase_positions, span_part
 
 MODEL = "Qwen/Qwen3.5-0.8B"
 D = 48

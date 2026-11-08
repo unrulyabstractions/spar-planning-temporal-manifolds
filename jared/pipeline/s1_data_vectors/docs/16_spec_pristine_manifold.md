@@ -104,7 +104,7 @@ the table shows what the fit removes.
 - **P2 fails where the others pass:** removing the confounds removed the signal.
   There is no magnitude code at that cell to steer.
 
-Output: `analysis/pristine_manifold.py` → `<results>/analysis/pristine_manifold.json`,
+Output: `pipeline/s1_data_vectors/analysis/pristine_manifold.py` → `<results>/analysis/pristine_manifold.json`,
 a table, and one figure per cell: both curves, with the paired renderings
 joined by lines.
 
@@ -244,7 +244,7 @@ the pooled fit are reported with the steering results, not used to select cells.
 2. The fit (`fit_duration_effects` in `spar_horizon/steering.py`, returning a
    `fit_cell`-shaped dict), with tests on synthetic data where duration, unit and
    regime effects are planted and must be recovered separately.
-3. `analysis/pristine_manifold.py`: cross-fit, P1–P4 for both curves, figure.
+3. `pipeline/s1_data_vectors/analysis/pristine_manifold.py`: cross-fit, P1–P4 for both curves, figure.
    Results in a short `17_results_pristine.md`.
 4. With your approval of those results: the crossed-bank spec (§4). Done:
    generator and tests; regimes rotated rather than drawn (§4).

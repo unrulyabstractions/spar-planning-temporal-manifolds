@@ -1,7 +1,7 @@
 """Inputs of the phrase number-patch experiment (27_spec_phrase_number_patch.md §2): same-unit
 crossing pairs, and per pair the manifold step, its random twins and the horizon subspace. CPU only.
 
-    python analysis/patch_prepare.py --phrase-dir ../results/horizon/exp14_Qwen3-8B_phrase
+    python -m pipeline.s1_data_vectors.analysis.patch_prepare --phrase-dir ../results/horizon/exp14_Qwen3-8B_phrase
     -> steering/exp16_Qwen3-8B_patch/{inputs.json, inputs.npz, fit_report.txt}
        (small; `just push` ships steering/ but not results/)
 
@@ -27,23 +27,20 @@ prompt, as E14 does.
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 from transformers import AutoTokenizer
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from exp8_steering import selected_records  # noqa: E402
-from scan_prepare import interleave, load_phrase_states  # noqa: E402
-from steering_prepare import (OUT, eligible_rows, fit_phrase_cell, phrase_columns, random_like,  # noqa: E402
-                              steerable, stratified_draw, transition_target, varying_factors)
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.full_bank import HORIZONS, regime, render_variant  # noqa: E402
-from spar_horizon.model_io import chat_text  # noqa: E402
-from spar_horizon.steering import curve_delta, phrase_positions  # noqa: E402
+from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
+from pipeline.s1_data_vectors.analysis.scan_prepare import interleave, load_phrase_states
+from pipeline.s1_data_vectors.analysis.steering_prepare import (
+    OUT, eligible_rows, fit_phrase_cell, phrase_columns, random_like, steerable, stratified_draw,
+    transition_target, varying_factors)
+from spar_horizon.config import Settings
+from spar_horizon.full_bank import HORIZONS, regime, render_variant
+from spar_horizon.model_io import chat_text
+from spar_horizon.steering import curve_delta, phrase_positions
 
 PATCH_LAYER = 16
 DEPTH_LAYERS = (12, 22)

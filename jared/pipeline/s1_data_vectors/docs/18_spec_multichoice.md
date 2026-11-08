@@ -166,7 +166,7 @@ FORMAT: I choose: <a), b), c) or d)>. My reasoning: <1-3 sentences>
 - **Bank names.** Add `choice4`, `choice8`, `choice4_roi` and `choice8_roi` in:
   - `config.py` (validation and the run tag, giving folders `..._think-on_choice4` …
     `..._think-on_choice8_roi`);
-  - `experiments/common.py` (`--bank` choices, and the rule that generated prompts get no
+  - `pipeline/s1_data_vectors/experiments/common.py` (`--bank` choices, and the rule that generated prompts get no
     prefill and `choice_prefix = "I choose:"`);
   - `banks.py`, both `build_records` and `variant_builder`. For these banks the variant is
     reversed order and labels 1..k, so the existing hook has a meaning.

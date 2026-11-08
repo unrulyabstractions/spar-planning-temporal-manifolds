@@ -16,7 +16,7 @@ For each, the cosine with caa, and how much of caa's projection on the near dire
 remains after projecting out the forced direction (the forced part of the wrong-way
 push). Null: |cosine| of random unit vectors in 4096 dims, ~0.012 SD.
 
-    python analysis/caa_confound.py /home/Jared/SPAR/results/horizon OUT_DIR
+    python -m pipeline.s1_data_vectors.analysis.caa_confound /home/Jared/SPAR/results/horizon OUT_DIR
     -> OUT_DIR/caa_confound.{json,txt}
 """
 import json
@@ -25,11 +25,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from probe_dimensionality import positions  # noqa: E402
-from unit_overlap import load_run  # noqa: E402
-from spar_horizon.runs import REGIONS  # noqa: E402
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
+from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
+from spar_horizon.runs import REGIONS
 
 CELLS = (("suffix newline", 16), ("think close", 24), ("pre-label", 24), ("pre-label", 22))
 
