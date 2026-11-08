@@ -6,20 +6,17 @@ import re
 import sys
 from collections import Counter
 from datetime import datetime
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import common  # noqa: E402
-from spar_horizon import implied_bank as ib  # noqa: E402
-from spar_horizon.banks import build_records, variant_builder  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.full_bank import TRUTH, regime  # noqa: E402
-from spar_horizon.horizons import DAYS_PER_YEAR  # noqa: E402
-from written_unit import durations  # noqa: E402
+from pipeline.s1_data_vectors.experiments import common
+from pipeline.s3_analysis.by_datatype.written_unit import durations
+from spar_horizon import implied_bank as ib
+from spar_horizon.banks import build_records, variant_builder
+from spar_horizon.config import Settings
+from spar_horizon.full_bank import TRUTH, regime
+from spar_horizon.horizons import DAYS_PER_YEAR
 
 CONSTRAINT = re.compile(r"^CONSTRAINT: .*$", re.MULTILINE)
 

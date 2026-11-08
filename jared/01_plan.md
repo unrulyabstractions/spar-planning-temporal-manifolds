@@ -44,23 +44,23 @@ representation, and what happens to it while the model reasons?
 
 | what | date | output (`SPAR/results/horizon/`) | write-up |
 |---|---|---|---|
-| E0 full bank, thinking on (generation, activations, behavior) | 2026-10-04 | `exp0_Qwen3-8B_think-on_full/`, `gen_cache/` | `06_results_probes_full.md` |
+| E0 full bank, thinking on (generation, activations, behavior) | 2026-10-04 | `exp0_Qwen3-8B_think-on_full/`, `gen_cache/` | `pipeline/s1_data_vectors/docs/06_results_probes_full.md` |
 | E0 full bank, thinking off (record only) | 2026-10-04 | `exp0_Qwen3-8B_think-off_full/` | same |
-| E7 linear vs MLP probes, both modes | 2026-10-04 | `analysis/probe_*` | `06_results_probes_full.md`, spec `04_spec_probes.md` |
-| E8 run 1: patching map (thinking off), 4 decodability-chosen cells: all null | 2026-10-11 | `exp8_Qwen3-8B_full/` | `08_results_steering.md` §1-3, spec `07_spec_steering.md` |
-| E8 run 2: answer-slot ablation and steering at L24/27/30, answer-slot patching across prompts, both modes | 2026-10-12 | `exp8_Qwen3-8B_answer_slot/` | `08_results_steering.md` §5 |
-| Horizon-vs-decision check on the answer-slot subspace (local) | 2026-10-12 | `analysis/steering_decision_check.*` | `08_results_steering.md` §6 |
-| E8 run 3: L24 curve split into decision direction and rest, natural closes | 2026-10-14 | `exp8_Qwen3-8B_decision_L24/` | `08_results_steering.md` §9 |
-| E9: unit rewrites at the suffix, 22 durations x 2-4 units x 24 contexts | 2026-10-14 | `exp9_Qwen3-8B_units/`, `analysis/units.*` | `08_results_steering.md` §10 |
-| E8 at L22, decision split | 2026-10-18 | `exp8_Qwen3-8B_decision_L22/` | `08_results_steering.md` §12 |
-| E10: patch before reasoning, 96 pairs | 2026-10-18 | `exp10_Qwen3-8B_reasoning/` | `08_results_steering.md` §11 |
-| E11: Qwen3-14B E0 both modes, E8 answer slot, probe line, coherence | 2026-10-20/21, rest 2026-10-24 | `exp0_Qwen3-14B_*`, `exp8_Qwen3-14B_*`, `coherence_Qwen3-14B_think-on_full/` | `11_results_14b.md`, `13_evidence.md` |
+| E7 linear vs MLP probes, both modes | 2026-10-04 | `analysis/probe_*` | `pipeline/s1_data_vectors/docs/06_results_probes_full.md`, spec `pipeline/s1_data_vectors/docs/04_spec_probes.md` |
+| E8 run 1: patching map (thinking off), 4 decodability-chosen cells: all null | 2026-10-11 | `exp8_Qwen3-8B_full/` | `pipeline/s2_steering/docs/08_results_steering.md` §1-3, spec `pipeline/s2_steering/docs/07_spec_steering.md` |
+| E8 run 2: answer-slot ablation and steering at L24/27/30, answer-slot patching across prompts, both modes | 2026-10-12 | `exp8_Qwen3-8B_answer_slot/` | `pipeline/s2_steering/docs/08_results_steering.md` §5 |
+| Horizon-vs-decision check on the answer-slot subspace (local) | 2026-10-12 | `analysis/steering_decision_check.*` | `pipeline/s2_steering/docs/08_results_steering.md` §6 |
+| E8 run 3: L24 curve split into decision direction and rest, natural closes | 2026-10-14 | `exp8_Qwen3-8B_decision_L24/` | `pipeline/s2_steering/docs/08_results_steering.md` §9 |
+| E9: unit rewrites at the suffix, 22 durations x 2-4 units x 24 contexts | 2026-10-14 | `exp9_Qwen3-8B_units/`, `analysis/units.*` | `pipeline/s2_steering/docs/08_results_steering.md` §10 |
+| E8 at L22, decision split | 2026-10-18 | `exp8_Qwen3-8B_decision_L22/` | `pipeline/s2_steering/docs/08_results_steering.md` §12 |
+| E10: patch before reasoning, 96 pairs | 2026-10-18 | `exp10_Qwen3-8B_reasoning/` | `pipeline/s2_steering/docs/08_results_steering.md` §11 |
+| E11: Qwen3-14B E0 both modes, E8 answer slot, probe line, coherence | 2026-10-20/21, rest 2026-10-24 | `exp0_Qwen3-14B_*`, `exp8_Qwen3-14B_*`, `coherence_Qwen3-14B_think-on_full/` | `pipeline/s1_data_vectors/docs/11_results_14b.md`, `13_evidence.md` |
 | Local checks: natural closes and within-unit R², horizon vs delay | 2026-10-21 | `analysis/` | `12_results_local_checks.md` |
-| Unit-overlap bank E0, 8B both modes | 2026-10-25 | `exp0_Qwen3-8B_think-{on,off}_units/` | spec `14_spec_unit_overlap.md`; no results doc yet |
-| Pristine steering stage A (answer slot, fixed α) and stage B (suffix, thinking on) | 2026-10-30 | `exp8_Qwen3-8B_pristine/`, `exp13_Qwen3-8B_pristine_suffix/`, `analysis/crossing_split_pristine.*` | `22_results_phrase_steering.md` §1, spec `16` §5 |
-| E14: steering at the horizon phrase, thinking on, 4 transitions x 38 conditions | 2026-10-31 | `exp14_Qwen3-8B_phrase/` | `22_results_phrase_steering.md`, spec `21_spec_phrase_steering.md` |
-| 4- and 8-choice banks (implicit ROI, 246 prompts each), behavior plus reduced activations and structure probes, thinking on | 2026-11-06 | `exp0_Qwen3-8B_think-on_choice{4,8}/` | `26_results_overnight_choice_scan.md` §1, spec `26_spec_overnight_choice_scan.md` |
-| Phrase-steering scan (L10/14/18/22/26 x number, unit, suffix, answer x manifold, random; 10 prompts per cell): 34 of 40 cells, L26 incomplete; no cell reaches excess ≥ 4 | 2026-11-06 | `exp15_Qwen3-8B_scan/` | `26_results_overnight_choice_scan.md` §2 |
+| Unit-overlap bank E0, 8B both modes | 2026-10-25 | `exp0_Qwen3-8B_think-{on,off}_units/` | spec `pipeline/s1_data_vectors/docs/14_spec_unit_overlap.md`; no results doc yet |
+| Pristine steering stage A (answer slot, fixed α) and stage B (suffix, thinking on) | 2026-10-30 | `exp8_Qwen3-8B_pristine/`, `exp13_Qwen3-8B_pristine_suffix/`, `analysis/crossing_split_pristine.*` | `pipeline/s2_steering/docs/22_results_phrase_steering.md` §1, spec `16` §5 |
+| E14: steering at the horizon phrase, thinking on, 4 transitions x 38 conditions | 2026-10-31 | `exp14_Qwen3-8B_phrase/` | `pipeline/s2_steering/docs/22_results_phrase_steering.md`, spec `pipeline/s2_steering/docs/21_spec_phrase_steering.md` |
+| 4- and 8-choice banks (implicit ROI, 246 prompts each), behavior plus reduced activations and structure probes, thinking on | 2026-11-06 | `exp0_Qwen3-8B_think-on_choice{4,8}/` | `pipeline/s2_steering/docs/26_results_overnight_choice_scan.md` §1, spec `pipeline/s2_steering/docs/26_spec_overnight_choice_scan.md` |
+| Phrase-steering scan (L10/14/18/22/26 x number, unit, suffix, answer x manifold, random; 10 prompts per cell): 34 of 40 cells, L26 incomplete; no cell reaches excess ≥ 4 | 2026-11-06 | `exp15_Qwen3-8B_scan/` | `pipeline/s2_steering/docs/26_results_overnight_choice_scan.md` §2 |
 | Starter bank: v1 (thinking off, E0-E5), v3 (thinking on, E0, E6) | 2026-09 | `snapshots/v1_noprefill`, `snapshots/v3_think` (removed 2026-10-27; in git at `a93acf9`) | `history/` |
 
 ## 4. Established (Qwen3-8B, thinking on, full bank unless noted)
