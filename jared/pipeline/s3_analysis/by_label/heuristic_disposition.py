@@ -12,7 +12,7 @@ Readers (decision_emergence's): surface metadata, prompt TF-IDF, activations (to
 activations + surface; out of fold, AUC with base-prompt bootstrap CIs. Two row sets:
 r* ≥ 10%/yr (n ≈ 77, the clean one) and all old-bank both prompts (n 105).
 
-    python analysis/heuristic_disposition.py /home/Jared/SPAR/results/horizon OUT_DIR
+    python -m pipeline.s3_analysis.by_label.heuristic_disposition /home/Jared/SPAR/results/horizon OUT_DIR
     -> OUT_DIR/heuristic_disposition.{json,txt}
 """
 import json
@@ -22,10 +22,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import decision_emergence as de  # noqa: E402
-from breakeven_rate import log10_breakeven  # noqa: E402
+import pipeline.s3_analysis.by_label.decision_emergence as de
+from pipeline.s3_analysis.by_label.breakeven_rate import log10_breakeven
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 CELLS = [(p, layer) for p in ("suffix newline", "suffix last") for layer in (8, 12, 16, 20, 24, 28, 36)]

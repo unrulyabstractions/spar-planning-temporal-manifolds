@@ -1,7 +1,7 @@
 """E14 analysis: did steering the horizon phrase move what the reasoning writes and what it chooses?
 (21_spec_phrase_steering.md §4 measures, §5 criteria, fixed before the run.)
 
-    python analysis/exp14_analysis.py <dir>      # <dir> = <out>/exp14_Qwen3-8B_phrase
+    python -m pipeline.s3_analysis.by_label.exp14_analysis <dir>      # <dir> = <out>/exp14_Qwen3-8B_phrase
     -> <dir>/summary.json, <dir>/summary.txt, <dir>/summary.png (post hoc figure)
 
 Reads <dir>/inputs.json and <dir>/conditions/*.json; runs no model. Works on partial runs:
@@ -24,11 +24,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from spar_horizon.full_bank import regime  # noqa: E402
-from spar_horizon.horizons import UNIT_YEARS, canonical_unit  # noqa: E402
-from written_unit import DURATION, close_to, durations, parse_number  # noqa: E402
+from spar_horizon.full_bank import regime
+from spar_horizon.horizons import UNIT_YEARS, canonical_unit
+from pipeline.s3_analysis.by_datatype.written_unit import DURATION, close_to, durations, parse_number
 
 N_BOOT = 2000
 C = 19.2                    # near log-odds step of the thinking-on behaviour map (behaviour_step.py)

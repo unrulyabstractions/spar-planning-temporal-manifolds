@@ -28,7 +28,7 @@ whole residual stream, with representational distances:
 
 CIs: 95%, resampling the 24 contexts (BOOT draws), each draw with fresh halvings.
 
-    python analysis/unit_number_rsa.py /home/Jared/SPAR/results/horizon OUT_DIR
+    python -m pipeline.s3_analysis.by_datatype.unit_number_rsa /home/Jared/SPAR/results/horizon OUT_DIR
     -> OUT_DIR/unit_number_rsa.{json,txt,png}
 """
 import json
@@ -43,8 +43,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from spar_horizon.horizons import UNIT_YEARS, canonical_unit  # noqa: E402
+from spar_horizon.horizons import UNIT_YEARS, canonical_unit
 
 RUN = "exp9_Qwen3-8B_units"
 POSITIONS = ("newline", "last")          # suffix newline after <|im_end|>, last suffix token

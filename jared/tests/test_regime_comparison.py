@@ -1,18 +1,13 @@
-"""Projection and null logic of analysis/regime_comparison.py on synthetic prompts.
+"""Projection and null logic of pipeline/s3_analysis/by_label/regime_comparison.py on synthetic prompts.
 
 The horizon and the far delay are written into strong directions (8 and 5 cosines,
 the sizes of the two removed subspaces), so the projection can remove them. The
 comparison variable is a weaker 9th direction."""
 
-import sys
-from pathlib import Path
-
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-
-import regime_comparison as rc  # noqa: E402
+import pipeline.s3_analysis.by_label.regime_comparison as rc
 
 D = 100
 HORIZON_AMPLITUDE = 8

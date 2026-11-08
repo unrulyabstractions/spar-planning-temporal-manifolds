@@ -13,7 +13,7 @@ Reported by model, bank, regime and choice, natural closes and all; in the regim
 where the choice varies, each theme's share among near and far choosers with a Fisher
 exact p (two-sided, uncorrected: read as descriptive).
 
-    python analysis/trace_audit.py /home/Jared/SPAR/results/horizon OUT_DIR
+    python -m pipeline.s3_analysis.by_label.trace_audit /home/Jared/SPAR/results/horizon OUT_DIR
     -> OUT_DIR/trace_audit.{json,txt}
 """
 import json
@@ -25,12 +25,10 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import fisher_exact
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from exp14_analysis import CONFLICT, MOVED, first_stated_horizon  # noqa: E402
-from written_unit import horizon_units, run_records  # noqa: E402
-from spar_horizon.full_bank import regime as regime_of  # noqa: E402
-from spar_horizon.horizons import canonical_unit  # noqa: E402
+from pipeline.s3_analysis.by_label.exp14_analysis import CONFLICT, MOVED, first_stated_horizon
+from pipeline.s3_analysis.by_datatype.written_unit import horizon_units, run_records
+from spar_horizon.full_bank import regime as regime_of
+from spar_horizon.horizons import canonical_unit
 
 RUNS = (("Qwen3-8B", "full"), ("Qwen3-8B", "units"), ("Qwen3-8B", "fill"), ("Qwen3-14B", "full"))
 HORIZON = r"(?:\S+[- ]\w+ )?(?:time[- ])?horizon"

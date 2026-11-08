@@ -1,7 +1,7 @@
-"""Probes and geometry on the saved chunks of a choice-bank E0 run (experiments/exp0_choice.py,
+"""Probes and geometry on the saved chunks of a choice-bank E0 run (pipeline/s1_data_vectors/experiments/exp0_choice.py,
 26_spec_overnight_choice_scan.md §6). Takes whatever chunks exist and reports n; a stopped run is fine.
 
-    python analysis/choice_structure.py results/horizon/exp0_Qwen3-8B_think-on_choice4
+    python -m pipeline.s3_analysis.by_label.choice_structure results/horizon/exp0_Qwen3-8B_think-on_choice4
     -> <run dir>/choice_structure/{results.json, results.txt, probes_*.png}
 
 Every probe is a cross-validated linear model on standardized activations reduced to at most
@@ -32,12 +32,12 @@ import numpy as np
 from tqdm import tqdm
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-from sklearn.decomposition import PCA  # noqa: E402
-from sklearn.linear_model import LogisticRegression, RidgeCV  # noqa: E402
-from sklearn.metrics import balanced_accuracy_score, r2_score  # noqa: E402
-from sklearn.model_selection import GroupKFold  # noqa: E402
-from sklearn.preprocessing import StandardScaler  # noqa: E402
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LogisticRegression, RidgeCV
+from sklearn.metrics import balanced_accuracy_score, r2_score
+from sklearn.model_selection import GroupKFold
+from sklearn.preprocessing import StandardScaler
 
 MAX_PCS = 64
 FOLDS = 5

@@ -23,7 +23,7 @@ the ingredients, read linearly: a sign that something like r* is computed before
 Rows: 8B thinking on, full + units (the fill's capped r* would dominate), natural and
 forced closes (r* is a prompt property), prompts with a horizon.
 
-    python analysis/breakeven_decode.py /home/Jared/SPAR/results/horizon OUT_DIR
+    python -m pipeline.s3_analysis.by_label.breakeven_decode /home/Jared/SPAR/results/horizon OUT_DIR
     -> OUT_DIR/breakeven_decode.{json,txt}
 """
 import json
@@ -40,12 +40,10 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from breakeven_rate import log10_breakeven  # noqa: E402
-from decision_emergence import N_PCS, cell  # noqa: E402
-from unit_overlap import load_run  # noqa: E402
-from written_unit import run_records  # noqa: E402
+from pipeline.s3_analysis.by_label.breakeven_rate import log10_breakeven
+from pipeline.s3_analysis.by_label.decision_emergence import N_PCS, cell
+from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
+from pipeline.s3_analysis.by_datatype.written_unit import run_records
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 MODEL, BANKS = "Qwen3-8B", ("full", "units")

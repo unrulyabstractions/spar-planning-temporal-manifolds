@@ -6,7 +6,7 @@ so the rerun is a small perturbation of the same greedy trace. `08` §11 noted t
 96 labels changed. Here: by regime, how many change, in which direction, against the E0
 cache. Saved answers only.
 
-    python analysis/rerun_stability.py /home/Jared/SPAR/results/horizon OUT_DIR
+    python -m pipeline.s3_analysis.by_label.rerun_stability /home/Jared/SPAR/results/horizon OUT_DIR
     -> OUT_DIR/rerun_stability.txt
 """
 import json

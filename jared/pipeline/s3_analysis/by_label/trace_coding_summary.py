@@ -11,7 +11,7 @@ with an independent earlier coding of 32 of the same traces (trace_coding.json).
 Reports: computes × final choice with Wilson 95% CIs on the near share; the same split by
 the break-even rate r* (breakeven_rate.py); and agreement with the earlier coding.
 
-    python analysis/trace_coding_summary.py /home/Jared/SPAR/results/horizon OUT_DIR
+    python -m pipeline.s3_analysis.by_label.trace_coding_summary /home/Jared/SPAR/results/horizon OUT_DIR
     -> OUT_DIR/trace_coding_summary.txt
 """
 import json
@@ -21,10 +21,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from breakeven_rate import log10_breakeven  # noqa: E402
-from written_unit import run_records  # noqa: E402
+from pipeline.s3_analysis.by_label.breakeven_rate import log10_breakeven
+from pipeline.s3_analysis.by_datatype.written_unit import run_records
 
 BATCHES = ("both_b8a", "both_b8b")
 CODES = ("correct", "error", "overridden", "none")

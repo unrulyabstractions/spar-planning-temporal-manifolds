@@ -1,15 +1,10 @@
-"""analysis/unit_readout.py: the number weight on readouts planted on the real units bank."""
-
-import sys
-from pathlib import Path
+"""pipeline/s3_analysis/by_datatype/unit_readout.py: the number weight on readouts planted on the real units bank."""
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-
-import unit_readout as ur  # noqa: E402
-from spar_horizon.full_bank import UNIT_YEARS, build_units_prompts  # noqa: E402
+import pipeline.s3_analysis.by_datatype.unit_readout as ur
+from spar_horizon.full_bank import UNIT_YEARS, build_units_prompts
 
 
 @pytest.fixture(scope="module")

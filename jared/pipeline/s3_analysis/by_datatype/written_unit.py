@@ -14,7 +14,7 @@ mention there cannot be told apart from the delay.
 Per prompt: first, last and most frequent written unit, and whether any mention uses
 a unit other than the rendered one ("converts").
 
-    python analysis/written_unit.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s3_analysis.by_datatype.written_unit /home/Jared/SPAR/results/horizon
     -> <root>/analysis/written_unit.json, a table on stdout
 
 Reads saved answers only; runs no model.
@@ -27,10 +27,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from spar_horizon.banks import build_records  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.horizons import UNIT_YEARS, canonical_unit  # noqa: E402
+from spar_horizon.banks import build_records
+from spar_horizon.config import Settings
+from spar_horizon.horizons import UNIT_YEARS, canonical_unit
 
 TOLERANCE = 0.10
 RUN = "exp0_Qwen3-8B_think-on_units"

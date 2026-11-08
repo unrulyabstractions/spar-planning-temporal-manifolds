@@ -38,7 +38,7 @@ for the features that still vary there.
 
 CIs resample base prompts (pairs) on the within-duration data, 200 times.
 
-    python analysis/confound_sweep.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s3_analysis.by_label.confound_sweep /home/Jared/SPAR/results/horizon
     -> <root>/analysis/confound_sweep.{json,txt}
 """
 
@@ -51,13 +51,12 @@ import numpy as np
 from sklearn.decomposition import PCA
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from probe_dimensionality import positions  # noqa: E402  (same folder)
-from unit_overlap import load_run  # noqa: E402  (same folder)
-from written_unit import run_records  # noqa: E402  (same folder)
-from spar_horizon.horizons import UNIT_YEARS, Horizon  # noqa: E402
-from spar_horizon.probes import fit_ridge  # noqa: E402
-from spar_horizon.runs import REGIONS  # noqa: E402
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
+from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
+from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.horizons import UNIT_YEARS, Horizon
+from spar_horizon.probes import fit_ridge
+from spar_horizon.runs import REGIONS
 
 K = 8
 BOOT = 200

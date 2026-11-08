@@ -1,10 +1,6 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import delay_margin as dm  # noqa: E402
+import pipeline.s3_analysis.by_label.delay_margin as dm
 
 
 def test_none_reference_subtracts_the_none_mean_of_each_duration():

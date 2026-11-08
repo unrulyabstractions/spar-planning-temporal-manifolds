@@ -7,7 +7,7 @@ them, and read every near and both prompt there against the near prompts' mean. 
 by log10(far delay / horizon): a code that compares the horizon with the far delay
 steps where that margin crosses 0 (the far delay falls inside the horizon, regime both).
 
-    python analysis/far_margin.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s3_analysis.by_label.far_margin /home/Jared/SPAR/results/horizon
     -> <root>/analysis/far_margin.{json,txt,png}
 """
 
@@ -21,9 +21,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import base_folds, calibration, cell_matrix, crossfit_readout, dataset, fit_probe, horizon_axis  # noqa: E402,E501
-from delay_margin import COLORS, binned, none_reference  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import base_folds, calibration, cell_matrix, crossfit_readout, dataset, fit_probe, horizon_axis  # noqa: E501
+from pipeline.s3_analysis.by_label.delay_margin import COLORS, binned, none_reference
 
 MIN_REFERENCE = 4
 CELLS = [("Qwen3-8B", ("full", "units"), "on", "suffix newline", 16),

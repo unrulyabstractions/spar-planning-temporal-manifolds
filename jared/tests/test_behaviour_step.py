@@ -1,10 +1,6 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import behaviour_step as bs  # noqa: E402
+import pipeline.s3_analysis.by_label.behaviour_step as bs
 
 
 def planted(rng, jump, slope, durations=30, per_duration=20):

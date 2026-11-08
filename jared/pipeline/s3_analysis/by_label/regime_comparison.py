@@ -14,27 +14,26 @@ fitted on the training prompts only:
 and the pooled out-of-fold AUC is compared with a null that shuffles the regime
 labels within each far delay. The full-X probe (no projection) is the reference.
 
-    python analysis/regime_comparison.py results/horizon
+    python -m pipeline.s3_analysis.by_label.regime_comparison results/horizon
     -> <root>/analysis/regime_comparison.json and .png
-    python analysis/regime_comparison.py results/horizon --within --shuffles 200
+    python -m pipeline.s3_analysis.by_label.regime_comparison results/horizon --within --shuffles 200
     -> regime_comparison_within.json and .png: the same cells scored by the AUC inside each
        held-out horizon (one horizon has one score level, and a probe cannot learn the far delay
        once its per-delay means are projected out, so only a comparison can rank the regimes there)
-    python analysis/regime_comparison.py results/horizon --far-control
+    python -m pipeline.s3_analysis.by_label.regime_comparison results/horizon --far-control
     -> regime_comparison_far_control.json: that within-horizon AUC against a probe trained on a
        fixed far-delay threshold instead of the regime (exactly 0.5 by construction: a check)
-    python analysis/regime_comparison.py results/horizon --shift-control --layers 16,18,22,25,28,30
+    python -m pipeline.s3_analysis.by_label.regime_comparison results/horizon --shift-control --layers 16,18,22,25,28,30
     -> regime_comparison_shift.json: the within-horizon AUC for thresholds moved by SHIFT_GRID
        decades, sign(log h - log far - shift), each with its own probe. A comparison at h = far
        peaks at shift 0; a smooth horizon x delay interaction scores shifted thresholds alike
-    python analysis/regime_comparison.py results/horizon --models Qwen3-8B --layers 20,22 --shuffles 50   (quick look)
+    python -m pipeline.s3_analysis.by_label.regime_comparison results/horizon --models Qwen3-8B --layers 20,22 --shuffles 50   (quick look)
 
 Reads the saved activations only; runs no model.
 """
 
 import argparse
 import json
-import sys
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
@@ -49,12 +48,11 @@ from sklearn.metrics import roc_auc_score
 from threadpoolctl import threadpool_limits
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from horizon_shape import cell_data  # noqa: E402  (same folder)
-from steering_analysis import saved_decision  # noqa: E402  (same folder)
-from steering_prepare import run_dir, run_settings  # noqa: E402  (same folder)
-from spar_horizon.banks import build_records  # noqa: E402
-from spar_horizon.steering import fit_cell  # noqa: E402
+from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
+from pipeline.s2_steering.analysis.steering_analysis import saved_decision
+from pipeline.s1_data_vectors.analysis.steering_prepare import run_dir, run_settings
+from spar_horizon.banks import build_records
+from spar_horizon.steering import fit_cell
 
 MODELS = {"Qwen3-8B": 36, "Qwen3-14B": 40}
 MODES = ("off", "on")

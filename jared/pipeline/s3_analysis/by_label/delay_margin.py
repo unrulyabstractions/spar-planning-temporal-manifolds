@@ -16,7 +16,7 @@ Two readouts, as in confound_sweep.py: the none-fitted probe (equivalent decades
 its calibration) and the projection on the none prompts' horizon axis (probe-free,
 equivalent decades). CIs resample base prompts.
 
-    python analysis/delay_margin.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s3_analysis.by_label.delay_margin /home/Jared/SPAR/results/horizon
     -> <root>/analysis/delay_margin.{json,txt,png}   (--replot redraws from the json)
 """
 
@@ -30,8 +30,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import (base_folds, calibration, cell_matrix, crossfit_readout, dataset,  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import (base_folds, calibration, cell_matrix, crossfit_readout, dataset,
                             fit_probe, horizon_axis)
 
 MIN_NONE = 4

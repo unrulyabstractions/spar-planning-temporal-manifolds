@@ -13,7 +13,7 @@ log10 r* plus log10 horizon / near delay (the none-regime gradient), and on the
 components (log ratio, log delay gap) to see whether r* is the right combination.
 Fit quality is the out-of-fold log loss (5 folds, base prompts grouped).
 
-    python analysis/breakeven_rate.py /home/Jared/SPAR/results/horizon OUT_DIR [on|off]
+    python -m pipeline.s3_analysis.by_label.breakeven_rate /home/Jared/SPAR/results/horizon OUT_DIR [on|off]
     -> OUT_DIR/breakeven_rate.{json,txt,png} (thinking on), breakeven_rate_off.* (thinking off;
        there is no think block, so every row counts as a natural close)
 """
@@ -31,9 +31,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss
 from sklearn.model_selection import GroupKFold
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from written_unit import run_records  # noqa: E402
+from pipeline.s3_analysis.by_datatype.written_unit import run_records
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 RUNS = (("Qwen3-8B", ("full", "units", "fill")), ("Qwen3-14B", ("full",)))

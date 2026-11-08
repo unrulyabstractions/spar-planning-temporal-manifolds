@@ -7,7 +7,7 @@ the E10 reasoning):
 3. horizon or decision: the three checks at the L24 answer slot;
 4. E10: patching the horizon before reasoning, and what the reasoning then says.
 
-    python analysis/presentation_figures.py results/horizon
+    python -m pipeline.s3_analysis.figures.presentation_figures results/horizon
     -> jared/figures/pres_*.png, <root>/analysis/presentation_figures.txt
 """
 
@@ -24,10 +24,9 @@ import numpy as np
 from matplotlib.patches import Patch
 from transformers import AutoTokenizer
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from spar_horizon.steering import bootstrap_mean  # noqa: E402
+from spar_horizon.steering import bootstrap_mean
 
-JARED = Path(__file__).resolve().parent.parent
+JARED = Path(__file__).resolve().parents[3]
 FIGURES = JARED / "figures"
 BLUE, ORANGE, AQUA, PINK, PURPLE, GRAY, INK = "#2a78d6", "#eb6834", "#1baf7a", "#d6437b", "#7b4fd6", "#9a9893", "#52514e"
 # T1 group index of the suffix newline (the '\n' right after <|im_end|>) and of the pre-label ':'

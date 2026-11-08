@@ -13,7 +13,7 @@ each rendered in 2-4 units, in the same 24 contexts. Reported per layer:
   true log difference (renderings differ from the canonical by up to 0.05 decades);
 - the extraction check: the originals against the saved E0 activations.
 
-    python analysis/units_analysis.py results/horizon
+    python -m pipeline.s3_analysis.by_datatype.units_analysis results/horizon
     -> <root>/analysis/units.json, units.txt, units.png
 """
 
@@ -28,8 +28,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.decomposition import PCA
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from spar_horizon.geometry import _fit  # noqa: E402
+from spar_horizon.geometry import _fit
 
 POSITIONS = {"suffix newline": ("newline", 1), "suffix last": ("last", 4)}   # E9 array, E0 kept index
 JUDGED = ("suffix newline", 16)   # the R3 criterion's cell

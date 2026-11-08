@@ -11,7 +11,7 @@ unit_number_rsa's terms (gap bins, same unit, same numeral, |Δ log numeral|) pl
 digit count, same leading digit and same last digit. Coefficients in units of the mean
 pair distance; 95% CIs over contexts (each half resampled within itself).
 
-    python analysis/numeral_digits.py /home/Jared/SPAR/results/horizon OUT_DIR
+    python -m pipeline.s3_analysis.by_datatype.numeral_digits /home/Jared/SPAR/results/horizon OUT_DIR
     -> OUT_DIR/numeral_digits.{json,txt}
 """
 import json
@@ -22,9 +22,7 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import unit_number_rsa as rsa  # noqa: E402
+import pipeline.s3_analysis.by_datatype.unit_number_rsa as rsa
 
 LAYERS = (3, 9, 15, 21, 27, 33)
 BOOT = 40

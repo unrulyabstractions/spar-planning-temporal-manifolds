@@ -23,7 +23,7 @@ Rows: natural closes only (a forced close cuts the reasoning and pulls the choic
 toward 50/50), prompts with a horizon. 8B: full + units + fill pooled (anchors out),
 as the pooled fits; 14B: full.
 
-    python analysis/decision_emergence.py /home/Jared/SPAR/results/horizon OUT_DIR [on|off]
+    python -m pipeline.s3_analysis.by_label.decision_emergence /home/Jared/SPAR/results/horizon OUT_DIR [on|off]
     -> OUT_DIR/decision_emergence.{json,txt,png}; decision_emergence_off.* for thinking off,
        the positive control: there the choice is made in the forward pass from the prompt,
        so information beyond the surface must be present by the answer slot
@@ -49,13 +49,11 @@ from tqdm import tqdm
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from confound_sweep import FEATURES, dataset  # noqa: E402
-from probe_dimensionality import positions  # noqa: E402
-from unit_overlap import load_run  # noqa: E402
-from written_unit import run_records  # noqa: E402
-from spar_horizon.runs import REGIONS  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import FEATURES, dataset
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
+from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
+from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.runs import REGIONS
 
 RUNS = {"Qwen3-8B": ("full", "units", "fill"), "Qwen3-14B": ("full",)}
 # layer 0 is the token embedding: constant across prompts at the fixed-token positions

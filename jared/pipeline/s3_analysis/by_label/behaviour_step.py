@@ -1,6 +1,6 @@
 """Is the model's own choice a threshold on the delays, or graded? (2026-10-30; post hoc)
 
-The crossing split of stage A (analysis/crossing_split.py) found steering graded: prompts
+The crossing split of stage A (pipeline/s2_steering/analysis/crossing_split.py) found steering graded: prompts
 whose steered horizon stays on the same side of a delay move almost as much per unit of
 step as those that cross. Whether that counts against a horizon reading depends on what
 the unsteered model does. A model that compares the horizon with the delays jumps where
@@ -25,7 +25,7 @@ Figure: the within-duration residual of the near log-odds, binned by the far mar
 prompts whose near delay is inside the horizon, and by the near margin on prompts whose
 far delay is outside, so each panel varies one crossing.
 
-    python analysis/behaviour_step.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s3_analysis.by_label.behaviour_step /home/Jared/SPAR/results/horizon
     -> <root>/analysis/behaviour_step.{json,txt,png}
 """
 
@@ -36,15 +36,14 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import dataset, within  # noqa: E402  (same folder)
-from delay_margin import binned  # noqa: E402  (same folder)
-from delay_step import BANKS, MARGIN_BINS, MODEL, SPECS, fmt, row_records, step_fits  # noqa: E402  (same folder)
-from steering_analysis import NORMAL_LEAD  # noqa: E402  (same folder)
-from unit_overlap import load_run  # noqa: E402  (same folder)
+from pipeline.s3_analysis.by_label.confound_sweep import dataset, within
+from pipeline.s3_analysis.by_label.delay_margin import binned
+from pipeline.s3_analysis.by_label.delay_step import BANKS, MARGIN_BINS, MODEL, SPECS, fmt, row_records, step_fits
+from pipeline.s2_steering.analysis.steering_analysis import NORMAL_LEAD
+from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
 
 CONTROL_COLUMNS = {"near first": 4, "log unit size": 5, "log reward": 2, "log ratio": 3}   # dataset feature columns
 FORCED = 8

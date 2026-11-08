@@ -50,7 +50,7 @@ even on in-range prompts). Its error on fill prompts is tabulated by regime and 
 fill's delay_scale label, and regressed on the log horizon, the absolute log delays and
 the two inside-the-horizon indicators, across fill prompts and across all prompts.
 
-    python analysis/delay_step.py /home/Jared/SPAR/results/horizon [--pre-label]
+    python -m pipeline.s3_analysis.by_label.delay_step /home/Jared/SPAR/results/horizon [--pre-label]
     -> <root>/analysis/delay_step.{json,txt}, delay_step_{fill,pooled}.png
 """
 
@@ -65,16 +65,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import (base_folds, calibration, cell_matrix, dataset, fe_regression,  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import (base_folds, calibration, cell_matrix, dataset, fe_regression,
                             fit_probe, within)
-from delay_margin import binned  # noqa: E402  (same folder)
-from pristine_confounds import unit_names  # noqa: E402  (same folder)
-from pristine_manifold import cross_fit, fit, subset  # noqa: E402  (same folder)
-from unit_overlap import load_run  # noqa: E402  (same folder)
-from written_unit import run_records  # noqa: E402  (same folder)
-from spar_horizon.horizons import Horizon  # noqa: E402
-from spar_horizon.steering import curve_readout  # noqa: E402  (read-only; another agent edits steering.py)
+from pipeline.s3_analysis.by_label.delay_margin import binned
+from pipeline.s1_data_vectors.analysis.pristine_confounds import unit_names
+from pipeline.s1_data_vectors.analysis.pristine_manifold import cross_fit, fit, subset
+from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
+from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.horizons import Horizon
+from spar_horizon.steering import curve_readout
 
 MODEL = "Qwen3-8B"
 BANKS = ("full", "units", "fill")

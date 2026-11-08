@@ -6,7 +6,7 @@ results only (no model runs):
 - evidence_within_unit.png: within-unit R² per prompt vs on horizon averages (12 §1a);
 - evidence_regime.png: the threshold-shift control and regime vs choice AUC (12 §2b).
 
-    python analysis/evidence_figures.py results/horizon
+    python -m pipeline.s3_analysis.figures.evidence_figures results/horizon
     -> <root>/analysis/evidence_*.png
 """
 
@@ -20,8 +20,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from spar_horizon.steering import bootstrap_mean  # noqa: E402
+from spar_horizon.steering import bootstrap_mean
 
 # categorical slots 1-4 of the dataviz reference palette, in fixed order
 BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"

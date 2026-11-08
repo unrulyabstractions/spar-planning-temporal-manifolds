@@ -16,7 +16,7 @@ number, in the probe's raw decades (a - b for a linear readout).
 Probe as in unit_overlap.py: fitted on natural renderings only, one duration held out
 at a time, top-8 duration-average PCs. CIs resample base prompts.
 
-    python analysis/unit_readout.py results/horizon [--replot]
+    python -m pipeline.s3_analysis.by_datatype.unit_readout results/horizon [--replot]
     -> <root>/analysis/unit_readout.{json,png}, unit_readout_cells.json (with readouts;
        --replot redraws from it without refitting)
 """
@@ -33,11 +33,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from threadpoolctl import threadpool_limits
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from probe_dimensionality import positions  # noqa: E402  (same folder)
-from spar_horizon.full_bank import NATURAL_UNITS, UNIT_YEARS  # noqa: E402
-from spar_horizon.probes import r2  # noqa: E402
-from unit_overlap import MODEL, REGIONS, load_run, lodo_predict, pair_shifts  # noqa: E402
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
+from spar_horizon.full_bank import NATURAL_UNITS, UNIT_YEARS
+from spar_horizon.probes import r2
+from pipeline.s3_analysis.by_datatype.unit_overlap import MODEL, REGIONS, load_run, lodo_predict, pair_shifts
 
 K = 8
 WORKERS = 4

@@ -16,7 +16,7 @@ the regime-none prompts at durations with at least MIN_NONE of them (about 30 s 
 1 year), with everything fitted on those prompts: no regime to absorb, and the delay
 effects measured where no delay falls inside the horizon.
 
-    python analysis/confound_robustness.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s3_analysis.by_label.confound_robustness /home/Jared/SPAR/results/horizon
     -> <root>/analysis/confound_robustness.{json,txt}
 """
 
@@ -26,10 +26,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import (FEATURES, base_folds, calibration, cell_matrix, crossfit_readout, dataset,  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import (FEATURES, base_folds, calibration, cell_matrix, crossfit_readout, dataset,
                             fe_regression, horizon_axis)
-from delay_margin import MIN_NONE  # noqa: E402
+from pipeline.s3_analysis.by_label.delay_margin import MIN_NONE
 
 KS = (1, 2, 4, 8, 16)
 SHOWN = ("near first", "regime near", "regime both", "log unit size", "log near delay", "log reward")

@@ -32,7 +32,7 @@ Rows: thinking off on all banks (the fill gives it the most choice variance); th
 on on the old banks (near ceiling on the fill, 19 §7). The other row sets are reported
 alongside.
 
-    python analysis/choice_from_code.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s3_analysis.by_label.choice_from_code /home/Jared/SPAR/results/horizon
     -> <root>/analysis/choice_from_code.{json,txt,png}
 
 Reads saved activations only; runs no model.
@@ -49,12 +49,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import (FEATURES, base_folds, calibration, cell_matrix, crossfit_readout, dataset,  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import (FEATURES, base_folds, calibration, cell_matrix, crossfit_readout, dataset,
                             fe_regression, within)
-from direction_stability import (MODEL, POOLED_BANKS, banks_of, fit_effects, fit_inputs,  # noqa: E402
+from pipeline.s1_data_vectors.analysis.direction_stability import (MODEL, POOLED_BANKS, banks_of, fit_effects, fit_inputs,
                                  steering_directions)
-from pristine_manifold import JUDGED_K, cross_fit  # noqa: E402  (same folder)
+from pipeline.s1_data_vectors.analysis.pristine_manifold import JUDGED_K, cross_fit
 
 CELLS = {"off": [("suffix newline", 16), ("pre-label", 22), ("pre-label", 24)],
          "on": [("suffix newline", 16), ("think close", 22), ("think close", 24), ("pre-label", 22),

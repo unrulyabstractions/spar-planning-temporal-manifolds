@@ -1,10 +1,6 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-from unit_staircase import staircase  # noqa: E402
+from pipeline.s3_analysis.by_datatype.unit_staircase import staircase
 
 
 def renderings():

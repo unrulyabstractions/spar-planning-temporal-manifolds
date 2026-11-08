@@ -1,6 +1,6 @@
 """Figures for the choice4 think-budget experiment (E17, spec 28) and the implied-horizon experiment (E18, spec 29).
 
-    python analysis/choice4_implied_figures.py [results/horizon dir] [output dir]
+    python -m pipeline.s3_analysis.figures.choice4_implied_figures [results/horizon dir] [output dir]
 
 Reads think_budget_summary.json and implied_summary.json (no model run) and writes
 choice4_1..3 and implied_1..3 PNGs.
@@ -13,12 +13,12 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[5]
 RESULTS = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "results" / "horizon"
-OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).resolve().parent.parent / "figures"
+OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).resolve().parents[3] / "figures"
 
 # Okabe-Ito: colourblind-safe. BLUE = the reference/explicit/truth, ORANGE = the condition of interest.
 BLUE, ORANGE, GREY, GREEN = "#0072B2", "#D55E00", "#8a8a8a", "#009E73"

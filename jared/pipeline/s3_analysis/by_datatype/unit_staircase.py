@@ -19,7 +19,7 @@ readout cannot extrapolate past the training range, so the end durations read pu
 inward, which would add negative steps at both ends. Each boundary's own jump is
 reported as well as their mean. CIs resample prompts within durations.
 
-    python analysis/unit_staircase.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s3_analysis.by_datatype.unit_staircase /home/Jared/SPAR/results/horizon
     -> <root>/analysis/unit_staircase.{json,txt,png}
 """
 
@@ -33,11 +33,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import cell_matrix, dataset  # noqa: E402
-from unit_overlap import lodo_predict  # noqa: E402
-from spar_horizon.full_bank import NATURAL_UNITS  # noqa: E402
-from spar_horizon.horizons import Horizon  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import cell_matrix, dataset
+from pipeline.s3_analysis.by_datatype.unit_overlap import lodo_predict
+from spar_horizon.full_bank import NATURAL_UNITS
+from spar_horizon.horizons import Horizon
 
 BOOT = 500
 PLOTTED = ("Qwen3-8B full on suffix newline L16", "Qwen3-8B full on suffix newline L24",

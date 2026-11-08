@@ -36,7 +36,7 @@ same rows it is measured on:
             than on purity.
 Cosines between the four main directions come from fits on all rows.
 
-    python analysis/axis_delay_purity.py /home/Jared/SPAR/results/horizon [--pre-label]
+    python -m pipeline.s3_analysis.by_label.axis_delay_purity /home/Jared/SPAR/results/horizon [--pre-label]
     -> <root>/analysis/axis_delay_purity.{json,txt,png}
 """
 
@@ -51,13 +51,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_sweep import (FEATURES, axis_effects, base_folds, cell_matrix, dataset,  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_sweep import (FEATURES, axis_effects, base_folds, cell_matrix, dataset,
                             fe_coefficients, fe_regression, varying, within)
-from delay_step import (BANKS, CELLS, K_CURVE, MODEL, PRE_LABEL_CELLS, curve_direction, fit_inputs,  # noqa: E402
+from pipeline.s3_analysis.by_label.delay_step import (BANKS, CELLS, K_CURVE, MODEL, PRE_LABEL_CELLS, curve_direction, fit_inputs,
                         project, row_records)
-from pristine_manifold import fit, subset  # noqa: E402  (same folder)
-from spar_horizon.steering import curve_readout  # noqa: E402  (read-only; another agent edits steering.py)
+from pipeline.s1_data_vectors.analysis.pristine_manifold import fit, subset
+from spar_horizon.steering import curve_readout
 
 BOOT = 200
 CANDIDATES = {"(a) old effects": ("effects", "old"), "(b) pooled effects": ("effects", "pooled"),

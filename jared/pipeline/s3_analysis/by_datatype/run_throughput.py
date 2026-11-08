@@ -1,7 +1,7 @@
 """Measured throughput of earlier box runs, and prompt token counts (big_experiment_plan.md, Steps 1-2).
 
 Reads saved results only, runs no model. The tokenizer part needs transformers:
-    ~/miniconda3/envs/mp/bin/python analysis/run_throughput.py ../../results/horizon
+    ~/miniconda3/envs/mp/bin/python -m pipeline.s3_analysis.by_datatype.run_throughput ../../results/horizon
 """
 import glob
 import json
@@ -11,12 +11,11 @@ from pathlib import Path
 import numpy as np
 from transformers import AutoTokenizer
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from spar_horizon.banks import build_records  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.model_io import chat_text  # noqa: E402
+from spar_horizon.banks import build_records
+from spar_horizon.config import Settings
+from spar_horizon.model_io import chat_text
 
-STEERING_INPUTS = Path(__file__).resolve().parents[1] / "steering"
+STEERING_INPUTS = Path(__file__).resolve().parents[3] / "steering"
 
 # GPU type as recorded (queue logs print the device from 2026-10-25 on; earlier runs are named in the docs)
 EXP8_RUNS = {  # run: (GPU, model)

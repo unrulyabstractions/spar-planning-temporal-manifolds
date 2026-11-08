@@ -16,7 +16,7 @@ horizon with the near delay fits "role".
 Regime-none prompts at durations with enough of them, everything fitted on them
 (confound_robustness.none_only); readouts: the top-4 probe and the horizon axis.
 
-    python analysis/delay_position.py /home/Jared/SPAR/results/horizon
+    python -m pipeline.s3_analysis.by_label.delay_position /home/Jared/SPAR/results/horizon
     -> <root>/analysis/delay_position.{json,txt}
 """
 
@@ -26,9 +26,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from confound_robustness import none_only  # noqa: E402
-from confound_sweep import (base_folds, calibration, cell_matrix, crossfit_readout, dataset,  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_robustness import none_only
+from pipeline.s3_analysis.by_label.confound_sweep import (base_folds, calibration, cell_matrix, crossfit_readout, dataset,
                             fe_regression, horizon_axis, within)
 
 CELLS = [("Qwen3-8B", ("full", "units"), "suffix newline", 16), ("Qwen3-8B", ("full", "units"), "suffix newline", 24),

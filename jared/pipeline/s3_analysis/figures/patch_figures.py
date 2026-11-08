@@ -1,6 +1,6 @@
 """Figures of the phrase number-patch experiment (27_spec_phrase_number_patch.md, results in 30_*).
 
-    python analysis/patch_figures.py --patch-dir ../results/horizon/exp16_Qwen3-8B_patch \\
+    python -m pipeline.s3_analysis.figures.patch_figures --patch-dir ../results/horizon/exp16_Qwen3-8B_patch \\
         --phrase-dir ../results/horizon/exp14_Qwen3-8B_phrase
 
 Writes <patch-dir>/figures/{patch_where_and_layer,patch_choice_shift,manifold_curve,manifold_all_pcs}.png. CPU only.
@@ -9,19 +9,15 @@ The manifold figure refits the pooled L16 number fit exactly as patch_prepare.pa
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import matplotlib
 import matplotlib.colors
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 INK, MUTED, GRID = "#1f2328", "#6e7781", "#d8dee4"
 BLUE, ORANGE, GREY = "#1f6feb", "#d1570d", "#8c959f"      # patch, control, no effect
@@ -146,9 +142,9 @@ def figure_choice_shift(patch_dir, out):
 def load_manifold(patch_dir, phrase_dir):
     """(inputs meta, the pooled L16 number fit, every prompt's coordinates on its basis, log10 horizons):
     the fit patch_prepare.patch_main makes."""
-    from scan_prepare import load_phrase_states
-    from steering_prepare import OUT, fit_phrase_cell, phrase_columns, varying_factors
-    from exp8_steering import selected_records
+    from pipeline.s1_data_vectors.analysis.scan_prepare import load_phrase_states
+    from pipeline.s1_data_vectors.analysis.steering_prepare import OUT, fit_phrase_cell, phrase_columns, varying_factors
+    from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
 
     meta = json.loads((Path(patch_dir) / "inputs.json").read_text())
     states, uids = load_phrase_states(Path(phrase_dir), (16,))

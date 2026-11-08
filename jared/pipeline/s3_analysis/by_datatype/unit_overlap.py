@@ -22,7 +22,7 @@ suffix newline, think close (thinking on) and pre-label cells:
 Behavior, per mode: how often a pair's renderings get the same choice, and the near
 log-odds of the other rendering minus the natural one.
 
-    python analysis/unit_overlap.py results/horizon
+    python -m pipeline.s3_analysis.by_datatype.unit_overlap results/horizon
     -> <root>/analysis/unit_overlap.{json,txt,png}
 """
 
@@ -39,12 +39,11 @@ import numpy as np
 from sklearn.decomposition import PCA
 from threadpoolctl import threadpool_limits
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from probe_dimensionality import positions  # noqa: E402  (same folder)
-from spar_horizon.full_bank import NATURAL_UNITS, natural_horizon  # noqa: E402
-from spar_horizon.probes import fit_ridge, horizon_within_unit_r2, r2, within_unit_r2  # noqa: E402
-from spar_horizon.runs import REGIONS  # noqa: E402
-from spar_horizon.steering import bootstrap_mean  # noqa: E402
+from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
+from spar_horizon.full_bank import NATURAL_UNITS, natural_horizon
+from spar_horizon.probes import fit_ridge, horizon_within_unit_r2, r2, within_unit_r2
+from spar_horizon.runs import REGIONS
+from spar_horizon.steering import bootstrap_mean
 
 MODEL = "Qwen3-8B"
 KS = (1, 2, 4, 8)

@@ -1,8 +1,8 @@
 """Cost model for the "first big experiment" (big_experiment_plan.md).
 
 Pure arithmetic, no model. Every rate below was measured on earlier box runs by
-analysis/run_throughput.py; prices are market assumptions. Change a constant and
-rerun:  python analysis/big_experiment_costs.py
+pipeline/s3_analysis/by_datatype/run_throughput.py; prices are market assumptions. Change a constant and
+rerun:  python -m pipeline.s3_analysis.by_datatype.big_experiment_costs
 """
 
 # --- measured (Qwen3-8B, HF transformers + forward hooks, bf16) ------------------------

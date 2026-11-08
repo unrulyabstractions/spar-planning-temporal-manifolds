@@ -6,7 +6,7 @@ Reads only saved results: the thinking-on E0 run (behavior and activations), the
 three E8 runs, the run-2 and run-3 inputs, and the 8B tokenizer (to rebuild the
 patching pairs exactly as the box did, same seed). No model.
 
-    python analysis/causal_walkthrough.py results/horizon
+    python -m pipeline.s3_analysis.figures.causal_walkthrough results/horizon
     -> jared/figures/causal_*.png, <root>/analysis/causal_walkthrough.json and .txt
 """
 
@@ -22,15 +22,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from transformers import AutoTokenizer
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from horizon_shape import cell_data  # noqa: E402  (same folder)
-from steering_analysis import cv_r2, plot_patching, saved_decision  # noqa: E402  (same folder)
-from spar_horizon import steering as S  # noqa: E402
-from spar_horizon.banks import build_records  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.full_bank import HORIZONS, regime  # noqa: E402
+from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
+from pipeline.s2_steering.analysis.steering_analysis import cv_r2, plot_patching, saved_decision
+from spar_horizon import steering as S
+from spar_horizon.banks import build_records
+from spar_horizon.config import Settings
+from spar_horizon.full_bank import HORIZONS, regime
 
-JARED = Path(__file__).resolve().parent.parent
+JARED = Path(__file__).resolve().parents[3]
 FIGURES = JARED / "figures"
 RUN3_INPUTS = JARED / "steering" / "inputs_Qwen3-8B_decision_L24.npz"
 RUN2_INPUTS = JARED / "steering" / "inputs_Qwen3-8B_answer_slot.npz"
