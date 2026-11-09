@@ -39,24 +39,41 @@ phrase positions, not that the choice is computed there.
 
 P0 (rerun reproduces the original label) passes: 103/105, 73/74. C2 (late-position bias disappears after closing) passes.
 C1 fails narrowly on accuracy (choice4 exact 84% vs 85% needed; choice8 78%) and choice8 net fixes (7 vs 7.05 needed).
-C3 fails: looping traces rarely close (20/57, 11/35). Extending to 8,192 closed none of the 37 and 28 that stayed open
+C3 fails: the bar was at most 30% of looping traces closing, and 20/57 = 35% (choice8 11/35 = 31%) close, above it;
+looping traces still close far less often than non-looping ones (48/48, 35/39). Extending to 8,192 closed none of the 37 and 28 that stayed open
 (25 and 27 attempted). So the forced-close errors are partly a budget problem (the closed traces become accurate and lose the
-late-slot pick bias: choice4 excess-late +0.33 -> +0.03), and partly loops that more tokens do not fix.
+late-slot pick bias). The excess-late comparison is between subsets: the 105 forced traces have +0.33, the 68 that
+closed later have +0.03, which is not a before/after on the same traces. On the same 68 prompts the original forced labels
+had +0.26 and the continued labels +0.03 (`position_original_same_prompts`), so the drop holds within the subset; the 37
+that stayed open are not in either 68 figure. Excess-late is a rate difference on 68 prompts with no interval, so
+the size of the drop is approximate. Errors concentrating in the forced closes (4 of 141 natural, 40 of 105 forced) is confounded with horizon and looping:
+forced traces can differ from natural closes in horizon and in looping (57 of 105 loop), so the table does not isolate the cut-off as the cause. The errors are also partly loops that more tokens do not fix.
 
 ## 29: implied horizons (288 rows: M1 144, M2 72, M3 48, M4 24; readout probes trained on E0 think-on activations)
 
 - C0 (reference valid) **fails**: explicit-twin accuracy 0.875 (near), 0.94 (both), under the threshold. Treat everything
   below as provisional.
 - Behaviour, implied vs explicit twin (accuracy, near/both): A 62/88 vs 81/94, B 56/88 vs 94/88, C 94/81 vs 88/100.
-  Only family C tracks (C1 pass for C, fail for A and B). Paired McNemar p = 0.34, 0.11, 0.69: the implied-vs-explicit gap
-  is not significant at this n.
+  Each cell is 16 rows. C1 (the rule-based criterion) passes for C and fails for A and B. Paired McNemar
+  p = 0.34 (A), 0.11 (B), 0.69 (C), 32 pairs each, with C0 failed: none of the gaps is significant, so the data do not
+  show that A or B differ from their twins, nor that C does not; B (p = 0.11, only-implied-right 2 vs only-explicit-right 8)
+  is the closest to a difference. Nothing here supports "only C tracks" as a finding.
 - Conversion (what horizon the trace writes): A 40/40 and C 40/40 state a duration (median error 0.04 and 0.001 decades);
-  B states one in 35/40 and 69% fall inside the target interval. Misconversions that flip the regime: A 8, B 5, C 0.
-- Mediation: of 7 regime-flipping misconversions, the choice follows the stated regime in 1 (14%). C4 underpowered.
+  B states one in 35/40 and 69% fall inside the target interval. Misconversions that flip the regime: A 8, B 5, C 0 (13 in all; the bars in
+  `implied_2_conversion.png` count these).
+- Mediation: of 7 regime-flipping misconversions, the choice follows the stated regime in 1 (14%; Wilson 95% interval
+  3-51%). Underpowered (7 against the criterion's minimum of 10): no verdict. Why 7 and not 13: the 13 count compares the stated
+  regime with `base_regime` over all 40 implied rows per family, including the none-regime rows (M3) and stated
+  regimes of "none". `mediation()` in `implied_summary.py` only takes implied rows whose true regime is near or both and whose
+  stated regime is the other of near/both, because only these have a rational option to follow. The summary does not
+  store how the other 6 split between the two exclusions.
 - Null twins pick near 12% / 25% / 50% (A/B/C), so the no-horizon default is not clean either.
-- Readout (probe MAE in decades): implied is worse than explicit at the suffix (e.g. B 0.48 vs 0.23, A 0.90 vs 0.39) but
-  rank-correlation stays high (rho 0.7-0.9). At think@1 the implied horizon is weakly present (B rho 0.24-0.53).
-  C3 verdict per cell is in the printout; I have not turned it into a single claim.
+- Readout (probe MAE in decades): implied is worse than explicit at the suffix (e.g. B 0.48 vs 0.23, A 0.90 vs 0.39) and
+  rank-correlation is mixed, not uniformly high. Implied rho by site at L16 (A/B/C): suffix_1 0.88/0.90/0.72 (explicit
+  0.96/0.97/0.87), prelabel 0.85/0.74/0.68 (explicit 0.85/0.89/0.60), think@1 0.66/0.24/0.41 (explicit 0.64/0.66/0.52);
+  n is 15-40 per cell (`implied_3_readout.png`). The implied horizon is weakly present at think@1 (B rho 0.24, "absent").
+  C3 verdict per cell is in the printout (21 cells: present 5, absent 1, rest intermediate); I have not turned it into a
+  single claim.
 - M3 (none regime) ran although decision 4 dropped it from the criteria; 89% of its traces were force-closed.
 
 ## Process notes
@@ -70,7 +87,6 @@ late-slot pick bias: choice4 excess-late +0.33 -> +0.03), and partly loops that 
 
 - Promote C0 failure of 29 into a decision: rewrite the explicit twins or relax the reference check?
 - Better direction for 27: fit from donor differences at the number tokens (the donor patch works, the pooled manifold does not).
-- Uncommitted: all of 27/28/29 code, tests and this note; `infra/vast.sh` duration filter.
 
 ## Addendum (2026-11-08): what the manifold figures show, and what 27 adds to E14
 

@@ -1,13 +1,15 @@
 """Figures for the choice4 think-budget experiment (E17, spec 28) and the implied-horizon experiment (E18, spec 29).
 
-    python -m pipeline.s3_analysis.figures.choice4_implied_figures [results/horizon dir] [output dir]
+    python -m pipeline.s3_analysis.figures.choice4_implied_figures RESULTS_HORIZON_DIR [OUTPUT_DIR]
 
-Reads think_budget_summary.json and implied_summary.json (no model run) and writes
-choice4_1..3 and implied_1..3 PNGs.
+Reads think_budget_summary.json and implied_summary.json under RESULTS_HORIZON_DIR (no model run) and writes
+choice4_1..3 and implied_1..3 PNGs. Every proportion bar carries a Wilson 95% interval; every n and every
+title number comes from the loaded JSON.
 """
 
 import json
 import sys
+from math import sqrt
 from pathlib import Path
 
 import matplotlib
@@ -15,160 +17,234 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.patches import Patch
 
-ROOT = Path(__file__).resolve().parents[5]
-RESULTS = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "results" / "horizon"
-OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).resolve().parents[3] / "figures"
+DEFAULT_OUT = Path(__file__).resolve().parents[3] / "figures"
 
 # Okabe-Ito: colourblind-safe. BLUE = the reference/explicit/truth, ORANGE = the condition of interest.
 BLUE, ORANGE, GREY, GREEN = "#0072B2", "#D55E00", "#8a8a8a", "#009E73"
-plt.rcParams.update({"axes.spines.top": False, "axes.spines.right": False, "font.size": 10,
-                     "axes.titlesize": 11, "axes.titleweight": "bold", "figure.dpi": 130})
+PROVISIONAL = "C0 failed, provisional"
+FAMILIES = ["A", "B", "C"]
+FAMILY_NAMES = {"A": "A: from stated dates", "B": "B: world knowledge", "C": "C: event + duration elsewhere"}
+FIRST_CAP_TOKENS = 3072
+SECOND_CAP_TOKENS = 8192
 
 
-def save(fig, name):
-    OUT.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUT / name, bbox_inches="tight", facecolor="white")
+def wilson_interval(k, n, z=1.96):
+    """Wilson score interval for k successes in n trials, as fractions in [0, 1]."""
+    if n == 0:
+        return 0.0, 1.0
+    p = k / n
+    denom = 1 + z * z / n
+    centre = p + z * z / (2 * n)
+    half = z * sqrt(p * (1 - p) / n + z * z / (4 * n * n))
+    return max(0.0, (centre - half) / denom), min(1.0, (centre + half) / denom)
+
+
+def significance_text(p, alpha=0.05):
+    return f"p={p:.2f} ({'n.s.' if p >= alpha else 'p<0.05'})"
+
+
+def percent_bars(ax, positions, counts, colours, width=0.55, horizontal=False, label_fmt="{k}/{n}"):
+    """Draw bars of 100*k/n with Wilson 95% error bars and a k/n label. counts = [(k, n), ...]."""
+    values = np.array([100 * k / n for k, n in counts])
+    intervals = [wilson_interval(k, n) for k, n in counts]
+    err = np.clip([[values[i] - 100 * lo for i, (lo, _) in enumerate(intervals)],
+                   [100 * hi - values[i] for i, (_, hi) in enumerate(intervals)]], 0, None)
+    if horizontal:
+        ax.barh(positions, values, color=colours, height=width, xerr=err, error_kw={"lw": 1, "capsize": 2})
+        for pos, (k, n), (_, hi) in zip(positions, counts, intervals):
+            ax.text(100 * hi + 1.5, pos, label_fmt.format(k=k, n=n), va="center", fontsize=9)
+    else:
+        ax.bar(positions, values, color=colours, width=width, yerr=err, error_kw={"lw": 1, "capsize": 2})
+        for pos, (k, n), (_, hi) in zip(positions, counts, intervals):
+            ax.text(pos, 100 * hi + 1.5, label_fmt.format(k=k, n=n), ha="center", fontsize=9)
+
+
+def proportion_bars_with_rates(ax, rates, n, offset, colour, label):
+    """Bars for per-slot rates (share of n prompts) with Wilson 95% error bars."""
+    x = np.arange(len(rates))
+    intervals = [wilson_interval(round(r * n), n) for r in rates]
+    err = np.clip([[r - lo for r, (lo, _) in zip(rates, intervals)], [hi - r for r, (_, hi) in zip(rates, intervals)]],
+                  0, None)
+    ax.bar(x + offset, rates, 0.4, color=colour, label=label, yerr=err, error_kw={"lw": 0.8, "capsize": 1.5})
+
+
+def apply_style():
+    plt.rcParams.update({"axes.spines.top": False, "axes.spines.right": False, "font.size": 10,
+                         "axes.titlesize": 11, "axes.titleweight": "bold", "figure.dpi": 130})
+
+
+def save(fig, out_dir, name):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_dir / name, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print("wrote", OUT / name)
+    print("wrote", out_dir / name)
 
 
-def pct(d):
-    return 100 * d["exact"] / d["n"]
+def acc_counts(accuracy):
+    return accuracy["exact"], accuracy["n"]
 
 
 # ---------------------------------------------------------------- choice4
-c4 = json.load(open(RESULTS / "exp17_Qwen3-8B_think_budget" / "think_budget_summary.json"))["choice4"]
-ref, u2 = c4["reference"], c4["unit2"]
+def figure_errors_by_close(c4, out_dir):
+    ref = c4["reference"]
+    groups = [("natural close", ref["natural"]["accuracy"], BLUE),
+              (f"forced close\n(hit {FIRST_CAP_TOKENS:,} cap)", ref["forced"]["accuracy"], ORANGE)]
+    fig, ax = plt.subplots(1, 2, figsize=(9.5, 3.8))
+    percent_bars(ax[0], range(2), [acc_counts(g[1]) for g in groups], [g[2] for g in groups])
+    ax[0].set_xticks(range(2), [g[0] for g in groups])
+    ax[0].set_ylim(0, 115)
+    ax[0].set_ylabel("exact accuracy (%), Wilson 95% interval")
+    ax[0].set_title("choice4: errors concentrate in forced closes\n(confounded with horizon and looping)", fontsize=10)
+    errors = [g[1]["n"] - g[1]["exact"] for g in groups]
+    ax[1].bar([0, 1], errors, color=[BLUE, ORANGE], width=0.55)
+    for i, e in enumerate(errors):
+        ax[1].text(i, e + 0.8, str(e), ha="center")
+    ax[1].set_xticks(range(2), [g[0] for g in groups])
+    ax[1].set_ylabel("number of errors")
+    ax[1].set_title(f"{sum(errors)} errors in total (n={sum(g[1]['n'] for g in groups)} traces)", fontsize=10)
+    save(fig, out_dir, "choice4_1_errors_by_close.png")
 
-# 1. Where the errors are: natural vs forced close.
-fig, ax = plt.subplots(1, 2, figsize=(9, 3.6))
-groups = [("natural close", ref["natural"]["accuracy"], BLUE), ("forced close\n(hit 3,072 cap)", ref["forced"]["accuracy"], ORANGE)]
-for i, (label, acc, colour) in enumerate(groups):
-    ax[0].bar(i, pct(acc), color=colour, width=0.55)
-    ax[0].text(i, pct(acc) + 1.5, f"{acc['exact']}/{acc['n']}", ha="center")
-ax[0].set_xticks(range(2), [g[0] for g in groups])
-ax[0].set_ylim(0, 110)
-ax[0].set_ylabel("exact accuracy (%)")
-ax[0].set_title("choice4: errors sit in the forced closes")
-errors = [acc["n"] - acc["exact"] for _, acc, _ in groups]
-ax[1].bar([0, 1], errors, color=[BLUE, ORANGE], width=0.55)
-for i, e in enumerate(errors):
-    ax[1].text(i, e + 0.8, str(e), ha="center")
-ax[1].set_xticks(range(2), [g[0] for g in groups])
-ax[1].set_ylabel("number of errors")
-ax[1].set_title("44 errors in total")
-save(fig, "choice4_1_errors_by_close.png")
 
-# 2. Position bias: pick rate vs truth rate per option slot.
-fig, axes = plt.subplots(1, 3, figsize=(11, 3.4), sharey=True)
-panels = [("natural close (n=141)", ref["natural"]["position"]),
-          ("forced close (n=105)", ref["forced"]["position"]),
-          ("continued, closed (n=68)", u2["position_closed"])]
-x = np.arange(4)
-for a, (title, pos) in zip(axes, panels):
-    a.bar(x - 0.2, pos["truth_rate"], 0.4, color=BLUE, label="truth rate")
-    a.bar(x + 0.2, pos["pick_rate"], 0.4, color=ORANGE, label="model pick rate")
-    a.set_xticks(x, list("abcd"))
-    a.set_title(f"{title}\nexcess-late {pos['excess_late']:+.2f}", fontsize=10)
-    a.set_xlabel("option slot")
-axes[0].set_ylabel("share of prompts")
-axes[0].legend(frameon=False, loc="upper left")
-save(fig, "choice4_2_position_bias.png")
+def figure_position_bias(c4, out_dir):
+    ref, u2 = c4["reference"], c4["unit2"]
+    panels = [("natural close", ref["natural"]["position"]),
+              ("forced close", ref["forced"]["position"]),
+              ("closed on continuing", u2["position_closed"]),
+              ("same traces, forced label", u2["position_original_same_prompts"])]
+    fig, axes = plt.subplots(1, len(panels), figsize=(15, 3.8), sharey=True)
+    for a, (title, pos) in zip(axes, panels):
+        proportion_bars_with_rates(a, pos["truth_rate"], pos["n"], -0.2, BLUE, "truth rate")
+        proportion_bars_with_rates(a, pos["pick_rate"], pos["n"], 0.2, ORANGE, "model pick rate")
+        a.set_xticks(np.arange(4), list("abcd"))
+        a.set_title(f"{title}\n(n={pos['n']}) excess-late {pos['excess_late']:+.2f}", fontsize=10)
+        a.set_xlabel("option slot")
+    axes[0].set_ylabel("share of prompts (Wilson 95%)")
+    axes[0].legend(frameon=False, loc="upper left")
+    save(fig, out_dir, "choice4_2_position_bias.png")
 
-# 3. Effect of more thinking room.
-fig, ax = plt.subplots(1, 3, figsize=(12, 3.8), gridspec_kw={"width_ratios": [1.1, 1, 1.1]})
-loop, noloop = u2["closed_by_loop"]["loop"], u2["closed_by_loop"]["no loop"]
-reg = u2["closed_by_regime"]
-labels = ["all", "no loop", "loop", "regime both", "regime near"]
-vals = [u2["closed"], noloop, loop, reg["both"], reg["near"]]
-ax[0].barh(range(5), [100 * k / n for k, n in vals], color=[GREY, GREEN, ORANGE, BLUE, BLUE], height=0.6)
-for i, (k, n) in enumerate(vals):
-    ax[0].text(100 * k / n + 1.5, i, f"{k}/{n}", va="center")
-ax[0].set_yticks(range(5), labels)
-ax[0].invert_yaxis()
-ax[0].set_xlim(0, 120)
-ax[0].set_xlabel("closed within +3,072 tokens (%)")
-ax[0].set_title("Do forced traces finish?")
 
-before, after = u2["original_accuracy_closed"], u2["accuracy_closed"]
-ax[1].bar([0, 1], [pct(before), pct(after)], color=[ORANGE, BLUE], width=0.55)
-for i, d in enumerate([before, after]):
-    ax[1].text(i, pct(d) + 1.5, f"{d['exact']}/{d['n']}", ha="center")
-ax[1].set_xticks([0, 1], ["forced label", "after continuing"])
-ax[1].set_ylim(0, 110)
-ax[1].set_ylabel("exact accuracy (%)")
-ax[1].set_title(f"same 68 prompts\nwrong→right {u2['wrong_to_right']}, right→wrong {u2['right_to_wrong']}")
+def figure_more_room(c4, out_dir):
+    ref, u2, u3 = c4["reference"], c4["unit2"], c4["unit3"]
+    closed_k, closed_n = u2["closed"]
+    loop, noloop = u2["closed_by_loop"]["loop"], u2["closed_by_loop"]["no loop"]
+    regime = u2["closed_by_regime"]
+    labels = ["all", "no loop", "loop", "regime both", "regime near"]
+    counts = [u2["closed"], noloop, loop, regime["both"], regime["near"]]
+    fig, ax = plt.subplots(1, 3, figsize=(13, 3.9), gridspec_kw={"width_ratios": [1.2, 1, 1.1]})
+    percent_bars(ax[0], range(5), counts, [GREY, GREEN, ORANGE, BLUE, BLUE], width=0.6, horizontal=True)
+    ax[0].set_yticks(range(5), labels)
+    ax[0].invert_yaxis()
+    ax[0].set_xlim(0, 135)
+    ax[0].set_xticks([0, 20, 40, 60, 80, 100])
+    ax[0].set_xlabel(f"closed within +{FIRST_CAP_TOKENS:,} tokens (%, Wilson 95%)")
+    ax[0].set_title(f"Do forced traces finish? (n={u2['n']})", fontsize=10)
 
-still = u2["still_open_accuracy"]
-ax[2].bar([0, 1, 2], [pct(after), pct(still), pct(ref["natural"]["accuracy"])], color=[BLUE, ORANGE, GREY], width=0.55)
-for i, d in enumerate([after, still, ref["natural"]["accuracy"]]):
-    ax[2].text(i, pct(d) + 1.5, f"{d['exact']}/{d['n']}", ha="center")
-ax[2].set_xticks([0, 1, 2], ["closed\nlater", "still open\n(forced again)", "natural\nclose"])
-ax[2].set_ylim(0, 110)
-ax[2].set_title("Traces that never close stay bad\n(8,192 tokens closed 0 of 25)", fontsize=10)
-save(fig, "choice4_3_more_room.png")
+    before, after = u2["original_accuracy_closed"], u2["accuracy_closed"]
+    percent_bars(ax[1], [0, 1], [acc_counts(before), acc_counts(after)], [ORANGE, BLUE])
+    ax[1].set_xticks([0, 1], ["forced label", "after continuing"])
+    ax[1].set_ylim(0, 115)
+    ax[1].set_ylabel("exact accuracy (%, Wilson 95%)")
+    ax[1].set_title(f"same {closed_k} prompts (of {closed_n})\nwrong→right {u2['wrong_to_right']}, "
+                    f"right→wrong {u2['right_to_wrong']}", fontsize=10)
+
+    still, natural = u2["still_open_accuracy"], ref["natural"]["accuracy"]
+    percent_bars(ax[2], [0, 1, 2], [acc_counts(after), acc_counts(still), acc_counts(natural)], [BLUE, ORANGE, GREY])
+    ax[2].set_xticks([0, 1, 2], ["closed\nlater", "still open\n(forced again)", "natural\nclose"])
+    ax[2].set_ylim(0, 115)
+    ax[2].set_title(f"Traces still open are less accurate\n(+{SECOND_CAP_TOKENS:,} tokens closed {u3['closed_in_unit3']} "
+                    f"of {u3['attempted']} attempted)", fontsize=10)
+    save(fig, out_dir, "choice4_3_more_room.png")
+
 
 # ---------------------------------------------------------------- implied
-im = json.load(open(RESULTS / "exp18_Qwen3-8B_think-on_implied" / "implied_summary.json"))
-beh, conv = im["behaviour"], im["conversion"]
-fams = ["A", "B", "C"]
-fam_names = {"A": "A: from stated dates", "B": "B: world knowledge", "C": "C: event + duration elsewhere"}
-
-
-def acc(fam, arm):
-    near, both = beh[fam][f"{arm} near"], beh[fam][f"{arm} both"]
-    return 100 * (near["correct"] + both["correct"]) / (near["n"] + both["n"])
-
-
-# 1. Implied vs explicit twin accuracy, by family and regime.
-fig, axes = plt.subplots(1, 3, figsize=(11, 3.5), sharey=True)
-for a, fam in zip(axes, fams):
-    cells = [("near", "near"), ("both", "both")]
+def figure_implied_behaviour(im, out_dir):
+    beh = im["behaviour"]
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4.0), sharey=True)
     x = np.arange(2)
-    for offset, arm, colour in [(-0.2, "explicit", BLUE), (0.2, "implied", ORANGE)]:
-        vals = [100 * beh[fam][f"{arm} {r}"]["correct"] / beh[fam][f"{arm} {r}"]["n"] for r, _ in cells]
-        a.bar(x + offset, vals, 0.4, color=colour, label=arm + (" twin" if arm == "explicit" else ""))
-        for xi, v in zip(x + offset, vals):
-            a.text(xi, v + 1.5, f"{v:.0f}", ha="center", fontsize=9)
-    mc = beh[fam]["mcnemar"]
-    a.set_xticks(x, ["near", "both"])
-    a.set_ylim(0, 112)
-    a.set_xlabel("true regime")
-    a.set_title(f"{fam_names[fam]}\nMcNemar p={mc['p']:.2f} (n.s.)", fontsize=10)
-axes[0].set_ylabel("accuracy (%), 16 rows per bar")
-fig.legend(*axes[0].get_legend_handles_labels(), frameon=False, loc="lower center", ncol=2, bbox_to_anchor=(0.5, -0.14))
-save(fig, "implied_1_behaviour.png")
+    for a, family in zip(axes, FAMILIES):
+        for offset, arm, colour in [(-0.2, "explicit", BLUE), (0.2, "implied", ORANGE)]:
+            cells = [beh[family][f"{arm} {regime}"] for regime in ("near", "both")]
+            percent_bars(a, x + offset, [(c["correct"], c["n"]) for c in cells], [colour, colour], width=0.4,
+                         label_fmt="{k}/{n}")
+        a.set_xticks(x, ["near", "both"])
+        a.set_ylim(0, 118)
+        a.set_xlabel("true regime")
+        a.set_title(f"{FAMILY_NAMES[family]}\nMcNemar {significance_text(beh[family]['mcnemar']['p'])}, "
+                    f"{beh[family]['mcnemar']['pairs']} pairs", fontsize=10)
+    axes[0].set_ylabel("accuracy (%, Wilson 95%)")
+    handles = [Patch(color=BLUE, label="explicit twin"), Patch(color=ORANGE, label="implied")]
+    fig.legend(handles=handles, frameon=False, loc="lower center", ncol=2, bbox_to_anchor=(0.5, -0.12))
+    fig.suptitle(f"Implied vs explicit twin behaviour ({PROVISIONAL})", y=1.04, fontsize=11, fontweight="bold")
+    save(fig, out_dir, "implied_1_behaviour.png")
 
-# 2. Conversion: does the trace state a duration, and does it flip the regime?
-fig, ax = plt.subplots(1, 2, figsize=(9, 3.5))
-x = np.arange(3)
-ax[0].bar(x, [100 * conv[f]["converted_share"] for f in fams], color=BLUE, width=0.55)
-for xi, f in zip(x, fams):
-    ax[0].text(xi, 100 * conv[f]["converted_share"] + 1.5, f"{conv[f]['converted']}/{conv[f]['n']}", ha="center")
-ax[0].set_xticks(x, fams)
-ax[0].set_ylim(0, 112)
-ax[0].set_ylabel("% of implied traces")
-ax[0].set_title("Trace states a horizon duration")
-ax[1].bar(x, [conv[f]["flips_regime"] for f in fams], color=ORANGE, width=0.55)
-for xi, f in zip(x, fams):
-    ax[1].text(xi, conv[f]["flips_regime"] + 0.15, str(conv[f]["flips_regime"]), ha="center")
-ax[1].set_xticks(x, fams)
-ax[1].set_ylabel("count of 40")
-ax[1].set_title(f"Stated horizon in the wrong regime\n(mediation test: choice followed it in {im['mediation']['follows_stated']} of {im['mediation']['flips']} analysed)", fontsize=10)
-save(fig, "implied_2_conversion.png")
 
-# 3. Probe readout: Spearman rho, implied vs explicit, per site and family.
-sites = ["think@1 L16", "prelabel L16", "suffix_1 L16"]
-fig, axes = plt.subplots(1, 3, figsize=(11, 3.5), sharey=True)
-for a, site in zip(axes, sites):
-    x = np.arange(3)
-    for offset, arm, colour in [(-0.2, "explicit", BLUE), (0.2, "implied", ORANGE)]:
-        a.bar(x + offset, [im["readout"][f"{site} {f}"][arm]["rho"] for f in fams], 0.4, color=colour, label=arm)
-    a.set_xticks(x, fams)
-    a.set_ylim(0, 1.05)
-    a.set_title(site)
-axes[0].set_ylabel("Spearman ρ, probe vs true log-duration")
-axes[0].legend(frameon=False, loc="upper left")
-fig.suptitle("Is the horizon readable from activations? (ridge probe trained on explicit E0)", y=1.04, fontsize=11)
-save(fig, "implied_3_readout.png")
+def figure_implied_conversion(im, out_dir):
+    conv, med = im["conversion"], im["mediation"]
+    x = np.arange(len(FAMILIES))
+    total_flips = sum(conv[f]["flips_regime"] for f in FAMILIES)
+    follow_lo, follow_hi = wilson_interval(med["follows_stated"], med["flips"])
+    fig, ax = plt.subplots(1, 2, figsize=(10, 4.2))
+    percent_bars(ax[0], x, [(conv[f]["converted"], conv[f]["n"]) for f in FAMILIES], [BLUE] * 3)
+    ax[0].set_xticks(x, FAMILIES)
+    ax[0].set_ylim(0, 118)
+    ax[0].set_ylabel("% of implied traces (Wilson 95%)")
+    ax[0].set_title("Trace states a horizon duration", fontsize=10)
+    percent_bars(ax[1], x, [(conv[f]["flips_regime"], conv[f]["n"]) for f in FAMILIES], [ORANGE] * 3)
+    ax[1].set_xticks(x, FAMILIES)
+    ax[1].set_ylim(0, 118)
+    ax[1].set_ylabel("% of implied traces (Wilson 95%)")
+    ax[1].set_title(f"Stated horizon in the wrong regime ({total_flips} traces)\n"
+                    f"mediation on {med['flips']}: choice followed it in {med['follows_stated']}\n"
+                    f"(95% CI {100 * follow_lo:.0f}-{100 * follow_hi:.0f}%)", fontsize=9)
+    fig.text(0.5, -0.04, "Families: " + "; ".join(FAMILY_NAMES.values()), ha="center", fontsize=8)
+    fig.suptitle(f"Implied horizons: conversion and mediation ({PROVISIONAL})", y=1.03, fontsize=11, fontweight="bold")
+    save(fig, out_dir, "implied_2_conversion.png")
+
+
+def figure_implied_readout(im, out_dir):
+    readout = im["readout"]
+    sites = ["think@1 L16", "prelabel L16", "suffix_1 L16"]
+    fig, axes = plt.subplots(1, 3, figsize=(12, 4.0), sharey=True)
+    x = np.arange(len(FAMILIES))
+    for a, site in zip(axes, sites):
+        for offset, arm, colour in [(-0.2, "explicit", BLUE), (0.2, "implied", ORANGE)]:
+            a.bar(x + offset, [readout[f"{site} {f}"][arm]["rho"] for f in FAMILIES], 0.4, color=colour, label=arm)
+        n_labels = [f"{f}\nn={readout[f'{site} {f}']['explicit']['n']}/{readout[f'{site} {f}']['implied']['n']}"
+                    for f in FAMILIES]
+        a.set_xticks(x, n_labels)
+        a.set_ylim(0, 1.05)
+        a.set_title(site, fontsize=10)
+    axes[0].set_ylabel("Spearman ρ, probe vs true log-duration")
+    axes[0].legend(frameon=False, loc="upper right")
+    fig.text(0.5, -0.09, "n = rows per bar (explicit/implied); no interval, rho is not a proportion. "
+             "Families: " + "; ".join(FAMILY_NAMES.values()), ha="center", fontsize=8)
+    fig.suptitle(f"Is the horizon readable from activations? Ridge probe trained on explicit E0 ({PROVISIONAL})",
+                 y=1.04, fontsize=11, fontweight="bold")
+    save(fig, out_dir, "implied_3_readout.png")
+
+
+def make_all_figures(results_root, out_dir):
+    apply_style()
+    c4 = json.load(open(results_root / "exp17_Qwen3-8B_think_budget" / "think_budget_summary.json"))["choice4"]
+    im = json.load(open(results_root / "exp18_Qwen3-8B_think-on_implied" / "implied_summary.json"))
+    figure_errors_by_close(c4, out_dir)
+    figure_position_bias(c4, out_dir)
+    figure_more_room(c4, out_dir)
+    figure_implied_behaviour(im, out_dir)
+    figure_implied_conversion(im, out_dir)
+    figure_implied_readout(im, out_dir)
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv:
+        sys.exit(__doc__)
+    results_root = Path(argv[0])
+    out_dir = Path(argv[1]) if len(argv) > 1 else DEFAULT_OUT
+    make_all_figures(results_root, out_dir)
+
+
+if __name__ == "__main__":
+    main()
