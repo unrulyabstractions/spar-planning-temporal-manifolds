@@ -47,24 +47,24 @@ or post hoc and gates nothing.
 
 ## Cross-stage dependencies
 
-The stages are not perfectly layered. These imports go against the data flow:
+Shared helpers that several stages used now live in `../spar_horizon/` (`e0_runs.py` run
+folders and loaders, `durations.py` duration parsing, plus a few functions in `probes.py`,
+`banks.py`, `steering.py`). Stage 1 no longer imports stage 2, and stage 2 no longer imports
+stage 3. Three imports still run against the data flow, all stage 1 into stage 3:
 
-- `s1 steering_prepare` imports `s2 exp8_steering`; stage 2 runners import `s1` builders back
-  (`common`, `exp0_choice`, `exp14_phrase_states`, `horizon_shape`, `pristine_manifold`).
-- `s1` analysis scripts import stage 3 helpers (`unit_overlap`, `written_unit`, `confound_sweep`,
-  `exp14_analysis`, `regime_comparison`).
-- `s2 patch_summary`, `implied_summary`, `exp13_suffix_steer` import stage 3 modules
-  (`exp14_analysis`, `written_unit`); a stage 3 rename breaks them.
-- `s1 queue.sh`, `queue_14b*.sh` mostly launch stage 2 work (E10, E8 decision split).
-- `s2 docs/18_results_overnight.md` is a stage 3 style confound sweep.
+- `pristine_confounds.py` and `direction_stability.py` use helpers from `by_label/confound_sweep`
+  (eleven stage 3 scripts use the same ones).
+- `exp14_geometry.py` imports `by_label/exp14_analysis`.
 
-Fixing these means moving a few functions into `spar_horizon/`; not done here.
+Fixing them means moving those three scripts into stage 3, or the `confound_sweep` helpers into
+`spar_horizon/`. Also: `queue.sh` and `queue_14b*.sh` (stage 1) mostly launch stage 2 work, and
+`s2 docs/18_results_overnight.md` is a stage 3 style confound sweep.
 
 ## Open points
 
 - "Datatype" is read as bank plus rendered unit word. Every current bank writes the horizon in
   digits, so a digits/written split exists only in the model's traces (`written_unit.py`).
-- `split.py` reads `answers.json` only; older stage 3 scripts keep their own loaders.
+- `split.py` reads `answers.json` only. Run-folder naming is shared (`spar_horizon/e0_runs.py`); two activation/record loaders stay separate on purpose (see their comments).
 - Older docs and queue headers still cite bare script names (`exp8_steering.py`) without the stage path.
 - Nothing was rerun in the reorganisation: paths and imports changed, model-backed runners were
   compile-checked only.
