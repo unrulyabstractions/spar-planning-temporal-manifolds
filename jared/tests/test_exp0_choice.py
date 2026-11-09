@@ -3,21 +3,18 @@ region and the number-token mean on a tiny random-weight Qwen3, chunk write / sk
 and assembling from partial chunks. No model weights."""
 
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import exp0_choice as choice  # noqa: E402
-from spar_horizon import extract as extract_module  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.extract import extract, prompt_side_positions  # noqa: E402
-from spar_horizon.full_bank import build_choice_prompts  # noqa: E402
-from spar_horizon.model_io import chat_text  # noqa: E402
-from test_exp14_states import MODEL, tiny, tok  # noqa: E402,F401
+from pipeline.s1_data_vectors.experiments import exp0_choice as choice
+from spar_horizon import extract as extract_module
+from spar_horizon.config import Settings
+from spar_horizon.extract import extract, prompt_side_positions
+from spar_horizon.full_bank import build_choice_prompts
+from spar_horizon.model_io import chat_text
+from test_exp14_states import MODEL, tiny, tok  # noqa: F401
 
 CHUNK = 3
 

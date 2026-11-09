@@ -1,17 +1,14 @@
 """exp8's Runner.score_many on a tiny random Qwen3 (no download): the shared-prefix
 path for last-position cells must equal one full pass per edit."""
 
-import sys
-from pathlib import Path
 
 import numpy as np
 import torch
 from transformers import Qwen3Config, Qwen3ForCausalLM
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
 
-from exp8_steering import Runner  # noqa: E402
-from spar_horizon import steering as S  # noqa: E402
+from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import Runner
+from spar_horizon import steering as S
 
 SEQS = [[3, 5, 7, 9, 11, 13], [4, 6, 8, 10], [7, 7, 9, 12, 15]]
 PAD = 0

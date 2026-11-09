@@ -1,10 +1,6 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-from delay_position import parametrizations, within_r2  # noqa: E402
+from pipeline.s3_analysis.by_label.delay_position import parametrizations, within_r2
 
 
 def test_a_positional_pull_fits_position_better_than_role():

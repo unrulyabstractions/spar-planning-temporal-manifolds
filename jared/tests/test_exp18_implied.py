@@ -2,20 +2,17 @@
 tokenizer), skipping finished units, losing only the unit in flight, OOM step-down. No model weights."""
 
 import json
-import sys
 from itertools import groupby
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import exp18_implied as e18  # noqa: E402
-from spar_horizon import extract as extract_module  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.implied_bank import build_implied_prompts  # noqa: E402
-from test_exp14_states import MODEL, tiny, tok  # noqa: E402,F401
+import pipeline.s2_steering.experiments.units_implied.exp18_implied as e18
+from spar_horizon import extract as extract_module
+from spar_horizon.config import Settings
+from spar_horizon.implied_bank import build_implied_prompts
+from test_exp14_states import MODEL, tiny, tok  # noqa: F401
 
 SIZE = 5
 LIMIT = 8   # records per module

@@ -15,8 +15,9 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import RidgeCV
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import GroupKFold, KFold
 from sklearn.neural_network import MLPRegressor
+from sklearn.preprocessing import StandardScaler
 from threadpoolctl import threadpool_limits
 
 from .geometry import ALPHAS, _fit
@@ -112,6 +113,37 @@ def horizon_within_unit_r2(y, pred, units, mask=None):
     rows = [(np.round(y, 9) == value) & (units == unit) for value, unit in renderings]
     return within_unit_r2(np.array([y[r].mean() for r in rows]), np.array([pred[r].mean() for r in rows]),
                           np.array([unit for _, unit in renderings]))
+
+
+def pair_shifts(pred, y, pairs, natural):
+    """Per non-natural row: its readout minus its pair's natural readout, minus the
+    true difference in log duration (decades)."""
+    natural_row = {p: i for i, (p, n) in enumerate(zip(pairs, natural)) if n}
+    others = np.flatnonzero(~natural)
+    reference = np.array([natural_row[pairs[i]] for i in others])
+    return others, (pred[others] - pred[reference]) - (y[others] - y[reference])
+
+
+def cv_r2(features, target, folds=5, seed=0):
+    """Pooled out-of-fold R² of a ridge (penalty by internal CV) on standardized features."""
+    features = np.atleast_2d(np.asarray(features, float).T).T
+    pred = np.empty(len(target))
+    for train, test in KFold(folds, shuffle=True, random_state=seed).split(features):
+        scaler = StandardScaler().fit(features[train])
+        model = RidgeCV(alphas=np.logspace(-3, 4, 15)).fit(scaler.transform(features[train]), target[train])
+        pred[test] = model.predict(scaler.transform(features[test]))
+    return float(1 - ((target - pred) ** 2).sum() / ((target - target.mean()) ** 2).sum())
+
+
+def reduce_to_span(X):
+    """Coordinates of the rows of X in the span of the centered data, scaled to unit
+    mean squared norm so that one penalty C suits every layer. n < d, so this is a
+    lossless rotation (no labels used): linear projections and L2-penalized probes
+    give the same answers in it, at a fraction of the cost."""
+    U, S, _ = np.linalg.svd(X - X.mean(0), full_matrices=False)
+    rank = int((S > 1e-8 * S[0]).sum())
+    R = U[:, :rank] * S[:rank]
+    return R / np.sqrt((R ** 2).sum(1).mean()) if rank else R
 
 
 def probe_curves(X, y, units=None, ks=KS, orders=ORDERS, probes=PROBES, ceiling=True):

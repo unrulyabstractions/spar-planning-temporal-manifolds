@@ -1,23 +1,20 @@
 """Part B scan driver on a tiny random-weight Qwen3 and the cached Qwen3.5-0.8B tokenizer: unit
 order and skipping, the prefill edit at each position, the answer-slot cells re-scoring the
 baseline's reasoning without generating, claim and resume. Inputs are built here in the format
-analysis/scan_prepare.py writes."""
+pipeline/s1_data_vectors/analysis/scan_prepare.py writes."""
 
 import argparse
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import exp15_scan as scan  # noqa: E402
-from exp14_phrase_states import record_phrase  # noqa: E402
-from spar_horizon import steering as S  # noqa: E402
-from spar_horizon.model_io import label_ids  # noqa: E402
-from test_exp14_states import BANK_SETTINGS, GENERATION, MODEL, bank_records, cfg, tiny, tok  # noqa: E402,F401
+import pipeline.s2_steering.experiments.manifold_steer.exp15_scan as scan
+from pipeline.s1_data_vectors.experiments.exp14_phrase_states import record_phrase
+from spar_horizon import steering as S
+from spar_horizon.model_io import label_ids
+from test_exp14_states import BANK_SETTINGS, GENERATION, MODEL, bank_records, cfg, tiny, tok  # noqa: F401
 
 D = 32
 N = 4

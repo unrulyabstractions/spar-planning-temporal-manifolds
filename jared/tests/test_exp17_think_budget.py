@@ -1,22 +1,19 @@
 """E17 driver on a tiny random-weight Qwen3 and the cached Qwen3.5-0.8B tokenizer: the answer pass
 equals E0's, a trace that closes inside the extension is not forced and keeps its head, chunks are
 saved once and skipped on a rerun, unit 3 resumes from unit 2's saved ids. Inputs are built here in
-the format analysis/think_budget_stage0.py writes."""
+the format pipeline/s2_steering/analysis/think_budget_stage0.py writes."""
 
 import argparse
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import exp17_think_budget as exp17  # noqa: E402
-from spar_horizon import model_io as M  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from test_exp14_states import GENERATION, MODEL, cfg, tiny, tok  # noqa: E402,F401
+import pipeline.s2_steering.experiments.think_budget.exp17_think_budget as exp17
+from spar_horizon import model_io as M
+from spar_horizon.config import Settings
+from test_exp14_states import GENERATION, MODEL, cfg, tiny, tok  # noqa: F401
 
 BASE = 5            # think tokens in the synthetic stage 0 head
 N = 5

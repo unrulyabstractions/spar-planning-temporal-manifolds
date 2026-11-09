@@ -3,19 +3,16 @@ row order, keys and file handling on a tiny random-weight Qwen3. No model weight
 
 import argparse
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 from transformers import AutoTokenizer, Qwen3Config, Qwen3ForCausalLM
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import exp14_phrase_states as states  # noqa: E402
-from spar_horizon import steering as S  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.full_bank import build_full_prompts  # noqa: E402
+from pipeline.s1_data_vectors.experiments import exp14_phrase_states as states
+from spar_horizon import steering as S
+from spar_horizon.config import Settings
+from spar_horizon.full_bank import build_full_prompts
 
 MODEL = "Qwen/Qwen3.5-0.8B"
 GENERATION = {"model": MODEL, "thinking": "on", "n_response": 6, "max_think_tokens": 3, "prefill": "",

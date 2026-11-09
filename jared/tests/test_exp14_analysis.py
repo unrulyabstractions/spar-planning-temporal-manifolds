@@ -1,13 +1,10 @@
 import json
 import math
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import exp14_analysis as ea  # noqa: E402
+import pipeline.s3_analysis.by_label.exp14_analysis as ea
 
 NEAR_DELAY, FAR_DELAY = 1.0, 10.0
 PER_TRANSITION = 40

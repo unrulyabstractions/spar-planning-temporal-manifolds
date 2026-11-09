@@ -1,16 +1,13 @@
 """Tests for the 2026-11-03 overnight analyses: unit_number_rsa, breakeven_rate, caa_confound,
 trace_audit, decision_emergence. Synthetic data only."""
-import sys
-from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import breakeven_rate as br  # noqa: E402
-import caa_confound as caa  # noqa: E402
-import decision_emergence as de  # noqa: E402
-import trace_audit as ta  # noqa: E402
-import unit_number_rsa as rsa  # noqa: E402
+from pipeline.s3_analysis.by_label import breakeven_rate as br
+from pipeline.s1_data_vectors.analysis import caa_confound as caa
+from pipeline.s3_analysis.by_label import decision_emergence as de
+from pipeline.s3_analysis.by_label import trace_audit as ta
+from pipeline.s3_analysis.by_datatype import unit_number_rsa as rsa
 
 UNIT_YEARS = {"minutes": 1 / 525960, "hours": 1 / 8766, "days": 1 / 365.25, "weeks": 7 / 365.25}
 RENDERINGS = [("60", "minutes", "1 hour"), ("1", "hours", "1 hour"), ("120", "minutes", "2 hours"),
@@ -143,7 +140,7 @@ def test_decision_probe_finds_a_planted_signal_and_not_noise():
 
 
 def test_wilson_interval_brackets_the_share_and_handles_extremes():
-    import trace_coding_summary as tcs
+    from pipeline.s3_analysis.by_label import trace_coding_summary as tcs
     lo, hi = tcs.wilson(0, 45)
     assert lo == 0 or abs(lo) < 1e-12
     assert 0.05 < hi < 0.1                      # the rule-of-three bound is ~3/45 = 0.067
@@ -152,7 +149,7 @@ def test_wilson_interval_brackets_the_share_and_handles_extremes():
 
 
 def test_digit_design_flags_shared_digit_count_and_digits():
-    import numeral_digits as nd
+    from pipeline.s3_analysis.by_datatype import numeral_digits as nd
     rows = [{"numeral": "60"}, {"numeral": "6"}, {"numeral": "90"}]
     D = nd.digit_design(rows)                   # pairs (60, 6), (60, 90), (6, 90)
     assert D.tolist() == [[0, 1, 0], [1, 0, 1], [0, 0, 0]]

@@ -1,16 +1,14 @@
-"""analysis/choice_structure.py on tiny chunk files with planted linear signals: the probes recover
+"""pipeline/s3_analysis/by_label/choice_structure.py on tiny chunk files with planted linear signals: the probes recover
 a planted target, a target independent of the activations stays near chance, and a stopped run
 with a handful of prompts is reported, not crashed on."""
 
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import choice_structure as cs  # noqa: E402
+import pipeline.s3_analysis.by_label.choice_structure as cs
 
 K = 4
 D = 16

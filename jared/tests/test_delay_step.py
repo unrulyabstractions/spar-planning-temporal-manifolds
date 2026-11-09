@@ -1,10 +1,6 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import delay_step as ds  # noqa: E402
+import pipeline.s3_analysis.by_label.delay_step as ds
 
 
 def fill_like(rng, durations=40, per_duration=12):

@@ -3,38 +3,22 @@
 Read `01_plan.md` next: status, what is done (do not rerun it), what is
 established, what is next. The rest is reference.
 
+Docs are numbered; the specs and results of stage 1 and 2 are listed once, in
+`pipeline/s1_data_vectors/docs/INDEX.md` and `pipeline/s2_steering/docs/INDEX.md`. Data locations:
+`pipeline/README.md` ("What lives where").
+
 | File | What it is |
 |---|---|
 | `01_plan.md` | Question, done list, findings, next steps, dated decisions |
-| `04_spec_probes.md` | Method of E7: linear vs MLP probes on the top-k PCs, leave-one-horizon-out |
-| `06_results_probes_full.md` | E7 results on the full bank: where and in how many dimensions the horizon is readable |
-| `07_spec_steering.md` | Method and fixed success criteria of E8: patching, ablation, steering |
-| `08_results_steering.md` | E8 results: the decision reaches the answer slot from L24; probe-chosen cells are passengers; at L24 the curve moves the choice, the line does not; E10: before reasoning the subspace at the unit token swaps the unit the reasoning writes |
-| `09_causal_tests_explained.md` | Walkthrough of E8 with figures: baselines, which prompts are patched, what mean ablation uses, and the horizon-vs-decision checks |
-| `10_spec_scale_14b.md` | Spec and fixed criteria of E11: the 8B map on Qwen3-14B, thinking off and on |
-| `11_results_14b.md` | E11 results: stage order replicates; cross-model alignment and the answer-slot causal tests on 14B |
 | `12_results_local_checks.md` | Two local checks on saved activations: natural closes and within-unit R² (Check 1), horizon vs delay before the hand-off (Check 2) |
 | `13_evidence.md` | Evidence index: each claim we rely on, its strength, and the figure behind it |
-| `14_spec_unit_overlap.md` | Spec (approved 2026-10-25, 8B only): the unit-overlap bank, horizon vs unit word |
-| `15_spec_crossing.md` | Spec (draft, on hold behind `16`): is curve steering horizon-specific? Delay-crossing split and boundary ladder |
-| `16_spec_pristine_manifold.md` | Spec (approved 2026-10-27): a horizon manifold free of unit, regime, forced closes; crossed bank outline |
-| `17_results_pristine.md` | E13 prototype on the 8B units bank: the fit cleans the suffix, the answer slot only on averages |
-| `18_results_overnight.md` | Overnight confound sweep on saved runs (8B, 14B): near-delay pull and number line before reasoning; regime mostly probe absorption at 8B L16 / 14B L20 |
-| `19_results_fill.md` | Fill bank pooled with the old 8B runs: anchors pass off and at the on suffix only; regime both cancels rather than vanishes; old-run curves misread delays outside Alan's range by ~2 decades |
-| `20_results_overnight_fill.md` | Second overnight: delay magnitude, not crossing, moves the suffix code; pooled effects ⟂ is the delay-free axis; code barely predicts choice; stage A/B ready |
-| `21_spec_phrase_steering.md` | Spec (run 2026-10-31): E14, thinking-on steering at the horizon phrase with per-prompt targets across a delay (none/both → near and reverses) |
-| `22_results_phrase_steering.md` | E14 results: H1-H3 fail. The steer at the horizon phrase is read as a discrete text change (a digit edit in the same unit, or a unit-word swap on short up-steps), rarely crossing a delay; the pristine curve is a written-number direction by construction (unit explains 88% of log duration). Where the stated horizon lands (none→near) the choice follows at about two thirds of a donor patch |
-| `23_literature.md` | Literature (2026-11-03): numbers, durations and manifolds; patching and steering pitfalls; CoT faithfulness; intertemporal choice. Synthesis, then two reviews; every arXiv id checked |
-| `24_results_overnight_autoresearch.md` | Overnight autoresearch (2026-11-03, post hoc, saved artifacts): both-regime choices follow whether the trace finishes the reinvestment arithmetic, not the horizon (read right); choice follows the break-even rate r*; no choice information before reasoning beyond the prompt; the prompt-end code is unit word + log written number; CAA follows the none-regime gradient; proposals P1-P8 |
-| `25_spec_arithmetic_mediation.md` | Spec (draft 2026-11-03, not approved): does the arithmetic decide the both-regime choice? On-policy resampling, arithmetic insertion, rate-anchored prompt |
-| `26_spec_overnight_choice_scan.md`, `26_results_overnight_choice_scan.md` | Spec and results (2026-11-06): 4- and 8-choice banks (accuracy, forced closes, activation structure) and the 2-choice phrase-steering scan (34 of 40 cells, none reach the report line; random controls match the manifold) |
-| `27_spec_phrase_number_patch.md`, `28_spec_choice4_side.md`, `29_spec_implied_horizon_side.md`, `30_results_overnight_patch_budget_implied.md` | Specs and results (2026-11-07): the number is read at the horizon's number tokens (donor patch 24/24, manifold step 3/24); +3,072 think tokens close about 63% of forced choice4/8 traces, loops stay open; implied horizons (reference check failed, provisional) |
-| `31_goals_next_specs.md` | Goals to spec next (not approved): linear steer at the number tokens, a direction fitted from donor differences, layer sweep, manifold-fit fixes, side-experiment follow-ups, housekeeping |
-| `queue*.sh` | Box queues as run: `queue_14b.sh`, `queue_14b_rest.sh` (E11), `queue_units.sh` (unit-overlap E0) |
+| `23_literature.md` | Literature (2026-11-03): numbers, durations and manifolds; patching and steering pitfalls; CoT faithfulness; intertemporal choice |
+| `24_results_overnight_autoresearch.md` | Overnight autoresearch (2026-11-03, post hoc, saved artifacts): both-regime choices follow whether the trace finishes the reinvestment arithmetic; proposals P1-P8 |
+| `31_goals_next_specs.md` | Goals to spec next (not approved) |
+| `big_experiment_plan.md` | Costs from measured runs and a recommendation for the first big experiment |
 | `history/` | Finished specs, superseded results and earlier plans; indexed at the end of `01_plan.md` |
 | `spar_horizon/` | The package: prompt banks, model I/O, extraction, probes, steering, run manifests |
-| `experiments/` | One CLI per experiment: `exp0_baseline.py` (generation and activations), `exp8_steering.py`, `exp9_units.py`, `exp10_patch_reasoning.py`, `coherence.py`, `warm_cache.py`, `check_prefix_cache.py` |
-| `analysis/` | Post-analysis on synced results: probes (`probe_dimensionality.py`, `probe_natural_within_unit.py`), horizon shape, steering inputs and analysis, `exp10_analysis.py`, 14B (`stage_markers.py`, `cross_model_alignment.py`), `regime_comparison.py`, units (`unit_readout.py`, `unit_overlap.py`), figures (`evidence_figures.py`, `presentation_figures.py`). The `r2` that E0 saves in each `activations.npz` uses a shuffled k-fold split, not leave-one-horizon-out, so it is optimistic; quote the probe scripts instead |
+| `pipeline/` | The three-stage pipeline (code, queues, per-stage docs); start at `pipeline/README.md` |
 | `tests/` | pytest: pure python, the real 0.8B tokenizer, a tiny random Qwen3 for the steering hooks |
 | `local_checks.py` | Model-backed checks on the 0.8B, run by Jared on the xpu env |
 
@@ -80,7 +64,7 @@ some horizons, mostly long ones, so the think block is force-closed at
 `max_think_tokens` (3,072). Forced prompts are kept and flagged
 (`forced_mask`); 103 of 500 on the full bank. Generation is batched (default
 12 on the 4090, steps down on out-of-memory) and every prompt's greedy
-generation is cached in `<results>/gen_cache/`, keyed by settings and input
+generation is cached in `$RESULTS/gen_cache/`, keyed by settings and input
 ids, so reruns after an analysis change skip generation (`--no-cache`
 disables). E8 feeds the cached reasoning back without generating.
 
@@ -104,18 +88,19 @@ disables). E8 feeds the cached reasoning back without generating.
 ~/miniconda3/envs/intel_ai/bin/python local_checks.py
 
 # post-analysis on synced results, CPU
-python analysis/probe_dimensionality.py results/horizon [--natural-only]
-python analysis/steering_prepare.py results/horizon [--name N --cells "on:pre-label:24,..."]
-python analysis/steering_analysis.py results/horizon
+export RESULTS=/home/Jared/SPAR/results/horizon      # fish: set -x RESULTS ...
+python -m pipeline.s1_data_vectors.analysis.probe_dimensionality $RESULTS [--natural-only]
+python -m pipeline.s1_data_vectors.analysis.steering_prepare $RESULTS [--name N --cells "on:pre-label:24,..."]
+python -m pipeline.s2_steering.analysis.steering_analysis $RESULTS
 
-# E8 on the box, inside tmux, from jared/ (see 07_spec_steering.md §9 for a full example)
-/venv/main/bin/python experiments/exp8_steering.py --inputs steering/inputs_Qwen3-8B_<name>.npz \
+# E8 on the box, inside tmux, from jared/ (see pipeline/s2_steering/docs/07_spec_steering.md §9 for a full example)
+/venv/main/bin/python -m pipeline.s2_steering.experiments.ablate_steer.exp8_steering --inputs steering/inputs_Qwen3-8B_<name>.npz \
     --tests post --out /workspace/results/horizon
 ```
 
 E0 has already generated and extracted the full bank with thinking on
 (`01_plan.md` §3); do not rerun it unless the prompts or kept positions
-change. Its command, for reference: `python experiments/exp0_baseline.py
+change. Its command, for reference: `python -m pipeline.s1_data_vectors.experiments.exp0_baseline
 --model Qwen/Qwen3-8B --thinking on --bank full --skip-behavior`.
 
 ## Shipping

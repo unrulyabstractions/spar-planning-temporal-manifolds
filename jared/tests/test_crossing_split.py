@@ -1,10 +1,7 @@
-import sys
-from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import crossing_split as cs  # noqa: E402
+import pipeline.s2_steering.analysis.crossing_split as cs
 
 BEHAVIOUR = {"none": -0.6, "near": 13.0, "both": -0.6}
 

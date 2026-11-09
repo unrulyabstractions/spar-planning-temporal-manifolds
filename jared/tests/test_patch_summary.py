@@ -1,16 +1,13 @@
-"""Summary of the phrase number patch (analysis/patch_summary.py): what a trace states against the
+"""Summary of the phrase number patch (pipeline/s2_steering/analysis/patch_summary.py): what a trace states against the
 donor, the per-unit counts, the criteria C0-C3 and their pending states, on synthetic rows."""
 
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import patch_summary as ps  # noqa: E402
-from spar_horizon.horizons import Horizon  # noqa: E402
+import pipeline.s2_steering.analysis.patch_summary as ps
+from spar_horizon.horizons import Horizon
 
 LAYER, DEPTH = 16, [12, 22]
 OWN, DONOR = Horizon(3, "weeks"), Horizon(8, "weeks")

@@ -1,11 +1,7 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import axis_delay_purity as adp  # noqa: E402
-from confound_sweep import FEATURES  # noqa: E402
+import pipeline.s3_analysis.by_label.axis_delay_purity as adp
+from pipeline.s3_analysis.by_label.confound_sweep import FEATURES
 
 
 def synthetic(rng, n_durations=30, per_duration=20, d=40):

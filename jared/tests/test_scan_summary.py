@@ -1,14 +1,11 @@
-"""Part B scan summary (analysis/scan_summary.py) on planted unit files: what counts as a flip, a
+"""Part B scan summary (pipeline/s2_steering/analysis/scan_summary.py) on planted unit files: what counts as a flip, a
 toward-target flip and an excess, which cells are reported, partial scans."""
 
 import json
-import sys
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import scan_summary as summary  # noqa: E402
+import pipeline.s2_steering.analysis.scan_summary as summary
 
 N = 10
 

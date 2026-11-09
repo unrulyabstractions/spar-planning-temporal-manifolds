@@ -1,15 +1,15 @@
 # First big experiment: costs from measured runs, and a recommendation
 
 2026-11-04. Read-only: no GPU job was run. Everything below comes from saved box
-results in `../../results/horizon/` (manifests, `results.json` phase timers,
+results in `$RESULTS` = `/home/Jared/SPAR/results/horizon` (`pipeline/README.md`; manifests, `results.json` phase timers,
 queue logs, generation condition files), the Qwen3-8B tokenizer on CPU, and
 arithmetic.
 
-- `analysis/run_throughput.py`: reproduces every measured number in Steps 1-2
-  (`~/miniconda3/envs/mp/bin/python analysis/run_throughput.py ../../results/horizon`).
-- `analysis/big_experiment_costs.py`: the cost model for Steps 3-5. All
+- `pipeline/s3_analysis/by_datatype/run_throughput.py`: reproduces every measured number in Steps 1-2
+  (`~/miniconda3/envs/mp/bin/python -m pipeline.s3_analysis.by_datatype.run_throughput $RESULTS`).
+- `pipeline/s3_analysis/by_datatype/big_experiment_costs.py`: the cost model for Steps 3-5. All
   assumptions are constants at the top; change one and rerun
-  (`python analysis/big_experiment_costs.py`).
+  (`python -m pipeline.s3_analysis.by_datatype.big_experiment_costs`).
 
 ## Summary
 
@@ -160,7 +160,7 @@ Sources are at the end.
 
 ## Step 3. Cost of the candidate designs
 
-### Formulas (`analysis/big_experiment_costs.py`)
+### Formulas (`pipeline/s3_analysis/by_datatype/big_experiment_costs.py`)
 
 ```
 runs (grid)     = layers × positions × prompts × coefficients (× V; V = 2 with the swapped twin)
@@ -332,7 +332,7 @@ the mid-prompt prefix-cached steering path and the cross-fit regression directio
 
 ## Step 5. Sanity check
 
-The arithmetic was run by `analysis/big_experiment_costs.py`. Hand checks:
+The arithmetic was run by `pipeline/s3_analysis/by_datatype/big_experiment_costs.py`. Hand checks:
 
 - A: 36 × 134.7 × 500 × 2 + 500 = 4,849,700 runs. 4,849,700 / 77 / 3600 = 17.50 GPU-h,
   × $0.40 = $7.00.
