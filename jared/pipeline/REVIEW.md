@@ -8,7 +8,7 @@ Start with `pipeline/README.md` for the layout; this file records what was done 
 1. Snapshot commit of everything (except `.claude/settings.local.json`).
 2. Reorganisation into three stages from one shared spec (`SPEC.md`): `s1_data_vectors`,
    `s2_steering` (by modality), `s3_analysis` (by label / by datatype), each with a README.
-3. A review by three models (haiku, sonnet, opus) on one rubric (`SCRATCH rubric`, summarised below),
+3. A review by three models (haiku, sonnet, opus) on one rubric (below),
    a round of fixes, then the same three models re-scored without being told what changed.
 
 ## Rubric
