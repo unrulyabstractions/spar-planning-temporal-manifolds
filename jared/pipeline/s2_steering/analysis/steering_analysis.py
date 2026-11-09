@@ -32,42 +32,15 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 
 from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
+from spar_horizon.e0_runs import saved_decision
+from spar_horizon.probes import cv_r2
 from spar_horizon.steering import bootstrap_mean
 
 JARED = Path(__file__).resolve().parents[3]
 INPUTS = JARED / "steering" / "inputs_Qwen3-8B_answer_slot.npz"
 RUNS = {"first": "exp8_Qwen3-8B_full", "second": "exp8_Qwen3-8B_answer_slot"}
 K = 4
-NORMAL_LEAD = 3
 BLUE, ORANGE, AQUA, GRAY, INK = "#2a78d6", "#eb6834", "#1baf7a", "#9a9893", "#52514e"
-
-
-def cv_r2(features, target, folds=5, seed=0):
-    """Pooled out-of-fold R² of a ridge (penalty by internal CV) on standardized features."""
-    features = np.atleast_2d(np.asarray(features, float).T).T
-    pred = np.empty(len(target))
-    for train, test in KFold(folds, shuffle=True, random_state=seed).split(features):
-        scaler = StandardScaler().fit(features[train])
-        model = RidgeCV(alphas=np.logspace(-3, 4, 15)).fit(scaler.transform(features[train]), target[train])
-        pred[test] = model.predict(scaler.transform(features[test]))
-    return float(1 - ((target - pred) ** 2).sum() / ((target - target.mean()) ** 2).sum())
-
-
-def saved_decision(run, z):
-    """The decision per horizon prompt of a saved E0 run (rows as in cell_data):
-    a-vs-b log-odds, near-vs-far log-odds, chose_near. Rows whose lead is not NORMAL_LEAD
-    have NaN log-odds: runs saved before extract.label_pair read the spaced ' a'/' b' logits
-    there, but after a markdown lead like `**b)**` the label is unspaced, so those logits are
-    for the wrong token pair. Callers drop the NaN rows."""
-    answers = json.loads((run / "answers.json").read_text())
-    keep = ~np.isnan(z["horizons"])
-    rows = [a for a, k in zip(answers, keep) if k]
-    ab = z["label_logits"][keep, 0] - z["label_logits"][keep, 1]
-    ab[z["lead"][keep] != NORMAL_LEAD] = np.nan
-    near_is_a = np.array([r["near_label"] == "a" for r in rows])
-    near = np.where(near_is_a, ab, -ab)
-    chose_near = np.array([r["label"] == r["near_label"] for r in rows])
-    return ab, near, chose_near
 
 
 def answer_slot(root, mode, layer, cell):

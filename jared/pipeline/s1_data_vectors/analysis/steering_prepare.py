@@ -52,7 +52,6 @@ with --pooled the units and fill runs too; gen_cache/) and the model's tokenizer
 """
 
 import argparse
-import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -60,11 +59,10 @@ from pathlib import Path
 import numpy as np
 from transformers import AutoTokenizer
 
-from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
 from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
-from pipeline.s2_steering.analysis.steering_analysis import saved_decision
-from spar_horizon.banks import build_records
+from spar_horizon.banks import build_records, selected_records
 from spar_horizon.config import Settings
+from spar_horizon.e0_runs import run_dir, run_settings, saved_decision
 from spar_horizon.full_bank import HORIZONS, natural_horizon, regime, render_variant
 from spar_horizon.horizons import Horizon
 from spar_horizon.model_io import cache_load, chat_text, label_ids, think_end_id
@@ -96,23 +94,6 @@ def parse_cells(text):
             raise ValueError(f"cell {item!r}: mode must be off or on")
         cells.append((mode, label, int(layer)))
     return cells
-
-
-def run_dir(root, model, mode, bank="full"):
-    """The E0 run folder of `model` for `mode` on `bank`; a results folder can hold several models."""
-    run = Path(root) / f"exp0_{model.split('/')[-1]}_think-{mode}_{bank}"
-    if not (run / "manifest.json").exists():
-        raise FileNotFoundError(f"no finished E0 run at {run}")
-    return run
-
-
-def run_settings(root, model, mode, bank="full"):
-    """The Settings of the E0 run in `root` for `model`, `mode` and `bank`, cache under root."""
-    manifest = json.loads((run_dir(root, model, mode, bank) / "manifest.json").read_text())
-    known = {f.name for f in dataclasses.fields(Settings)}
-    cfg = Settings(**{k: v for k, v in manifest["settings"].items() if k in known})
-    cfg.cache_dir = str(root / "gen_cache")
-    return cfg
 
 
 def matches_e0(g, z, i):

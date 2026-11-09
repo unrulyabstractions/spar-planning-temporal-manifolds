@@ -9,11 +9,11 @@ model and no activations are needed:
         print(regime, near_share(group))
 """
 
-import json
 import re
 from collections import defaultdict
 from pathlib import Path
 
+from spar_horizon.e0_runs import read_answers, run_folder
 from spar_horizon.full_bank import natural_horizon
 from spar_horizon.horizons import canonical_unit
 
@@ -60,10 +60,9 @@ def table_row(answer, bank):
 
 
 def load_run(run_dir):
-    """The table of one run folder. Prompts the run did not keep (no label) are left out."""
-    run_dir = Path(run_dir)
-    answers = json.loads((run_dir / "answers.json").read_text())
-    return [table_row(a, bank_of(run_dir)) for a in answers if "label" in a]
+    """The table of one run folder. Prompts the run did not keep (no label) are left out. (Not
+    `e0_runs.load_run_activations`: that one keeps the prompts with activations, by `think_len`.)"""
+    return [table_row(a, bank_of(run_dir)) for a in read_answers(run_dir) if "label" in a]
 
 
 def load_runs(root, model, mode, banks):
@@ -71,7 +70,7 @@ def load_runs(root, model, mode, banks):
     banks whose run folder is missing are skipped."""
     rows = []
     for bank in banks:
-        run_dir = Path(root) / f"exp0_{model}_think-{mode}_{bank}"
+        run_dir = run_folder(root, model, mode, bank)
         if (run_dir / "answers.json").exists():
             rows += load_run(run_dir)
     return rows

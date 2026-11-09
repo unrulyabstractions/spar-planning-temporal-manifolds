@@ -32,11 +32,11 @@ from pathlib import Path
 import numpy as np
 from transformers import AutoTokenizer
 
-from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
 from pipeline.s1_data_vectors.analysis.scan_prepare import interleave, load_phrase_states
 from pipeline.s1_data_vectors.analysis.steering_prepare import (
     OUT, eligible_rows, fit_phrase_cell, phrase_columns, random_like, steerable, stratified_draw,
     transition_target, varying_factors)
+from spar_horizon.banks import selected_records
 from spar_horizon.config import Settings
 from spar_horizon.full_bank import HORIZONS, regime, render_variant
 from spar_horizon.model_io import chat_text

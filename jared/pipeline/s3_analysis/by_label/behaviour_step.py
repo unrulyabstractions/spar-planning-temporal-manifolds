@@ -42,7 +42,7 @@ import numpy as np
 from pipeline.s3_analysis.by_label.confound_sweep import dataset, within
 from pipeline.s3_analysis.by_label.delay_margin import binned
 from pipeline.s3_analysis.by_label.delay_step import BANKS, MARGIN_BINS, MODEL, SPECS, fmt, row_records, step_fits
-from pipeline.s2_steering.analysis.steering_analysis import NORMAL_LEAD
+from spar_horizon.e0_runs import NORMAL_LEAD
 from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
 
 CONTROL_COLUMNS = {"near first": 4, "log unit size": 5, "log reward": 2, "log ratio": 3}   # dataset feature columns

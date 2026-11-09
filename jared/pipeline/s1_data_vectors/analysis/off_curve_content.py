@@ -37,10 +37,9 @@ from sklearn.linear_model import Ridge, RidgeCV
 from tqdm import tqdm
 
 from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
-from pipeline.s3_analysis.by_label.regime_comparison import reduce_to_span
-from pipeline.s2_steering.analysis.steering_analysis import saved_decision
-from pipeline.s1_data_vectors.analysis.steering_prepare import run_dir, run_settings
 from spar_horizon.banks import build_records
+from spar_horizon.e0_runs import run_dir, run_settings, saved_decision
+from spar_horizon.probes import reduce_to_span
 from spar_horizon.steering import basis_without, decision_direction, fit_cell, random_orthonormal
 
 LAYERS = {"Qwen3-8B": list(range(14, 36, 2)) + [21, 23, 25], "Qwen3-14B": list(range(15, 40, 2)) + [26, 28, 30]}
@@ -83,7 +82,8 @@ def shuffle_within(target, groups, rng):
 
 
 def load_run(root, model):
-    """Activations, the horizon rows' records and decisions, thinking on."""
+    """Activations, the horizon rows' records and decisions, thinking on. (Not `e0_runs.load_run_activations`:
+    this one needs the full records and the saved decision, and has no labels or unit pairs.)"""
     run = run_dir(root, model, "on")
     z = np.load(run / "activations.npz")
     keep = ~np.isnan(z["horizons"])

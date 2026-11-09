@@ -53,7 +53,7 @@ from tqdm import tqdm
 
 from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
 from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
-from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.e0_runs import read_answers, run_folder, run_records
 from spar_horizon.horizons import UNIT_YEARS, Horizon
 from spar_horizon.probes import fit_ridge
 from spar_horizon.runs import REGIONS
@@ -180,9 +180,9 @@ def dataset(root, model, mode, banks):
     for bank in banks:
         z, labels = load_run(root, mode, bank, model)
         labels = {k: v[~labels["anchor"]] for k, v in labels.items()}   # the fill run's re-runs of old prompts
-        records = run_records(root, f"exp0_{model}_think-{mode}_{bank}")
-        answers = {a["sample_uid"]: a for a in json.loads(
-            (root / f"exp0_{model}_think-{mode}_{bank}" / "answers.json").read_text())}
+        run = run_folder(root, model, mode, bank)
+        records = run_records(root, run.name)
+        answers = {a["sample_uid"]: a for a in read_answers(run)}
         recs = [records[uid] for uid in labels["sample_uids"]]
         think = np.array([answers[uid].get("think_len", 0) for uid in labels["sample_uids"]], dtype=float)
         regime = labels["regime"]

@@ -49,9 +49,9 @@ from threadpoolctl import threadpool_limits
 from tqdm import tqdm
 
 from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data
-from pipeline.s2_steering.analysis.steering_analysis import saved_decision
-from pipeline.s1_data_vectors.analysis.steering_prepare import run_dir, run_settings
 from spar_horizon.banks import build_records
+from spar_horizon.e0_runs import run_dir, run_settings, saved_decision
+from spar_horizon.probes import reduce_to_span
 from spar_horizon.steering import fit_cell
 
 MODELS = {"Qwen3-8B": 36, "Qwen3-14B": 40}
@@ -64,17 +64,6 @@ SHIFTS = (-0.5, 0.5)  # decades; see offset_auc
 SHIFT_GRID = (-0.5, -0.25, 0.0, 0.25, 0.5)  # decades; see shift_control
 EXTEND_ABOVE = 0.90  # a cell whose AUC beats this null quantile at 200 shuffles gets 1000
 HANDOFF_FIRST = {"Qwen3-8B": 22, "Qwen3-14B": 25}   # pre-registered: nothing above the null before these layers
-
-
-def reduce_to_span(X):
-    """Coordinates of the rows of X in the span of the centered data, scaled to unit
-    mean squared norm so that one penalty C suits every layer. n < d, so this is a
-    lossless rotation (no labels used): linear projections and L2-penalized probes
-    give the same answers in it, at a fraction of the cost."""
-    U, S, _ = np.linalg.svd(X - X.mean(0), full_matrices=False)
-    rank = int((S > 1e-8 * S[0]).sum())
-    R = U[:, :rank] * S[:rank]
-    return R / np.sqrt((R ** 2).sum(1).mean()) if rank else R
 
 
 def projected_folds(R, log_h, log_far, k_horizon=K_HORIZON, k_far=K_FAR):

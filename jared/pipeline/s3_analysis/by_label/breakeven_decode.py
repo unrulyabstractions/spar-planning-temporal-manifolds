@@ -43,7 +43,7 @@ from tqdm import tqdm
 from pipeline.s3_analysis.by_label.breakeven_rate import log10_breakeven
 from pipeline.s3_analysis.by_label.decision_emergence import N_PCS, cell
 from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
-from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.e0_runs import run_records
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 MODEL, BANKS = "Qwen3-8B", ("full", "units")

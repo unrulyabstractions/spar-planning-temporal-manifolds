@@ -52,7 +52,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 from pipeline.s3_analysis.by_label.confound_sweep import FEATURES, dataset
 from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
 from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
-from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.e0_runs import run_records
 from spar_horizon.runs import REGIONS
 
 RUNS = {"Qwen3-8B": ("full", "units", "fill"), "Qwen3-14B": ("full",)}

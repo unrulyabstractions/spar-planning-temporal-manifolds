@@ -38,6 +38,7 @@ from spar_horizon.config import Settings
 from spar_horizon.full_bank import render_variant
 from spar_horizon.model_io import _free_memory, _generate_rows, chat_text, label_ids, load_model
 from spar_horizon.runs import code_hash, out_base, stamp
+from spar_horizon.steering import states_at
 
 K = 8                     # horizon-subspace dimensions swapped by the subspace patch
 MIN_PAIR_GAP = 1.0        # recipient/donor-text log-odds gap below which a pair carries no transfer signal
@@ -69,21 +70,6 @@ def build_pairs(records, tokenizer, cfg, n_pairs):
         phrase |= set(S.phrase_positions(tokenizer, chat_text(tokenizer, p["donor_prompt"], cfg), p["donor_horizon"]))
         p["phrase"] = sorted(phrase)
     return pairs
-
-
-@torch.no_grad()
-def states_at(model, device, tokenizer, id_lists, positions, layers, batch_size):
-    """{layer: list of [len(positions[i]), d] float32 CPU tensors}: hidden_states[layer]
-    of each prompt (forward pass over the prompt only) at its positions."""
-    out = {layer: [] for layer in layers}
-    for start in range(0, len(id_lists), batch_size):
-        rows = slice(start, start + batch_size)
-        _, hidden, offsets = S.forward(model, device, id_lists[rows], tokenizer.pad_token_id, hidden=True)
-        for layer in layers:
-            values = S.gather(hidden[layer], positions[rows], offsets).cpu()
-            sizes = [len(p) for p in positions[rows]]
-            out[layer] += list(torch.split(values, sizes))
-    return out
 
 
 def fit_subspaces(model, device, tokenizer, cfg, records, layers, batch_size):

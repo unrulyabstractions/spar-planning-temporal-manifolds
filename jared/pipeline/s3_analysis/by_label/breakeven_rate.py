@@ -31,7 +31,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss
 from sklearn.model_selection import GroupKFold
 
-from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.e0_runs import run_records
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 RUNS = (("Qwen3-8B", ("full", "units", "fill")), ("Qwen3-14B", ("full",)))

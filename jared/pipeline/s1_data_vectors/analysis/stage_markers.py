@@ -26,7 +26,8 @@ import numpy as np
 from tqdm import tqdm
 
 from pipeline.s1_data_vectors.analysis.horizon_shape import cell_data, horizon_components
-from pipeline.s2_steering.analysis.steering_analysis import cv_r2, saved_decision
+from spar_horizon.e0_runs import saved_decision
+from spar_horizon.probes import cv_r2
 
 MODELS = ("Qwen3-8B", "Qwen3-14B")
 PATCH_RUN = {"Qwen3-8B": "exp8_Qwen3-8B_full", "Qwen3-14B": "exp8_Qwen3-14B_patch"}

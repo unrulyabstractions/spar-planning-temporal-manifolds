@@ -37,9 +37,9 @@ import torch
 
 from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import delta_rows, load_inputs, selected_records, suffix_newlines
 from pipeline.s2_steering.experiments.patch.exp10_patch_reasoning import generate, generation_arrays, names_horizon, run_claimed, score
-from pipeline.s3_analysis.by_datatype.written_unit import close_to, durations
 from spar_horizon import steering as S
 from spar_horizon.config import Settings
+from spar_horizon.durations import close_to, durations
 from spar_horizon.model_io import load_model, suffix_length
 from spar_horizon.runs import code_hash, out_base, stamp
 

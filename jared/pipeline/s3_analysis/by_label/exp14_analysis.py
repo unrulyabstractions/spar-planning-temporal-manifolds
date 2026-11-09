@@ -25,8 +25,7 @@ from pathlib import Path
 import numpy as np
 
 from spar_horizon.full_bank import regime
-from spar_horizon.horizons import UNIT_YEARS, canonical_unit
-from pipeline.s3_analysis.by_datatype.written_unit import DURATION, close_to, durations, parse_number
+from spar_horizon.durations import MOVED, close_to, durations, first_stated_horizon
 
 N_BOOT = 2000
 C = 19.2                    # near log-odds step of the thinking-on behaviour map (behaviour_step.py)
@@ -44,11 +43,6 @@ FROM_NEAR = ("near-both", "near-none")
 # the trace noticing that the stated horizon does not fit the prompt
 CONFLICT = re.compile(r"typo|wait, the horizon|mistake|inconsistent", re.IGNORECASE)
 
-# post hoc: a duration stated as the horizon ("a 13-year time horizon", "the horizon is 2.5 years")
-HORIZON_AFTER = re.compile(r"[\s-]+(?:time[\s-]+)?horizon", re.IGNORECASE)
-HORIZON_BEFORE = re.compile(r"horizon (?:given |here |stated )?(?:is|of) (?:about |approximately |roughly )?$",
-                            re.IGNORECASE)
-MOVED = 0.05                # decades (12%): further than any rendering of the same horizon
 STEERED = ("effects L14", "effects L16", "effects L18", "invariant L16")
 
 
@@ -64,18 +58,6 @@ def written_durations(row):
 def writes_target_regime(row):
     near, far = row["near_delay_years"], row["far_delay_years"]
     return any(regime(years, near, far) == row["target_regime"] for years in written_durations(row))
-
-
-def first_stated_horizon(text):
-    """(years, unit, number as written) of the first duration the trace states as its horizon, or None."""
-    for match in DURATION.finditer(text):
-        before = text[max(0, match.start() - 40):match.start()]
-        if HORIZON_AFTER.match(text, match.end()) or HORIZON_BEFORE.search(before):
-            value = parse_number(match["number"])
-            if value is not None:
-                unit = canonical_unit(match["unit"])
-                return value * UNIT_YEARS[unit], unit, match["number"]
-    return None
 
 
 def digits_of(number_text):

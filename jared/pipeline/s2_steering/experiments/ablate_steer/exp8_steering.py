@@ -34,7 +34,7 @@ import torch
 from tqdm import tqdm
 
 from spar_horizon import steering as S
-from spar_horizon.banks import build_records
+from spar_horizon.banks import selected_records
 from spar_horizon.config import Settings
 from spar_horizon.full_bank import render_variant
 from spar_horizon.model_io import label_ids, load_model, suffix_length
@@ -111,21 +111,6 @@ def load_inputs(path):
     names = ("ids", "offsets", "close", "think_len", "forced", "labels", "record")
     post = {name: z[f"post|{name}"] for name in names} if meta["n_post"] else None
     return meta, cells, post
-
-
-def selected_records(meta):
-    """The inputs' prompt records, in their order. Pooled inputs name each record's
-    bank and the settings its run was built with; older inputs are all full bank."""
-    if "bank_settings" in meta:
-        banks, settings = meta["selected_banks"], meta["bank_settings"]
-    else:
-        banks = ["full"] * len(meta["selected"])
-        settings = {"full": {k: meta[k] for k in ("n_prompts", "seed", "limit")}}
-    built = {bank: build_records(Settings(bank=bank, **settings[bank])) for bank in set(banks)}
-    records = [built[bank][i] for bank, i in zip(banks, meta["selected"])]
-    if [r["sample_uid"] for r in records] != meta["sample_uids"]:
-        raise ValueError("the prompt bank differs from the one the inputs were prepared on")
-    return records
 
 
 def suffix_newlines(ids, tokenizer, n_suffix):

@@ -24,12 +24,12 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
-from pipeline.s2_steering.experiments.patch.exp10_patch_reasoning import states_at
 from spar_horizon import steering as S
+from spar_horizon.banks import selected_records
 from spar_horizon.config import Settings
 from spar_horizon.model_io import chat_text, load_model
 from spar_horizon.runs import code_hash, out_base, stamp
+from spar_horizon.steering import states_at
 
 LAYERS = (12, 14, 16, 18)   # L12 is kept for a follow-up; the steering fits use L14, L16, L18
 ROLES = ("number", "unit")

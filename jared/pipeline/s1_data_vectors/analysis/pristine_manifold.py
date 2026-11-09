@@ -51,11 +51,10 @@ from tqdm import tqdm
 
 from pipeline.s1_data_vectors.analysis.off_curve_content import center_within
 from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
-from pipeline.s3_analysis.by_datatype.unit_overlap import MODEL, load_run, pair_shifts
-from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.e0_runs import MODEL, load_run_activations, run_records
 from spar_horizon.full_bank import NATURAL_UNITS
 from spar_horizon.horizons import Horizon
-from spar_horizon.probes import within_unit_r2
+from spar_horizon.probes import pair_shifts, within_unit_r2
 from spar_horizon.runs import REGIONS
 from spar_horizon.steering import curve_readout, fit_duration_effects
 
@@ -255,7 +254,7 @@ ANCHOR_TOLERANCE = 0.1
 
 def mode_labels(root, mode, bank, model=MODEL):
     """One run's activation file and labels, with the fit's columns added."""
-    z, labels = load_run(root, mode, bank, model)
+    z, labels = load_run_activations(root, mode, bank, model)
     records = run_records(root, f"exp0_{model}_think-{mode}_{bank}")
     labels["duration"] = np.array([Horizon.parse(d).log10_years for d in labels["durations"]])
     labels["near_first"] = np.array([records[uid]["short_first"] for uid in labels["sample_uids"]])

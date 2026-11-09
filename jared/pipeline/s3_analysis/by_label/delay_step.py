@@ -71,7 +71,7 @@ from pipeline.s3_analysis.by_label.delay_margin import binned
 from pipeline.s1_data_vectors.analysis.pristine_confounds import unit_names
 from pipeline.s1_data_vectors.analysis.pristine_manifold import cross_fit, fit, subset
 from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
-from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.e0_runs import run_records
 from spar_horizon.horizons import Horizon
 from spar_horizon.steering import curve_readout
 

@@ -225,6 +225,21 @@ def gather(hidden, positions, offsets):
     return hidden[rows, index[mask]].float()
 
 
+@torch.no_grad()
+def states_at(model, device, tokenizer, id_lists, positions, layers, batch_size):
+    """{layer: list of [len(positions[i]), d] float32 CPU tensors}: hidden_states[layer]
+    of each prompt (forward pass over the prompt only) at its positions."""
+    out = {layer: [] for layer in layers}
+    for start in range(0, len(id_lists), batch_size):
+        rows = slice(start, start + batch_size)
+        _, hidden, offsets = forward(model, device, id_lists[rows], tokenizer.pad_token_id, hidden=True)
+        for layer in layers:
+            values = gather(hidden[layer], positions[rows], offsets).cpu()
+            sizes = [len(p) for p in positions[rows]]
+            out[layer] += list(torch.split(values, sizes))
+    return out
+
+
 # --- directions from saved activations ----------------------------------------
 
 def fit_cell(X, log_h, k_max=8):

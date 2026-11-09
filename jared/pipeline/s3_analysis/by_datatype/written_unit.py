@@ -20,64 +20,16 @@ a unit other than the rendered one ("converts").
 Reads saved answers only; runs no model.
 """
 
-import dataclasses
 import json
-import re
 import sys
 from collections import Counter
 from pathlib import Path
 
-from spar_horizon.banks import build_records
-from spar_horizon.config import Settings
+from spar_horizon.durations import TOLERANCE, close_to, durations, horizon_units, parse_number  # noqa: F401
+from spar_horizon.e0_runs import read_answers, run_records
 from spar_horizon.horizons import UNIT_YEARS, canonical_unit
 
-TOLERANCE = 0.10
 RUN = "exp0_Qwen3-8B_think-on_units"
-
-ONES = ("zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen "
-        "fifteen sixteen seventeen eighteen nineteen").split()
-TENS = "twenty thirty forty fifty sixty seventy eighty ninety".split()
-WORD_VALUES = {**{w: i for i, w in enumerate(ONES)}, **{w: 20 + 10 * i for i, w in enumerate(TENS)},
-               "a": 1, "an": 1, "hundred": 100, "thousand": 1000}
-
-# a number (digits, a word, or a hyphenated compound like "fifty-nine"), then a time unit,
-# joined by spaces or a hyphen ("three-year")
-DURATION = re.compile(r"\b(?P<number>\d[\d,]*(?:\.\d+)?|[a-z]+(?:-[a-z]+)?)[\s-]+"
-                      r"(?P<unit>seconds?|minutes?|hours?|days?|weeks?|months?|years?|decades?|century|centuries)\b",
-                      re.IGNORECASE)
-
-
-def parse_number(text):
-    """The value of a digit string or an English number word ("fifty-nine"), or None."""
-    text = text.lower().replace(",", "")
-    if text[0].isdigit():
-        return float(text)
-    if text in WORD_VALUES:
-        return float(WORD_VALUES[text])
-    tens, _, ones = text.partition("-")
-    if tens in TENS and ones in ONES[1:10]:
-        return float(WORD_VALUES[tens] + WORD_VALUES[ones])
-    return None
-
-
-def durations(text):
-    """Every "<number> <unit>" in `text` as (years, canonical unit), in order."""
-    out = []
-    for match in DURATION.finditer(text):
-        value = parse_number(match["number"])
-        if value is not None:
-            unit = canonical_unit(match["unit"])
-            out.append((value * UNIT_YEARS[unit], unit))
-    return out
-
-
-def close_to(years, target, tolerance=TOLERANCE):
-    return abs(years / target - 1) <= tolerance
-
-
-def horizon_units(text, horizon_years):
-    """The units of the mentions in `text` whose duration matches the horizon, in order."""
-    return [unit for years, unit in durations(text) if close_to(years, horizon_years)]
 
 
 def summarize(units, rendered_unit):
@@ -90,22 +42,14 @@ def summarize(units, rendered_unit):
             "converts": any(u != rendered_unit for u in units)}
 
 
-def run_records(root, run=RUN):
-    """The records of an E0 run (the units-bank thinking-on run by default), by sample_uid."""
-    manifest = json.loads((root / run / "manifest.json").read_text())
-    known = {f.name for f in dataclasses.fields(Settings)}
-    cfg = Settings(**{k: v for k, v in manifest["settings"].items() if k in known})
-    return {r["sample_uid"]: r for r in build_records(cfg)}
-
-
 def rate(rows, key):
     return sum(bool(r[key]) for r in rows) / len(rows) if rows else float("nan")
 
 
 def main(root):
     root = Path(root)
-    answers = [a for a in json.loads((root / RUN / "answers.json").read_text()) if "think_text" in a]
-    records = run_records(root)
+    answers = [a for a in read_answers(root / RUN) if "think_text" in a]
+    records = run_records(root, RUN)
     rows = []
     for a in answers:
         rec = records[a["sample_uid"]]

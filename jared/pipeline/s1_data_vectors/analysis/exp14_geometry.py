@@ -27,9 +27,9 @@ from pathlib import Path
 import numpy as np
 
 from pipeline.s3_analysis.by_label import exp14_analysis as ea
+from spar_horizon.durations import durations
 from spar_horizon.horizons import UNIT_YEARS, canonical_unit
 from spar_horizon.steering import curve_delta, fit_duration_effects, span_part
-from pipeline.s3_analysis.by_datatype.written_unit import durations
 
 LAYER = 16
 UP = ("none-near", "near-both")      # transitions whose target is a longer horizon

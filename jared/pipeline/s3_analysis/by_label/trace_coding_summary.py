@@ -22,7 +22,7 @@ from pathlib import Path
 import numpy as np
 
 from pipeline.s3_analysis.by_label.breakeven_rate import log10_breakeven
-from pipeline.s3_analysis.by_datatype.written_unit import run_records
+from spar_horizon.e0_runs import run_records
 
 BATCHES = ("both_b8a", "both_b8b")
 CODES = ("correct", "error", "overridden", "none")

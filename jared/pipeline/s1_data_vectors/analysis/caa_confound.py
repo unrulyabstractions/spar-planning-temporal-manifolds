@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 
 from pipeline.s1_data_vectors.analysis.probe_dimensionality import positions
-from pipeline.s3_analysis.by_datatype.unit_overlap import load_run
+from spar_horizon.e0_runs import load_run_activations
 from spar_horizon.runs import REGIONS
 
 CELLS = (("suffix newline", 16), ("think close", 24), ("pre-label", 24), ("pre-label", 22))
@@ -90,7 +90,7 @@ def cell_result(X, labels):
 
 def main(root, out_dir):
     root, out_dir = Path(root), Path(out_dir)
-    z, labels = load_run(root, "on", "full", "Qwen3-8B")
+    z, labels = load_run_activations(root, "on", "full", "Qwen3-8B")
     meta = {"regions": {r: tuple(int(x) for x in z[f"region_{r}"]) for r in REGIONS},
             "tokens": [str(t) for t in z["tokens"]]}
     rng = np.random.default_rng(0)

@@ -42,10 +42,10 @@ from pathlib import Path
 
 import numpy as np
 
-from pipeline.s2_steering.experiments.ablate_steer.exp8_steering import selected_records
 from pipeline.s1_data_vectors.analysis.steering_prepare import (
     OUT, TRANSITIONS, draw_prompts, fit_phrase_cell, phrase_cell_report, phrase_columns, random_like,
     steerable, transition_target, varying_factors)
+from spar_horizon.banks import selected_records
 from spar_horizon.steering import curve_delta
 
 SCAN_LAYERS = (18, 14, 22, 10, 26)           # run order: the most motivated layers first

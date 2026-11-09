@@ -29,11 +29,10 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import binomtest, spearmanr
 
-from pipeline.s3_analysis.by_label.exp14_analysis import HORIZON_AFTER, HORIZON_BEFORE
+from spar_horizon.durations import DURATION, HORIZON_AFTER, HORIZON_BEFORE, close_to, parse_number
 from spar_horizon.full_bank import regime
 from spar_horizon.horizons import UNIT_YEARS, canonical_unit
 from spar_horizon.probes import fit_ridge
-from pipeline.s3_analysis.by_datatype.written_unit import DURATION, close_to, parse_number
 
 FAMILIES = ("A", "B", "C")
 REGIMES = ("near", "both")
