@@ -2,6 +2,8 @@
 
 One RTX 4090 box (59546743, $0.421/h), tmux queues, 10:06 to ~20:00 UTC. Spend $6.33 by `just burn`
 (estimate, not a bill: it is hours x rate and ignores bandwidth; billing API not readable with this key).
+Unreconciled: $6.33 at $0.421/h is about 15 h, but the window above is about 10 h; the box was destroyed, so
+the uptime cannot be rechecked. Treat the spend as unverified.
 Box destroyed after a full sync. All three are screens (24 pairs / 105+74 traces / 288 rows), no significance claims.
 Raw summaries: `results/horizon/exp16_*/patch_summary.txt`, `exp17_*/think_budget_summary.txt`, `exp18_*/implied_summary.json`.
 
