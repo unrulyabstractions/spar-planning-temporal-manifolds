@@ -119,7 +119,7 @@ imports rewritten to `pipeline.<stage>...`, usage lines changed to `python -m ..
 
 Sorting calls: `run_throughput` and `big_experiment_costs` are in `by_datatype` (per bank),
 `exp14_analysis` and `choice_structure` in `by_label`, `causal_walkthrough` in `figures`.
-`written_unit` is imported by most `by_label` scripts for `run_records`.
+`run_records` lives in `spar_horizon/e0_runs.py`; `written_unit` re-exports it.
 
 ## Docs
 
