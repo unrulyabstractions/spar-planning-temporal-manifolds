@@ -1,0 +1,134 @@
+
+################ canonical investment: n=2000, stakes levels [1000.0, 2500.0, 5000.0, 10000.0, 25000.0, 50000.0, 100000.0]
+behaviour: standardised logistic coefficients for chose_short (90% bootstrap interval):
+   log H            -6.472  [-6.896, -6.114]
+   log ratio        -0.549  [-0.696, -0.402]
+   log stakes       +0.052  [-0.092, +0.213]
+   log short delay  +0.112  [-0.011, +0.284]
+   log long delay   +2.941  [+2.748, +3.167]
+   short first      +0.407  [+0.252, +0.550]
+   stratum low  n= 519: P(short) 0.77; fitted switch horizon 10^1.12 = 13.10 y
+   stratum mid  n= 550: P(short) 0.73; fitted switch horizon 10^1.05 = 11.28 y
+   stratum high n= 821: P(short) 0.75; fitted switch horizon 10^1.06 = 11.40 y
+
+=== L35 T3 (n=1890) ===
+(a) ridge R² 5-fold: log H 0.999  log stakes 0.995  log ratio 0.989;  |rho(PC1-3, stakes)| [0.21, 0.19, 0.15] vs H [0.9, 0.17, 0.08]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.93 / 0.97 / 0.84;  ratio 0.90 / 0.97 / 0.53;  horizon 0.98 / 1.00 / 2.00;  angle(stakes dir, horizon dir) 66°
+(b) per stratum |rho(PC1, H)| low 0.91 mid 0.92 high 0.91;  chord/spread low 2.02 mid 2.06 high 1.97
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 8°/8°  mid-high 7°/8°  low-high 7°/9°
+    frozen ridge for log H across strata: low→high: within-2x 0.98, RMSE 0.116 dec, R² 0.993 (in-high CV R² 0.998); high→low: within-2x 1.00, RMSE 0.088 dec, R² 0.996 (in-low CV R² 0.997)
+    quad curve model, stratum as context, 5-fold R²: none 0.3672  offset 0.4121  interaction 0.4109
+
+=== L59 T3 (n=1890) ===
+(a) ridge R² 5-fold: log H 0.998  log stakes 0.991  log ratio 0.980;  |rho(PC1-3, stakes)| [0.07, 0.07, 0.01] vs H [0.19, 0.87, 0.25]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.04 / 0.81 / 0.44;  ratio 0.80 / 0.98 / 0.50;  horizon 0.75 / 1.00 / 1.88;  angle(stakes dir, horizon dir) 79°
+(b) per stratum |rho(PC1, H)| low 0.08 mid 0.27 high 0.30;  chord/spread low 1.74 mid 1.90 high 1.99
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 48°/10°  mid-high 14°/10°  low-high 59°/16°
+    frozen ridge for log H across strata: low→high: within-2x 1.00, RMSE 0.114 dec, R² 0.993 (in-high CV R² 0.997); high→low: within-2x 0.99, RMSE 0.107 dec, R² 0.994 (in-low CV R² 0.995)
+    quad curve model, stratum as context, 5-fold R²: none 0.2951  offset 0.3081  interaction 0.3131
+
+=== L35 R0 (n=1890) ===
+(a) ridge R² 5-fold: log H 0.998  log stakes 0.992  log ratio 0.982;  |rho(PC1-3, stakes)| [0.03, 0.19, 0.1] vs H [0.93, 0.1, 0.09]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.93 / 0.92 / 0.58;  ratio 1.00 / 0.98 / 0.52;  horizon 0.98 / 1.00 / 2.20;  angle(stakes dir, horizon dir) 87°
+(b) per stratum |rho(PC1, H)| low 0.92 mid 0.93 high 0.93;  chord/spread low 2.16 mid 2.24 high 2.23
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 6°/9°  mid-high 5°/11°  low-high 6°/10°
+    frozen ridge for log H across strata: low→high: within-2x 0.99, RMSE 0.109 dec, R² 0.994 (in-high CV R² 0.996); high→low: within-2x 0.99, RMSE 0.108 dec, R² 0.994 (in-low CV R² 0.995)
+    quad curve model, stratum as context, 5-fold R²: none 0.3751  offset 0.3972  interaction 0.3961
+
+=== L46 R0 (n=1890) ===
+(a) ridge R² 5-fold: log H 0.997  log stakes 0.988  log ratio 0.976;  |rho(PC1-3, stakes)| [0.02, 0.18, 0.06] vs H [0.88, 0.3, 0.01]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.93 / 0.85 / 0.52;  ratio 0.90 / 0.97 / 0.45;  horizon 0.98 / 1.00 / 1.96;  angle(stakes dir, horizon dir) 84°
+(b) per stratum |rho(PC1, H)| low 0.85 mid 0.90 high 0.89;  chord/spread low 1.87 mid 1.98 high 2.01
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 8°/11°  mid-high 6°/12°  low-high 7°/12°
+    frozen ridge for log H across strata: low→high: within-2x 0.96, RMSE 0.147 dec, R² 0.988 (in-high CV R² 0.996); high→low: within-2x 0.97, RMSE 0.135 dec, R² 0.990 (in-low CV R² 0.993)
+    quad curve model, stratum as context, 5-fold R²: none 0.3397  offset 0.3583  interaction 0.3574
+
+################ matrix main investment: n=1080, stakes levels [1000.0, 2500.0, 5000.0, 10000.0, 25000.0, 50000.0, 100000.0]
+behaviour: standardised logistic coefficients for chose_short (90% bootstrap interval):
+   log H            -3.488  [-3.967, -3.170]
+   log ratio        -0.603  [-0.798, -0.422]
+   log stakes       -0.409  [-0.632, -0.209]
+   log short delay  -0.128  [-0.330, +0.059]
+   log long delay   +1.548  [+1.327, +1.848]
+   short first      -0.085  [-0.302, +0.082]
+   stratum low  n= 252: P(short) 0.84; fitted switch horizon 10^1.70 = 49.59 y
+   stratum mid  n= 396: P(short) 0.82; fitted switch horizon 10^1.50 = 31.74 y
+   stratum high n= 432: P(short) 0.81; fitted switch horizon 10^1.46 = 28.72 y
+
+=== L35 T3 (n=1080) ===
+(a) ridge R² 5-fold: log H 0.994  log stakes 0.985  log ratio 0.980;  |rho(PC1-3, stakes)| [0.08, 0.03, 0.05] vs H [0.08, 0.35, 0.49]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.57 / 0.88 / 0.26;  ratio 0.30 / 0.77 / 0.20;  horizon 0.98 / 0.99 / 0.59;  angle(stakes dir, horizon dir) 77°
+(b) per stratum |rho(PC1, H)| low 0.10 mid 0.08 high 0.08;  chord/spread low 0.60 mid 0.61 high 0.57
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 12°/14°  mid-high 10°/10°  low-high 13°/18°
+    frozen ridge for log H across strata: low→high: within-2x 0.54, RMSE 0.386 dec, R² 0.921 (in-high CV R² 0.986); high→low: within-2x 0.89, RMSE 0.198 dec, R² 0.979 (in-low CV R² 0.985)
+    quad curve model, stratum as context, 5-fold R²: none 0.0390  offset 0.0433  interaction 0.0375
+
+=== L59 T3 (n=1080) ===
+(a) ridge R² 5-fold: log H 0.989  log stakes 0.935  log ratio 0.895;  |rho(PC1-3, stakes)| [0.07, 0.02, 0.05] vs H [0.2, 0.28, 0.33]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.46 / 0.98 / 0.26;  ratio 0.10 / 0.98 / 0.14;  horizon 0.93 / 0.99 / 0.74;  angle(stakes dir, horizon dir) 40°
+(b) per stratum |rho(PC1, H)| low 0.23 mid 0.25 high 0.14;  chord/spread low 0.90 mid 0.81 high 0.61
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 7°/24°  mid-high 13°/20°  low-high 12°/19°
+    frozen ridge for log H across strata: low→high: within-2x 0.69, RMSE 0.310 dec, R² 0.949 (in-high CV R² 0.978); high→low: within-2x 0.79, RMSE 0.246 dec, R² 0.968 (in-low CV R² 0.976)
+    quad curve model, stratum as context, 5-fold R²: none 0.0669  offset 0.0674  interaction 0.0646
+
+=== L35 R0 (n=1080) ===
+(a) ridge R² 5-fold: log H 0.992  log stakes 0.963  log ratio 0.967;  |rho(PC1-3, stakes)| [0.06, 0.07, 0.02] vs H [0.16, 0.1, 0.58]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.86 / 0.72 / 0.15;  ratio 0.90 / 0.44 / 0.16;  horizon 0.98 / 0.99 / 0.48;  angle(stakes dir, horizon dir) 82°
+(b) per stratum |rho(PC1, H)| low 0.17 mid 0.16 high 0.15;  chord/spread low 0.51 mid 0.48 high 0.46
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 11°/19°  mid-high 11°/17°  low-high 13°/21°
+    frozen ridge for log H across strata: low→high: within-2x 0.62, RMSE 0.331 dec, R² 0.942 (in-high CV R² 0.982); high→low: within-2x 0.83, RMSE 0.227 dec, R² 0.972 (in-low CV R² 0.977)
+    quad curve model, stratum as context, 5-fold R²: none 0.0201  offset 0.0191  interaction 0.0136
+
+=== L46 R0 (n=1080) ===
+(a) ridge R² 5-fold: log H 0.991  log stakes 0.956  log ratio 0.953;  |rho(PC1-3, stakes)| [0.02, 0.07, 0.01] vs H [0.04, 0.58, 0.23]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.29 / 0.58 / 0.12;  ratio 1.00 / 0.53 / 0.13;  horizon 0.98 / 0.99 / 0.40;  angle(stakes dir, horizon dir) 82°
+(b) per stratum |rho(PC1, H)| low 0.07 mid 0.03 high 0.04;  chord/spread low 0.42 mid 0.41 high 0.40
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 13°/23°  mid-high 12°/17°  low-high 17°/22°
+    frozen ridge for log H across strata: low→high: within-2x 0.55, RMSE 0.366 dec, R² 0.929 (in-high CV R² 0.981); high→low: within-2x 0.65, RMSE 0.287 dec, R² 0.956 (in-low CV R² 0.977)
+    quad curve model, stratum as context, 5-fold R²: none 0.0147  offset 0.0129  interaction 0.0076
+
+################ matrix main climate: n=1080, stakes levels [1000.0, 2500.0, 5000.0, 10000.0, 25000.0, 50000.0, 100000.0]
+behaviour: standardised logistic coefficients for chose_short (90% bootstrap interval):
+   log H            -3.324  [-3.778, -3.006]
+   log ratio        -0.826  [-1.072, -0.638]
+   log stakes       -0.393  [-0.617, -0.220]
+   log short delay  -0.547  [-0.739, -0.388]
+   log long delay   +1.306  [+1.077, +1.613]
+   short first      -0.503  [-0.722, -0.333]
+   stratum low  n= 252: P(short) 0.83; fitted switch horizon 10^1.60 = 39.87 y
+   stratum mid  n= 396: P(short) 0.81; fitted switch horizon 10^1.43 = 26.76 y
+   stratum high n= 432: P(short) 0.82; fitted switch horizon 10^1.53 = 33.56 y
+
+=== L35 T3 (n=1080) ===
+(a) ridge R² 5-fold: log H 0.993  log stakes 0.974  log ratio 0.981;  |rho(PC1-3, stakes)| [0.03, 0.03, 0.01] vs H [0.16, 0.1, 0.62]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.18 / 0.80 / 0.17;  ratio 0.30 / 0.76 / 0.19;  horizon 0.99 / 0.98 / 0.60;  angle(stakes dir, horizon dir) 72°
+(b) per stratum |rho(PC1, H)| low 0.20 mid 0.19 high 0.11;  chord/spread low 0.67 mid 0.62 high 0.56
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 14°/32°  mid-high 14°/25°  low-high 13°/40°
+    frozen ridge for log H across strata: low→high: within-2x 0.70, RMSE 0.300 dec, R² 0.952 (in-high CV R² 0.983); high→low: within-2x 0.76, RMSE 0.253 dec, R² 0.966 (in-low CV R² 0.981)
+    quad curve model, stratum as context, 5-fold R²: none 0.0353  offset 0.0380  interaction 0.0333
+
+=== L59 T3 (n=1080) ===
+(a) ridge R² 5-fold: log H 0.990  log stakes 0.920  log ratio 0.934;  |rho(PC1-3, stakes)| [0.05, 0.01, 0.03] vs H [0.12, 0.12, 0.34]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.04 / 0.98 / 0.26;  ratio 0.80 / 0.89 / 0.19;  horizon 0.90 / 0.95 / 0.52;  angle(stakes dir, horizon dir) 40°
+(b) per stratum |rho(PC1, H)| low 0.02 mid 0.07 high 0.23;  chord/spread low 0.40 mid 0.42 high 0.80
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 55°/15°  mid-high 25°/32°  low-high 33°/32°
+    frozen ridge for log H across strata: low→high: within-2x 0.59, RMSE 0.378 dec, R² 0.924 (in-high CV R² 0.977); high→low: within-2x 0.78, RMSE 0.241 dec, R² 0.969 (in-low CV R² 0.964)
+    quad curve model, stratum as context, 5-fold R²: none 0.0143  offset 0.0152  interaction 0.0145
+
+=== L35 R0 (n=1080) ===
+(a) ridge R² 5-fold: log H 0.989  log stakes 0.936  log ratio 0.957;  |rho(PC1-3, stakes)| [0.04, 0.02, 0.03] vs H [0.11, 0.0, 0.25]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.04 / 0.41 / 0.10;  ratio 1.00 / 0.53 / 0.13;  horizon 1.00 / 0.99 / 0.46;  angle(stakes dir, horizon dir) 86°
+(b) per stratum |rho(PC1, H)| low 0.13 mid 0.12 high 0.09;  chord/spread low 0.50 mid 0.47 high 0.44
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 13°/42°  mid-high 13°/24°  low-high 13°/42°
+    frozen ridge for log H across strata: low→high: within-2x 0.63, RMSE 0.326 dec, R² 0.944 (in-high CV R² 0.979); high→low: within-2x 0.81, RMSE 0.219 dec, R² 0.974 (in-low CV R² 0.971)
+    quad curve model, stratum as context, 5-fold R²: none 0.0162  offset 0.0144  interaction 0.0094
+
+=== L46 R0 (n=1080) ===
+(a) ridge R² 5-fold: log H 0.988  log stakes 0.930  log ratio 0.955;  |rho(PC1-3, stakes)| [0.02, 0.02, 0.01] vs H [0.02, 0.36, 0.2]
+    centroid ordinality / split-half |cos| / chord (within-spread units): stakes 0.04 / 0.17 / 0.09;  ratio 0.30 / 0.34 / 0.14;  horizon 1.00 / 0.99 / 0.40;  angle(stakes dir, horizon dir) 89°
+(b) per stratum |rho(PC1, H)| low 0.04 mid 0.03 high 0.00;  chord/spread low 0.44 mid 0.41 high 0.39
+    angle between strata horizon directions (PC1 / top-2 subspace): low-mid 14°/40°  mid-high 13°/26°  low-high 15°/39°
+    frozen ridge for log H across strata: low→high: within-2x 0.62, RMSE 0.318 dec, R² 0.946 (in-high CV R² 0.977); high→low: within-2x 0.80, RMSE 0.246 dec, R² 0.968 (in-low CV R² 0.971)
+    quad curve model, stratum as context, 5-fold R²: none 0.0126  offset 0.0105  interaction 0.0056
+
+wrote figures/stakes_pilot_qwen3.8-27b

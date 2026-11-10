@@ -1,0 +1,394 @@
+2026-10-03 16:54:24 eager upload for gemma-4-31b: watching runs/gemma-4-31b_*.log (pass every 300s)
+2026/10/03 17:14:24 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 17:17:56 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 17:22:56 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 17:22:56 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 17:27:56 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 17:27:56 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 17:32:56 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 17:32:56 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 17:37:56 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 17:37:57 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 17:42:57 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 17:42:57 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 17:42:57 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 17:48:32 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 17:53:32 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 17:53:32 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 17:53:32 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 17:53:32 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 17:58:32 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:02:06 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:02:07 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:02:07 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:02:07 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:02:07 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:07:07 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:07:07 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:07:07 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:07:07 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:07:08 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:07:08 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:12:08 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:12:08 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:12:08 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:12:08 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:12:08 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:12:08 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:17:09 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:17:09 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:17:09 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:17:09 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:17:09 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:17:09 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:17:09 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:21:58 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 18:26:58 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:26:58 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:26:58 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:26:58 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:26:58 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:26:59 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:26:59 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:26:59 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 18:31:59 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:31:59 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:31:59 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:31:59 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:31:59 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:32:00 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:32:00 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:32:00 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 18:32:00 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:35:30 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 18:40:30 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:40:30 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:40:30 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:42:09 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 18:42:09 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:42:09 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:42:09 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:42:09 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:42:09 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:42:10 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 18:42:10 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:42:10 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 18:47:10 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:47:10 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:47:10 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:47:10 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 18:47:10 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:47:10 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:47:11 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:47:11 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:47:11 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:47:11 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 18:47:11 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:47:11 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 18:52:11 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:52:11 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:52:11 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:52:12 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 18:52:12 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:52:12 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:52:12 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:52:12 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:52:12 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:52:12 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 18:52:12 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:52:13 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 18:57:13 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:57:13 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 18:57:13 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:57:13 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 18:57:13 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:57:13 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 18:57:13 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:57:13 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 18:57:14 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:57:14 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 18:57:14 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 18:57:14 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:02:14 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:02:14 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:02:14 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:02:14 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:02:14 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:02:15 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:02:15 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:02:15 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:02:15 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:02:15 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:02:15 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:02:15 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:07:15 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:07:16 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:07:16 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:07:16 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:07:16 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:07:16 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:07:16 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:07:16 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:07:16 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:07:17 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:07:17 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:07:17 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:12:17 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:12:17 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:12:17 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:12:17 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:12:17 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:12:17 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:12:18 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:12:18 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:12:18 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:12:18 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:12:18 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:12:18 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:17:18 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:17:18 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:17:19 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:17:19 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:17:19 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:17:19 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:17:19 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:17:19 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:17:19 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:17:19 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:17:20 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:17:20 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:22:20 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:22:20 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:22:20 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:22:20 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:22:20 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:22:20 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:22:20 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:22:21 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:22:21 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:22:21 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:22:21 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:22:21 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:27:21 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:27:21 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:27:21 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:27:22 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:27:22 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:27:22 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:27:22 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:27:22 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:27:22 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:33:36 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 19:33:36 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:33:36 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:33:36 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:33:36 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:38:36 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:38:36 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:38:36 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:38:36 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:38:36 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:41:30 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 19:41:30 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:41:31 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:41:31 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:41:31 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:41:31 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:41:31 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 19:41:31 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:41:31 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:41:31 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:41:32 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:46:32 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:46:32 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:46:32 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:46:32 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:46:32 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:46:32 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 19:46:32 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:46:32 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:46:33 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:46:33 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:46:33 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:46:33 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 19:46:33 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:46:33 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:46:33 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:46:33 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:51:34 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:51:34 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:51:34 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:51:34 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:51:34 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:51:34 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 19:51:34 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:51:34 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:51:34 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:51:35 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:51:35 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:51:35 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 19:51:35 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:51:35 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:51:35 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:51:35 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 19:56:35 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:56:36 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 19:56:36 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:56:36 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 19:56:36 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:56:36 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 19:56:36 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:56:36 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 19:56:36 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:56:37 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 19:56:37 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:56:37 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 19:56:37 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:56:37 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 19:56:37 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 19:56:37 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:01:37 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:01:37 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 20:01:38 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:01:38 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 20:01:38 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:01:38 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 20:01:38 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:01:38 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 20:01:38 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:01:38 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 20:01:38 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:01:39 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 20:01:39 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:01:39 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 20:01:39 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:01:39 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:06:39 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:06:39 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 20:06:39 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:06:40 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 20:06:40 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:06:40 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 20:06:40 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:06:40 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 20:06:40 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:06:40 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 20:06:40 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:06:41 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 20:06:41 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:06:41 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 20:06:41 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:06:41 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:11:41 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:11:41 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 20:11:41 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:11:41 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 20:11:41 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:11:42 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 20:11:42 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:11:42 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 20:11:42 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:11:42 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 20:11:42 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:11:42 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 20:11:42 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:11:43 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 20:11:43 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:11:43 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:16:43 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:16:43 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 20:16:43 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:16:43 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 20:16:43 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:16:44 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 20:16:44 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:16:44 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 20:16:44 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:16:44 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 20:16:44 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:16:44 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 20:16:44 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:16:44 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 20:16:45 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:16:45 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:21:45 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:21:45 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 20:21:45 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:21:45 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 20:21:45 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:21:45 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 20:21:45 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:21:46 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 20:21:46 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:21:46 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 20:21:46 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:21:46 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 20:21:46 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:21:46 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 20:21:46 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:21:47 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:26:47 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:26:47 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 20:26:47 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:26:47 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 20:26:47 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:26:47 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 20:26:47 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:26:47 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 20:26:47 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:26:48 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 20:26:48 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:26:48 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 20:26:48 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:26:48 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 20:26:48 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:26:48 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:31:48 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:31:49 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 20:31:49 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:31:49 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 20:31:49 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:31:49 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 20:31:49 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:31:49 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 20:31:49 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:31:49 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 20:31:49 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:31:50 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 20:31:50 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:31:50 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 20:31:50 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:31:50 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:36:50 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:36:50 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 20:36:50 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:36:51 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 20:36:51 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:36:51 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 20:36:51 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:36:51 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 20:36:51 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:36:51 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 20:36:51 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:36:51 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 20:36:52 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:36:52 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 20:36:52 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:36:52 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:41:52 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:41:52 pass: gemma-4-31b_extended_n2000_s0 in bucket
+2026/10/03 20:41:52 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:41:52 pass: gemma-4-31b_families_s0 in bucket
+2026/10/03 20:41:52 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:41:53 pass: gemma-4-31b_families_s0_long in bucket
+2026/10/03 20:41:53 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:41:53 pass: gemma-4-31b_investment_n2000_s0 in bucket
+2026/10/03 20:41:53 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:41:53 pass: gemma-4-31b_matrix_s0 in bucket
+2026/10/03 20:41:53 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:41:53 pass: gemma-4-31b_matrix_s0_long in bucket
+2026/10/03 20:41:53 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:41:54 pass: gemma-4-31b_phrasings_n2000_s0 in bucket
+2026/10/03 20:41:54 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults
+2026-10-03 20:41:54 pass: gemma-4-31b_units_paired_n2000_s1 in bucket
+2026/10/03 20:46:54 NOTICE: Config file "/root/.config/rclone/rclone.conf" not found - using defaults

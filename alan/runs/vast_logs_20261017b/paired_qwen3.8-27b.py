@@ -1,0 +1,36 @@
+import pandas as pd, numpy as np
+t=pd.read_parquet("runs/qwen3.8-27b_think_pilot/index.parquet"); n=pd.read_parquet("runs/qwen3.8-27b_nothink_pilot/index.parquet")
+c=["sample_uid","horizon_unit","horizon_years","long_delay_years","short_first","chose_short","choice","n_generated","gen_text"]
+m=t[c].merge(n[["sample_uid","chose_short","choice"]],on="sample_uid",suffixes=("_t","_n"))
+m["du"]=m.sample_uid.str.extract(r"_d(\w+?)_\d+$")[0]; m["units"]=np.where(m.horizon_unit==m.du,"matched","mismatched")
+m["hd"]=m.horizon_years/m.long_delay_years; m["order"]=np.where(m.short_first,"short first","long first")
+m["closed"]=m.gen_text.str.contains("</think>")
+out=[]
+P=lambda *a: out.append(" ".join(str(x) for x in a))
+P("# Qwen3.8-27B unit-boundary pilot: thinking vs no-thinking, paired by prompt\n")
+P(f"{len(m)} paired prompts. Thinking: {m.choice_t.notna().sum()} parsed, {(~m.closed).sum()} never closed thinking (cap 8192), n_generated median {m.n_generated.median():.0f}, p90 {m.n_generated.quantile(.9):.0f}, max {m.n_generated.max()}. No-thinking: {m.choice_n.notna().sum()} parsed.\n")
+P("Truncated prompts:", ", ".join(m.loc[~m.closed,"sample_uid"]), "\n")
+v=m[m.choice_t.notna()].copy()
+for k in ("t","n"): v["long_"+k]=~v["chose_short_"+k].astype(bool)
+v["bin"]=pd.cut(v.hd,[0.66,0.85,0.95,1.0,1.05,1.2,1.51])
+def tab(g, title):
+    b=g.groupby(["units","bin"],observed=True).agg(n=("long_t","size"),think=("long_t","mean"),nothink=("long_n","mean")).round(3)
+    P(f"## {title}\n"); P(b.reset_index().to_string(index=False)); P("")
+tab(v,"P(long chosen) by H/D bin (below 1: long is a violation; above 1: long is correct)")
+for o in ("short first","long first"): tab(v[v.order==o], f"P(long chosen) by H/D bin, {o}")
+b=v[v.hd<1]
+s=b.groupby(["units","order"]).agg(n=("long_t","size"),think=("long_t","mean"),nothink=("long_n","mean")).round(3)
+P("## Below-boundary violation rate by units and order\n"); P(s.reset_index().to_string(index=False)); P("")
+s=b.groupby("units").agg(n=("long_t","size"),think=("long_t","mean"),nothink=("long_n","mean")).round(3)
+P(s.reset_index().to_string(index=False)); P("")
+bb=b[b.hd<0.95]
+s=bb.groupby("units").agg(n=("long_t","size"),think=("long_t","mean"),nothink=("long_n","mean")).round(3)
+P("## Below-boundary violations excluding H/D in (0.95, 1)\n"); P(s.reset_index().to_string(index=False)); P("")
+pa=v.groupby("order").agg(think=("choice_t",lambda s:(s=="a").mean()),nothink=("choice_n",lambda s:(s=="a").mean())).round(3)
+P("## P(choose a))\n"); P(pa.reset_index().to_string(index=False)); P("")
+d=b.assign(both=b.long_t&b.long_n, only_t=b.long_t&~b.long_n, only_n=~b.long_t&b.long_n)
+P(f"Below boundary, paired: violation in both {d.both.sum()}, thinking only {d.only_t.sum()}, no-thinking only {d.only_n.sum()}, neither {(~d.long_t&~d.long_n).sum()} (n {len(d)}).")
+viol=v[(v.hd<1)&v.long_t][["sample_uid","hd","n_generated"]].round(3)
+P("\n## Thinking violations below the boundary\n"); P(viol.to_string(index=False))
+open("figures/qwen3.8-27b_think_pilot/paired_think_vs_nothink.txt","w").write("\n".join(out)+"\n")
+print("\n".join(out))

@@ -15,7 +15,7 @@ constraint line, at each requested (layer, position) cell:
   3. Spearman of PC1 with log magnitude, with the written number, and with unit rank.
   4. A scatter at the cell: PC1-PC2 colored by log magnitude, marker shape by unit / phrasing.
 
-Usage: analyze_variants.py RUN_DIR OUT_DIR --factor unit|phrasing [--cells 22:T3,37:T3,22:R0,29:R0]
+Usage: analyze_variants.py RUN_DIR OUT_DIR --factor unit|phrasing [--cells 0.55L:T3,0.92L:T3,0.55L:R0,0.72L:R0]
 """
 import argparse, sys
 from pathlib import Path
@@ -25,13 +25,14 @@ from sklearn.linear_model import RidgeCV
 from sklearn.metrics import r2_score
 from ptm.analysis import cell_metrics, COLOR_NULL, HORIZON_CMAP, _import_plt, cell_name
 from ptm.store import RunData
+from ptm.depth import resolve_cell, parse_layers
 
 UNIT_RANK = {"hours": 0, "days": 1, "weeks": 2, "months": 3, "years": 4, "decades": 5, "centuries": 6}
 MARKERS = ["o", "s", "^", "D", "v", "P", "X"]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("run_dir"); ap.add_argument("out_dir"); ap.add_argument("--factor", choices=["unit", "phrasing"], required=True)
-ap.add_argument("--cells", default="22:T3,37:T3,22:R0,29:R0")
+ap.add_argument("--cells", default="0.55L:T3,0.92L:T3,0.55L:R0,0.72L:R0")
 a = ap.parse_args()
 run = RunData(a.run_dir); df = run.index; out = Path(a.out_dir); out.mkdir(parents=True, exist_ok=True)
 has_h = df["horizon_years"].notna().to_numpy()
@@ -50,7 +51,7 @@ print("variants:", variant[has_h].value_counts().to_dict())
 rows = []
 plt = _import_plt()
 for cell in a.cells.split(","):
-    layer, pos = cell.split(":"); layer = int(layer)
+    layer, pos = resolve_cell(cell, run)
     m, ex = cell_metrics(run, layer, pos)
     X = ex["X"]; valid = ex["valid"]
     tr = valid & has_h & is_ref; te = valid & has_h & ~is_ref

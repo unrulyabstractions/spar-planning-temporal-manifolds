@@ -20,6 +20,7 @@ UNIT_YEARS: dict[str, float] = {
     "days": 1.0 / DAYS_PER_YEAR,
     "weeks": 7.0 / DAYS_PER_YEAR,
     "months": 1.0 / 12.0,
+    "quarters": 0.25,
     "years": 1.0,
     "decades": 10.0,
     "centuries": 100.0,

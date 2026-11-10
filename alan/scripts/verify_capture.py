@@ -4,18 +4,19 @@
 Checks, on a small batch:
   1. acts[l] == hidden_states[l] for l in 0..n_layers-1 (input to decoder layer l)
   2. acts[n_layers] == output of the last decoder layer (raw, pre-norm)
-  3. norm(acts[n_layers][pos]) -> lm_head == model(...).logits[pos]
+  3. norm(acts[n_layers][pos]) -> lm_head -> soft cap (Gemma) == model(...).logits[pos]
   4. the captured token at each stored position decodes to the expected string
 """
 import argparse, sys
 import pandas as pd, torch
-from ptm.capture import CaptureConfig, ResidualHooks, capture_batch, load_model
+from ptm.capture import CaptureConfig, ResidualHooks, capture_batch, load_model, text_stack
 from ptm.chat import encode_user_turn
 from ptm.prompts import from_frame
 
 ap = argparse.ArgumentParser(); ap.add_argument("--model", default="Qwen/Qwen3-8B"); ap.add_argument("--n", type=int, default=4)
+ap.add_argument("--anchors", action="store_true"); ap.add_argument("--max-new-tokens", type=int, default=40)
 a = ap.parse_args()
-cfg = CaptureConfig(model_name=a.model, batch_size=a.n, max_new_tokens=40, n_response=8)
+cfg = CaptureConfig(model_name=a.model, batch_size=a.n, max_new_tokens=a.max_new_tokens, n_response=8, anchors=a.anchors)
 model, tok = load_model(cfg)
 hooks = ResidualHooks(model)
 samples = from_frame(pd.read_parquet("data/prompts/investment_n16_s1.parquet"))[: a.n]
@@ -33,7 +34,7 @@ for s, r in zip(samples, res):
     ref = model(input_ids=full, output_hidden_states=True)
     hs = ref.hidden_states
     last_raw = {}
-    h = model.model.layers[-1].register_forward_hook(lambda m, i, o: last_raw.setdefault("x", (o[0] if isinstance(o, (tuple, list)) else o)))
+    h = text_stack(model).layers[-1].register_forward_hook(lambda m, i, o: last_raw.setdefault("x", (o[0] if isinstance(o, (tuple, list)) else o)))
     model.model(input_ids=full); h.remove()
     n_trans = len(enc.transition_tokens)
     positions = list(range(enc.transition_start, enc.prompt_len)) + [enc.prompt_len + k for k in range(cfg.n_response) if k < len(r.gen_ids)]
@@ -56,7 +57,10 @@ for s, r in zip(samples, res):
     if r.choice is not None:
         pos = enc.prompt_len + r.choice_gen_index - 1
         lg = ref.logits[0, pos].float().cpu()
-        ia, ib = tok(" a)", add_special_tokens=False)["input_ids"][0], tok(" b)", add_special_tokens=False)["input_ids"][0]
+        # spacing variant from the emitted token, as capture does (`I choose: **b)` emits 'b', not ' b')
+        spaced = full[0, pos + 1].item() in (tok(" a)", add_special_tokens=False)["input_ids"][0], tok(" b)", add_special_tokens=False)["input_ids"][0])
+        sp = " " if spaced else ""
+        ia, ib = tok(sp + "a)", add_special_tokens=False)["input_ids"][0], tok(sp + "b)", add_special_tokens=False)["input_ids"][0]
         pr = torch.softmax(lg, -1)
         line += f" | logits ref a={lg[ia]:.3f} b={lg[ib]:.3f} mine a={r.logit_a:.3f} b={r.logit_b:.3f}; p ref a={pr[ia]:.3f} b={pr[ib]:.3f}"
         ok &= abs((lg[ia] - lg[ib]) - (r.logit_a - r.logit_b)) < 1.0   # bf16 ulp at |logit|~60 is 0.5
@@ -65,6 +69,21 @@ for s, r in zip(samples, res):
     toks_at = [tok.decode([full[0, p].item()]) for p in positions]
     assert toks_at[:n_trans] == enc.transition_tokens == r.transition_tokens, toks_at
     assert toks_at[n_trans:] == r.response_tokens[: len(toks_at) - n_trans], (toks_at[n_trans:], r.response_tokens)
+    if a.anchors:
+        n_fixed = n_trans + cfg.n_response; ai = r.anchor_index; valid = r.pos_valid
+        if ai and ai["M0"] is not None and valid[n_fixed]:
+            m0 = enc.prompt_len + ai["M0"]; e0 = enc.prompt_len + ai["E0"]
+            assert tok.decode(full[0, :m0].tolist()[enc.prompt_len:]).rstrip().endswith("My reasoning:")
+            assert e0 == full.shape[1] - 1
+            for l in [0, 1, L // 2, L - 1]:
+                assert float((hs[l][0, m0].float().cpu() - r.acts[l, n_fixed].float()).abs().max()) == 0.0, ("M0 mismatch", l)
+                assert float((hs[l][0, e0].float().cpu() - r.acts[l, n_fixed + 1].float()).abs().max()) == 0.0, ("E0 mismatch", l)
+                ref_mean = hs[l][0, m0 : e0 + 1].float().mean(0).to(torch.bfloat16).float().cpu()
+                d_mean = float((ref_mean - r.acts[l, n_fixed + 2].float()).abs().max()); rel = d_mean / float(ref_mean.abs().max())
+                assert rel < 1e-2, ("MEAN mismatch", l, rel)
+            line += f" | anchors OK: M0=gen[{ai['M0']}] {tok.decode([full[0, m0].item()])!r}, E0=gen[{ai['E0']}] {tok.decode([full[0, e0].item()])!r}, MEAN over {e0 - m0 + 1} tokens"
+        else:
+            line += " | anchors: no reasoning prefix in this response"
     ok &= worst_rel < 2e-2 and worst_cos > 0.999 and rel_last < 2e-2 and shifted_cos < 0.98
     print(line); sys.stdout.flush()
 print("mem per gpu (GiB):", [round(torch.cuda.max_memory_allocated(i) / 2**30, 2) for i in range(torch.cuda.device_count())])

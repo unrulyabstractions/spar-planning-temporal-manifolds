@@ -1,0 +1,25 @@
+run runs/qwen3-14b_matched_months_dwm_n1200 (Qwen3-14B, matched months, months >= 10, L=40); activations from shards; k1..k2 = 10..20
+/home/alan/SPAR-2026/scripts/intrinsic_dim.py:139: RuntimeWarning: invalid value encountered in scalar divide
+  r[f"smooth_r2_{lo}_{hi or 'up'}"] = float(1 - err[m].sum() / err0[m].sum())
+L22 R0 (0.55 L) n=1191 (dropped 0 duplicates): m = 26.17 [k-2 form 24.17]  Gaussian, same covariance 31.29
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 53.38 41.93 36.56 32.23 28.78 26.00 24.36 22.35 19.79 17.92 16.57 14.74 13.45 11.37
+   1-D reference (log10 horizon_years, same sampling) 1.22; mean |rank gap| to 20-NN 58.1 (1-D reference 5.5); local estimate vs log horizon_years: Spearman +0.16, by decade (log10 horizon_years) {"-1": 7.03, "0": 13.71, "1": 27.46, "2": 17.22}
+   spline in log horizon_years (quantile knots): held-out R² 0.457 (interpolation only 0.457) [value 1-9 nan, 10-99 0.79, >=100 0.36; line 0.307]; estimate on the residual 41.48; residual variance share by last digit 0.111 (permuted 0.008), by digit count 0.003
+   mean |Δ log10 H| to the 20-NN: 0.06 decades
+L29 R0 (0.72 L) n=1191 (dropped 0 duplicates): m = 17.42 [k-2 form 16.09]  Gaussian, same covariance 20.76
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 37.24 28.16 24.16 20.77 18.76 17.30 16.34 14.90 13.03 11.61 10.79 9.87 9.16 8.08
+   1-D reference (log10 horizon_years, same sampling) 1.22; mean |rank gap| to 20-NN 41.3 (1-D reference 5.5); local estimate vs log horizon_years: Spearman +0.25, by decade (log10 horizon_years) {"-1": 6.46, "0": 7.89, "1": 18.38, "2": 22.98}
+   spline in log horizon_years (quantile knots): held-out R² 0.681 (interpolation only 0.682) [value 1-9 nan, 10-99 0.90, >=100 0.48; line 0.403]; estimate on the residual 27.90; residual variance share by last digit 0.101 (permuted 0.006), by digit count 0.005
+   mean |Δ log10 H| to the 20-NN: 0.04 decades
+L37 T3 (0.93 L) n=1191 (dropped 0 duplicates): m = 29.38 [k-2 form 27.13]  Gaussian, same covariance 35.34
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 65.97 47.98 40.96 36.78 32.23 29.24 27.29 24.88 21.99 19.67 18.16 16.06 14.55 12.23
+   1-D reference (log10 horizon_years, same sampling) 1.22; mean |rank gap| to 20-NN 54.4 (1-D reference 5.5); local estimate vs log horizon_years: Spearman +0.06, by decade (log10 horizon_years) {"-1": 10.09, "0": 18.72, "1": 30.49, "2": 22.14}
+   spline in log horizon_years (quantile knots): held-out R² 0.430 (interpolation only 0.430) [value 1-9 nan, 10-99 0.79, >=100 0.34; line 0.292]; estimate on the residual 46.37; residual variance share by last digit 0.093 (permuted 0.007), by digit count 0.003
+   mean |Δ log10 H| to the 20-NN: 0.05 decades
+L22 T3 (0.55 L) n=1191 (dropped 0 duplicates): m = 27.20 [k-2 form 25.12]  Gaussian, same covariance 35.24
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 56.70 43.84 38.00 33.76 29.74 26.95 25.47 23.39 20.88 18.92 17.62 15.72 14.37 12.16
+   1-D reference (log10 horizon_years, same sampling) 1.22; mean |rank gap| to 20-NN 46.9 (1-D reference 5.5); local estimate vs log horizon_years: Spearman +0.05, by decade (log10 horizon_years) {"-1": 8.0, "0": 17.57, "1": 28.21, "2": 18.6}
+   spline in log horizon_years (quantile knots): held-out R² 0.446 (interpolation only 0.446) [value 1-9 nan, 10-99 0.80, >=100 0.35; line 0.294]; estimate on the residual 43.94; residual variance share by last digit 0.107 (permuted 0.007), by digit count 0.003
+   mean |Δ log10 H| to the 20-NN: 0.05 decades
+calibration N_m(0, I), n=1191, eq. (9) k=10..20: m=1: 1.09  m=2: 2.19  m=3: 3.29  m=5: 5.35  m=8: 8.20  m=10: 9.76  m=12: 11.25  m=15: 13.33  m=20: 16.41  m=30: 21.31
+wrote figures/qwen3-14b_matched_months_dwm_n1200/months_ge10/intrinsic_dim.csv, figures/qwen3-14b_matched_months_dwm_n1200/months_ge10/intrinsic_dim_kcurve.csv, figures/qwen3-14b_matched_months_dwm_n1200/months_ge10/intrinsic_dim_kcurve.png

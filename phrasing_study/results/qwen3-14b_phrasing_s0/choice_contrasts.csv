@@ -1,0 +1,17 @@
+contrast,a,b,n,mean_diff,lo,hi
+"pressure cue (hurry - relax), all phrasings, canonical layout",hurry,relax,320,0.05523547647951967,0.032208013433933945,0.07839295751012824
+"pressure cue (hurry - relax), no horizon",hurry,relax,32,0.03350543044390212,0.006758342310263329,0.06688252220117312
+"pressure cue (hurry - relax), layout constraint_first",hurry,relax,320,0.00024131129902253654,-0.012291266724029977,0.009773566444417724
+"pressure cue (hurry - relax), layout markdown",hurry,relax,320,0.026924633434002265,0.015089576163494784,0.040418508299658575
+"pressure cue (hurry - relax), layout prose",hurry,relax,320,0.008094297679392343,-0.005722959153220587,0.020146511993003723
+"pressure cue (hurry - relax), layout task_brief",hurry,relax,320,0.006594417478289469,-0.010910152145766726,0.021092346089906577
+"pressure cue (hurry - relax), layout user_request",hurry,relax,320,0.0008651763799773936,-0.009942169407791428,0.011010888425920415
+"agreement cue (sooner - later), all phrasings, canonical layout",sooner,later,320,0.3582864699297209,0.28833664294680417,0.4301364244890582
+"agreement cue (sooner - later), no horizon",sooner,later,32,0.9049958137233662,0.8296228518917799,0.9733062222417698
+"agreement cue (sooner - later), layout constraint_first",sooner,later,320,0.19833531115600952,0.17082869928526445,0.22667248790251054
+"agreement cue (sooner - later), layout markdown",sooner,later,320,0.42505156698347824,0.329963313695694,0.5215345994326374
+"agreement cue (sooner - later), layout prose",sooner,later,320,0.4752902383846743,0.4166412426807514,0.5385229296792768
+"agreement cue (sooner - later), layout task_brief",sooner,later,320,0.6623641788500108,0.5531080767388056,0.773629148282167
+"agreement cue (sooner - later), layout user_request",sooner,later,320,0.3093764233888071,0.2496464227402315,0.3720654100074014
+"option order (short first - short second), all variants",,,12432,0.21793792087876304,0.129916338864597,0.3048166120750248
+unit-match interaction (h months: with month options - with mixed options),,,224,-0.03526893155447169,-0.08351401276952618,0.015245511877333648

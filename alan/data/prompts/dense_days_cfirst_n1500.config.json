@@ -1,0 +1,16 @@
+{
+  "out": "data/prompts/dense_days_cfirst_n1500.parquet",
+  "vary": "horizon",
+  "n": 1500,
+  "unit": "days",
+  "max": 36525,
+  "horizon": "5 years",
+  "short_reward": 10000,
+  "short_delay": "1 year",
+  "long_reward": 50000,
+  "long_delay": "10 years",
+  "long_first": false,
+  "no_reward_commas": true,
+  "constraint_first": true,
+  "n_values": 1500
+}

@@ -1,0 +1,29 @@
+n,rmse,bias,rmse_debiased,medae,rho,within2x,worst_group,worst_group_name,suite,method,tag,n_nan
+96,0.36765913337603123,0.03064393199773754,0.3663798408571798,0.29653839347401734,0.9649772811079325,0.5104166666666666,0.3333333333333333,1 day,"A new scenarios, structured, train horizons",activation,train-structured-investment+climate,0
+96,1.7619890380815402,0.040857435244447515,1.7615152682576318,1.3802112417116061,0.0,0.14583333333333334,0.0,1 day,"A new scenarios, structured, train horizons",regex_first,train-structured-investment+climate,0
+96,0.0,0.0,0.0,0.0,1.0,1.0,1.0,1 day,"A new scenarios, structured, train horizons",regex_horizon,train-structured-investment+climate,0
+96,0.43552415750669793,0.04735398187352339,0.43294213490100614,0.3477296974720345,0.9856483347324819,0.4270833333333333,0.0,1 day,"A new scenarios, structured, train horizons",text_ridge,train-structured-investment+climate,0
+320,0.6810076100721573,-0.3681404784590788,0.572925783235588,0.5673612731615805,0.9440447021312056,0.303125,0.0,100 years,"B familiar scenarios, plain, train horizons",activation,train-structured-investment+climate,0
+320,1.9782006512866888,0.14099686639939538,1.9731694555756307,1.4164621889280964,0.0,0.13125,0.0,1 day,"B familiar scenarios, plain, train horizons",regex_first,train-structured-investment+climate,0
+320,0.0,0.0,0.0,0.0,1.0,1.0,1.0,1 day,"B familiar scenarios, plain, train horizons",regex_horizon,train-structured-investment+climate,0
+320,1.0415063975025893,0.06941973649578201,1.039190298368724,0.9349560510699999,0.9689816205700729,0.178125,0.0,1 day,"B familiar scenarios, plain, train horizons",text_ridge,train-structured-investment+climate,0
+320,0.7638486746302608,-0.34688246103831005,0.6805419575297408,0.5840777534167074,0.897094198498525,0.234375,0.025,100 years,"C familiar scenarios, varied, train horizons",activation,train-structured-investment+climate,0
+320,1.362507067644563,0.05855103956168767,1.3612484288871123,0.0,0.541545888607488,0.58125,0.4,1 day,"C familiar scenarios, varied, train horizons",regex_first,train-structured-investment+climate,0
+320,0.0,0.0,0.0,0.0,1.0,1.0,1.0,1 day,"C familiar scenarios, varied, train horizons",regex_horizon,train-structured-investment+climate,0
+320,1.0279666175396394,0.08708682277078236,1.0242710832956172,0.9108424730628084,0.9641093984949832,0.18125,0.0,1 day,"C familiar scenarios, varied, train horizons",text_ridge,train-structured-investment+climate,0
+96,0.5799032242742037,-0.20949210527249054,0.540740979908234,0.4875926971435547,0.9446343394456775,0.3020833333333333,0.0,100 years,"D new scenarios, plain, train horizons",activation,train-structured-investment+climate,0
+96,1.7619890380815402,0.040857435244447515,1.7615152682576318,1.3802112417116061,0.0,0.14583333333333334,0.0,1 day,"D new scenarios, plain, train horizons",regex_first,train-structured-investment+climate,0
+96,0.0,0.0,0.0,0.0,1.0,1.0,1.0,1 day,"D new scenarios, plain, train horizons",regex_horizon,train-structured-investment+climate,0
+96,1.0668245146676443,0.10727244214046494,1.0614175277679727,0.9387532347800707,0.8727778197031962,0.16666666666666666,0.0,1 day,"D new scenarios, plain, train horizons",text_ridge,train-structured-investment+climate,0
+96,0.6863494337658722,-0.15012874009915067,0.6697289799814363,0.37934255599975586,0.8860663541761209,0.3645833333333333,0.16666666666666666,100 years,"E new scenarios, varied, train horizons",activation,train-structured-investment+climate,0
+96,1.4130180146668765,0.1588165201905142,1.4040645365109456,0.6020599913279624,0.48204215875249695,0.4583333333333333,0.16666666666666666,10 years,"E new scenarios, varied, train horizons",regex_first,train-structured-investment+climate,0
+96,0.0,0.0,0.0,0.0,1.0,1.0,1.0,1 day,"E new scenarios, varied, train horizons",regex_horizon,train-structured-investment+climate,0
+96,1.0564696894917855,0.11985851127590341,1.0496485802827507,0.927062480834649,0.8667077484007493,0.15625,0.0,1 day,"E new scenarios, varied, train horizons",text_ridge,train-structured-investment+climate,0
+160,0.2621693520783166,0.04556968240360666,0.2581785684653139,0.18030376493894668,0.9495046186618523,0.79375,0.675,3 months,"F withheld horizons, structured, train scenarios",activation,train-structured-investment+climate,0
+160,1.6699565042397384,0.03535961139761323,1.669582110569713,1.1154321932641151,0.0,0.1125,0.0,2 weeks,"F withheld horizons, structured, train scenarios",regex_first,train-structured-investment+climate,0
+160,0.0,0.0,0.0,0.0,0.9999999999999999,1.0,1.0,2 weeks,"F withheld horizons, structured, train scenarios",regex_horizon,train-structured-investment+climate,0
+160,0.8222254920419592,0.011021206191416444,0.8221516239585787,0.700205546274234,0.7260775280245318,0.09375,0.0,2 weeks,"F withheld horizons, structured, train scenarios",text_ridge,train-structured-investment+climate,0
+144,0.48202148335073036,-0.03633753529766949,0.4806498662645492,0.3386470925732197,0.8739824783025429,0.4305555555555556,0.3888888888888889,5 years,"G withheld horizons, all renderings, new scenarios",activation,train-structured-investment+climate,0
+144,1.3543445783135295,-0.026621139051222938,1.354082919086888,1.0,0.10282788069931295,0.1736111111111111,0.05555555555555555,2 weeks,"G withheld horizons, all renderings, new scenarios",regex_first,train-structured-investment+climate,0
+144,0.0,0.0,0.0,0.0,1.0,1.0,1.0,2 weeks,"G withheld horizons, all renderings, new scenarios",regex_horizon,train-structured-investment+climate,0
+144,0.9598820776538274,-0.003935090224041131,0.9598740115587864,0.8829799040530266,0.4437967314090364,0.11805555555555555,0.0,2 weeks,"G withheld horizons, all renderings, new scenarios",text_ridge,train-structured-investment+climate,0

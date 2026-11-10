@@ -1,0 +1,16 @@
+replotted figures/qwen3-14b_matrix_s0_long
+/home/alan/SPAR-2026/scripts/geometry_path.py:53: RuntimeWarning: Mean of empty slice
+  Co_full = np.stack([X[(ht == h) & odd_m].mean(0) for h in labels]); Ce_full = np.stack([X[(ht == h) & even_m].mean(0) for h in labels])
+/home/alan/SPAR-2026/.venv/lib/python3.13/site-packages/numpy/_core/_methods.py:134: RuntimeWarning: invalid value encountered in divide
+  ret = um.true_divide(
+Traceback (most recent call last):
+  File "/home/alan/SPAR-2026/scripts/geometry_path.py", line 87, in <module>
+    st = path_stats(X)
+  File "/home/alan/SPAR-2026/scripts/geometry_path.py", line 55, in path_stats
+    noise_eig = np.sort(np.linalg.svd((Co_full - Ce_full) / 2 - ((Co_full - Ce_full) / 2).mean(0), compute_uv=False) ** 2)[::-1] / (len(C) - 1)
+                        ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alan/SPAR-2026/.venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py", line 1850, in svd
+    s = _umath_linalg.svd(a, signature=signature)
+  File "/home/alan/SPAR-2026/.venv/lib/python3.13/site-packages/numpy/linalg/_linalg.py", line 153, in _raise_linalgerror_svd_nonconvergence
+    raise LinAlgError("SVD did not converge")
+numpy.linalg.LinAlgError: SVD did not converge

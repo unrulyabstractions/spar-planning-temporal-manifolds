@@ -1,0 +1,81 @@
+=== L23 T3 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.6140000224113464, 0.26100000739097595, 0.039000000804662704]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.614 0.261 0.039 0.025 0.016 0.013 0.008 0.006
+  split-half noise scree at the same ranks:              0.003 0.002 0.001 0.001 0.001 0.001 0.000 0.000
+  cumulative: beyond PC2 0.125, beyond PC3 0.086; components for 90% / 95% / 99% of centroid variance: 3 / 5 / 11; above 2x noise: 16 of 16
+  in centroid top-3 PC space: path length 7.4, tortuosity 3.22 (full-space 4.18); turning angles median 63 deg, max 139
+  split-half: centroid-plane correlation r = 0.996; median odd/even centroid gap / median segment = 0.22
+  spacing per decade of horizon: first 1.8, last 2.4, middle median 1.1  (ends/middle 1.80)
+  median adjacent spacing / median within-bin spread (full space) = 0.33
+  bin: years, arclen(3D), seg-to-next, seg/decade, within-spread, participation-ratio
+        1 day     0.0027      0.0     0.8     1.8     1.2     8.8
+       3 days     0.0082      0.8     0.8     2.2     1.2     9.6
+       1 week     0.0192      1.6     0.6     2.0     1.3     6.5
+      2 weeks     0.0383      2.2     0.9     2.6     1.2     8.7
+      1 month     0.0833      3.1     0.4     1.2     1.3     8.7
+     2 months     0.1667      3.5     0.1     0.7     1.3     7.4
+     3 months     0.2500      3.6     0.3     0.8     1.3     9.1
+     6 months     0.5000      3.9     0.5     1.6     1.2     8.1
+       1 year     1.0000      4.3     0.5     1.5     1.2     9.0
+      2 years     2.0000      4.8     0.2     0.9     1.2     9.1
+      3 years     3.0000      4.9     0.2     1.1     1.2     9.0
+      5 years     5.0000      5.2     0.3     1.1     1.2     9.1
+     10 years    10.0000      5.5     0.5     1.5     1.2     8.8
+     20 years    20.0000      6.0     0.3     1.9     1.3     7.6
+     30 years    30.0000      6.3     0.3     1.5     1.2     8.0
+     50 years    50.0000      6.7     0.7     2.4     1.2     7.3
+    100 years   100.0000      7.4       -       -     1.1     8.9
+=== L20 R0 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.656000018119812, 0.1979999989271164, 0.0430000014603138]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.656 0.198 0.043 0.037 0.020 0.014 0.007 0.006
+  split-half noise scree at the same ranks:              0.003 0.002 0.001 0.001 0.001 0.000 0.000 0.000
+  cumulative: beyond PC2 0.146, beyond PC3 0.103; components for 90% / 95% / 99% of centroid variance: 4 / 5 / 11; above 2x noise: 16 of 16
+  in centroid top-3 PC space: path length 3.6, tortuosity 2.72 (full-space 3.78); turning angles median 71 deg, max 143
+  split-half: centroid-plane correlation r = 0.998; median odd/even centroid gap / median segment = 0.20
+  spacing per decade of horizon: first 0.8, last 1.1, middle median 0.6  (ends/middle 1.49)
+  median adjacent spacing / median within-bin spread (full space) = 0.33
+  bin: years, arclen(3D), seg-to-next, seg/decade, within-spread, participation-ratio
+        1 day     0.0027      0.0     0.4     0.8     0.6     7.7
+       3 days     0.0082      0.4     0.4     1.2     0.6     8.6
+       1 week     0.0192      0.8     0.3     0.8     0.7     5.4
+      2 weeks     0.0383      1.1     0.4     1.3     0.6     7.8
+      1 month     0.0833      1.5     0.2     0.7     0.6     8.7
+     2 months     0.1667      1.7     0.1     0.6     0.6     7.7
+     3 months     0.2500      1.8     0.2     0.5     0.7     9.1
+     6 months     0.5000      2.0     0.1     0.4     0.6     8.2
+       1 year     1.0000      2.1     0.3     0.9     0.6     9.5
+      2 years     2.0000      2.4     0.1     0.4     0.6     8.2
+      3 years     3.0000      2.4     0.1     0.6     0.6     9.1
+      5 years     5.0000      2.6     0.2     0.7     0.6     9.2
+     10 years    10.0000      2.8     0.2     0.7     0.6     9.9
+     20 years    20.0000      3.0     0.1     0.8     0.6     9.4
+     30 years    30.0000      3.1     0.2     0.9     0.6    10.0
+     50 years    50.0000      3.3     0.3     1.1     0.6     9.6
+    100 years   100.0000      3.6       -       -     0.6    10.6
+=== L31 T6 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.5759999752044678, 0.25999999046325684, 0.04100000113248825]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.576 0.260 0.041 0.031 0.027 0.020 0.009 0.008
+  split-half noise scree at the same ranks:              0.003 0.002 0.002 0.001 0.001 0.001 0.001 0.001
+  cumulative: beyond PC2 0.164, beyond PC3 0.123; components for 90% / 95% / 99% of centroid variance: 4 / 6 / 12; above 2x noise: 16 of 16
+  in centroid top-3 PC space: path length 5.0, tortuosity 2.19 (full-space 4.19); turning angles median 32 deg, max 63
+  split-half: centroid-plane correlation r = 0.998; median odd/even centroid gap / median segment = 0.23
+  spacing per decade of horizon: first 0.5, last 2.8, middle median 0.9  (ends/middle 1.78)
+  median adjacent spacing / median within-bin spread (full space) = 0.19
+  bin: years, arclen(3D), seg-to-next, seg/decade, within-spread, participation-ratio
+        1 day     0.0027      0.0     0.3     0.5     1.4    13.1
+       3 days     0.0082      0.3     0.6     1.6     1.4    13.8
+       1 week     0.0192      0.9     0.1     0.5     1.5    11.4
+      2 weeks     0.0383      1.0     0.4     1.2     1.4    13.4
+      1 month     0.0833      1.4     0.1     0.3     1.4    14.0
+     2 months     0.1667      1.5     0.1     0.6     1.4    12.3
+     3 months     0.2500      1.6     0.2     0.8     1.4    14.6
+     6 months     0.5000      1.8     0.3     1.0     1.4    13.8
+       1 year     1.0000      2.1     0.2     0.8     1.4    14.2
+      2 years     2.0000      2.4     0.2     0.9     1.4    13.8
+      3 years     3.0000      2.5     0.2     1.0     1.4    14.4
+      5 years     5.0000      2.8     0.4     1.3     1.4    14.9
+     10 years    10.0000      3.2     0.4     1.3     1.4    15.5
+     20 years    20.0000      3.5     0.3     1.5     1.4    13.6
+     30 years    30.0000      3.8     0.4     1.9     1.4    13.6
+     50 years    50.0000      4.2     0.8     2.8     1.4    13.0
+    100 years   100.0000      5.0       -       -     1.3    14.6

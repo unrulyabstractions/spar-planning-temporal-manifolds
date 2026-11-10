@@ -1,0 +1,123 @@
+# Unit-boundary analysis: Qwen/Qwen3.8-27B nothink (pilot, A100)
+
+Run `runs/qwen3.8-27b_nothink_pilot`; 384 of 384 prompts with a parsed choice (format adherence 1.000).
+Switch point = H/D at P(short) = 0.5 (logistic fit on ln(H/D)); 95% CI: 1000 bootstrap resamples of prompts.
+Shift = ln(switch) - ln(switch of the matched cell); negative = the model takes the long option at shorter horizons.
+A switch outside the sampled H/D range is shown as <min or >max (censored, not extrapolated); a shift involving one
+is ±inf. † = more than 5% of bootstrap resamples gave no defined value; treat that interval as unreliable.
+
+## Switch point H/D by horizon unit (rows) and delay unit (columns), pooled
+
+| horizon \ delays | weeks | months | quarters | years |
+|---|---|---|---|---|
+| weeks | **1.269 [1.059, >1.501]** | 1.394 [1.097, >1.501] | >1.501 [<0.690, >1.501]† | 1.297 [1.052, >1.501] |
+| months | 0.914 [0.805, 0.984] | **0.915 [0.819, 1.017]** | 0.807 [<0.690, 0.977] | 0.818 [<0.690, 1.120]† |
+| quarters | n/a [<0.690, <0.690]† | <0.690 [<0.690, <0.690] | **0.835 [<0.690, 0.978]** | <0.690 [<0.690, <0.690] |
+| years | 0.727 [<0.690, 0.819] | 0.727 [<0.690, 0.821] | n/a [<0.690, >1.501]† | **0.983 [0.925, 1.041]** |
+
+Error rates (below: long chosen though H < D / above: short chosen though H > D):
+
+| horizon \ delays | weeks | months | quarters | years |
+|---|---|---|---|---|
+| weeks | 0.083 / 0.500 | 0.083 / 0.583 | 0.333 / 0.500 | 0.083 / 0.500 |
+| months | 0.250 / 0.000 | 0.250 / 0.000 | 0.500 / 0.083 | 0.500 / 0.250 |
+| quarters | 1.000 / 0.167 | 1.000 / 0.000 | 0.417 / 0.000 | 1.000 / 0.000 |
+| years | 0.750 / 0.000 | 0.750 / 0.000 | 0.500 / 0.500 | 0.083 / 0.000 |
+
+## Shift vs matched units (ln units; 95% CI)
+
+Same horizon unit, delays changed (controls the horizon's rendering) | same delay unit, horizon changed:
+
+| horizon unit | delay unit | shift vs (H, delays in H's unit) | shift vs (horizon in delays' unit, D) |
+|---|---|---|---|
+| weeks | months | +0.094 [-inf, +inf]† | +0.422 [+0.167, +inf] |
+| weeks | quarters | +inf [-inf, +inf]† | +inf [-inf, +inf]† |
+| weeks | years | +0.022 [-inf, +inf] | +0.277 [+0.056, +inf] |
+| months | weeks | -0.000 [-0.145, +0.138] | -0.328 [-inf, -0.121] |
+| months | quarters | -0.125 [-inf, +0.084] | -0.033 [-inf, +inf] |
+| months | years | -0.111 [-inf, +0.246]† | -0.183 [-inf, +0.176]† |
+| quarters | weeks | n/a [-inf, -inf]† | n/a [-inf, -inf]† |
+| quarters | months | -inf [-inf, -inf]† | -inf [-inf, -inf] |
+| quarters | years | -inf [-inf, -inf]† | -inf [-inf, -inf] |
+| years | weeks | -0.302 [-inf, -0.175] | -0.557 [-inf, -0.337] |
+| years | months | -0.302 [-inf, -0.178] | -0.230 [-inf, -0.049] |
+| years | quarters | n/a [-inf, +inf]† | n/a [-inf, +inf]† |
+
+## Matched vs mismatched by factor (pooled over unit pairs)
+
+| factor | level | switch matched | switch mismatched | shift (ln) | errors below, matched / mismatched |
+|---|---|---|---|---|---|
+| D | 10 | 0.980 | 0.720 | -0.308 [-inf, -0.157] | 0.208 / 0.562 |
+| ratio | 5 | 0.980 | 0.720 | -0.308 [-inf, -0.155] | 0.208 / 0.562 |
+| order | long first | 0.855 | <0.690 | -inf [-inf, -0.200] | 0.417 / 0.764 |
+| order | short first | 1.113 | 1.059 | -0.050 [-0.252, +0.179] | 0.000 / 0.361 |
+| phrasing_id | 0 | 0.980 | 0.720 | -0.308 [-inf, -0.158] | 0.208 / 0.562 |
+| hu | months | 0.915 | 0.865 | -0.056 [-0.239, +0.096] | 0.250 / 0.417 |
+| hu | quarters | 0.835 | n/a | n/a [-inf, -inf]† | 0.417 / 1.000 |
+| hu | weeks | 1.269 | 1.372 | +0.078 [-inf, +inf] | 0.083 / 0.167 |
+| hu | years | 0.983 | <0.690 | -inf [-inf, -0.187] | 0.083 / 0.667 |
+| du | months | 0.915 | <0.690 | -inf [-inf, -0.032] | 0.250 / 0.611 |
+| du | quarters | 0.835 | 0.905 | +0.080 [-inf, +inf]† | 0.417 / 0.444 |
+| du | weeks | 1.269 | 0.695 | -0.601 [-inf, -0.358] | 0.083 / 0.667 |
+| du | years | 0.983 | 0.760 | -0.257 [-inf, -0.009] | 0.083 / 0.528 |
+
+## Continuity check: the 2026-10-03 conditions (months/years, D = 10 y, ratio 5, short first, phrasing 0)
+
+| horizon | delays | n | switch H/D | switch H (years) |
+|---|---|---|---|---|
+| months | years | 12 | 1.268 | 12.68 |
+| months | months | 12 | 1.020 | 10.20 |
+| years | years | 12 | 1.018 | 10.18 |
+| years | months | 12 | 0.824 | 8.24 |
+
+## Option order
+
+P(choose a)) = 0.682 overall; short first 0.542, long first 0.823.
+
+P(short) by H/D bin, short first (rows: horizon unit / delay unit):
+
+| H / delays | (0.66, 0.75] | (0.75, 0.85] | (0.85, 0.95] | (0.95, 1.0] | (1.05, 1.2] | (1.2, 1.51] |
+|---|---|---|---|---|---|---|
+| weeks / weeks (match) | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.75 |
+| weeks / months | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| weeks / quarters | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| weeks / years | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| months / weeks | 0.50 | 1.00 | 1.00 | 0.00 | 0.00 | 0.00 |
+| months / months (match) | 1.00 | 1.00 | 1.00 | 1.00 | 0.00 | 0.00 |
+| months / quarters | 1.00 | 1.00 | 1.00 | 1.00 | 0.50 | 0.00 |
+| months / years | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 0.25 |
+| quarters / weeks | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.25 |
+| quarters / months | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| quarters / quarters (match) | 1.00 | 1.00 | 1.00 | 1.00 | 0.00 | 0.00 |
+| quarters / years | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| years / weeks | 1.00 | 1.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| years / months | 1.00 | 1.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| years / quarters | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| years / years (match) | 1.00 | 1.00 | 1.00 | 1.00 | 0.00 | 0.00 |
+
+P(short) by H/D bin, long first (rows: horizon unit / delay unit):
+
+| H / delays | (0.66, 0.75] | (0.75, 0.85] | (0.85, 0.95] | (0.95, 1.0] | (1.05, 1.2] | (1.2, 1.51] |
+|---|---|---|---|---|---|---|
+| weeks / weeks (match) | 1.00 | 1.00 | 1.00 | 0.00 | 0.00 | 0.25 |
+| weeks / months | 1.00 | 1.00 | 0.50 | 1.00 | 0.50 | 0.00 |
+| weeks / quarters | 0.00 | 1.00 | 0.00 | 1.00 | 0.00 | 0.00 |
+| weeks / years | 1.00 | 1.00 | 0.50 | 1.00 | 0.00 | 0.00 |
+| months / weeks | 1.00 | 1.00 | 1.00 | 0.00 | 0.00 | 0.00 |
+| months / months (match) | 1.00 | 0.50 | 0.00 | 0.00 | 0.00 | 0.00 |
+| months / quarters | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| months / years | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| quarters / weeks | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.25 |
+| quarters / months | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| quarters / quarters (match) | 0.00 | 1.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| quarters / years | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| years / weeks | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| years / months | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| years / quarters | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| years / years (match) | 1.00 | 1.00 | 1.00 | 0.00 | 0.00 | 0.00 |
+
+P(short) at H/D < 0.85 by phrasing and order:
+
+| phrasing | short first | long first |
+|---|---|---|
+| 0 | 0.80 | 0.41 |

@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Phrasing at 32B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #F4F6F7;
+  --surface: #FFFFFF;
+  --ink: #1A242D;
+  --muted: #56636E;
+  --rule: #D6DDE2;
+  --accent: #1D6A84;
+  --accent-soft: #E3EEF2;
+  --warn: #9A5B12;
+  --warn-soft: #F6EBDD;
+  --plate: #FFFFFF;
+  --mark: #FBE7B5;
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11171C;
+    --surface: #182027;
+    --ink: #E2E8EC;
+    --muted: #9AA7B1;
+    --rule: #2B363F;
+    --accent: #72B9D1;
+    --accent-soft: #1B2C34;
+    --warn: #E0A866;
+    --warn-soft: #2E2419;
+    --plate: #F4F6F7;
+    --mark: #5A4A1C;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11171C;
+  --surface: #182027;
+  --ink: #E2E8EC;
+  --muted: #9AA7B1;
+  --rule: #2B363F;
+  --accent: #72B9D1;
+  --accent-soft: #1B2C34;
+  --warn: #E0A866;
+  --warn-soft: #2E2419;
+  --plate: #F4F6F7;
+  --mark: #5A4A1C;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 17px/1.62 var(--sans);
+  padding-inline: 20px;
+  padding-block: 40px 80px;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { max-width: 1080px; margin-inline: auto; display: grid; gap: 72px; }
+.col { max-width: 68ch; }
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(2rem, 4.5vw, 2.8rem); letter-spacing: -0.01em; }
+h2 { font-size: clamp(1.5rem, 3vw, 1.9rem); }
+h3 { font-size: 1.15rem; font-family: var(--sans); font-weight: 600; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+.eyebrow {
+  font: 500 0.78rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.muted { color: var(--muted); }
+.stack { display: grid; gap: 16px; }
+.stack-lg { display: grid; gap: 28px; }
+
+header.intro { display: grid; gap: 20px; }
+.lede { font-size: 1.12rem; color: var(--muted); max-width: 62ch; }
+.meta { font: 400 0.82rem/1.5 var(--mono); color: var(--muted); }
+
+/* table of contents */
+.toc { display: grid; gap: 0; border-top: 1px solid var(--rule); max-width: 760px; }
+.toc a {
+  display: grid; grid-template-columns: 2.4em 1fr; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--rule);
+  text-decoration: none; color: var(--ink);
+}
+.toc a:hover .toc-q { color: var(--accent); }
+.toc-n { font-family: var(--mono); color: var(--accent); font-size: 0.9rem; padding-top: 2px; }
+.toc-q { font-weight: 600; }
+.toc-a { color: var(--muted); font-weight: 400; }
+
+/* sections */
+section.finding { display: grid; gap: 24px; scroll-margin-top: 24px; }
+.finding-head { display: grid; gap: 10px; }
+.question { font-size: 1.05rem; color: var(--muted); }
+
+figure { margin: 0; display: grid; gap: 10px; }
+.plate {
+  background: var(--plate);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+}
+.plate img { margin-inline: auto; }
+.plate.narrow img { max-width: 720px; width: 100%; }
+figcaption { font-size: 0.86rem; color: var(--muted); max-width: 90ch; }
+figcaption code { font-size: 0.95em; }
+
+.readings { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px 32px; }
+.reading { display: grid; gap: 6px; align-content: start; }
+.reading h3 { font-size: 0.78rem; font-family: var(--mono); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.reading p + p { margin-top: 8px; }
+
+.for-us {
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 16px 20px;
+  display: grid; gap: 6px;
+  max-width: 78ch;
+}
+.for-us .eyebrow { font-size: 0.72rem; }
+.caveat {
+  background: var(--warn-soft);
+  border-radius: 6px;
+  padding: 14px 20px;
+  max-width: 78ch;
+  display: grid; gap: 6px;
+}
+.caveat .eyebrow { color: var(--warn); font-size: 0.72rem; }
+
+/* prompt specimen */
+.prompt {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 16px 18px;
+  font: 400 0.86rem/1.6 var(--mono);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-width: 88ch;
+}
+.prompt .label { color: var(--accent); font-weight: 500; }
+mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 2px; }
+
+/* token strip */
+.tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.tok {
+  display: grid; gap: 2px; justify-items: center;
+  border: 1px solid var(--rule); background: var(--surface);
+  border-radius: 4px; padding: 6px 8px; min-width: 52px;
+}
+.tok b { font: 500 0.72rem/1 var(--mono); color: var(--accent); }
+.tok span { font: 400 0.8rem/1.2 var(--mono); white-space: nowrap; }
+.tok.resp { border-style: dashed; }
+.tok.hot { border-color: var(--warn); }
+.tok.hot b { color: var(--warn); }
+
+/* small tables */
+.tbl-wrap { overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 16px 7px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 500 0.74rem/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+td.num { font-family: var(--mono); font-size: 0.88rem; }
+tr.em td { font-weight: 600; }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.metric { border-top: 2px solid var(--accent); padding-top: 10px; display: grid; gap: 4px; align-content: start; }
+.metric .name { font-weight: 600; }
+.metric .desc { font-size: 0.92rem; color: var(--muted); }
+
+.vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; max-width: 820px; }
+.vs-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.vs-card .big { font: 500 1.6rem/1.1 var(--mono); }
+.vs-card .who { font: 500 0.74rem/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px 40px; }
+.summary ul { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; }
+.summary .stack { align-content: start; }
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+footer { font-size: 0.85rem; color: var(--muted); display: grid; gap: 8px; max-width: 80ch; }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; padding-inline: 16px; }
+  .page { gap: 56px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+caption { max-width: 80ch; }
+th.grp, td.grp { padding-left: 28px; border-left: 1px solid var(--rule); }
+td.num { padding-right: 28px; }
+.plate img { image-rendering: auto; }
+
+/* keep wide children (tables, token strips) from widening the page on narrow screens */
+.page, section.finding, figure { grid-template-columns: minmax(0, 1fr); }
+.page > *, section.finding > * { min-width: 0; }
+
+/* reproduce table: wrap long paths/hashes; label above text on narrow screens */
+table.repro { width: 100%; }
+table.repro td { overflow-wrap: anywhere; }
+@media (max-width: 620px) {
+  table.repro tr, table.repro th, table.repro td { display: block; }
+  table.repro th { border-bottom: 0; padding-bottom: 2px; }
+}
+</style>
+
+</head>
+<body>
+<main class="page">
+
+<header class="intro">
+  <div class="eyebrow">Planning Temporal Manifolds · phrasing study · Qwen3-32B vs Qwen3-14B</div>
+  <h1>Does a bigger model care about the same phrasings?</h1>
+  <p class="lede">The single-choice part of the phrasing study, rerun on Qwen3-32B and, for a fair comparison, again on Qwen3-14B, both with a corrected answer readout. The 32B ignores most of the formatting that moved the 14B (option order, digit labels, the wording of the constraint). It still does what the user says they lean towards, even more than the 14B.</p>
+  <p class="meta">Runs <code>qwen3-32b_choice_r2</code>, <code>qwen3-14b_choice_r2</code> (and the Oct 7 run <code>qwen3-14b_phrasing_s0</code>) · 2026-10-12 · branch <code>phrasing-study</code> (commit d642a78) · choice protocol only, 24,864 prompts per model</p>
+  <nav class="toc" aria-label="Contents">
+    <a href="#summary"><span class="toc-n">00</span><span><span class="toc-q">Summary</span> <span class="toc-a">what changes with size, what doesn't</span></span></a>
+    <a href="#setup"><span class="toc-n">01</span><span><span class="toc-q">What was run</span> <span class="toc-a">two models, one new readout</span></span></a>
+    <a href="#readout"><span class="toc-n">02</span><span><span class="toc-q">The new readout</span> <span class="toc-a">add up both ways of writing the answer</span></span></a>
+    <a href="#fix"><span class="toc-n">03</span><span><span class="toc-q">What did the fix change on the 14B?</span> <span class="toc-a">the conclusions hold; some sizes shrink</span></span></a>
+    <a href="#baseline"><span class="toc-n">04</span><span><span class="toc-q">Is the 32B baseline sound?</span> <span class="toc-a">yes, and order no longer matters</span></span></a>
+    <a href="#ranking"><span class="toc-n">05</span><span><span class="toc-q">Which phrasings change each model's choice?</span> <span class="toc-a">formatting fades, stated preferences stay</span></span></a>
+    <a href="#layouts"><span class="toc-n">06</span><span><span class="toc-q">Do they hold in other prompt structures?</span> <span class="toc-a">preferences everywhere; units flip</span></span></a>
+    <a href="#implicit"><span class="toc-n">07</span><span><span class="toc-q">Implicit horizons</span> <span class="toc-a">still more patient, but different items</span></span></a>
+    <a href="#caveats"><span class="toc-n">08</span><span><span class="toc-q">Caveats</span> <span class="toc-a">a third way of answering, and what wasn't run</span></span></a>
+    <a href="#next"><span class="toc-n">09</span><span><span class="toc-q">Recommendations and next steps</span></span></a>
+    <a href="#reproduce"><span class="toc-n">10</span><span><span class="toc-q">Reproduce</span> <span class="toc-a">code, models, data</span></span></a>
+  </nav>
+</header>
+
+<section class="finding" id="summary">
+  <div class="finding-head">
+    <div class="eyebrow">00 · Summary</div>
+    <h2>Formatting effects mostly vanish at 32B; stated preferences don't</h2>
+  </div>
+  <div class="summary">
+    <div class="stack">
+      <h3>Gone or much smaller on the 32B</h3>
+      <ul>
+        <li><b>Option order.</b> Listing the short option first: 14B <b>+0.16</b>, 32B <b>+0.01</b> (CI includes 0).</li>
+        <li><b>Digit labels</b> <code>1)</code>/<code>2)</code>: 14B <b>+0.15</b>, 32B <b>+0.00</b>.</li>
+        <li><b>Constraint wording.</b> "Evaluate … over a time frame of <i>h</i>": 14B <b>−0.14</b>, 32B <b>−0.00</b>.</li>
+        <li><b>Prompt structure.</b> The task-brief layout shifts the 14B by −0.07; no layout passes the bar on the 32B.</li>
+        <li><b>At 1 week</b>, when neither option pays out within the horizon, the 14B picks by position; the 32B picks the sooner payout (0.998 in both orders).</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Still there, or larger</h3>
+      <ul>
+        <li><b>A stated preference</b> ("I'm leaning towards the option that pays out sooner / later"): 14B <b>+0.22 / −0.07</b>, 32B <b>+0.14 / −0.18</b>. With a person asking for help, the sooner–later swing doubles: 0.27 → <b>0.64</b>.</li>
+        <li><b>"We're not in a hurry at all."</b> 14B −0.07, 32B <b>−0.12</b>. The other pressure phrasings still do nothing.</li>
+        <li><b>Units flip direction.</b> "180 days", "26 weeks", "60 months" make the 32B <i>less</i> patient (+0.05 to +0.08); they made the 14B slightly more patient (−0.03 to −0.05). Decades: −0.08 on both.</li>
+        <li><b>Implicit horizons</b> still make choices more patient than their explicit twins (16 of 18 items), but the items that move most differ between the models (correlation 0.64).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="caveat">
+    <div class="eyebrow">The Oct 7 numbers, corrected</div>
+    <p>The old readout only scored answers written as <code>I choose: a)</code>; this one also scores <code>I choose: **a)</code>. On the 14B, the main conclusions of the <a href="../explainer/index.html">Qwen3-14B explainer</a> (Oct 7) hold, but some sizes change: option order +0.22 → +0.16, labels 1)/2) +0.20 → +0.15, "leaning later" −0.11 → −0.07. The constraint-first layout and "days" drop just below the bar. Use the corrected numbers from now on (§03).</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="finding" id="setup">
+  <div class="finding-head">
+    <div class="eyebrow">01 · Setup</div>
+    <h2>The same 24,864 choices, on two models, with one new readout</h2>
+    <p class="question col">Is the list of phrasings that matter a property of Qwen3-14B, or of the task? A model twice the size, from the same family, answers the same prompts.</p>
+  </div>
+  <div class="metrics">
+    <div class="metric"><span class="name">Qwen3-32B</span><span class="desc">Same family, tokenizer and chat template as the 14B (identical token ids for all 154 prompt variants); 64 layers, width 5120. Only model size changes. Qwen3.5-27B, which Alan used, is a newer generation, so it would mix size with generation.</span></div>
+    <div class="metric"><span class="name">Qwen3-14B, rerun</span><span class="desc">The same model as on Oct 7, rerun with the new readout (§02). This is the fair reference for the 32B, and comparing it with the Oct 7 run shows what the readout fix changed.</span></div>
+    <div class="metric"><span class="name">Choice protocol only</span><span class="desc">All variant families of the single-choice protocol (§01 of the <a href="../explainer/index.html#setup">Qwen3-14B explainer</a>). Not rerun: the "name the horizon" protocol and the multi-turn plans. Activations were stored as before (9 layers, transition window + readout position).</span></div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Run</th><th>Model</th><th>Readout</th><th>Choice step</th><th>Free answers in format · agree with readout</th></tr></thead>
+      <tbody>
+        <tr><td><code>qwen3-14b_phrasing_s0</code></td><td>Qwen3-14B</td><td>" " only</td><td class="num">10.5 min</td><td class="num">100% · 94%</td></tr>
+        <tr><td><code>qwen3-14b_choice_r2</code></td><td>Qwen3-14B</td><td>summed</td><td class="num">11 min</td><td class="num">100% · 99%</td></tr>
+        <tr class="em"><td><code>qwen3-32b_choice_r2</code></td><td>Qwen3-32B</td><td>summed</td><td class="num">23 min</td><td class="num">94% · 99% (100% · 99% counting <code>&lt;b)&gt;</code>, §08)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="finding" id="readout">
+  <div class="finding-head">
+    <div class="eyebrow">02 · Methods</div>
+    <h2>The new readout adds up both ways of writing the answer</h2>
+    <p class="question col">P(short) is read from the model's next-token probabilities after the start of its answer. The question is which start.</p>
+  </div>
+  <div class="tokens" aria-label="Two answer paths after I choose:">
+    <div class="tok"><b>prefill</b><span>I choose:</span></div>
+    <div class="tok resp"><b>path 1</b><span>␣a)</span></div>
+    <div class="tok resp hot"><b>path 2</b><span>␣**</span></div>
+    <div class="tok resp hot"><b>then</b><span>a)**</span></div>
+  </div>
+  <div class="readings">
+    <div class="reading"><h3>Old readout</h3><p>On Oct 7 the prompt was followed by "I choose:" plus <em>one</em> separator, the one the model wrote most often in 48 free answers (a space, 37 of 48 on the 14B), and we compared the probabilities of the two labels after it. If the model would rather write <code>I choose: **a)</code>, that probability was never counted. In markdown, the 14B put only 5% of its probability on the counted path.</p></div>
+    <div class="reading"><h3>New readout</h3><p>Each label's probability is now the sum over both paths: P(" a)") + P(" **") × P("a)" after " **"). Both paths are scored from the same point, right after "I choose:", so the sum is a real probability of the model answering a). P(short) = P(short label) ÷ (P(short) + P(long)), as before. Letter labels need one forward pass; digit labels need two (1.3% more compute in total).</p></div>
+    <div class="reading"><h3>Readout mass</h3><p>The share of probability on the counted paths: how much of the model's actual answer the readout sees. Close to 1 means the readout covers what the model would write. The free-answer check (160 sampled prompts answered without prefill) confirms that the written choice agrees with the readout.</p></div>
+    <div class="reading"><h3>Everything else as before</h3><p>Paired Δ against each variant's reference on the same cells; 95% bootstrap CIs over 16 scenarios; null floor = largest |Δ| of the six null rewordings; a variant <b>matters</b> if beyond the floor, CI excludes 0, and |Δ| ≥ 0.05. Primer in the <a href="../explainer/index.html#methods">Qwen3-14B explainer</a>, §02.</p></div>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/f1_readout_mass.png" alt="Readout mass by layout for three runs. Old 14B readout: medians 0.91 (Alan's lines), 0.85, 0.05 (markdown), 0.99, 0.68, 0.62. New 14B readout: 1.00 everywhere. 32B: 0.99 to 1.00 except plain prose 0.51 and person asking 0.60" loading="lazy"></div>
+    <figcaption>Probability on the counted answer paths, per prompt, by layout. Gray: the Oct 7 14B readout. Blue and orange: the summed readout.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>With the old readout, 36% of 14B prompts had less than half their probability counted. With the summed readout, every 14B prompt is above 0.999. The 32B's median is 0.99–1.00 in four layouts, but only about half in plain prose (median 0.51) and the person-asking layout (0.60). There it often writes a third form, <code>I choose: &lt;b)&gt;</code> (§08).</p></div>
+  </div>
+</section>
+
+<hr>
+
+<section class="finding" id="fix">
+  <div class="finding-head">
+    <div class="eyebrow">03 · The fix, on the 14B</div>
+    <h2>The Oct 7 conclusions hold; some effect sizes shrink</h2>
+    <p class="question col">Every variant's Δ P(short) on the same model, the Oct 7 readout against the summed one.</p>
+  </div>
+  <figure>
+    <div class="plate narrow"><img src="figs/f2_fix_effects.png" alt="Scatter of each variant's effect with the old readout against the summed readout. Points lie close to the diagonal; a few move: labels 1)/2) from 0.20 to 0.15, leaning later from -0.11 to -0.07, the mortgage implicit item from 0.10 to 0.37, the 8-weeks-pregnant item from -0.63 to -0.45" loading="lazy"></div>
+    <figcaption>One point per variant (116, including the layout-cross and implicit variants). Dashed line: no change.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>Not the hardware</h3><p>The rerun used a different GPU (A100 instead of RTX PRO 5000). Scoring the new run with only the old path reproduces the Oct 7 logits (correlation 0.9998, median difference 0.2 log-odds from rounding) and the Oct 7 effects (mean change 0.004). The summed readout changes them by 0.049 on average. So the differences below come from counting the second path, not from the machine.</p></div>
+    <div class="reading"><h3>What changed</h3><p>Effects on the 14B shrink but keep their sign: option order (all variants) +0.22 → <b>+0.16</b>, labels 1)/2) +0.20 → <b>+0.15</b>, leaning sooner +0.25 → +0.22, leaning later −0.11 → <b>−0.07</b>, the time-frame wording −0.15 → −0.14. The reason: the two answer paths don't prefer the same label. Scored on one path at a time, option order is +0.22 on the " " path but +0.11 on the " **" path, and labels 1)/2) are +0.19 vs −0.01. The summed readout weighs each path by how likely the model is to take it.</p></div>
+    <div class="reading"><h3>Verdicts that flip</h3><p>On Alan's layout, two variants drop just below the bar: "days" (−0.055 → −0.050) and the constraint-first layout (+0.08 → +0.05). Markdown moves most (its old numbers were 95% unseen): the agreement swing there is 0.43 → 0.24. Among implicit items, the mortgage item becomes less patient (+0.10 → +0.37) and the 8-weeks-pregnant item less extreme (−0.63 → −0.45). Overall, 60 → 50 of 116 variants pass the bar.</p></div>
+  </div>
+  <div class="for-us">
+    <div class="eyebrow">What it means</div>
+    <p>The Oct 7 checklist stands. But even where the old readout saw ~90% of the probability, the unseen 10% leaned differently, so effect sizes from single-separator readouts (ours, and anyone's who prefills one answer start) are biased towards formatting effects. The summed readout should be the default from now on.</p>
+  </div>
+</section>
+
+<section class="finding" id="baseline">
+  <div class="finding-head">
+    <div class="eyebrow">04 · Baseline</div>
+    <h2>The 32B follows the horizon and ignores option order</h2>
+    <p class="question col">The canonical prompt on both models, split by which option is listed first.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/f3_curves.png" alt="P(short) against stated horizon. 14B: the short-first line is above the short-second line, by 0.30 at 1 week and 0.14 at 10 years. 32B: both lines overlap, near 1 up to 1 year, falling to 0.30 at 20 years and rising to 0.41 at 50 years" loading="lazy"></div>
+    <figcaption>Canonical prompt, summed readout. Each point: mean over 8 option configurations × 2 domains.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>Both models choose the short option up to a year and less often after. The 32B follows the horizon a bit more closely (Spearman ρ between P(short) and log horizon −0.72 vs −0.66). The two order lines of the 32B overlap: its order effect on the canonical prompt is 0.02 (14B: 0.09). At 1 week, when neither option pays out in time, the 14B goes by position (1.00 if listed first, 0.70 if second); the 32B picks the sooner payout in both orders (0.998).</p></div>
+    <div class="reading"><h3>Something to check</h3><p>The 32B is less patient at long horizons: P(short) 0.30 at 20 years (14B 0.15), and it rises again to 0.41 at 50 years. With a 50-year horizon both options pay out in time and the larger one should win. Whether the 32B discounts very long horizons, or something in the option grid drives this, is open; the per-configuration breakdown is the next thing to look at.</p></div>
+  </div>
+</section>
+
+<section class="finding" id="ranking">
+  <div class="finding-head">
+    <div class="eyebrow">05 · Single choices</div>
+    <h2>Formatting stops mattering; what the user says still does</h2>
+    <p class="question col">Every variant on Alan's layout, Δ P(short) against the canonical prompt, on both models.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/f4_compare.png" alt="Dot plot of each variant's effect for the 14B (blue) and the 32B (orange). Large 14B effects for option order, the time-frame rewording, options and horizon in months, labels 1)/2) and the task-brief layout shrink to near zero on the 32B. Leaning-later is -0.18 on the 32B, not-in-a-hurry -0.12, days/weeks/months +0.05 to +0.08" loading="lazy"></div>
+    <figcaption>Filled: passes the bar on that model; hollow: does not. Gray band: the 32B's null floor (±0.020; 14B ±0.014). Rows sorted by the 14B effect within each group. * meaning arguably changes. † compared with "options in months".</figcaption>
+  </figure>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Variant</th><th>Qwen3-14B</th><th>Qwen3-32B</th></tr></thead>
+      <tbody>
+        <tr><td>option order (short first − second)</td><td class="num">+0.16 (0.06–0.25)</td><td class="num">+0.01 (−0.06–0.09)</td></tr>
+        <tr><td>labels 1) / 2)</td><td class="num">+0.15 (0.12–0.18)</td><td class="num">+0.00 (−0.02–0.03)</td></tr>
+        <tr><td>"Evaluate … over a time frame of <i>h</i>"</td><td class="num">−0.14 (−0.17–−0.10)</td><td class="num">−0.00 (−0.06–0.06)</td></tr>
+        <tr><td>options + horizon in months</td><td class="num">−0.08 (−0.11–−0.04)</td><td class="num">+0.04 (0.00–0.07)</td></tr>
+        <tr><td>task-brief layout</td><td class="num">−0.07 (−0.12–−0.02)</td><td class="num">+0.03 (−0.01–0.07)</td></tr>
+        <tr class="em"><td>+ "…leaning towards … sooner."</td><td class="num">+0.22 (0.17–0.27)</td><td class="num">+0.14 (0.10–0.19)</td></tr>
+        <tr class="em"><td>+ "…leaning towards … later."</td><td class="num">−0.07 (−0.12–−0.02)</td><td class="num">−0.18 (−0.22–−0.14)</td></tr>
+        <tr class="em"><td>+ "We're not in a hurry at all."</td><td class="num">−0.07 (−0.10–−0.04)</td><td class="num">−0.12 (−0.16–−0.08)</td></tr>
+        <tr><td>days / weeks / months</td><td class="num">−0.05 / −0.03 / −0.05</td><td class="num">+0.08 / +0.07 / +0.05</td></tr>
+        <tr><td>decades ("0.5 decades")</td><td class="num">−0.07 (−0.13–−0.02)</td><td class="num">−0.08 (−0.16–−0.01)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>Of the 11 variants that matter on the 14B, 6 also matter on the 32B. Everything about the <em>form</em> of the prompt (order, labels, constraint wording, months in the options, layout) fades to within ±0.05 on the 32B. What remains is <em>content a person adds</em>: a stated preference and "We're not in a hurry at all." With no horizon in the prompt, the sooner/later swing is about 0.9 on both models (0.89 vs 0.92).</p></div>
+    <div class="reading"><h3>Units</h3><p>Days, weeks and months make the 32B choose the short option more often (+0.05 to +0.08), the opposite sign from the 14B. Decades lower P(short) on both. Named and spelled-out forms stay small on both. Why the sign flips is open; it is one more reason to keep one unit system per experiment.</p></div>
+  </div>
+  <div class="for-us">
+    <div class="eyebrow">What it means</div>
+    <p>The formatting controls (both orders, letter labels, one constraint sentence) matter most for smaller models; they cost nothing, so keep them. The controls that matter at every size are about content: no user preference or pressure sentence unless it is the manipulation, and one unit system per experiment, since its effect can flip with the model.</p>
+  </div>
+</section>
+
+<section class="finding" id="layouts">
+  <div class="finding-head">
+    <div class="eyebrow">06 · Prompt structure</div>
+    <h2>Stated preferences matter in every layout, more so on the 32B</h2>
+    <p class="question col">Eight variants repeated in six layouts, each against that layout's own canonical prompt.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/f5_layout_cross.png" alt="Two heatmaps of effect by variant and layout. Leaning sooner is red and leaning later blue in every layout on both models; on the 32B leaning later reaches -0.43 in task brief and -0.41 for a person asking. Pressure cues are near zero. Days and months are blue on the 14B and red on the 32B in Alan's lines, prose and markdown" loading="lazy"></div>
+    <figcaption>Red: more short choices; blue: fewer. Hatched, bold italic: fewer than half the cell pairs have readout mass ≥ 0.5 (32B plain prose and person asking, §08); read those with care.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>Leaning sooner/later moves both models in every layout. On the 32B, "leaning later" is strongest when a person asks for help (−0.41) or in a task brief (−0.43); the sooner–later swing in the person-asking layout is 0.64 on the 32B vs 0.27 on the 14B. The readout sees less there (hatched), but on the prompts where it sees at least half the probability the effects are even larger (+0.33 / −0.46), so this is not a readout artifact. Hurry, "Take your time" and "Thanks." stay within ±0.06 everywhere.</p></div>
+    <div class="reading"><h3>Units across layouts</h3><p>On the 32B, days and months raise P(short) in Alan's lines, prose and markdown (+0.05 to +0.09) but lower it in the constraint-first layout (−0.08, −0.09), the one place where the horizon comes before the options. On the 14B they lower it in most layouts. Unit effects depend on both model and layout; they are not a stable property of the phrasing.</p></div>
+  </div>
+</section>
+
+<section class="finding" id="implicit">
+  <div class="finding-head">
+    <div class="eyebrow">07 · Implicit horizons</div>
+    <h2>Both models are more patient with implicit horizons, on different items</h2>
+    <p class="question col">An implicit horizon ("before our baby is born; my partner is 8 weeks pregnant") against its explicit twin ("within the next 32 weeks"), in Alan's layout.</p>
+  </div>
+  <figure>
+    <div class="plate"><img src="figs/f6_implicit.png" alt="Per implicit item, the effect on the 14B (blue) and the 32B (orange). Most items are negative on both. Large differences: daughter starts university (-0.07 vs -0.40), baby items (-0.45 vs -0.17), mortgage (+0.37 vs -0.06), kids grown up (+0.27 vs -0.06)" loading="lazy"></div>
+    <figcaption>One row per implicit item, the explicit twin's duration in brackets. Concrete items above the dotted line, vague ones below.</figcaption>
+  </figure>
+  <div class="readings">
+    <div class="reading"><h3>What it shows</h3><p>16 of 18 items make the 32B more patient than the explicit twin (14B: 15 of 18). The size per item agrees only moderately between models (correlation 0.64). The 32B moves less on the baby items (−0.17, −0.18 vs −0.45, −0.40) and the wedding (−0.08 vs −0.33), and more on "our daughter starts university; she just turned 8" (−0.40 vs −0.07) and the toddler starting school (−0.47 vs −0.28). The two long-horizon items where the 14B became <em>less</em> patient (mortgage +0.37, kids grown up +0.27) are near zero on the 32B.</p></div>
+    <div class="reading"><h3>Not run this time</h3><p>On Oct 7, the "name the horizon" protocol showed the 14B stating multi-year horizons for "before Friday; today is Monday". That protocol was not run on the 32B, so we can't yet say whether the 32B's shifts come from misreading the horizon or from the "before X" framing.</p></div>
+  </div>
+  <div class="for-us">
+    <div class="eyebrow">For the implicit-horizon direction</div>
+    <p>"Implicit makes the model more patient" holds at both sizes, but which items carry it does not. A ground truth for implicit horizons has to be measured per model (state protocol or behaviour), not fixed once from the text.</p>
+  </div>
+</section>
+
+<hr>
+
+<section class="finding" id="caveats">
+  <div class="finding-head">
+    <div class="eyebrow">08 · Caveats</div>
+    <h2>A third way of answering, and what this run doesn't cover</h2>
+  </div>
+  <div class="readings">
+    <div class="reading"><h3>The 32B copies the angle brackets</h3><p>The format line reads <code>I choose: &lt;a) or b)&gt;</code>. In plain prose and the person-asking layout, where that line is inline, the 32B often writes <code>I choose: &lt;b)&gt;</code>, which neither counted path covers; readout mass there is about half. The comparison still looks sound: counting those answers, all 156 free answers give a label and 98.7% agree with the readout (8 of the 9 lowest-mass ones too). The fix is cheap: add " &lt;" as a third path.</p></div>
+    <div class="reading"><h3>Noise floor</h3><p>The 32B's null rewordings reach ±0.020 (14B ±0.014, Oct 7 run ±0.009), so its bar is effectively a little higher. Its CIs are wider too: 16 scenarios, one greedy readout per cell.</p></div>
+    <div class="reading"><h3>Choices only</h3><p>No multi-turn plans and no "name the horizon" answers on the 32B. The plan results (hurry ×0.65 before step 3, units setting the step size) are 14B-only. Pressure cues barely touch single choices on either model, so whether the 32B's plans react to them is open.</p></div>
+  </div>
+</section>
+
+<section class="finding" id="next">
+  <div class="finding-head">
+    <div class="eyebrow">09 · Recommendations</div>
+    <h2>The checklist, updated</h2>
+  </div>
+  <div class="summary">
+    <div class="stack">
+      <h3>Control in every experiment</h3>
+      <ul>
+        <li>Read choices with the summed readout (" ", " **", and " &lt;" for models that copy the format brackets); report the readout mass.</li>
+        <li>No user preference or pressure sentence unless it is the manipulation: the one effect that grows with model size.</li>
+        <li>One unit system per experiment, or units as an explicit factor; the direction of a unit effect can flip between models.</li>
+        <li>Both option orders, letter labels, one fixed constraint sentence: free, and essential below 32B.</li>
+        <li>For implicit horizons, measure what each model thinks the horizon is.</li>
+      </ul>
+    </div>
+    <div class="stack">
+      <h3>Next</h3>
+      <ul>
+        <li>Why the 32B gets less patient at 50 years: break the curve down by option configuration (local, from the saved results).</li>
+        <li>Add " &lt;" to the readout and rerun the 32B prose and person-asking layouts (≈ 10 min of GPU).</li>
+        <li>32B state protocol on the implicit items (a few minutes) and multi-turn cues (≈ 3 h on an 80 GB card).</li>
+        <li>Activations of both models are in the bucket: does the horizon direction at the boundary move with the variants that change behaviour, and stay still for the formatting variants the 32B ignores?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="finding" id="reproduce">
+  <div class="finding-head">
+    <div class="eyebrow">10 · Reproduce</div>
+    <h2>Code, models and data</h2>
+  </div>
+  <div class="tbl-wrap">
+    <table class="repro">
+      <tbody>
+        <tr><th>Code</th><td><code>phrasing_study/</code> on branch <code>phrasing-study</code>, capture at commit <code>d642a78</code>. The summed readout is <code>readout_paths</code> / <code>plan_readout</code> / <code>forward_logprobs</code> in <code>phr/model.py</code> and <code>run_choice</code> in <code>phr/single.py</code>; tests in <code>tests/test_model.py</code> (the summed readout equals token-by-token probabilities, fp32, Qwen3-1.7B). Design: <code>README.md</code>, section "Readout v2".</td></tr>
+        <tr><th>Run</th><td><code>PROTOCOLS=choice MODEL=Qwen/Qwen3-32B bash phrasing_study/scripts/run_pipeline.sh</code> (and the same with <code>Qwen/Qwen3-14B</code>) on one GPU with ≥ 80 GB: unit tests → smoke slice + sanity gates → choice capture → evaluate → gates → checksums (optional upload to a GCS bucket). Gates: readout mass 0.994 / 1.000, free answers in format 0.94 / 1.00, agreeing with the readout 0.99 / 0.99 (32B / 14B).</td></tr>
+        <tr><th>Models</th><td><code>Qwen/Qwen3-32B</code> revision <code>9216db5781bf21249d130ec9da846c4624c16137</code>; <code>Qwen/Qwen3-14B</code> revision <code>40c069824f4251a91eefaf281ebe4c544efd3e18</code>; bf16, thinking off.</td></tr>
+        <tr><th>Hardware</th><td>1× A100 80 GB PCIe on vast.ai, torch 2.11 + CUDA 12.8, transformers 5.17. Choice protocol 23 min (32B) and 11 min (14B); rental ≈ 1 h, ≈ $1.80.</td></tr>
+        <tr><th>Results</th><td><code>results/qwen3-32b_choice_r2/</code> and <code>results/qwen3-14b_choice_r2/</code>: per-variant effects (<code>choice_variants.csv</code>, <code>choice_contrasts.csv</code>, <code>choice_shifts.csv</code>), layouts (<code>choice_layout_cross.csv</code>), implicit items (<code>choice_implicit.csv</code>), the canonical curve and gate, and <code>summary.md</code>. All three runs side by side: <code>explainer-32b/figs/variants_three_runs.csv</code> (<code>d_hw</code> = the new 14B run scored with the old readout).</td></tr>
+        <tr><th>Data</th><td>Not in git. Both runs (21.3 GiB each: per-item tables with per-separator log-odds and mass, activations, metadata, logs, SHA-256 checksums) are in the GCS bucket <code>gs://augusto-phrasing-study/qwen3-32b_choice_r2/</code> and <code>…/qwen3-14b_choice_r2/</code>; ask Augusto for read access. The small files (everything except activations) are enough for the analysis and the figures; place them in <code>runs/&lt;run&gt;/</code> and check them with <code>sha256sum -c SHA256SUMS</code>.</td></tr>
+        <tr><th>Figures</th><td><code>explainer-32b/make_figs.py</code> regenerates every figure on this page from <code>results/</code> and the small files in <code>runs/</code> (also needs <code>runs/qwen3-14b_phrasing_s0/</code> for the comparison with Oct 7).</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>Builds on Alan's choice template, option grid and unit/phrasing controls (<code>alan/</code>) and on the Oct 7 phrasing study (<a href="../explainer/index.html">Qwen3-14B explainer</a>). Author: Augusto Nicola, SPAR fall 2026, project <em>Planning Temporal Manifolds</em> (mentors: Ian Rios-Sialer, Shantanu Darveshi, Justin Shenk).</p>
+</footer>
+
+</main>
+</body>
+</html>

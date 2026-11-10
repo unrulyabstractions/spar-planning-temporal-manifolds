@@ -1,0 +1,17 @@
+contrast,a,b,n,mean_diff,lo,hi
+"pressure cue (hurry - relax), all phrasings, canonical layout",hurry,relax,320,0.05095664154845223,0.02429514693278107,0.07870337509364697
+"pressure cue (hurry - relax), no horizon",hurry,relax,32,0.08111590657131214,0.036749015785690196,0.13248907896601392
+"pressure cue (hurry - relax), layout constraint_first",hurry,relax,320,-0.011883786207277045,-0.02836697216108817,0.005410066253946325
+"pressure cue (hurry - relax), layout markdown",hurry,relax,320,-0.016875656198164887,-0.042192592155068306,0.005572273761098596
+"pressure cue (hurry - relax), layout prose",hurry,relax,320,-0.03234047766226644,-0.06225738696296108,-0.006018905006400316
+"pressure cue (hurry - relax), layout task_brief",hurry,relax,320,0.009223779767991491,0.004465051648271394,0.013891524162114257
+"pressure cue (hurry - relax), layout user_request",hurry,relax,320,-0.0457904299287508,-0.05978995977567712,-0.032509851053313873
+"agreement cue (sooner - later), all phrasings, canonical layout",sooner,later,320,0.32570393022976685,0.2614569711244655,0.3871807297803413
+"agreement cue (sooner - later), no horizon",sooner,later,32,0.9146913557999525,0.879466953619087,0.9481761377357103
+"agreement cue (sooner - later), layout constraint_first",sooner,later,320,0.29939574397809066,0.26299796063564596,0.3363372237612182
+"agreement cue (sooner - later), layout markdown",sooner,later,320,0.30606723065680175,0.24305858167587682,0.36700206140842273
+"agreement cue (sooner - later), layout prose",sooner,later,320,0.416119243549391,0.34751668942225333,0.48286575515133306
+"agreement cue (sooner - later), layout task_brief",sooner,later,320,0.6259149538222862,0.5471297260848156,0.7041262938699901
+"agreement cue (sooner - later), layout user_request",sooner,later,320,0.6429919728956663,0.6053614082068189,0.6816061340447535
+"option order (short first - short second), all variants",,,12432,0.010024317542011333,-0.06346848955676865,0.08620201350457053
+unit-match interaction (h months: with month options - with mixed options),,,224,-0.01757207575026229,-0.06805021531335305,0.03215051197179306

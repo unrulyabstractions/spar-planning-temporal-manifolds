@@ -1,0 +1,74 @@
+2026-09-29 21:25:45 CHAIN START commit 2f52e2e model Qwen/Qwen3.5-27B tag qwen3.5-27b
+torch 2.11.0+cu128 12.8 NVIDIA A100-SXM4-80GB
+2026-09-29 21:26:03 tests: 49 passed, 15 skipped in 8.99s
+2026-09-29 21:26:31 verify: mem per gpu (GiB): [50.84] VERIFY OK 
+2026-09-29 21:26:31 START commit 2f52e2e model Qwen/Qwen3.5-27B tag qwen3.5-27b cap [--model Qwen/Qwen3.5-27B --batch-size 16]
+2026-09-29 21:26:31 datasets
+2026-09-29 21:26:35 datasets done
+2026-09-29 21:26:35 capture qwen3.5-27b_investment_n2000_s0 start
+2026-09-29 22:07:12 capture qwen3.5-27b_investment_n2000_s0 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-09-29 22:07:12 capture qwen3.5-27b_matrix_s0 start
+Terminated
+2026-09-30 06:56:48 capture qwen3.5-27b_matrix_s0 done: 3240 samples, format adherence 2998/3240 = 0.925
+2026-09-30 06:56:48 capture qwen3.5-27b_extended_n2000_s0 start
+2026-09-30 07:17:10 capture qwen3.5-27b_extended_n2000_s0 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-09-30 07:17:10 capture qwen3.5-27b_phrasings_n2000_s0 start
+2026-09-30 07:42:19 capture qwen3.5-27b_phrasings_n2000_s0 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-09-30 07:42:19 capture qwen3.5-27b_units_paired_n2000_s1 start
+2026-09-30 08:00:51 capture qwen3.5-27b_units_paired_n2000_s1 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-09-30 08:00:51 all captures done; waiting for analyses
+2026-09-30 08:01:00 checksums
+qwen3.5-27b_investment_n2000_s0: n=2000 index=d9f5aa061217 T3sum=105090 R0sum=21562.6
+qwen3.5-27b_matrix_s0: n=3240 index=85778dde9e0a T3sum=135981 R0sum=27138.6
+qwen3.5-27b_extended_n2000_s0: n=2000 index=56028a21be98 T3sum=104382 R0sum=21606.3
+qwen3.5-27b_phrasings_n2000_s0: n=2000 index=ad8ba13a83ee T3sum=105136 R0sum=20060
+qwen3.5-27b_units_paired_n2000_s1: n=2000 index=52ac11ed0602 T3sum=104247 R0sum=21716.3
+wrote snapshot/checksums_qwen3.5-27b.json
+2026-09-30 08:01:07 ALL DONE
+2026-09-30 08:01:07 capture qwen3.5-27b_families_s0 start
+2026-09-30 08:10:03 capture qwen3.5-27b_families_s0 done: 960 samples, format adherence 960/960 = 1.000
+2026-09-30 08:10:03 capture qwen3.5-27b_matrix_s0_long start
+2026-09-30 09:07:47 capture qwen3.5-27b_matrix_s0_long done: 3240 samples, format adherence 2998/3240 = 0.925
+2026-09-30 09:07:47 capture qwen3.5-27b_families_s0_long start
+2026-09-30 09:22:51 capture qwen3.5-27b_families_s0_long done: 960 samples, format adherence 960/960 = 1.000
+2026-09-30 09:22:51 analysis curve_model start
+2026-09-30 09:24:50 analysis curve_model done
+2026-09-30 09:24:50 analysis relevance_decoder start
+2026-09-30 09:29:31 analysis relevance_decoder done
+2026-09-30 09:29:31 analysis relevance_families start
+2026-09-30 09:30:39 analysis relevance_families done
+2026-09-30 09:30:39 analysis scaling_test start
+2026-09-30 09:48:44 analysis scaling_test done
+2026-09-30 09:48:44 analysis guttman_canonical start
+2026-09-30 09:48:56 analysis guttman_canonical done
+2026-09-30 09:48:56 analysis guttman_extended start
+2026-09-30 09:49:06 analysis guttman_extended done
+2026-09-30 09:49:06 analysis leace_check start
+2026-09-30 09:54:52 analysis leace_check done
+2026-09-30 09:54:52 analysis pls_check start
+2026-09-30 09:56:57 analysis pls_check done
+2026-09-30 09:56:57 analysis stakes_pilot start
+2026-09-30 09:57:54 analysis stakes_pilot done
+2026-09-30 09:57:54 analysis late_readout start
+2026-09-30 09:58:54 analysis late_readout done
+2026-09-30 09:58:54 analysis depth_profile start
+2026-09-30 10:02:38 analysis depth_profile done
+2026-09-30 10:02:38 analysis analyze_long start
+2026-09-30 10:44:15 analysis analyze_long done
+2026-09-30 10:44:15 export subset runs/qwen3.5-27b_investment_n2000_s0
+2026-09-30 10:44:25 export subset runs/qwen3.5-27b_matrix_s0
+2026-09-30 10:44:37 export subset runs/qwen3.5-27b_extended_n2000_s0
+2026-09-30 10:44:46 export subset runs/qwen3.5-27b_phrasings_n2000_s0
+2026-09-30 10:45:00 export subset runs/qwen3.5-27b_units_paired_n2000_s1
+2026-09-30 10:45:13 export subset runs/qwen3.5-27b_families_s0
+2026-09-30 10:45:22 export subset runs/qwen3.5-27b_matrix_s0_long
+2026-09-30 10:45:35 export subset runs/qwen3.5-27b_families_s0_long
+    with open(self.dir / "meta.json") as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+NotADirectoryError: [Errno 20] Not a directory: 'runs/qwen3.5-27b_extended_n2000_s0.analysis.log/meta.json'
+2026-09-30 10:49:22 tier-1 size: 20G	total
+2026-09-30 10:49:22 CHAIN DONE
+^^^^^^^
+NotADirectoryError: [Errno 20] Not a directory: 'runs/qwen3.5-27b_extended_n2000_s0.analysis.log/meta.json'
+2026-09-30 10:49:22 tier-1 size: 20G	total
+2026-09-30 10:49:22 CHAIN DONE

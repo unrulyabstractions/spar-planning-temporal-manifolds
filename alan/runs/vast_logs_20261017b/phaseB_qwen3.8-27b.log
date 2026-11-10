@@ -1,0 +1,7 @@
+2026-10-17 21:54:30 PHASE B START Qwen/Qwen3.8-27B batch 20
+2026-10-18 01:05:19 think: done: 192 samples, format adherence 180/192 = 0.938 done: 192 samples, format adherence 182/192 = 0.948 
+runs/qwen3.8-27b_think_pilot 384 rows; uids unique and equal to the pilot set
+runs/qwen3.8-27b_nothink_pilot 384 rows; uids unique and equal to the pilot set
+2026-10-18 01:10:39 analysis done
+2026-10-18 01:10:39 weights freed; disk 115G free
+2026-10-18 01:10:39 PHASE B DONE

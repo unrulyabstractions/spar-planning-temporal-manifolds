@@ -8,7 +8,7 @@ bins) and expressed in units of the local adjacent-bin spacing ("grid steps"; + 
 plus the orthogonal remainder. Then the pair-level link: Spearman(Δalong, Δp_short) in mixed bins.
 Also ridge transfer (train canonical → test rewrites) with residual by unit, as in analyze_variants.
 
-Usage: analyze_paired.py RUN_DIR OUT_DIR [--cells 22:T3,37:T3,22:R0,29:R0]
+Usage: analyze_paired.py RUN_DIR OUT_DIR [--cells 0.55L:T3,0.92L:T3,0.55L:R0,0.72L:R0]
 """
 import argparse, sys
 from pathlib import Path
@@ -18,9 +18,10 @@ from sklearn.linear_model import RidgeCV
 from sklearn.metrics import r2_score
 from ptm.analysis import cell_metrics, _import_plt, cell_name
 from ptm.store import RunData
+from ptm.depth import resolve_cell, parse_layers
 
 UNIT_RANK = {"hours": 0, "days": 1, "weeks": 2, "months": 3, "years": 4, "decades": 5, "centuries": 6}
-ap = argparse.ArgumentParser(); ap.add_argument("run_dir"); ap.add_argument("out_dir"); ap.add_argument("--cells", default="22:T3,37:T3,22:R0,29:R0")
+ap = argparse.ArgumentParser(); ap.add_argument("run_dir"); ap.add_argument("out_dir"); ap.add_argument("--cells", default="0.55L:T3,0.92L:T3,0.55L:R0,0.72L:R0")
 a = ap.parse_args()
 run = RunData(a.run_dir); df = run.index.reset_index(drop=True); out = Path(a.out_dir); out.mkdir(parents=True, exist_ok=True)
 has_h = df["horizon_years"].notna().to_numpy()
@@ -47,7 +48,7 @@ bins = df.loc[is_canon].groupby("horizon_text")["horizon_years"].first().sort_va
 labels, years = bins.index.tolist(), bins.to_numpy()
 rows = []
 for cell in a.cells.split(","):
-    layer, pos = cell.split(":"); layer = int(layer)
+    layer, pos = resolve_cell(cell, run)
     m, ex = cell_metrics(run, layer, pos)
     X = ex["X"]
     # canonical centroids, local tangents and spacings
@@ -96,7 +97,7 @@ cells = a.cells.split(","); fig, axes = plt.subplots(1, len(cells), figsize=(3.6
 for ax, cell in zip(np.atleast_1d(axes), cells):
     gg = pairs.groupby("horizon_unit")[f"along_{cell}"].agg(["mean", "sem"]).sort_index(key=lambda s: s.map(UNIT_RANK))
     ax.axhline(0, color="#9a9a9a", lw=1); ax.errorbar(range(len(gg)), gg["mean"], yerr=1.96 * gg["sem"], fmt="o", color="#1b7f79", capsize=3)
-    ax.set_xticks(range(len(gg))); ax.set_xticklabels(gg.index, rotation=45, ha="right", fontsize=8); ax.set_title(cell_name(run, int(cell.split(":")[0]), cell.split(":")[1]), fontsize=9); ax.spines[["top", "right"]].set_visible(False)
+    ax.set_xticks(range(len(gg))); ax.set_xticklabels(gg.index, rotation=45, ha="right", fontsize=8); ax.set_title(cell_name(run, *resolve_cell(cell, run)), fontsize=9); ax.spines[["top", "right"]].set_visible(False)
 np.atleast_1d(axes)[0].set_ylabel("along-path displacement (grid steps, + = longer)")
 fig.suptitle(f"{run.meta['model_name']}: unit rewrite displacement along the horizon path (95% CI)", fontsize=10); fig.tight_layout()
 fig.savefig(out / "paired_along_by_unit.png", dpi=150); plt.close(fig)

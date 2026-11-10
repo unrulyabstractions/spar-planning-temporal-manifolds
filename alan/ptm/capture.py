@@ -1,11 +1,13 @@
 """Activation capture: generate greedily, then re-run teacher-forced and hook the residual stream.
 
 Residual-stream convention (stored axis `layer`, length n_layers + 1):
-  layer 0        = output of the token embedding (input to decoder layer 0)
+  layer 0        = output of the token embedding (input to decoder layer 0; for Gemma this includes its
+                   sqrt(d) embedding scale, which the embedding module applies itself)
   layer l >= 1   = output of decoder layer l-1, i.e. the residual stream after l layers
                    (the prior work's `resid_post` of layer l-1)
 No final norm is applied to any stored layer. Choice logits are computed by applying the model's
-final norm and lm_head to the layer-n_layers vector at the position that predicts the label token.
+final norm, lm_head and (Gemma) final logit soft cap to the layer-n_layers vector at the position that
+predicts the label token.
 """
 
 from __future__ import annotations
@@ -19,7 +21,8 @@ from typing import Optional
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from .chat import ChatEncoding, encode_user_turn, find_choice, label_first_token_id, position_labels
+from .chat import (ANCHOR_LABELS, ChatEncoding, answer_start, encode_user_turn, end_of_turn_id, find_anchor, find_choice,
+                   label_first_token_id, position_labels)
 from .prompts import PromptSample
 
 
@@ -29,10 +32,13 @@ class CaptureConfig:
     enable_thinking: bool = False
     max_new_tokens: int = 48
     n_response: int = 8            # response positions R0..R{n-1} to store
+    anchors: bool = False          # also store M0 (first token after "My reasoning:"), E0 (last generated token), MEAN over M0..E0
+    reasoning_prefix: str = "My reasoning:"
     batch_size: int = 4
     dtype: str = "bfloat16"
     max_memory_gib: Optional[object] = None  # per-GPU cap in GiB: a number, or a list per GPU; None = accelerate decides
     split_layers: Optional[int] = None       # explicit 2-GPU map: embeddings + this many decoder layers on GPU 0, rest on GPU 1
+    store_acts: bool = True                  # False: behaviour only (generation + choice logits), no residual hooks or shards
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -49,6 +55,7 @@ class SampleResult:
     response_tokens: list[str] = field(default_factory=list)
     choice: Optional[str] = None            # 'a' | 'b' | None
     choice_gen_index: Optional[int] = None  # index into gen_ids
+    anchor_index: Optional[dict] = None     # {"M0": index into gen_ids of the first reasoning token, "E0": last index} when anchors are stored
     logit_a: float = math.nan               # float32 two-row logits from the normed residual
     logit_b: float = math.nan
     p_a: float = math.nan                   # full-vocab softmax mass on the label token (model dtype)
@@ -57,15 +64,41 @@ class SampleResult:
     pos_valid: Optional[list[bool]] = None
 
 
+def text_stack(model):
+    """The decoder stack holding embed_tokens / layers / norm: `model.model` for Qwen3 and Qwen3.5 (which
+    AutoModelForCausalLM loads text-only), `model.model.language_model` when it returns a multimodal wrapper
+    (Gemma 4: Gemma4ForConditionalGeneration)."""
+    base = model.model
+    stack = getattr(base, "language_model", base)
+    for name in ("embed_tokens", "layers", "norm"):
+        if not hasattr(stack, name):
+            raise AttributeError(f"{type(model).__name__}: decoder stack {type(stack).__name__} has no {name!r}; unverified layout")
+    return stack
+
+
+def final_logit_softcap(model) -> Optional[float]:
+    """Gemma's final logit soft cap c (logits = c·tanh(z/c)); None for models without one (Qwen)."""
+    cfg = model.config
+    return getattr(cfg.get_text_config(), "final_logit_softcapping", None)
+
+
+def softcap(x, cap: Optional[float]):
+    """Apply the model's final logit soft cap, as its own forward does after lm_head."""
+    if cap is None:
+        return x
+    return cap * (torch.tanh(x / cap) if isinstance(x, torch.Tensor) else math.tanh(x / cap))
+
+
 class ResidualHooks:
     """Forward hooks that copy the residual stream at requested positions to CPU as it is produced."""
 
     def __init__(self, model):
-        base = model.model
+        base = text_stack(model)
         self.modules = [base.embed_tokens] + list(base.layers)
         self.n_layers = len(base.layers)
         self.positions: Optional[torch.Tensor] = None   # [B, n_pos] long, on CPU
-        self.out: Optional[torch.Tensor] = None         # [B, L+1, n_pos, d]
+        self.mean_range: Optional[list] = None          # per batch row: (start, end) or None -> one extra MEAN slot
+        self.out: Optional[torch.Tensor] = None         # [B, L+1, n_pos (+1 if mean), d]
         self._handles = [m.register_forward_hook(self._make_hook(i)) for i, m in enumerate(self.modules)]
 
     def _make_hook(self, layer_index: int):
@@ -76,17 +109,25 @@ class ResidualHooks:
             B = h.shape[0]
             idx = self.positions.to(h.device)
             gathered = h[torch.arange(B, device=h.device)[:, None], idx]     # [B, n_pos, d]
+            extra = 1 if self.mean_range is not None else 0
             if self.out is None:
-                self.out = torch.zeros((B, self.n_layers + 1, idx.shape[1], h.shape[-1]), dtype=h.dtype)
-            self.out[:, layer_index] = gathered.to("cpu")
+                self.out = torch.zeros((B, self.n_layers + 1, idx.shape[1] + extra, h.shape[-1]), dtype=h.dtype)
+            self.out[:, layer_index, : idx.shape[1]] = gathered.to("cpu")
+            if extra:
+                for b in range(B):
+                    rng = self.mean_range[b]
+                    if rng is not None:
+                        self.out[b, layer_index, -1] = h[b, rng[0] : rng[1] + 1].float().mean(0).to(h.dtype).to("cpu")
         return hook
 
-    def arm(self, positions: torch.Tensor) -> None:
+    def arm(self, positions: torch.Tensor, mean_range: Optional[list] = None) -> None:
         self.positions = positions
+        self.mean_range = mean_range
         self.out = None
 
     def disarm(self) -> None:
         self.positions = None
+        self.mean_range = None
 
     def remove(self) -> None:
         for h in self._handles:
@@ -94,14 +135,25 @@ class ResidualHooks:
 
 
 def explicit_device_map(model_name: str, split_layers: int) -> dict:
-    """Embeddings and decoder layers [0, split) on cuda:0; the rest, final norm and lm_head on cuda:1."""
+    """Embeddings and decoder layers [0, split) on cuda:0; the rest, final norm and lm_head on cuda:1.
+    Module paths come from a weightless (meta-device) instance of the class AutoModelForCausalLM will load, so a
+    multimodal wrapper (Gemma 4) gets its `model.language_model.*` paths and its non-text modules go on cuda:0."""
     from transformers import AutoConfig
-    n = AutoConfig.from_pretrained(model_name).num_hidden_layers
+    cfg = AutoConfig.from_pretrained(model_name)
+    n = getattr(cfg, "text_config", cfg).num_hidden_layers     # multimodal wrappers (Qwen3.5) keep the depth in text_config
     if not (0 < split_layers < n):
         raise ValueError(f"split_layers must be in (0, {n}), got {split_layers}")
-    dm = {"model.embed_tokens": 0, "model.rotary_emb": 0, "model.norm": 1, "lm_head": 1}
+    with torch.device("meta"):
+        skeleton = AutoModelForCausalLM.from_config(cfg)
+    wrapped = hasattr(skeleton.model, "language_model")
+    p = "model.language_model" if wrapped else "model"
+    dm = {f"{p}.embed_tokens": 0, f"{p}.rotary_emb": 0, f"{p}.norm": 1, "lm_head": 1}
     for i in range(n):
-        dm[f"model.layers.{i}"] = 0 if i < split_layers else 1
+        dm[f"{p}.layers.{i}"] = 0 if i < split_layers else 1
+    if wrapped:   # vision/audio towers and projections: unused for text, but every module needs a device
+        for name, _ in skeleton.model.named_children():
+            if name != "language_model":
+                dm[f"model.{name}"] = 0
     return dm
 
 
@@ -150,7 +202,7 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
     for e in encs:
         assert len(e.transition_tokens) == n_trans, "transition window length differs across prompts; template drift"
     pad_id = tok.pad_token_id
-    eos_ids = sorted({tok.convert_tokens_to_ids("<|im_end|>"), tok.eos_token_id})
+    eos_ids = sorted({end_of_turn_id(tok), tok.eos_token_id})
     device = model.get_input_embeddings().weight.device
 
     # 1) greedy generation, left-padded so all sequences end at the same index
@@ -173,12 +225,14 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
     # 2) teacher-forced pass over prompt + generation, one unpadded sequence at a time.
     #    Unpadded single-sequence passes reproduce the library's own hidden states bit-exactly;
     #    padded batches differ by up to ~8% relative L2 at deep layers (bf16 kernel noise).
-    n_pos = n_trans + cfg.n_response
-    acts_list, pos_valid, last_raw_list = [], [], []
+    n_fixed = n_trans + cfg.n_response
+    n_pos = n_fixed + (len(ANCHOR_LABELS) if cfg.anchors else 0)
+    acts_list, pos_valid, last_raw_list, positions_list = [], [], [], []
     for e, g in zip(encs, gen_ids):
-        positions = torch.zeros((1, n_pos), dtype=torch.long)
+        n_gather = n_fixed + (2 if cfg.anchors else 0)          # M0 and E0 are gathered; MEAN is computed in the hook
+        positions = torch.zeros((1, n_gather), dtype=torch.long)
         valid = []
-        for k in range(n_pos):
+        for k in range(n_fixed):
             if k < n_trans:
                 positions[0, k] = e.transition_start + k
                 valid.append(True)
@@ -188,21 +242,36 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
             else:
                 positions[0, k] = 0   # gathered then zeroed
                 valid.append(False)
-        hooks.arm(positions)
+        mean_range = None
+        if cfg.anchors:
+            st = answer_start(tok, g, cfg.enable_thinking)
+            j = find_anchor(tok, g, cfg.reasoning_prefix, start=st) if st is not None else None
+            m0 = (e.prompt_len + j) if (j is not None and j < len(g)) else None
+            e0 = (e.prompt_len + len(g) - 1) if len(g) > 0 else None
+            positions[0, n_fixed] = m0 if m0 is not None else 0; valid.append(m0 is not None)
+            positions[0, n_fixed + 1] = e0 if e0 is not None else 0; valid.append(e0 is not None)
+            ok = m0 is not None and e0 is not None and e0 >= m0
+            mean_range = [(m0, e0) if ok else None]; valid.append(ok)
+        if cfg.store_acts:
+            hooks.arm(positions, mean_range if cfg.anchors else None)
         last_raw: dict = {}
-        hh = model.model.layers[-1].register_forward_hook(
+        hh = text_stack(model).layers[-1].register_forward_hook(
             lambda m, i, o: last_raw.setdefault("x", (o[0] if isinstance(o, (tuple, list)) else o)))
         try:
             model.model(input_ids=torch.tensor([e.input_ids + g], device=device))
         finally:
             hh.remove()
             hooks.disarm()
-        a = hooks.out[0].clone()   # [L+1, n_pos, d]
-        for k, v in enumerate(valid):
-            if not v:
-                a[:, k] = 0
+        if cfg.store_acts:
+            a = hooks.out[0].clone()   # [L+1, n_pos, d]
+            for k, v in enumerate(valid):
+                if not v:
+                    a[:, k] = 0
+        else:
+            a = None
         acts_list.append(a)
         pos_valid.append(valid)
+        positions_list.append(positions)
         last_raw_list.append(last_raw["x"][0])   # [S, d] raw residual after the last layer (pre-norm)
 
     # 3) behavior readout: logits over the two labels at the position predicting the choice token
@@ -216,30 +285,36 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
             n_transition=n_trans,
             transition_tokens=e.transition_tokens,
             response_tokens=[tok.decode([t]) for t in g[: cfg.n_response]],
+            anchor_index={"M0": int(positions_list[b][0, n_fixed]) - e.prompt_len if cfg.anchors and pos_valid[b][n_fixed] else None,
+                          "E0": len(g) - 1 if cfg.anchors and len(g) > 0 else None} if cfg.anchors else None,
             acts=acts_list[b],
             pos_valid=pos_valid[b],
         )
-        j, choice = find_choice(tok, g, s.label_a, s.label_b)
+        # thinking mode: only text after the model closed its thinking can be the answer
+        st = answer_start(tok, g, cfg.enable_thinking)
+        j, choice = find_choice(tok, g, s.label_a, s.label_b, start=st) if st is not None else (None, None)
         if j is not None:
             k = n_trans + (j - 1)          # stored position R{j-1} predicts the label token
             pos = e.prompt_len + j - 1
-            if k < n_pos and pos_valid[b][k]:
+            if cfg.store_acts and k < n_pos and pos_valid[b][k]:
                 raw = acts_list[b][-1, k]
-            else:                          # choice beyond the stored response window: pull it now
+            else:                          # choice beyond the stored response window, or no stored acts: pull it now
                 raw = last_raw_list[b][pos].to("cpu")
-            norm = model.model.norm
+            norm = text_stack(model).norm
             h = norm(raw.to(norm.weight.device, dtype=norm.weight.dtype))
             W = model.lm_head.weight
+            cap = final_logit_softcap(model)
             # the actual emitted token decides the spacing variant; its counterpart uses the same variant
             emitted = g[j]
             spaced = emitted == label_first_token_id(tok, s.label_a if choice == "a" else s.label_b)
             ia = tok((" " if spaced else "") + s.label_a, add_special_tokens=False)["input_ids"][0]
             ib = tok((" " if spaced else "") + s.label_b, add_special_tokens=False)["input_ids"][0]
             h32 = h.to(W.device).float()
-            # two-row logits in float32 (exact given the bf16 residual); full-vocab softmax in model dtype
-            logit_a = float(h32 @ W[ia].float())
-            logit_b = float(h32 @ W[ib].float())
-            probs = torch.softmax(model.lm_head(h.to(W.device)).float(), dim=-1)
+            # two-row logits in float32 (exact given the bf16 residual); full-vocab softmax in model dtype.
+            # Both include the model's final logit soft cap (Gemma), so p_short is the model's own pairwise preference.
+            logit_a = softcap(float(h32 @ W[ia].float()), cap)
+            logit_b = softcap(float(h32 @ W[ib].float()), cap)
+            probs = torch.softmax(softcap(model.lm_head(h.to(W.device)).float(), cap), dim=-1)
             r.choice, r.choice_gen_index = choice, j
             r.logit_a, r.logit_b = logit_a, logit_b
             r.p_a, r.p_b = float(probs[ia]), float(probs[ib])
@@ -250,7 +325,7 @@ def capture_batch(model, tok, hooks: ResidualHooks, samples: list[PromptSample],
 def run_capture(samples: list[PromptSample], cfg: CaptureConfig, sink, log=print) -> None:
     """Capture all samples in batches, handing each batch's results to `sink(results)`."""
     model, tok = load_model(cfg)
-    hooks = ResidualHooks(model)
+    hooks = ResidualHooks(model)          # with store_acts=False the hooks stay disarmed and copy nothing
     log(f"loaded {cfg.model_name}: n_layers={hooks.n_layers} devices={sorted({str(p.device) for p in model.parameters()})}")
     sys.stdout.flush()
     t0 = time.time()

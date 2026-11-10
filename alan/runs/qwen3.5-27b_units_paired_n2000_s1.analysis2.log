@@ -1,0 +1,77 @@
+run Qwen/Qwen3.5-27B  n=2000  canonical rows 656  rewritten rows with a canonical partner 1311
+
+=== behavior: within-pair Δp_short by unit (+ = more short-option preference than the canonical rendering) ===
+               mean    sem  count
+horizon_unit                     
+hours        -0.023  0.005    140
+days         -0.006  0.002    309
+weeks        -0.009  0.006    302
+months        0.005  0.004    339
+decades      -0.002  0.004    178
+centuries    -0.025  0.005     43
+
+by canonical horizon (long end) × unit, mean Δp_short:
+horizon_unit       centuries  days  decades  months  weeks
+horizon_canonical                                         
+2 years                  NaN -0.03      NaN    0.01  -0.01
+3 years                  NaN   NaN      NaN    0.02  -0.00
+5 years                  NaN   NaN      NaN    0.01  -0.07
+10 years                 NaN   NaN     0.03    0.02    NaN
+20 years                 NaN   NaN    -0.01   -0.02    NaN
+30 years                 NaN   NaN    -0.01    0.03    NaN
+50 years                 NaN   NaN     0.01    0.01    NaN
+100 years              -0.03   NaN    -0.03   -0.04    NaN
+
+=== L35 T3 ===
+ridge transfer canonical->rewrites R^2 vs magnitude 0.918; residual (pred-true, decades) by unit {'centuries': -0.32, 'days': -0.12, 'decades': -0.21, 'hours': 0.3, 'months': -0.45, 'weeks': -0.22}
+displacement in grid steps (along tangent, + = toward longer; normal = orthogonal remainder); noise floor for normal = 3.94
+              along_mean  along_sem  normal_mean    n
+horizon_unit                                         
+hours              -0.74       0.08         2.93  140
+days               -0.26       0.03         2.82  309
+weeks              -0.23       0.04         3.45  302
+months             -0.22       0.03         2.24  339
+decades            -0.05       0.03         1.38  178
+centuries          -0.23       0.02         0.78   43
+pair-level link Spearman(Δalong, Δp_short): mixed bins (>=2y) -0.231 (n=656), all -0.073
+
+=== L59 T3 ===
+ridge transfer canonical->rewrites R^2 vs magnitude 0.931; residual (pred-true, decades) by unit {'centuries': 0.02, 'days': -0.01, 'decades': -0.06, 'hours': 0.0, 'months': -0.38, 'weeks': -0.08}
+displacement in grid steps (along tangent, + = toward longer; normal = orthogonal remainder); noise floor for normal = 3.88
+              along_mean  along_sem  normal_mean    n
+horizon_unit                                         
+hours              -0.14       0.08         4.02  140
+days               -0.09       0.07         3.48  309
+weeks              -0.17       0.07         3.83  302
+months             -0.61       0.05         2.42  339
+decades            -0.09       0.03         1.35  178
+centuries          -0.20       0.02         0.93   43
+pair-level link Spearman(Δalong, Δp_short): mixed bins (>=2y) -0.182 (n=656), all -0.089
+
+=== L35 R0 ===
+ridge transfer canonical->rewrites R^2 vs magnitude 0.866; residual (pred-true, decades) by unit {'centuries': -0.32, 'days': -0.17, 'decades': -0.14, 'hours': 0.44, 'months': -0.55, 'weeks': -0.31}
+displacement in grid steps (along tangent, + = toward longer; normal = orthogonal remainder); noise floor for normal = 4.10
+              along_mean  along_sem  normal_mean    n
+horizon_unit                                         
+hours              -0.45       0.07         2.91  140
+days               -0.28       0.03         2.97  309
+weeks              -0.16       0.04         3.89  302
+months             -0.24       0.03         2.74  339
+decades            -0.09       0.02         1.72  178
+centuries          -0.12       0.02         0.92   43
+pair-level link Spearman(Δalong, Δp_short): mixed bins (>=2y) -0.229 (n=656), all -0.034
+
+=== L46 R0 ===
+ridge transfer canonical->rewrites R^2 vs magnitude 0.872; residual (pred-true, decades) by unit {'centuries': -0.26, 'days': -0.07, 'decades': -0.12, 'hours': 0.29, 'months': -0.53, 'weeks': -0.24}
+displacement in grid steps (along tangent, + = toward longer; normal = orthogonal remainder); noise floor for normal = 3.95
+              along_mean  along_sem  normal_mean    n
+horizon_unit                                         
+hours              -0.69       0.11         3.04  140
+days               -0.19       0.03         2.96  309
+weeks              -0.09       0.05         3.61  302
+months             -0.36       0.03         2.47  339
+decades            -0.11       0.02         1.48  178
+centuries          -0.18       0.02         0.85   43
+pair-level link Spearman(Δalong, Δp_short): mixed bins (>=2y) -0.309 (n=656), all -0.052
+wrote figures/qwen3.5-27b_units_paired_n2000_s1
+REDO_PAIRED_DONE

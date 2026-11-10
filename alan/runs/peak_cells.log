@@ -1,0 +1,13 @@
+peak cells for qwen3.5-27b (n_layers 64): T3 → L23, R0 → L20, overall → L31 T6  (23:T3,20:R0,31:T6)
+=== geometry_path
+=== guttman_canonical
+=== guttman_extended
+=== curve_model
+=== relevance_decoder
+=== relevance_families
+=== scaling_test
+=== leace_check
+=== pls_check
+=== within_bin
+=== late_readout
+PEAK CELLS DONE

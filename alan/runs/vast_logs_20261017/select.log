@@ -1,0 +1,7 @@
+wrote 384 of 18128 prompts to data/prompts/unit_boundary_think_pilot.parquet
+delay_unit    months  quarters  weeks  years
+horizon_unit                                
+months            24        24     24     24
+quarters          24        24     24     24
+weeks             24        24     24     24
+years             24        24     24     24

@@ -1,0 +1,1 @@
+peak cells for qwen3.5-27b (n_layers 64): T3 → L23, R0 → L20, overall → L31 T6  (23:T3,20:R0,31:T6)

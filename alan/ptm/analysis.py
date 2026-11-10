@@ -49,12 +49,26 @@ class CellMetrics:
     cum_evr_5: float = np.nan
     cum_evr_10: float = np.nan
     n_pc_horizon: int = 0              # number of top-10 PCs with |rho(PC_k, log horizon)| > 0.3
+    n_pc_90: int = 0                   # components for 90% of total variance (full spectrum, horizon rows)
+    n_pc_95: int = 0                   # components for 95%
     evr_top10: str = ""                # JSON list of the top-10 explained-variance ratios
     rho_top10: str = ""                # JSON list of |rho(PC_k, log horizon)|, k = 1..10
     n_choice: int = 0
     silhouette_choice_pc3: float = np.nan
     rho_pc1_p_short: float = np.nan
     ridge_r2_horizon: float = np.nan
+
+
+def spectrum_counts(X: np.ndarray, levels=(0.90, 0.95)) -> tuple[int, ...]:
+    """Number of principal components needed to reach each cumulative variance level. The full spectrum
+    is the eigenvalue spectrum of the smaller Gram matrix (Xc Xcᵀ for n < d, Xcᵀ Xc otherwise): identical
+    to the squared singular values, several times cheaper than a values-only SVD of the n × d matrix."""
+    Xc = (X - X.mean(0)).astype(np.float64)
+    G = Xc @ Xc.T if Xc.shape[0] <= Xc.shape[1] else Xc.T @ Xc
+    var = np.linalg.eigvalsh(G)[::-1]; var = np.clip(var, 0, None)
+    tot = var.sum()
+    cum = np.cumsum(var) / tot if tot > 0 else np.ones_like(var)       # zero variance (e.g. identical embeddings): 1 component
+    return tuple(int(np.searchsorted(cum, lv) + 1) for lv in levels)
 
 
 def _rho(a, b) -> float:
@@ -76,6 +90,7 @@ def cell_metrics(run: RunData, layer: int, position: str, supervised: bool = Fal
     sub = df.loc[has_h]
     rhos = [abs(_rho(Zh[:, k], y)) for k in range(Zh.shape[1])]
     evr = pca.explained_variance_ratio_
+    n90, n95 = spectrum_counts(X[has_h])
     m = dict(
         layer=layer, position=position, n_horizon=int(has_h.sum()),
         rho_pc1_horizon=_rho(Zh[:, 0], y), rho_pc2_horizon=_rho(Zh[:, 1], y), rho_pc3_horizon=_rho(Zh[:, 2], y),
@@ -87,6 +102,7 @@ def cell_metrics(run: RunData, layer: int, position: str, supervised: bool = Fal
         evr_pc3=float(pca.explained_variance_ratio_[2]),
         cum_evr_2=float(evr[:2].sum()), cum_evr_5=float(evr[:5].sum()), cum_evr_10=float(evr[:10].sum()),
         n_pc_horizon=int(sum(r > 0.3 for r in rhos if not np.isnan(r))),
+        n_pc_90=n90, n_pc_95=n95,
         evr_top10=json.dumps([round(float(v), 4) for v in evr[:10]]),
         rho_top10=json.dumps([round(float(r), 3) if not np.isnan(r) else None for r in rhos[:10]]),
     )
@@ -117,7 +133,7 @@ def sweep(run: RunData, layers: Optional[Iterable[int]] = None, positions: Optio
         best = max((r for r in rows if r["layer"] == l), key=lambda r: abs(r["rho_pc1_horizon"]) if not np.isnan(r["rho_pc1_horizon"]) else -1)
         ev = json.loads(best["evr_top10"]); rh = json.loads(best["rho_top10"])
         log(f"layer {l:2d}: best |rho_pc1| = {abs(best['rho_pc1_horizon']):.3f} at {best['position']}  (reward-ratio rho {best['rho_pc1_reward_ratio']:+.2f}, choice silhouette {best['silhouette_choice_pc3']:.2f}) "
-            f"| evr top-5 {' '.join(f'{v:.3f}' for v in ev[:5])} cum10 {best['cum_evr_10']:.2f} | |rho| by PC {' '.join(f'{r:.2f}' if r is not None else ' nan' for r in rh[:6])} | horizon PCs {best['n_pc_horizon']}")
+            f"| evr top-5 {' '.join(f'{v:.3f}' for v in ev[:5])} cum10 {best['cum_evr_10']:.2f} | n90/n95 {best['n_pc_90']}/{best['n_pc_95']} | |rho| by PC {' '.join(f'{r:.2f}' if r is not None else ' nan' for r in rh[:6])} | horizon PCs {best['n_pc_horizon']}")
     return pd.DataFrame(rows)
 
 
@@ -149,7 +165,33 @@ def position_token_labels(run: RunData, top: int = 2) -> dict[str, str]:
     out = {}
     trans = _json.loads(run.index["transition_tokens"].iloc[0])
     resp = [_json.loads(v) for v in run.index["response_tokens"]]
+    anchors, gen = [], []
+    if "anchor_index" in run.index.columns:
+        for av, gv in zip(run.index["anchor_index"], run.index["gen_ids"]):
+            if isinstance(av, str) and isinstance(gv, str):
+                a = _json.loads(av)
+                if isinstance(a, dict):
+                    anchors.append(a); gen.append(_json.loads(gv))
     for lab in run.labels:
+        if lab == "MEAN":
+            out[lab] = "mean(M0..E0)"; continue
+        if lab in ("M0", "E0"):
+            toks = []
+            for ai, g in zip(anchors, gen):
+                j = ai.get(lab)
+                if j is not None and 0 <= j < len(g):
+                    toks.append(g[j])
+            vc = pd.Series(toks).value_counts()
+            ids = list(vc.index[:top])
+            try:                                   # decode ids with the run's tokenizer (cached weights; offline)
+                import os
+                os.environ.setdefault("HF_HUB_OFFLINE", "1")
+                from transformers import AutoTokenizer
+                tk = AutoTokenizer.from_pretrained(run.meta["model_name"])
+                out[lab] = "|".join(_show(tk.decode([int(t)])) for t in ids) if ids else ""
+            except Exception:
+                out[lab] = "|".join(f"id{t}" for t in ids) if ids else ""
+            continue
         k = int(lab[1:])
         if lab.startswith("T"):
             out[lab] = _show(trans[k]) if k < len(trans) else ""

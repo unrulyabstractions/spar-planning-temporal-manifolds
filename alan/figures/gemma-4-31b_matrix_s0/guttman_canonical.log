@@ -1,0 +1,60 @@
+
+=== L33 R0  (17 bins, log10 range [-2.56, 2.00], midpoint -0.09 = 0.81 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.828): deg1: 0.96  deg2: 0.96  deg3: 0.99  deg4: 1.00
+    PC2 (evr 0.115): deg1: 0.00  deg2: 0.88  deg3: 0.98  deg4: 0.98
+    PC3 (evr 0.020): deg1: 0.02  deg2: 0.04  deg3: 0.36  deg4: 0.58
+    PC4 (evr 0.014): deg1: 0.02  deg2: 0.06  deg3: 0.31  deg4: 0.39
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.949, ℓ = 3.12 decades
+(c) vertex vs window midpoint (windows of 9 bins, 9 windows): slope +0.94   [full-range vertex 10^-0.25 = 0.56 y vs midpoint 0.81 y]
+(d) PC2 share 0.115 vs split-half noise share ≈ 0.0045 of centroid variance
+(e) matched banded null (200 draws, ℓ=3.12, noise ratio 0.07):  evr1 0.44–0.51 (obs 0.83)  evr2 0.17–0.22 (obs 0.12)  evr3 0.08–0.11 (obs 0.02)
+    PC2 quadratic R^2 0.84–0.92 (obs 0.88);  PC3 cubic R^2 0.61–0.81 (obs 0.36);  vertex slope 1.01–1.05 (obs +0.94);  vertex 10^-0.25–10^-0.11 (obs 10^-0.25)
+
+=== L55 T3  (17 bins, log10 range [-2.56, 2.00], midpoint -0.09 = 0.81 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.410): deg1: 0.73  deg2: 0.96  deg3: 0.96  deg4: 0.99
+    PC2 (evr 0.292): deg1: 0.17  deg2: 0.67  deg3: 0.85  deg4: 0.87
+    PC3 (evr 0.085): deg1: 0.01  deg2: 0.02  deg3: 0.10  deg4: 0.55
+    PC4 (evr 0.071): deg1: 0.03  deg2: 0.04  deg3: 0.45  deg4: 0.64
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.596, ℓ = 0.76 decades
+(c) vertex vs window midpoint (windows of 9 bins, 9 windows): slope +1.15   [full-range vertex 10^0.16 = 1.45 y vs midpoint 0.81 y]
+(d) PC2 share 0.292 vs split-half noise share ≈ 0.0470 of centroid variance
+/workspace/SPAR-2026/scripts/guttman_check.py:51: OptimizeWarning: Covariance of the parameters could not be estimated
+  (s_, l_), _ = curve_fit(f, dt, dd, p0=[dd.max(), 1.0], maxfev=5000); r2_band = 1 - np.var(dd - f(dt, s_, l_)) / np.var(dd)
+/workspace/SPAR-2026/scripts/guttman_check.py:49: RuntimeWarning: overflow encountered in exp
+  f = lambda x, s, l: s * (1 - np.exp(-x / l))
+/workspace/SPAR-2026/scripts/guttman_check.py:51: OptimizeWarning: Covariance of the parameters could not be estimated
+  (s_, l_), _ = curve_fit(f, dt, dd, p0=[dd.max(), 1.0], maxfev=5000); r2_band = 1 - np.var(dd - f(dt, s_, l_)) / np.var(dd)
+/workspace/SPAR-2026/scripts/guttman_check.py:51: OptimizeWarning: Covariance of the parameters could not be estimated
+  (s_, l_), _ = curve_fit(f, dt, dd, p0=[dd.max(), 1.0], maxfev=5000); r2_band = 1 - np.var(dd - f(dt, s_, l_)) / np.var(dd)
+/workspace/SPAR-2026/scripts/guttman_check.py:51: OptimizeWarning: Covariance of the parameters could not be estimated
+  (s_, l_), _ = curve_fit(f, dt, dd, p0=[dd.max(), 1.0], maxfev=5000); r2_band = 1 - np.var(dd - f(dt, s_, l_)) / np.var(dd)
+/workspace/SPAR-2026/scripts/guttman_check.py:49: RuntimeWarning: overflow encountered in exp
+  f = lambda x, s, l: s * (1 - np.exp(-x / l))
+(e) matched banded null (200 draws, ℓ=0.76, noise ratio 0.22):  evr1 0.24–0.30 (obs 0.41)  evr2 0.17–0.21 (obs 0.29)  evr3 0.11–0.14 (obs 0.09)
+    PC2 quadratic R^2 0.62–0.84 (obs 0.67);  PC3 cubic R^2 0.42–0.70 (obs 0.10);  vertex slope 1.00–1.05 (obs +1.15);  vertex 10^-0.36–10^0.06 (obs 10^0.16)
+
+=== L33 T3  (17 bins, log10 range [-2.56, 2.00], midpoint -0.09 = 0.81 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.658): deg1: 0.84  deg2: 0.96  deg3: 0.97  deg4: 0.99
+    PC2 (evr 0.187): deg1: 0.07  deg2: 0.73  deg3: 0.96  deg4: 0.96
+    PC3 (evr 0.050): deg1: 0.06  deg2: 0.20  deg3: 0.59  deg4: 0.65
+    PC4 (evr 0.034): deg1: 0.02  deg2: 0.03  deg3: 0.04  deg4: 0.60
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.729, ℓ = 1.37 decades
+(c) vertex vs window midpoint (windows of 9 bins, 9 windows): slope +1.02   [full-range vertex 10^-0.01 = 0.98 y vs midpoint 0.81 y]
+(d) PC2 share 0.187 vs split-half noise share ≈ 0.0190 of centroid variance
+(e) matched banded null (200 draws, ℓ=1.37, noise ratio 0.14):  evr1 0.33–0.40 (obs 0.66)  evr2 0.18–0.22 (obs 0.19)  evr3 0.10–0.13 (obs 0.05)
+    PC2 quadratic R^2 0.77–0.89 (obs 0.73);  PC3 cubic R^2 0.53–0.76 (obs 0.59);  vertex slope 1.01–1.05 (obs +1.02);  vertex 10^-0.28–10^-0.05 (obs 10^-0.01)
+
+=== L43 R0  (17 bins, log10 range [-2.56, 2.00], midpoint -0.09 = 0.81 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.740): deg1: 0.95  deg2: 0.95  deg3: 0.96  deg4: 0.96
+    PC2 (evr 0.164): deg1: 0.01  deg2: 0.76  deg3: 0.77  deg4: 0.84
+    PC3 (evr 0.040): deg1: 0.00  deg2: 0.06  deg3: 0.46  deg4: 0.78
+    PC4 (evr 0.017): deg1: 0.02  deg2: 0.09  deg3: 0.09  deg4: 0.15
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.874, ℓ = 2.28 decades
+(c) vertex vs window midpoint (windows of 9 bins, 9 windows): slope +1.30   [full-range vertex 10^-0.28 = 0.52 y vs midpoint 0.81 y]
+(d) PC2 share 0.164 vs split-half noise share ≈ 0.0342 of centroid variance
+(e) matched banded null (200 draws, ℓ=2.28, noise ratio 0.18):  evr1 0.38–0.46 (obs 0.74)  evr2 0.17–0.22 (obs 0.16)  evr3 0.09–0.11 (obs 0.04)
+    PC2 quadratic R^2 0.82–0.92 (obs 0.76);  PC3 cubic R^2 0.59–0.80 (obs 0.46);  vertex slope 1.01–1.05 (obs +1.30);  vertex 10^-0.26–10^-0.09 (obs 10^-0.28)

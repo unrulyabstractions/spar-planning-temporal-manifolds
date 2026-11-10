@@ -1,0 +1,68 @@
+
+=== L23 T3  (erasure fit on 1440 train rows; PCA on 432 test rows: 6 new configs × 2 domains × 12 horizons × 3 renderings) ===
+variance budget of the test rows: rendering 0.693  domain 0.118  cell 0.840  config 0.012  prompt 0.864  horizon 0.017  horizon×cell 0.017  horizon×prompt (=residual) 0.119
+condition                                    rank removed | |rho1| |rho2| |rho3|  evr1  evr2  evr3 nPCh |   cent evr1/2/3 c_rho1 |  accR  accD   R2sr   R2h
+none                                            0   0.000 |   0.06   0.13   0.15  0.66  0.13  0.07    2 |  0.52/0.27/0.06   0.95 |  1.00  1.00   0.89  0.99
+rend                                            2   0.689 |   0.13   0.22   0.07  0.40  0.17  0.10    2 |  0.52/0.27/0.06   0.95 |  0.33  1.00   0.89  0.99
+rend+dom                                        3   0.808 |   0.33   0.07   0.20  0.28  0.16  0.12    3 |  0.52/0.27/0.06   0.95 |  0.33  0.50   0.89  0.99
+cell                                            5   0.836 |   0.36   0.31   0.03  0.33  0.17  0.08    4 |  0.52/0.27/0.06   0.95 |  0.33  0.50   0.89  0.99
+cell+par                                       10   0.843 |   0.35   0.30   0.09  0.34  0.17  0.09    3 |  0.52/0.27/0.06   0.95 |  0.33  0.50  -0.00  0.99
+cell+par orth                                  10   0.887 |   0.38   0.38   0.67  0.30  0.18  0.07    4 |  0.58/0.19/0.06   0.95 |  0.33  0.50  -0.00  0.99
+cell+par +cfg(in)                              15   0.849 |   0.36   0.31   0.05  0.35  0.18  0.09    4 |  0.52/0.27/0.06   0.95 |  0.33  0.50  -0.00  0.99
+cell+par +prompt(in)                           45   0.865 |   0.43   0.38   0.09  0.37  0.19  0.09    4 |  0.52/0.27/0.06   0.95 |  0.33  0.50  -0.00  0.99
+  sub-cell plain|climate                        0     nan |   0.89   0.16   0.03  0.27  0.19  0.11    1 |                   h-share 0.403 | 
+  sub-cell plain|investment                     0     nan |   0.82   0.31   0.34  0.23  0.23  0.14    3 |                   h-share 0.401 | 
+  sub-cell structured|climate                   0     nan |   0.96   0.00   0.07  0.32  0.14  0.12    1 |                   h-share 0.453 | 
+  sub-cell structured|investment                0     nan |   0.93   0.03   0.10  0.30  0.23  0.11    1 |                   h-share 0.445 | 
+  sub-cell varied|climate                       0     nan |   0.08   0.10   0.06  0.52  0.20  0.10    2 |                   h-share 0.143 | 
+  sub-cell varied|investment                    0     nan |   0.15   0.11   0.10  0.39  0.27  0.11    2 |                   h-share 0.176 | 
+sub-cell ceiling (mean of 6)                    0     nan |   0.64   0.12   0.11  0.34  0.21  0.12    1 |                   h-share 0.337 | 
+angles between sub-cell horizon directions (deg): centroid PC1 — pairs differing in rendering 62, in domain 33, in both 64; largest principal angle between top-2 centroid subspaces — rendering 63, domain 48, both 65   (random directions in R^5120: ~89)
+canonical 72-row subsample (mean of 50)         0     nan |   0.94   0.14   0.05  0.29  0.19  0.11    1 |                        | 
+canonical all rows, 12 horizons (n=1349)        0     nan |   0.95   0.09   0.02  0.27  0.18  0.10    1 |                   h-share 0.425 | 
+
+=== L20 R0  (erasure fit on 1440 train rows; PCA on 432 test rows: 6 new configs × 2 domains × 12 horizons × 3 renderings) ===
+variance budget of the test rows: rendering 0.774  domain 0.096  cell 0.888  config 0.006  prompt 0.901  horizon 0.013  horizon×cell 0.013  horizon×prompt (=residual) 0.086
+condition                                    rank removed | |rho1| |rho2| |rho3|  evr1  evr2  evr3 nPCh |   cent evr1/2/3 c_rho1 |  accR  accD   R2sr   R2h
+none                                            0   0.000 |   0.14   0.16   0.04  0.76  0.10  0.04    2 |  0.60/0.21/0.05   0.97 |  1.00  1.00   0.84  0.97
+rend                                            2   0.772 |   0.17   0.05   0.18  0.48  0.15  0.07    2 |  0.60/0.21/0.05   0.97 |  0.33  1.00   0.84  0.97
+rend+dom                                        3   0.866 |   0.27   0.01   0.03  0.33  0.12  0.11    2 |  0.60/0.21/0.05   0.97 |  0.33  0.50   0.84  0.97
+cell                                            5   0.884 |   0.31   0.01   0.56  0.38  0.13  0.11    3 |  0.60/0.21/0.05   0.97 |  0.33  0.50   0.84  0.97
+cell+par                                       10   0.887 |   0.34   0.02   0.54  0.38  0.14  0.12    3 |  0.60/0.21/0.05   0.97 |  0.33  0.50  -0.00  0.97
+cell+par orth                                  10   0.921 |   0.07   0.27   0.66  0.31  0.15  0.11    2 |  0.60/0.20/0.05   0.98 |  0.33  0.50  -0.00  0.97
+cell+par +cfg(in)                              15   0.890 |   0.33   0.01   0.55  0.39  0.14  0.12    3 |  0.60/0.21/0.05   0.97 |  0.33  0.50  -0.00  0.97
+cell+par +prompt(in)                           45   0.901 |   0.41   0.02   0.58  0.41  0.14  0.12    3 |  0.60/0.21/0.05   0.97 |  0.33  0.50  -0.00  0.98
+  sub-cell plain|climate                        0     nan |   0.97   0.02   0.04  0.31  0.11  0.11    1 |                   h-share 0.480 | 
+  sub-cell plain|investment                     0     nan |   0.94   0.10   0.12  0.30  0.14  0.12    1 |                   h-share 0.462 | 
+  sub-cell structured|climate                   0     nan |   0.95   0.04   0.19  0.37  0.12  0.10    1 |                   h-share 0.501 | 
+  sub-cell structured|investment                0     nan |   0.96   0.04   0.08  0.32  0.17  0.12    1 |                   h-share 0.464 | 
+  sub-cell varied|climate                       0     nan |   0.15   0.18   0.01  0.47  0.20  0.14    1 |                   h-share 0.164 | 
+  sub-cell varied|investment                    0     nan |   0.22   0.01   0.36  0.50  0.18  0.13    3 |                   h-share 0.176 | 
+sub-cell ceiling (mean of 6)                    0     nan |   0.70   0.06   0.13  0.38  0.16  0.12    1 |                   h-share 0.375 | 
+angles between sub-cell horizon directions (deg): centroid PC1 — pairs differing in rendering 61, in domain 25, in both 63; largest principal angle between top-2 centroid subspaces — rendering 65, domain 42, both 66   (random directions in R^5120: ~89)
+canonical 72-row subsample (mean of 50)         0     nan |   0.96   0.06   0.05  0.33  0.15  0.09    1 |                        | 
+canonical all rows, 12 horizons (n=1349)        0     nan |   0.96   0.00   0.05  0.32  0.14  0.09    1 |                   h-share 0.463 | 
+
+=== L31 T6  (erasure fit on 1440 train rows; PCA on 432 test rows: 6 new configs × 2 domains × 12 horizons × 3 renderings) ===
+variance budget of the test rows: rendering 0.712  domain 0.096  cell 0.831  config 0.013  prompt 0.858  horizon 0.021  horizon×cell 0.018  horizon×prompt (=residual) 0.121
+condition                                    rank removed | |rho1| |rho2| |rho3|  evr1  evr2  evr3 nPCh |   cent evr1/2/3 c_rho1 |  accR  accD   R2sr   R2h
+none                                            0   0.000 |   0.08   0.11   0.16  0.68  0.10  0.08    1 |  0.55/0.26/0.06   0.95 |  1.00  1.00   0.86  0.99
+rend                                            2   0.706 |   0.11   0.24   0.07  0.34  0.20  0.07    2 |  0.55/0.25/0.06   0.95 |  0.33  1.00   0.86  0.99
+rend+dom                                        3   0.803 |   0.28   0.09   0.09  0.30  0.11  0.08    2 |  0.55/0.25/0.06   0.95 |  0.33  0.50   0.86  0.99
+cell                                            5   0.825 |   0.28   0.09   0.81  0.34  0.09  0.07    2 |  0.55/0.25/0.06   0.95 |  0.33  0.50   0.87  0.99
+cell+par                                       10   0.833 |   0.28   0.07   0.82  0.35  0.10  0.07    2 |  0.55/0.25/0.06   0.95 |  0.33  0.50  -0.00  0.99
+cell+par orth                                  10   0.871 |   0.27   0.12   0.94  0.28  0.11  0.08    1 |  0.57/0.23/0.06   0.96 |  0.33  0.50  -0.00  0.99
+cell+par +cfg(in)                              15   0.840 |   0.31   0.12   0.84  0.37  0.10  0.07    3 |  0.55/0.25/0.06   0.95 |  0.33  0.50  -0.00  0.99
+cell+par +prompt(in)                           45   0.859 |   0.37   0.25   0.89  0.39  0.11  0.08    3 |  0.55/0.25/0.06   0.95 |  0.33  0.50  -0.00  0.99
+  sub-cell plain|climate                        0     nan |   0.92   0.25   0.05  0.25  0.13  0.10    1 |                   h-share 0.406 | 
+  sub-cell plain|investment                     0     nan |   0.95   0.00   0.18  0.22  0.17  0.11    1 |                   h-share 0.407 | 
+  sub-cell structured|climate                   0     nan |   0.95   0.05   0.09  0.24  0.11  0.09    1 |                   h-share 0.392 | 
+  sub-cell structured|investment                0     nan |   0.96   0.06   0.05  0.23  0.16  0.10    1 |                   h-share 0.397 | 
+  sub-cell varied|climate                       0     nan |   0.03   0.12   0.02  0.52  0.14  0.09    2 |                   h-share 0.155 | 
+  sub-cell varied|investment                    0     nan |   0.14   0.09   0.35  0.48  0.15  0.09    3 |                   h-share 0.182 | 
+sub-cell ceiling (mean of 6)                    0     nan |   0.66   0.10   0.12  0.32  0.14  0.10    1 |                   h-share 0.323 | 
+angles between sub-cell horizon directions (deg): centroid PC1 — pairs differing in rendering 63, in domain 36, in both 65; largest principal angle between top-2 centroid subspaces — rendering 66, domain 46, both 68   (random directions in R^5120: ~89)
+canonical 72-row subsample (mean of 50)         0     nan |   0.94   0.09   0.08  0.23  0.14  0.09    1 |                        | 
+canonical all rows, 12 horizons (n=1349)        0     nan |   0.96   0.00   0.09  0.22  0.13  0.08    1 |                   h-share 0.364 | 
+
+wrote figures/qwen3.5-27b_matrix_s0/peak/leace

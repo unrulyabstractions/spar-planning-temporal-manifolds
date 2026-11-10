@@ -1,0 +1,24 @@
+
+=== L35 R0  (25 bins, log10 range [-5.72, 4.00], midpoint -0.25 = 0.57 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.495): deg1: 0.86  deg2: 0.86  deg3: 0.94  deg4: 0.98
+    PC2 (evr 0.322): deg1: 0.02  deg2: 0.72  deg3: 0.86  deg4: 0.90
+    PC3 (evr 0.078): deg1: 0.10  deg2: 0.25  deg3: 0.57  deg4: 0.72
+    PC4 (evr 0.025): deg1: 0.00  deg2: 0.01  deg3: 0.10  deg4: 0.11
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.871, ℓ = 2.10 decades
+(c) vertex vs window midpoint (windows of 11 bins, 15 windows): slope +1.13   [full-range vertex 10^-0.94 = 0.12 y vs midpoint 0.57 y]
+(d) PC2 share 0.322 vs split-half noise share ≈ 0.0106 of centroid variance
+(e) matched banded null (200 draws, ℓ=2.10, noise ratio 0.10):  evr1 0.27–0.33 (obs 0.49)  evr2 0.18–0.23 (obs 0.32)  evr3 0.10–0.13 (obs 0.08)
+    PC2 quadratic R^2 0.70–0.85 (obs 0.72);  PC3 cubic R^2 0.45–0.68 (obs 0.57);  vertex slope 1.12–1.15 (obs +1.13);  vertex 10^-0.96–10^-0.07 (obs 10^-0.94)
+
+=== L59 T3  (25 bins, log10 range [-5.72, 4.00], midpoint -0.25 = 0.57 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.686): deg1: 0.39  deg2: 0.77  deg3: 0.81  deg4: 0.87
+    PC2 (evr 0.202): deg1: 0.46  deg2: 0.57  deg3: 0.88  deg4: 0.88
+    PC3 (evr 0.046): deg1: 0.06  deg2: 0.38  deg3: 0.48  deg4: 0.59
+    PC4 (evr 0.025): deg1: 0.01  deg2: 0.04  deg3: 0.05  deg4: 0.14
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.498, ℓ = 1.67 decades
+(c) vertex vs window midpoint (windows of 11 bins, 14 windows): slope +1.06   [full-range vertex 10^2.24 = 172.77 y vs midpoint 0.57 y]
+(d) PC2 share 0.202 vs split-half noise share ≈ 0.0111 of centroid variance
+(e) matched banded null (200 draws, ℓ=1.67, noise ratio 0.11):  evr1 0.24–0.29 (obs 0.69)  evr2 0.18–0.21 (obs 0.20)  evr3 0.10–0.13 (obs 0.05)
+    PC2 quadratic R^2 0.62–0.81 (obs 0.57);  PC3 cubic R^2 0.39–0.66 (obs 0.48);  vertex slope 1.11–1.14 (obs +1.06);  vertex 10^-1.06–10^0.15 (obs 10^2.24)

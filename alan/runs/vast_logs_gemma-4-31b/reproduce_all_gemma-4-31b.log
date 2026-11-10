@@ -1,0 +1,27 @@
+2026-10-03 16:55:40 START commit 3ee92fd model google/gemma-4-31B-it tag gemma-4-31b cap [--model google/gemma-4-31B-it --batch-size 16]
+2026-10-03 16:55:40 datasets
+2026-10-03 16:55:43 datasets done
+2026-10-03 16:55:43 capture gemma-4-31b_investment_n2000_s0 start
+2026-10-03 17:12:08 capture gemma-4-31b_investment_n2000_s0 done: 2000 samples, format adherence 1998/2000 = 0.999
+2026-10-03 17:12:08 capture gemma-4-31b_matrix_s0 start
+2026-10-03 17:25:08 analysis gemma-4-31b_investment_n2000_s0 done
+2026-10-03 17:39:30 capture gemma-4-31b_matrix_s0 done: 3240 samples, format adherence 2985/3240 = 0.921
+2026-10-03 17:39:30 capture gemma-4-31b_extended_n2000_s0 start
+2026-10-03 17:57:16 capture gemma-4-31b_extended_n2000_s0 done: 2000 samples, format adherence 1996/2000 = 0.998
+2026-10-03 17:57:16 capture gemma-4-31b_phrasings_n2000_s0 start
+2026-10-03 18:08:46 analysis gemma-4-31b_matrix_s0 done
+2026-10-03 18:10:53 analysis gemma-4-31b_extended_n2000_s0 done
+2026-10-03 18:15:02 capture gemma-4-31b_phrasings_n2000_s0 done: 2000 samples, format adherence 1995/2000 = 0.998
+2026-10-03 18:15:02 capture gemma-4-31b_units_paired_n2000_s1 start
+2026-10-03 18:15:29 analysis gemma-4-31b_phrasings_n2000_s0 done
+2026-10-03 18:31:44 capture gemma-4-31b_units_paired_n2000_s1 done: 2000 samples, format adherence 1997/2000 = 0.999
+2026-10-03 18:31:44 all captures done; waiting for analyses
+2026-10-03 18:31:54 analysis gemma-4-31b_units_paired_n2000_s1 done
+2026-10-03 18:31:54 checksums
+gemma-4-31b_investment_n2000_s0: n=2000 index=ec3ab8a131e5 T3sum=570235 R0sum=402831
+gemma-4-31b_matrix_s0: n=3240 index=b55764730fe3 T3sum=1.01662e+06 R0sum=670346
+gemma-4-31b_extended_n2000_s0: n=2000 index=ebb221c483a5 T3sum=564139 R0sum=403416
+gemma-4-31b_phrasings_n2000_s0: n=2000 index=552783417f51 T3sum=572272 R0sum=398949
+gemma-4-31b_units_paired_n2000_s1: n=2000 index=37c46cc74434 T3sum=568396 R0sum=401953
+wrote snapshot/checksums_gemma-4-31b.json
+2026-10-03 18:32:00 ALL DONE

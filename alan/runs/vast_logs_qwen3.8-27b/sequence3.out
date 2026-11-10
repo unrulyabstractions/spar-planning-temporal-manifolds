@@ -1,0 +1,4 @@
+2026-10-03 16:53:52 SEQUENCE START commit 5cff0f4 models [Qwen/Qwen3.8-27B:qwen3.8-27b google/gemma-4-31B-it:gemma-4-31b] dest gs://alan-captures-20261003
+2026-10-03 16:53:53 bucket reachable and writable
+2026-10-03 16:53:53 qwen3.8-27b: chain already done, resuming at upload
+2026-10-03 16:53:53 qwen3.8-27b: upload start (201G of runs)

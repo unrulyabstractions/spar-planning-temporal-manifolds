@@ -1,0 +1,127 @@
+=== analyze_run: runs/qwen3-14b_matrix_s0_long -> figures/qwen3-14b_matrix_s0_long (L=40, cells 22:R0,29:R0,37:T3,22:T3) ===
+=== sweep ===
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  var = sv ** 2; cum = np.cumsum(var) / var.sum()
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  var = sv ** 2; cum = np.cumsum(var) / var.sum()
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  var = sv ** 2; cum = np.cumsum(var) / var.sum()
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  var = sv ** 2; cum = np.cumsum(var) / var.sum()
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  var = sv ** 2; cum = np.cumsum(var) / var.sum()
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  var = sv ** 2; cum = np.cumsum(var) / var.sum()
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  var = sv ** 2; cum = np.cumsum(var) / var.sum()
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  var = sv ** 2; cum = np.cumsum(var) / var.sum()
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  var = sv ** 2; cum = np.cumsum(var) / var.sum()
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+run: Qwen/Qwen3-14B  n=3240  layers=40  positions=['T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'R0', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'M0', 'E0', 'MEAN']
+format adherence: 0.926   chose_short overall: 0.705
+horizon_bin  horizon_years   n  n_format_ok  frac_short  p_short_mean
+   17 hours       0.001939  20           20    0.850000      0.849146
+      1 day       0.002738 240          220    0.809091      0.825139
+     3 days       0.008214  20           20    0.900000      0.900232
+     1 week       0.019165 260          240    0.941667      0.926637
+    2 weeks       0.038330 240          220    0.818182      0.830846
+    18 days       0.049281  20           20    0.900000      0.917742
+    1 month       0.083333 260          240    0.966667      0.969484
+   10 weeks       0.191650  40           40    0.850000      0.867335
+   3 months       0.250000 240          220    0.954545      0.948999
+   6 months       0.500000 260          240    0.937500      0.931406
+  10 months       0.833333  20           20    0.950000      0.969079
+     1 year       1.000000  20           20    0.700000      0.670939
+    2 years       2.000000 260          240    0.820833      0.813577
+    3 years       3.000000  20           20    0.150000      0.171070
+    5 years       5.000000 260          240    0.800000      0.798746
+   10 years      10.000000 260          240    0.562500      0.567349
+   20 years      20.000000 260          240    0.404167      0.405263
+   30 years      30.000000 260          240    0.204167      0.203850
+  100 years     100.000000 260          240    0.266667      0.264461
+  300 years     300.000000  20           20    0.350000      0.334321
+Traceback (most recent call last):
+  File "/home/alan/SPAR-2026/scripts/analyze.py", line 70, in <module>
+    main()
+    ~~~~^^
+  File "/home/alan/SPAR-2026/scripts/analyze.py", line 51, in main
+    plot_sweep(t, run, a.out_dir / "sweep_rho_pc1_horizon.png")
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alan/SPAR-2026/ptm/analysis.py", line 228, in plot_sweep
+    toklab = position_token_labels(run)
+  File "/home/alan/SPAR-2026/ptm/analysis.py", line 166, in position_token_labels
+    k = int(lab[1:])
+ValueError: invalid literal for int() with base 10: 'EAN'
+=== path geometry ===
+=== hypothesis checks ===
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+run Qwen/Qwen3-14B n=3240
+=== H(sink) at T4: |rho| of the k-th PC with log horizon (same PCA fit); evr_top1; top/median PC std ===
+layer  evr_top1  k=0     k=1     k=2     k=5    top/median
+L22    0.998    0.033  0.269  0.051  0.138   499x
+L29    0.997    0.034  0.293  0.018  0.634   339x
+L37    0.966    0.037  0.080  0.012  0.146   124x
+
+=== H(U-shape): 17 canonical centroids in their own PC plane; polynomial fits vs log10 horizon ===
+cell     PC2: R2 quad  vertex(years)  R2 linear | PC1: R2 linear  R2 quad
+(U-shape fit restricted to 18 bins in [0.0027, 100.0] years)
+L22 R0   0.911           0.00         0.911     | 0.030           0.140
+L22 T3   0.902         325200236.45         0.897     | 0.043           0.136
+L29 R0   0.748           0.00         0.717     | 0.093           0.211
+L37 T3   0.892         8324.60         0.871     | 0.051           0.137
+
+=== H(variants) by horizon_unit (['days', 'hours', 'months', 'weeks', 'years']) ===
+cell     pooled|rho_pc1|  per-variant|rho_pc1|  silhouette(variant,PC1-3)  |rho(PC1,variant-mean)|
+L14 R0   0.031            0.20/nan/0.01/0.01/0.00       -0.636                    0.030
+L22 T3   0.054            0.18/nan/0.00/0.01/0.03       -0.369                    0.051
+L22 R0   0.074            0.17/nan/0.01/0.05/0.06       -0.450                    0.072
+L29 R0   0.154            0.00/nan/0.06/0.04/0.01       -0.643                    0.174
+L37 T3   0.112            0.26/nan/0.04/0.03/0.05       -0.294                    0.106
+=== 3-D views ===
+Traceback (most recent call last):
+  File "/home/alan/SPAR-2026/scripts/plot3d.py", line 68, in <module>
+    title=f"{run.meta['model_name']}  {cell_name(run, layer, pos)}   basis: {a.basis} PCA   n={len(d)}",
+                                       ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/alan/SPAR-2026/ptm/analysis.py", line 176, in cell_name
+    return f"layer {layer}  {position} ({position_token_labels(run)[position]!r})"
+                                         ~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/home/alan/SPAR-2026/ptm/analysis.py", line 166, in position_token_labels
+    k = int(lab[1:])
+ValueError: invalid literal for int() with base 10: 'EAN'
+Traceback (most recent call last):
+  File "/home/alan/SPAR-2026/scripts/plot3d.py", line 68, in <module>
+    title=f"{run.meta['model_name']}  {cell_name(run, layer, pos)}   basis: {a.basis} PCA   n={len(d)}",
+                                       ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/alan/SPAR-2026/ptm/analysis.py", line 176, in cell_name
+    return f"layer {layer}  {position} ({position_token_labels(run)[position]!r})"
+                                         ~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/home/alan/SPAR-2026/ptm/analysis.py", line 166, in position_token_labels
+    k = int(lab[1:])
+ValueError: invalid literal for int() with base 10: 'EAN'
+ANALYZE_RUN DONE

@@ -1,0 +1,83 @@
+
+=== L33 T3  (train rows 960) ===
+model                  ctx          trainR2       A       F       G X extrap  A cent  F cent
+line                   none           0.062   0.070   0.039   0.043   -0.598    1.21    1.10
+line                   offset         0.376   0.339   0.380   0.333   -0.437    0.82    0.60
+line                   interaction    0.452   0.420   0.438   0.392   -0.624    0.67    0.46
+quad                   none           0.082   0.090   0.050   0.056   -1.353    1.18    1.09
+quad                   offset         0.396   0.359   0.392   0.346   -0.966    0.79    0.58
+quad                   interaction    0.501   0.466   0.460   0.411   -2.925    0.56    0.41
+spline                 none           0.097   0.100   0.057   0.062   -0.414    1.17    1.07
+spline                 offset         0.411   0.369   0.399   0.353   -0.187    0.77    0.56
+spline                 interaction    0.548   0.492   0.487   0.427   -0.124    0.48    0.32
+
+decoder                        A w2x   A rmse   F w2x   F rmse   G w2x   G rmse   X w2x  X rmse
+ridge                           0.69    0.343    0.79    0.252    0.60    0.326    0.09    2.462 
+quad+offset                     0.37    0.968    0.28    0.903    0.28    0.928    0.07    2.883 
+spline+offset                   0.41    0.962    0.30    0.843    0.24    0.888    0.08    2.863 
+quad+interaction                0.36    0.870    0.29    0.874    0.25    0.935    0.08    2.851 
+
+geometry quad+offset (1 d–100 y, reference context plain|climate): tortuosity 1.43 [1.39, 1.49], end-to-end turn 135° [131.37, 137.86], curvature peak at 10^-0.98 y = 0.10 y [-1.03, -0.92], curve n90/n95/n99 2/2/2, curve var top-3 [0.884, 0.116, 0.0]; bootstrap F R2 [0.38, 0.39]  (50 resamples of 20 training configs)
+
+geometry spline+offset (1 d–100 y, reference context plain|climate): tortuosity 2.55 [2.53, 2.89], end-to-end turn 79° [76.63, 92.71], curvature peak at 10^-2.25 y = 0.01 y [-2.25, -2.23], curve n90/n95/n99 2/3/5, curve var top-3 [0.743, 0.178, 0.036]; bootstrap F R2 [0.38, 0.40]  (50 resamples of 20 training configs)
+context effects (quad): offset vs interaction held-out R2  A 0.359 vs 0.466   F 0.392 vs 0.460   G 0.346 vs 0.411
+parameterization absolute log H              : held-out R2  A 0.359   F 0.392
+parameterization relative log(H/short delay) : held-out R2  A 0.331   F 0.376
+distractor mention  n=240: along-tangent shift in decades (along/||f'||): rho with (D−H) +0.158, mean |shift| 0.69 dec; orthogonal residual median 31.9 vs plain-main 31.1, rho(orth, |D−H|) -0.017; curve-decoder within-2x 0.32, rho(decoded−H, D−H) +0.381
+distractor role     n=240: along-tangent shift in decades (along/||f'||): rho with (D−H) -0.061, mean |shift| 0.78 dec; orthogonal residual median 32.3 vs plain-main 31.1, rho(orth, |D−H|) +0.053; curve-decoder within-2x 0.31, rho(decoded−H, D−H) +0.113
+
+=== L39 T1  (train rows 960) ===
+model                  ctx          trainR2       A       F       G X extrap  A cent  F cent
+line                   none           0.027   0.025   0.011   0.012   -0.291    1.12    0.97
+line                   offset         0.321   0.311   0.326   0.315   -0.177    0.67    0.45
+line                   interaction    0.368   0.360   0.356   0.350   -1.240    0.57    0.37
+quad                   none           0.037   0.033   0.016   0.014   -0.608    1.11    0.96
+quad                   offset         0.330   0.319   0.331   0.317   -0.526    0.65    0.43
+quad                   interaction    0.401   0.387   0.372   0.356   -3.335    0.50    0.31
+spline                 none           0.045   0.037   0.016   0.012   -0.200    1.10    0.96
+spline                 offset         0.338   0.324   0.331   0.315   -0.086    0.65    0.44
+spline                 interaction    0.430   0.399   0.375   0.352   -0.135    0.46    0.28
+
+decoder                        A w2x   A rmse   F w2x   F rmse   G w2x   G rmse   X w2x  X rmse
+ridge                           0.64    0.388    0.81    0.284    0.60    0.364    0.13    2.604 
+quad+offset                     0.36    0.900    0.27    0.986    0.30    0.889    0.11    2.847 
+spline+offset                   0.42    1.002    0.31    1.152    0.32    0.935    0.10    2.720 
+quad+interaction                0.39    1.046    0.27    1.065    0.26    1.153    0.08    3.089 
+
+geometry quad+offset (1 d–100 y, reference context plain|climate): tortuosity 1.48 [1.45, 1.53], end-to-end turn 133° [130.77, 134.63], curvature peak at 10^-0.81 y = 0.15 y [-0.85, -0.73], curve n90/n95/n99 2/2/2, curve var top-3 [0.842, 0.158, 0.0]; bootstrap F R2 [0.31, 0.33]  (50 resamples of 20 training configs)
+
+geometry spline+offset (1 d–100 y, reference context plain|climate): tortuosity 2.92 [2.97, 3.60], end-to-end turn 94° [80.26, 100.37], curvature peak at 10^-2.24 y = 0.01 y [-2.27, -2.23], curve n90/n95/n99 3/4/6, curve var top-3 [0.674, 0.189, 0.071]; bootstrap F R2 [0.31, 0.33]  (50 resamples of 20 training configs)
+context effects (quad): offset vs interaction held-out R2  A 0.319 vs 0.387   F 0.331 vs 0.372   G 0.317 vs 0.356
+parameterization absolute log H              : held-out R2  A 0.319   F 0.331
+parameterization relative log(H/short delay) : held-out R2  A 0.310   F 0.328
+distractor mention  n=240: along-tangent shift in decades (along/||f'||): rho with (D−H) -0.209, mean |shift| 0.68 dec; orthogonal residual median 86.1 vs plain-main 43.0, rho(orth, |D−H|) +0.100; curve-decoder within-2x 0.23, rho(decoded−H, D−H) +0.081
+distractor role     n=240: along-tangent shift in decades (along/||f'||): rho with (D−H) -0.223, mean |shift| 0.87 dec; orthogonal residual median 71.2 vs plain-main 43.0, rho(orth, |D−H|) +0.213; curve-decoder within-2x 0.25, rho(decoded−H, D−H) +0.040
+
+=== L33 R0  (train rows 960) ===
+model                  ctx          trainR2       A       F       G X extrap  A cent  F cent
+line                   none           0.145   0.148   0.101   0.111   -2.650    1.86    1.78
+line                   offset         0.651   0.630   0.642   0.597   -1.412    0.80    0.59
+line                   interaction    0.680   0.656   0.663   0.614   -2.032    0.69    0.48
+quad                   none           0.166   0.169   0.112   0.115   -2.828    1.83    1.76
+quad                   offset         0.672   0.650   0.653   0.601   -1.788    0.72    0.53
+quad                   interaction    0.708   0.679   0.673   0.616   -3.218    0.57    0.41
+spline                 none           0.178   0.179   0.117   0.128   -1.414    1.81    1.75
+spline                 offset         0.684   0.660   0.658   0.614   -0.174    0.68    0.50
+spline                 interaction    0.728   0.691   0.680   0.628   -0.038    0.49    0.34
+
+decoder                        A w2x   A rmse   F w2x   F rmse   G w2x   G rmse   X w2x  X rmse
+ridge                           0.93    0.163    0.99    0.112    0.90    0.168    0.13    1.772 
+quad+offset                     0.50    0.626    0.45    0.581    0.41    0.708    0.12    2.792 
+spline+offset                   0.51    0.661    0.46    0.602    0.43    0.671    0.12    2.802 
+quad+interaction                0.49    0.622    0.45    0.576    0.38    0.694    0.11    2.710 
+
+geometry quad+offset (1 d–100 y, reference context plain|climate): tortuosity 1.25 [1.23, 1.28], end-to-end turn 107° [104.69, 110.21], curvature peak at 10^-0.50 y = 0.31 y [-0.61, -0.38], curve n90/n95/n99 2/2/2, curve var top-3 [0.894, 0.106, 0.0]; bootstrap F R2 [0.64, 0.65]  (50 resamples of 20 training configs)
+
+geometry spline+offset (1 d–100 y, reference context plain|climate): tortuosity 2.03 [2.00, 2.22], end-to-end turn 71° [61.90, 88.69], curvature peak at 10^-2.27 y = 0.01 y [-2.28, -2.24], curve n90/n95/n99 2/2/4, curve var top-3 [0.851, 0.111, 0.024]; bootstrap F R2 [0.64, 0.66]  (50 resamples of 20 training configs)
+context effects (quad): offset vs interaction held-out R2  A 0.650 vs 0.679   F 0.653 vs 0.673   G 0.601 vs 0.616
+parameterization absolute log H              : held-out R2  A 0.650   F 0.653
+parameterization relative log(H/short delay) : held-out R2  A 0.627   F 0.638
+distractor mention  n=240: along-tangent shift in decades (along/||f'||): rho with (D−H) -0.049, mean |shift| 0.29 dec; orthogonal residual median 8.6 vs plain-main 6.3, rho(orth, |D−H|) +0.034; curve-decoder within-2x 0.59, rho(decoded−H, D−H) -0.019
+distractor role     n=240: along-tangent shift in decades (along/||f'||): rho with (D−H) -0.253, mean |shift| 0.39 dec; orthogonal residual median 12.5 vs plain-main 6.3, rho(orth, |D−H|) +0.190; curve-decoder within-2x 0.46, rho(decoded−H, D−H) -0.129
+
+wrote figures/gemma-4-31b_matrix_s0/curve

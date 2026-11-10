@@ -1,0 +1,52 @@
+{
+  "qwen3.8-27b_investment_n2000_s0": {
+    "n": 2000,
+    "index_sha256": "b88e067807d4c173c8af0373e840535c9ed943da8642681f30c3d472620bb903",
+    "model": "Qwen/Qwen3.8-27B",
+    "layer": 22,
+    "T3_sum": 134193.95938634872,
+    "T3_sha256": "3bdf17720e93bb7300eab438dc8f6bf8ac7a778ed3e342741988f5a6b3d7ce60",
+    "R0_sum": 49403.30423690379,
+    "R0_sha256": "a33b294f5c7f71687e154aed3085b638e74ef631d0b21c8965908fdb05d2d2af"
+  },
+  "qwen3.8-27b_matrix_s0": {
+    "n": 3240,
+    "index_sha256": "8290856c1cae45b2fea919e2706da6e78fe964742a36f5d28ef73cfe51e4aaaf",
+    "model": "Qwen/Qwen3.8-27B",
+    "layer": 22,
+    "T3_sum": 182125.1463496685,
+    "T3_sha256": "4d72fdc55943fa686f24bb4c2d52a08b2d2fe9b8a7db255762f8930897b51e51",
+    "R0_sum": 83267.06724214554,
+    "R0_sha256": "cb99624b3c23b6b36efebebf58c239f2d5988ae0b3a5d6fbe167e4f467584ebe"
+  },
+  "qwen3.8-27b_extended_n2000_s0": {
+    "n": 2000,
+    "index_sha256": "74c31dba1317385bd6390d51a35d701560fad08a249863cef945dd8b6c628884",
+    "model": "Qwen/Qwen3.8-27B",
+    "layer": 22,
+    "T3_sum": 134311.71888494492,
+    "T3_sha256": "b5b83214b349915d05acec54b7c665d0f5989406e95ce81d6f3309635ab50d89",
+    "R0_sum": 50363.4183037281,
+    "R0_sha256": "db4238fe1cea1c4e48d9954ca7b90c02603dc4837b8f27bbcaed9be23be410a6"
+  },
+  "qwen3.8-27b_phrasings_n2000_s0": {
+    "n": 2000,
+    "index_sha256": "2df103ba922d392999881f850db7c3e5ff6ee500b58ddcd93cf7282b5c3f4331",
+    "model": "Qwen/Qwen3.8-27B",
+    "layer": 22,
+    "T3_sum": 130020.88661122322,
+    "T3_sha256": "8af0c4d8654cd986a095b187ec171cdfbd4322eabd6636797f5a07b6fc567724",
+    "R0_sum": 44062.87270563841,
+    "R0_sha256": "5aae2c0331d81e74e33bfc1610e687d142fa8a6ae7a2d1d038c3c57befce8c1e"
+  },
+  "qwen3.8-27b_units_paired_n2000_s1": {
+    "n": 2000,
+    "index_sha256": "77bcf01a7fc1052faccd2489de7122456010e696287ed8194d85f0622944db1b",
+    "model": "Qwen/Qwen3.8-27B",
+    "layer": 22,
+    "T3_sum": 134398.99240976572,
+    "T3_sha256": "703b925e6d3ca563e5750bb4bdbe66512b522799d5094d27359c7e0749d73a58",
+    "R0_sum": 49489.480164051056,
+    "R0_sha256": "4fe449695e88c2a0d396fc66f5c5b0fe1915021183ea01c0d1026191d67e54f3"
+  }
+}

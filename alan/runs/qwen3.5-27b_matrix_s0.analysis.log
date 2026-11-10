@@ -1,0 +1,311 @@
+=== analyze_run: runs/qwen3.5-27b_matrix_s0 -> figures/qwen3.5-27b_matrix_s0 (L=64, cells 35:R0,46:R0,59:T3,35:T3) ===
+=== sweep ===
+run: Qwen/Qwen3.5-27B  n=3240  layers=64  positions=['T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'R0', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7']
+format adherence: 0.925   chose_short overall: 0.802
+horizon_bin  horizon_years   n  n_format_ok  frac_short  p_short_mean
+   17 hours       0.001939  20           20    0.950000      0.814504
+      1 day       0.002738 240          220    0.995455      0.865147
+     3 days       0.008214  20           20    0.950000      0.860777
+     1 week       0.019165 260          240    1.000000      0.923408
+    2 weeks       0.038330 240          220    0.995455      0.926184
+    18 days       0.049281  20           20    1.000000      0.912992
+    1 month       0.083333 260          240    1.000000      0.950933
+   10 weeks       0.191650  40           40    1.000000      0.920556
+   3 months       0.250000 240          219    1.000000      0.968800
+   6 months       0.500000 260          240    1.000000      0.965811
+  10 months       0.833333  20           20    1.000000      0.964324
+     1 year       1.000000  20           20    0.700000      0.630140
+    2 years       2.000000 260          240    0.904167      0.895819
+    3 years       3.000000  20           20    0.100000      0.167559
+    5 years       5.000000 260          239    0.861925      0.833004
+   10 years      10.000000 260          240    0.691667      0.667852
+   20 years      20.000000 260          240    0.587500      0.560128
+   30 years      30.000000 260          240    0.337500      0.401635
+  100 years     100.000000 260          240    0.316667      0.399415
+  300 years     300.000000  20           20    0.300000      0.419761
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  self.explained_variance_ratio_ = self.explained_variance_ / total_var
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+  return float(spearmanr(a, b, nan_policy="omit").statistic)
+
+top cells by |rho_pc1_horizon|:
+ layer position  rho_pc1_horizon  rho_pc1_reward_ratio  evr_pc1  silhouette_choice_pc3  rho_pc1_p_short
+    49       T4         0.752956             -0.009287 0.196919               0.220246        -0.395866
+    48       T4         0.745901             -0.014068 0.190110               0.233976        -0.431182
+    46       T4         0.654079             -0.003340 0.204402               0.260048        -0.337203
+    50       T4         0.653476             -0.004843 0.198101               0.203072        -0.302096
+
+sample-level PCA spectrum at the top cells (explained variance ratio; |rho| of each PC with log horizon):
+  L49 T4: evr 0.197 0.179 0.099 0.065 0.048 0.032 0.030 0.024 0.023 0.019  (cum2 0.38 cum5 0.59 cum10 0.72; components for 90% / 95% of variance: 49 / 120)
+            |rho| 0.75 0.19 0.26 0.21 0.20 0.11 0.12 0.10 0.15 0.06
+  L48 T4: evr 0.190 0.181 0.092 0.066 0.049 0.034 0.029 0.025 0.023 0.019  (cum2 0.37 cum5 0.58 cum10 0.71; components for 90% / 95% of variance: 51 / 124)
+            |rho| 0.75 0.51 0.18 0.17 0.21 0.12 0.14 0.21 0.00 0.05
+  L46 T4: evr 0.204 0.191 0.074 0.070 0.049 0.036 0.030 0.027 0.020 0.018  (cum2 0.39 cum5 0.59 cum10 0.72; components for 90% / 95% of variance: 46 / 109)
+            |rho| 0.65 0.73 0.13 0.07 0.23 0.14 0.31 0.12 0.04 0.04
+  L50 T4: evr 0.198 0.191 0.099 0.063 0.047 0.031 0.027 0.025 0.024 0.018  (cum2 0.39 cum5 0.60 cum10 0.72; components for 90% / 95% of variance: 47 / 115)
+            |rho| 0.65 0.58 0.34 0.24 0.19 0.07 0.22 0.12 0.12 0.05
+
+wrote figures/qwen3.5-27b_matrix_s0
+=== path geometry ===
+=== L35 R0 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.8230000138282776, 0.10100000351667404, 0.026000000536441803]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.823 0.101 0.026 0.020 0.012 0.006 0.003 0.002
+  split-half noise scree at the same ranks:              0.610 0.034 0.024 0.007 0.004 0.002 0.001 0.001
+  cumulative: beyond PC2 0.076, beyond PC3 0.050; components for 90% / 95% / 99% of centroid variance: 2 / 4 / 8; above 2x noise: 14 of 16
+  in centroid top-3 PC space: path length 67.8, tortuosity 29.54 (full-space 26.17); turning angles median 122 deg, max 176
+  split-half: centroid-plane correlation r = 0.192; median odd/even centroid gap / median segment = 0.15
+  spacing per decade of horizon: first 37.6, last 10.6, middle median 17.2  (ends/middle 1.40)
+=== L46 R0 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.7419999837875366, 0.14900000393390656, 0.057999998331069946]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.742 0.149 0.058 0.018 0.013 0.006 0.003 0.003
+  split-half noise scree at the same ranks:              0.592 0.039 0.029 0.005 0.004 0.002 0.002 0.001
+  cumulative: beyond PC2 0.109, beyond PC3 0.051; components for 90% / 95% / 99% of centroid variance: 3 / 4 / 8; above 2x noise: 14 of 16
+  in centroid top-3 PC space: path length 100.7, tortuosity 18.34 (full-space 18.06); turning angles median 124 deg, max 178
+  split-half: centroid-plane correlation r = 0.209; median odd/even centroid gap / median segment = 0.28
+  spacing per decade of horizon: first 56.0, last 15.0, middle median 25.2  (ends/middle 1.41)
+=== L59 T3 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.6769999861717224, 0.1889999955892563, 0.0689999982714653]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.677 0.189 0.069 0.031 0.010 0.007 0.005 0.003
+  split-half noise scree at the same ranks:              0.292 0.111 0.022 0.012 0.007 0.006 0.004 0.003
+  cumulative: beyond PC2 0.134, beyond PC3 0.065; components for 90% / 95% / 99% of centroid variance: 3 / 4 / 8; above 2x noise: 6 of 16
+  in centroid top-3 PC space: path length 351.7, tortuosity 9.86 (full-space 10.10); turning angles median 149 deg, max 177
+  split-half: centroid-plane correlation r = 0.601; median odd/even centroid gap / median segment = 0.90
+  spacing per decade of horizon: first 142.3, last 106.2, middle median 106.4  (ends/middle 1.17)
+=== L35 T3 ===
+  centroid planarity: top-1/2/3 PCs of the 17 centroids explain [0.5550000071525574, 0.23499999940395355, 0.09399999678134918]
+  centroid scree (fraction of centroid variance), ranks 1-8: 0.555 0.235 0.094 0.054 0.019 0.014 0.007 0.005
+  split-half noise scree at the same ranks:              0.383 0.072 0.026 0.016 0.008 0.006 0.003 0.002
+  cumulative: beyond PC2 0.211, beyond PC3 0.117; components for 90% / 95% / 99% of centroid variance: 4 / 5 / 10; above 2x noise: 15 of 16
+  in centroid top-3 PC space: path length 78.4, tortuosity 13.09 (full-space 12.73); turning angles median 111 deg, max 179
+  split-half: centroid-plane correlation r = 0.795; median odd/even centroid gap / median segment = 0.46
+  spacing per decade of horizon: first 45.7, last 13.0, middle median 23.7  (ends/middle 1.24)
+per-layer components for 95% of centroid variance (layers 1..L):
+  T3: 3 1 1 1 1 2 2 1 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 5 5 5 5 5 5 4 5 4 4 4 4 5 5 5 5 5 5 5 5 5 5 5 5 5 4 5 6 6 6 6
+  R0: 2 2 2 2 2 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 3 4 4 4 4 4 3 4 4 4 4 3 3 4 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4
+per-layer fraction of centroid variance beyond PC2:
+  T3: 0.06 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.04 0.03 0.03 0.03 0.03 0.03 0.04 0.04 0.07 0.07 0.07 0.07 0.08 0.08 0.08 0.09 0.10 0.11 0.11 0.12 0.14 0.14 0.13 0.15 0.20 0.21 0.20 0.19 0.19 0.19 0.20 0.20 0.20 0.20 0.20 0.20 0.21 0.20 0.20 0.21 0.22 0.22 0.23 0.24 0.24 0.22 0.25 0.25 0.25 0.13 0.23 0.25 0.26 0.27 0.26
+  R0: 0.00 0.00 0.01 0.01 0.01 0.01 0.01 0.01 0.02 0.02 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.04 0.05 0.04 0.05 0.05 0.05 0.04 0.06 0.07 0.08 0.08 0.09 0.09 0.09 0.09 0.10 0.10 0.09 0.09 0.10 0.11 0.11 0.12 0.14 0.18 0.18 0.16 0.17 0.16 0.16 0.16 0.15 0.15 0.15 0.15 0.15 0.15 0.16 0.15
+wrote figures/qwen3.5-27b_matrix_s0
+=== hypothesis checks ===
+run Qwen/Qwen3.5-27B n=3240
+=== H(sink) at T4: |rho| of the k-th PC with log horizon (same PCA fit); evr_top1; top/median PC std ===
+layer  evr_top1  k=0     k=1     k=2     k=5    top/median
+L35    0.284    0.612  0.795  0.139  0.088   9x
+L46    0.204    0.654  0.735  0.129  0.139   7x
+L59    0.238    0.193  0.447  0.544  0.127   8x
+
+=== H(U-shape): 17 canonical centroids in their own PC plane; polynomial fits vs log10 horizon ===
+cell     PC2: R2 quad  vertex(years)  R2 linear | PC1: R2 linear  R2 quad
+(U-shape fit restricted to 18 bins in [0.0027, 100.0] years)
+L35 R0   0.915           0.00         0.891     | 0.021           0.114
+L35 T3   0.742           0.00         0.742     | 0.080           0.189
+L46 R0   0.924           0.00         0.891     | 0.015           0.102
+L59 T3   0.719         1052.19         0.692     | 0.200           0.473
+
+=== H(variants) by horizon_unit (['days', 'hours', 'months', 'weeks', 'years']) ===
+cell     pooled|rho_pc1|  per-variant|rho_pc1|  silhouette(variant,PC1-3)  |rho(PC1,variant-mean)|
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L22 R0   0.135            0.04/nan/0.03/0.04/0.07       -0.648                    0.107
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L35 T3   0.030            0.01/nan/0.07/0.12/0.11       -0.366                    0.073
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L35 R0   0.180            0.33/nan/0.10/0.11/0.05       -0.678                    0.122
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L46 R0   0.107            0.09/nan/0.01/0.03/0.15       -0.700                    0.128
+  per = "/".join(f"{abs(spearmanr(PCA(1, random_state=0).fit_transform(X[vv == k])[:, 0], yy[vv == k]).statistic):.2f}" for k in keys if (vv == k).sum() > 10)
+L59 T3   0.043            0.12/nan/0.07/0.04/0.03       -0.265                    0.079
+=== 3-D views ===
+wrote figures/qwen3.5-27b_matrix_s0/view3d_centroid_L35_R0.html  (691 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0)
+wrote figures/qwen3.5-27b_matrix_s0/view3d_centroid_L46_R0.html  (692 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0)
+wrote figures/qwen3.5-27b_matrix_s0/view3d_centroid_L59_T3.html  (687 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0)
+wrote figures/qwen3.5-27b_matrix_s0/view3d_centroid_L35_T3.html  (693 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0)
+wrote figures/qwen3.5-27b_matrix_s0/view3d_sample_L35_R0.html  (691 KB; plotly.min.js shared in figures/qwen3.5-27b_matrix_s0)
+ANALYZE_RUN DONE
+[train-structured-investment+climate] train rows 320  dev rows 192  candidate cells 42  alphas [1.0, 10.0, 100.0, 1000.0, 10000.0]
+selected on dev: layer 46 position T3 alpha 1  (dev rmse 0.492, within2x 0.56)
+dev rmse by position (best layer/alpha each): T0 0.586, T1 0.644, T3 0.492, T5 0.664, T8 0.568, R0 0.504
+dev rmse by layer (best position/alpha each): L22 0.568, L29 0.586, L35 0.607, L42 0.566, L46 0.492, L53 0.504, L59 0.559
+
+=== test suites (frozen decoder; log10-year errors) ===
+suite                                                     n  method          rmse   bias     sd  medae    rho  w/in2x worst bin
+A new scenarios, structured, train horizons              96  activation     0.194  +0.05  0.188  0.117  0.991    0.90   0.75 (1 month)
+A new scenarios, structured, train horizons              96  regex_first    1.762  +0.04  1.762  1.380  0.000    0.15   0.00 (1 day)
+A new scenarios, structured, train horizons              96  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+A new scenarios, structured, train horizons              96  text_ridge     0.436  +0.05  0.433  0.348  0.986    0.43   0.00 (1 day)
+B familiar scenarios, plain, train horizons             320  activation     0.545  +0.07  0.541  0.364  0.970    0.45   0.00 (1 day)
+B familiar scenarios, plain, train horizons             320  regex_first    1.978  +0.14  1.973  1.416  0.000    0.13   0.00 (1 day)
+B familiar scenarios, plain, train horizons             320  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+B familiar scenarios, plain, train horizons             320  text_ridge     1.042  +0.07  1.039  0.935  0.969    0.18   0.00 (1 day)
+C familiar scenarios, varied, train horizons            320  activation     0.619  -0.03  0.618  0.448  0.926    0.37   0.07 (1 day)
+C familiar scenarios, varied, train horizons            320  regex_first    1.363  +0.06  1.361  0.000  0.542    0.58   0.40 (1 day)
+C familiar scenarios, varied, train horizons            320  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+C familiar scenarios, varied, train horizons            320  text_ridge     1.028  +0.09  1.024  0.911  0.964    0.18   0.00 (1 day)
+D new scenarios, plain, train horizons                   96  activation     0.544  +0.10  0.534  0.333  0.966    0.45   0.00 (1 day)
+D new scenarios, plain, train horizons                   96  regex_first    1.762  +0.04  1.762  1.380  0.000    0.15   0.00 (1 day)
+D new scenarios, plain, train horizons                   96  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+D new scenarios, plain, train horizons                   96  text_ridge     1.067  +0.11  1.061  0.939  0.873    0.17   0.00 (1 day)
+E new scenarios, varied, train horizons                  96  activation     0.665  -0.12  0.655  0.525  0.928    0.25   0.08 (1 day)
+E new scenarios, varied, train horizons                  96  regex_first    1.413  +0.16  1.404  0.602  0.482    0.46   0.17 (10 years)
+E new scenarios, varied, train horizons                  96  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+E new scenarios, varied, train horizons                  96  text_ridge     1.056  +0.12  1.050  0.927  0.867    0.16   0.00 (1 day)
+F withheld horizons, structured, train scenarios        160  activation     0.127  +0.04  0.120  0.086  0.968    0.97   0.93 (2 weeks)
+F withheld horizons, structured, train scenarios        160  regex_first    1.670  +0.04  1.670  1.115  0.000    0.11   0.00 (2 weeks)
+F withheld horizons, structured, train scenarios        160  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (2 weeks)
+F withheld horizons, structured, train scenarios        160  text_ridge     0.822  +0.01  0.822  0.700  0.726    0.09   0.00 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  activation     0.459  +0.01  0.459  0.265  0.890    0.54   0.33 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  regex_first    1.354  -0.03  1.354  1.000  0.103    0.17   0.06 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  text_ridge     0.960  -0.00  0.960  0.883  0.444    0.12   0.00 (2 weeks)
+
+=== controls (frozen decoder) ===
+mention  n=240  activation: rmse 0.792 within2x 0.28 rho(pred,H) 0.906  rho(residual, D-H) +0.833 | regex-first within2x 0.04  regex-horizon within2x 1.00
+role     n=240  activation: rmse 0.808 within2x 0.39 rho(pred,H) 0.932  rho(residual, D-H) +0.795 | regex-first within2x 0.12  regex-horizon within2x 1.00
+factual  n=240  activation at T3: rmse 6.359 within2x 0.00 rho -0.294   (no decision task; same quantities)
+scaling  n=360  slope of prediction vs log10(scale factor): mean 0.51 (1 = absolute horizon, 0 = relative to option delays); within2x of absolute H 0.38; rho(pred, absolute H) 0.934, rho(pred, H/short-delay) 0.727
+wrote figures/qwen3.5-27b_matrix_s0/transfer
+[train-structured+plain+varied-investment+climate] train rows 960  dev rows 192  candidate cells 42  alphas [1.0, 10.0, 100.0, 1000.0, 10000.0]
+/workspace/SPAR-2026/.venv/lib/python3.12/site-packages/sklearn/linear_model/_ridge.py:264: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 7.837069659899498e-08.
+  dual_coef = linalg.solve(K, y, assume_a="pos", overwrite_a=False)
+/workspace/SPAR-2026/.venv/lib/python3.12/site-packages/sklearn/linear_model/_ridge.py:264: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 9.079299445602373e-08.
+  dual_coef = linalg.solve(K, y, assume_a="pos", overwrite_a=False)
+selected on dev: layer 22 position T1 alpha 1  (dev rmse 0.114, within2x 0.99)
+dev rmse by position (best layer/alpha each): T0 0.153, T1 0.114, T3 0.144, T5 0.162, T8 0.143, R0 0.182
+dev rmse by layer (best position/alpha each): L22 0.114, L29 0.139, L35 0.143, L42 0.144, L46 0.143, L53 0.174, L59 0.167
+
+=== test suites (frozen decoder; log10-year errors) ===
+suite                                                     n  method          rmse   bias     sd  medae    rho  w/in2x worst bin
+A new scenarios, structured, train horizons              96  activation     0.119  +0.03  0.115  0.074  0.992    1.00   1.00 (1 day)
+A new scenarios, structured, train horizons              96  regex_first    1.762  +0.04  1.762  1.380  0.000    0.15   0.00 (1 day)
+A new scenarios, structured, train horizons              96  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+A new scenarios, structured, train horizons              96  text_ridge     0.357  +0.07  0.350  0.263  0.984    0.55   0.17 (1 day)
+B familiar scenarios, plain, train horizons [IN TRAINING SET under this condition]  320  activation     0.031  -0.00  0.031  0.021  0.992    1.00   1.00 (1 day)
+B familiar scenarios, plain, train horizons [IN TRAINING SET under this condition]  320  regex_first    1.978  +0.14  1.973  1.416  0.000    0.13   0.00 (1 day)
+B familiar scenarios, plain, train horizons [IN TRAINING SET under this condition]  320  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+B familiar scenarios, plain, train horizons [IN TRAINING SET under this condition]  320  text_ridge     0.210  -0.00  0.210  0.160  0.992    0.82   0.50 (1 day)
+C familiar scenarios, varied, train horizons [IN TRAINING SET under this condition]  320  activation     0.036  -0.00  0.036  0.022  0.992    1.00   1.00 (1 day)
+C familiar scenarios, varied, train horizons [IN TRAINING SET under this condition]  320  regex_first    1.363  +0.06  1.361  0.000  0.542    0.58   0.40 (1 day)
+C familiar scenarios, varied, train horizons [IN TRAINING SET under this condition]  320  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+C familiar scenarios, varied, train horizons [IN TRAINING SET under this condition]  320  text_ridge     0.448  +0.00  0.448  0.292  0.984    0.52   0.17 (1 day)
+D new scenarios, plain, train horizons                   96  activation     0.080  +0.01  0.078  0.053  0.992    1.00   1.00 (1 day)
+D new scenarios, plain, train horizons                   96  regex_first    1.762  +0.04  1.762  1.380  0.000    0.15   0.00 (1 day)
+D new scenarios, plain, train horizons                   96  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+D new scenarios, plain, train horizons                   96  text_ridge     0.303  +0.06  0.296  0.215  0.984    0.69   0.42 (1 day)
+E new scenarios, varied, train horizons                  96  activation     0.119  +0.01  0.118  0.082  0.992    0.98   0.92 (100 years)
+E new scenarios, varied, train horizons                  96  regex_first    1.413  +0.16  1.404  0.602  0.482    0.46   0.17 (10 years)
+E new scenarios, varied, train horizons                  96  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+E new scenarios, varied, train horizons                  96  text_ridge     0.506  -0.00  0.506  0.321  0.964    0.48   0.17 (1 day)
+F withheld horizons, structured, train scenarios        160  activation     0.105  +0.05  0.094  0.073  0.968    0.99   0.97 (2 weeks)
+F withheld horizons, structured, train scenarios        160  regex_first    1.670  +0.04  1.670  1.115  0.000    0.11   0.00 (2 weeks)
+F withheld horizons, structured, train scenarios        160  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (2 weeks)
+F withheld horizons, structured, train scenarios        160  text_ridge     0.760  -0.00  0.760  0.657  0.858    0.16   0.00 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  activation     0.236  +0.15  0.184  0.152  0.968    0.83   0.42 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  regex_first    1.354  -0.03  1.354  1.000  0.103    0.17   0.06 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  text_ridge     0.831  +0.04  0.830  0.750  0.687    0.22   0.00 (2 weeks)
+
+=== controls (frozen decoder) ===
+mention  n=240  activation: rmse 1.366 within2x 0.12 rho(pred,H) 0.802  rho(residual, D-H) +0.899 | regex-first within2x 0.04  regex-horizon within2x 1.00
+role     n=240  activation: rmse 0.379 within2x 0.47 rho(pred,H) 0.980  rho(residual, D-H) +0.812 | regex-first within2x 0.12  regex-horizon within2x 1.00
+factual  n=240  activation at T1: rmse 0.905 within2x 0.19 rho 0.858   (no decision task; same quantities)
+scaling  n=360  slope of prediction vs log10(scale factor): mean 0.98 (1 = absolute horizon, 0 = relative to option delays); within2x of absolute H 0.72; rho(pred, absolute H) 0.969, rho(pred, H/short-delay) 0.650
+
+=== distractor sweep (train-structured+plain+varied-investment+climate; alpha=1 per cell): new-scenario within-2x | mention within-2x, rho(resid, D-H) | role within-2x, rho(resid, D-H) ===
+layer                T0                T1                T2                T3                T4                T5                T6                T7                T8                R0
+L22     0.94|0.39,+0.77|0.36,+0.87  0.99|0.12,+0.90|0.47,+0.81  0.92|0.33,+0.87|0.47,+0.77  0.91|0.40,+0.80|0.13,+0.92  0.97|0.46,+0.73|0.18,+0.95  0.83|0.42,+0.83|0.20,+0.79  0.72|0.39,+0.77|0.40,+0.57  0.83|0.44,+0.81|0.21,+0.91  0.91|0.53,+0.78|0.28,+0.92  0.82|0.55,+0.80|0.36,+0.90
+L29     0.95|0.63,+0.84|0.52,+0.77  0.97|0.17,+0.98|0.30,+0.18  0.90|0.40,+0.83|0.46,+0.63  0.94|0.35,+0.95|0.27,+0.90  1.00|0.49,+0.85|0.26,+0.94  0.90|0.37,+0.88|0.39,+0.87  0.91|0.41,+0.89|0.31,+0.76  0.92|0.46,+0.83|0.16,+0.90  0.91|0.42,+0.75|0.21,+0.84  0.88|0.49,+0.78|0.20,+0.86
+L35     0.96|0.65,+0.83|0.19,+0.93  0.89|0.23,+0.93|0.39,+0.43  0.85|0.35,+0.68|0.40,+0.32  0.95|0.40,+0.96|0.25,+0.91  0.96|0.60,+0.42|0.49,+0.79  0.94|0.42,+0.79|0.36,+0.86  0.93|0.55,+0.87|0.40,+0.79  0.97|0.38,+0.80|0.37,+0.92  0.96|0.73,+0.74|0.53,+0.80  0.91|0.67,+0.77|0.10,+0.79
+L42     0.94|0.57,+0.86|0.20,+0.88  0.86|0.23,+0.91|0.41,+0.39  0.82|0.38,+0.64|0.45,+0.21  0.94|0.42,+0.92|0.18,+0.91  0.97|0.72,+0.36|0.71,+0.78  0.95|0.42,+0.71|0.34,+0.91  0.88|0.54,+0.83|0.52,+0.70  0.94|0.47,+0.75|0.44,+0.90  0.96|0.63,+0.74|0.13,+0.85  0.90|0.65,+0.66|0.00,+0.69
+L46     0.92|0.51,+0.75|0.42,+0.87  0.88|0.21,+0.93|0.52,+0.10  0.78|0.32,+0.58|0.57,+0.17  0.94|0.46,+0.86|0.24,+0.87  0.94|0.68,+0.37|0.53,+0.78  0.94|0.42,+0.61|0.35,+0.84  0.88|0.50,+0.78|0.63,+0.67  0.93|0.51,+0.86|0.54,+0.88  0.95|0.71,+0.69|0.42,+0.81  0.86|0.75,+0.50|0.00,+0.62
+L53     0.84|0.60,+0.70|0.39,+0.74  0.83|0.14,+0.95|0.59,+0.19  0.71|0.31,+0.66|0.63,+0.34  0.92|0.43,+0.83|0.49,+0.77  0.89|0.65,+0.33|0.69,+0.66  0.90|0.50,+0.61|0.40,+0.83  0.86|0.47,+0.76|0.52,+0.79  0.90|0.66,+0.77|0.56,+0.80  0.91|0.75,+0.56|0.47,+0.91  0.86|0.60,+0.34|0.04,+0.70
+/workspace/SPAR-2026/.venv/lib/python3.12/site-packages/sklearn/linear_model/_ridge.py:264: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 7.837069659899498e-08.
+  dual_coef = linalg.solve(K, y, assume_a="pos", overwrite_a=False)
+/workspace/SPAR-2026/.venv/lib/python3.12/site-packages/sklearn/linear_model/_ridge.py:264: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 1.1417088074949788e-07.
+  dual_coef = linalg.solve(K, y, assume_a="pos", overwrite_a=False)
+/workspace/SPAR-2026/.venv/lib/python3.12/site-packages/sklearn/linear_model/_ridge.py:264: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 9.079299445602373e-08.
+  dual_coef = linalg.solve(K, y, assume_a="pos", overwrite_a=False)
+L59     0.82|0.61,+0.70|0.38,+0.80  0.79|0.09,+0.93|0.47,+0.05  0.68|0.32,+0.67|0.59,+0.36  0.89|0.37,+0.90|0.63,+0.55  0.84|0.51,+0.21|0.50,+0.68  0.84|0.45,+0.64|0.35,+0.56  0.83|0.40,+0.71|0.55,+0.71  0.89|0.57,+0.78|0.43,+0.77  0.91|0.57,+0.78|0.44,+0.88  0.86|0.59,+0.39|0.06,+0.74
+cells with new-scenario within-2x >= 0.85: 55/70; min mention rho +0.21, min role rho +0.05 over all cells
+least role-distractor pull among them:
+                                             tag  layer position  test_within2x  mention_within2x  mention_rho  role_within2x  role_rho
+train-structured+plain+varied-investment+climate     46       T1          0.875             0.208        0.928          0.521     0.103
+train-structured+plain+varied-investment+climate     29       T1          0.965             0.167        0.976          0.296     0.179
+train-structured+plain+varied-investment+climate     35       T2          0.854             0.354        0.682          0.400     0.317
+train-structured+plain+varied-investment+climate     42       T1          0.861             0.233        0.905          0.412     0.390
+train-structured+plain+varied-investment+climate     35       T1          0.885             0.225        0.930          0.388     0.432
+wrote figures/qwen3.5-27b_matrix_s0/transfer
+[train-structured+plain+varied-investment] train rows 480  dev rows 192  candidate cells 42  alphas [1.0, 10.0, 100.0, 1000.0, 10000.0]
+selected on dev: layer 46 position T0 alpha 1  (dev rmse 0.314, within2x 0.78)
+dev rmse by position (best layer/alpha each): T0 0.314, T1 0.373, T3 0.320, T5 0.401, T8 0.336, R0 0.336
+dev rmse by layer (best position/alpha each): L22 0.375, L29 0.373, L35 0.333, L42 0.330, L46 0.314, L53 0.353, L59 0.336
+
+=== test suites (frozen decoder; log10-year errors) ===
+suite                                                     n  method          rmse   bias     sd  medae    rho  w/in2x worst bin
+A new scenarios, structured, train horizons              96  activation     0.270  +0.06  0.264  0.164  0.987    0.76   0.50 (1 day)
+A new scenarios, structured, train horizons              96  regex_first    1.762  +0.04  1.762  1.380  0.000    0.15   0.00 (1 day)
+A new scenarios, structured, train horizons              96  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+A new scenarios, structured, train horizons              96  text_ridge     0.443  +0.09  0.434  0.379  0.980    0.47   0.00 (1 day)
+B familiar scenarios, plain, train horizons [IN TRAINING SET under this condition]  320  activation     0.200  +0.03  0.198  0.078  0.990    0.89   0.55 (1 day)
+B familiar scenarios, plain, train horizons [IN TRAINING SET under this condition]  320  regex_first    1.978  +0.14  1.973  1.416  0.000    0.13   0.00 (1 day)
+B familiar scenarios, plain, train horizons [IN TRAINING SET under this condition]  320  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+B familiar scenarios, plain, train horizons [IN TRAINING SET under this condition]  320  text_ridge     0.272  +0.02  0.271  0.226  0.992    0.67   0.10 (1 day)
+C familiar scenarios, varied, train horizons [IN TRAINING SET under this condition]  320  activation     0.362  +0.17  0.321  0.099  0.974    0.71   0.57 (1 day)
+C familiar scenarios, varied, train horizons [IN TRAINING SET under this condition]  320  regex_first    1.363  +0.06  1.361  0.000  0.542    0.58   0.40 (1 day)
+C familiar scenarios, varied, train horizons [IN TRAINING SET under this condition]  320  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+C familiar scenarios, varied, train horizons [IN TRAINING SET under this condition]  320  text_ridge     0.526  +0.04  0.525  0.381  0.980    0.40   0.00 (1 day)
+D new scenarios, plain, train horizons                   96  activation     0.236  +0.10  0.212  0.131  0.990    0.85   0.42 (1 day)
+D new scenarios, plain, train horizons                   96  regex_first    1.762  +0.04  1.762  1.380  0.000    0.15   0.00 (1 day)
+D new scenarios, plain, train horizons                   96  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+D new scenarios, plain, train horizons                   96  text_ridge     0.352  +0.09  0.342  0.251  0.983    0.61   0.25 (1 day)
+E new scenarios, varied, train horizons                  96  activation     0.385  +0.15  0.356  0.249  0.964    0.56   0.33 (6 months)
+E new scenarios, varied, train horizons                  96  regex_first    1.413  +0.16  1.404  0.602  0.482    0.46   0.17 (10 years)
+E new scenarios, varied, train horizons                  96  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+E new scenarios, varied, train horizons                  96  text_ridge     0.565  +0.05  0.562  0.357  0.955    0.42   0.08 (1 day)
+F withheld horizons, structured, train scenarios        160  activation     0.205  +0.06  0.196  0.124  0.966    0.86   0.57 (2 weeks)
+F withheld horizons, structured, train scenarios        160  regex_first    1.670  +0.04  1.670  1.115  0.000    0.11   0.00 (2 weeks)
+F withheld horizons, structured, train scenarios        160  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (2 weeks)
+F withheld horizons, structured, train scenarios        160  text_ridge     0.780  +0.02  0.779  0.637  0.797    0.17   0.00 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  activation     0.316  +0.18  0.260  0.171  0.948    0.72   0.39 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  regex_first    1.354  -0.03  1.354  1.000  0.103    0.17   0.06 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (2 weeks)
+G withheld horizons, all renderings, new scenarios      144  text_ridge     0.844  +0.07  0.841  0.752  0.683    0.21   0.00 (2 weeks)
+H domain transfer -> climate, all renderings, all scenarios  720  activation     0.389  +0.16  0.355  0.226  0.975    0.61   0.09 (1 day)
+H domain transfer -> climate, all renderings, all scenarios  720  regex_first    1.744  +0.17  1.736  1.000  0.198    0.28   0.13 (100 years)
+H domain transfer -> climate, all renderings, all scenarios  720  regex_horizon  0.000  +0.00  0.000  0.000  1.000    1.00   1.00 (1 day)
+H domain transfer -> climate, all renderings, all scenarios  720  text_ridge     0.383  +0.08  0.375  0.259  0.986    0.56   0.06 (1 day)
+
+=== controls (frozen decoder) ===
+mention  n=240  activation: rmse 0.406 within2x 0.55 rho(pred,H) 0.969  rho(residual, D-H) +0.784 | regex-first within2x 0.04  regex-horizon within2x 1.00
+role     n=240  activation: rmse 0.668 within2x 0.25 rho(pred,H) 0.924  rho(residual, D-H) +0.848 | regex-first within2x 0.12  regex-horizon within2x 1.00
+factual  n=240  activation at T0: rmse 3.543 within2x 0.06 rho -0.778   (no decision task; same quantities)
+scaling  n=360  slope of prediction vs log10(scale factor): mean 0.72 (1 = absolute horizon, 0 = relative to option delays); within2x of absolute H 0.62; rho(pred, absolute H) 0.977, rho(pred, H/short-delay) 0.744
+wrote figures/qwen3.5-27b_matrix_s0/transfer

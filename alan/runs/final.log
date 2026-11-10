@@ -1,0 +1,19 @@
+export runs/qwen3.5-27b_extended_n2000_s0 10:50:46
+export runs/qwen3.5-27b_families_s0 10:51:04
+export runs/qwen3.5-27b_families_s0_long 10:51:13
+export runs/qwen3.5-27b_investment_n2000_s0 10:51:23
+export runs/qwen3.5-27b_matrix_s0 10:51:37
+export runs/qwen3.5-27b_matrix_s0_long 10:52:02
+export runs/qwen3.5-27b_phrasings_n2000_s0 10:52:23
+export runs/qwen3.5-27b_units_paired_n2000_s1 10:52:39
+qwen3.5-27b_extended_n2000_s0: n=2000 index=56028a21be98 T3sum=104382 R0sum=21606.3
+qwen3.5-27b_families_s0: n=960 index=df7f2a369e5d T3sum=34501.1 R0sum=5239.82
+qwen3.5-27b_families_s0_long: n=960 index=8e68ad859c4e T3sum=34626.5 R0sum=5235.7
+qwen3.5-27b_investment_n2000_s0: n=2000 index=d9f5aa061217 T3sum=105090 R0sum=21562.6
+qwen3.5-27b_matrix_s0: n=3240 index=85778dde9e0a T3sum=135981 R0sum=27138.6
+qwen3.5-27b_matrix_s0_long: n=3240 index=9c95380dfd01 T3sum=136188 R0sum=27148.3
+qwen3.5-27b_phrasings_n2000_s0: n=2000 index=ad8ba13a83ee T3sum=105136 R0sum=20060
+qwen3.5-27b_units_paired_n2000_s1: n=2000 index=52ac11ed0602 T3sum=104247 R0sum=21716.3
+wrote snapshot/checksums_qwen3.5-27b_all.json
+37G	total
+FINAL DONE

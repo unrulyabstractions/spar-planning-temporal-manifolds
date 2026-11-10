@@ -22,8 +22,9 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from ptm.analysis import cell_metrics
 from ptm.store import RunData
+from ptm.depth import resolve_cell, parse_layers
 
-ap = argparse.ArgumentParser(); ap.add_argument("run_dir"); ap.add_argument("--cells", default="22:T3,37:T3,22:R0,29:R0")
+ap = argparse.ArgumentParser(); ap.add_argument("run_dir"); ap.add_argument("--cells", default="0.55L:T3,0.92L:T3,0.55L:R0,0.72L:R0")
 ap.add_argument("--leaky", action="store_true", help="fit PCA on all rows before CV (the earlier procedure; for comparison)")
 a = ap.parse_args()
 run = RunData(a.run_dir); df = run.index
@@ -55,7 +56,7 @@ print(f"prompt parameters, linear      : logloss {ll1:.3f}  AUC {auc1:.3f}")
 print(f"prompt parameters + interactions: logloss {ll2:.3f}  AUC {auc2:.3f}")
 mixed = base.groupby("horizon_text")["chose_short"].mean().pipe(lambda s: s[(s > 0.1) & (s < 0.9)]).index.tolist()
 for cell in a.cells.split(","):
-    layer, pos = cell.split(":"); layer = int(layer)
+    layer, pos = resolve_cell(cell, run)
     if a.leaky:
         m, ex = cell_metrics(run, layer, pos)
         A = ex["pca"].transform(ex["X"])[:, :3][base.index.to_numpy()].astype(np.float32)

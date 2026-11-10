@@ -1,0 +1,21 @@
+{
+  "layers": [
+    22,
+    26
+  ],
+  "positions": [
+    "T1",
+    "T3",
+    "R0"
+  ],
+  "chunks": [
+    [
+      0,
+      3240
+    ]
+  ],
+  "d_model": 5120,
+  "n": 3240,
+  "layer_convention": "layer 0 = embeddings; layer l = residual stream after decoder layer l-1 (resid_post of l-1); no final norm",
+  "source_run": "Qwen/Qwen3-14B"
+}

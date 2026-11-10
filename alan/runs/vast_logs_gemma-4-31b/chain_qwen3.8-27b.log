@@ -1,0 +1,46 @@
+2026-10-03 11:27:41 CHAIN START commit fe08805 model Qwen/Qwen3.8-27B tag qwen3.8-27b; nproc 4, cgroup CPU quota 23 cores, OMP_NUM_THREADS 4
+2026-10-03 11:28:09 tests: 78 passed, 43 skipped, 14 warnings in 18.02s
+2026-10-03 11:28:30 verify: mem per gpu (GiB): [50.84] VERIFY OK 
+2026-10-03 13:08:23 capture qwen3.8-27b_families_s0 start
+2026-10-03 13:16:50 capture qwen3.8-27b_families_s0 done: 960 samples, format adherence 960/960 = 1.000
+2026-10-03 13:16:50 capture qwen3.8-27b_matrix_s0_long start
+2026-10-03 14:06:51 capture qwen3.8-27b_matrix_s0_long done: 3240 samples, format adherence 3000/3240 = 0.926
+2026-10-03 14:06:51 capture qwen3.8-27b_families_s0_long start
+2026-10-03 14:20:20 capture qwen3.8-27b_families_s0_long done: 960 samples, format adherence 960/960 = 1.000
+2026-10-03 14:20:20 analysis curve_model start
+2026-10-03 14:22:05 analysis curve_model done
+2026-10-03 14:22:05 analysis relevance_decoder start
+2026-10-03 14:24:06 analysis relevance_decoder done
+2026-10-03 14:24:06 analysis relevance_families start
+2026-10-03 14:25:16 analysis relevance_families done
+2026-10-03 14:25:16 analysis scaling_test start
+2026-10-03 14:42:47 analysis scaling_test done
+2026-10-03 14:42:47 analysis guttman_canonical start
+2026-10-03 14:42:59 analysis guttman_canonical done
+2026-10-03 14:42:59 analysis guttman_extended start
+2026-10-03 14:43:09 analysis guttman_extended done
+2026-10-03 14:43:09 analysis leace_check start
+2026-10-03 14:48:29 analysis leace_check done
+2026-10-03 14:48:29 analysis pls_check start
+2026-10-03 14:50:21 analysis pls_check done
+2026-10-03 14:50:21 analysis stakes_pilot start
+2026-10-03 14:50:59 analysis stakes_pilot done
+2026-10-03 14:50:59 analysis late_readout start
+2026-10-03 14:51:42 analysis late_readout done
+2026-10-03 14:51:42 analysis depth_profile start
+2026-10-03 14:54:17 analysis depth_profile done
+2026-10-03 14:54:17 analysis analyze_long start
+2026-10-03 15:31:35 analysis analyze_long done
+2026-10-03 15:31:35 export subset runs/qwen3.8-27b_investment_n2000_s0
+2026-10-03 15:31:49 export subset runs/qwen3.8-27b_matrix_s0
+2026-10-03 15:32:21 export subset runs/qwen3.8-27b_extended_n2000_s0
+2026-10-03 15:32:49 export subset runs/qwen3.8-27b_phrasings_n2000_s0
+2026-10-03 15:33:16 export subset runs/qwen3.8-27b_units_paired_n2000_s1
+2026-10-03 15:33:41 export subset runs/qwen3.8-27b_families_s0
+2026-10-03 15:33:57 export subset runs/qwen3.8-27b_matrix_s0_long
+2026-10-03 15:34:20 export subset runs/qwen3.8-27b_families_s0_long
+qwen3.8-27b_phrasings_n2000_s0: n=2000 index=2df103ba922d T3sum=130021 R0sum=44062.9
+qwen3.8-27b_units_paired_n2000_s1: n=2000 index=77bcf01a7fc1 T3sum=134399 R0sum=49489.5
+wrote snapshot/checksums_qwen3.8-27b_all.json
+2026-10-03 15:37:13 tier-1 size: 20G	total
+2026-10-03 15:37:13 CHAIN DONE

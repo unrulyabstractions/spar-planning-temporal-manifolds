@@ -1,0 +1,48 @@
+
+=== L35 R0  (17 bins, log10 range [-2.56, 2.00], midpoint -0.09 = 0.81 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.749): deg1: 0.96  deg2: 0.96  deg3: 0.99  deg4: 0.99
+    PC2 (evr 0.139): deg1: 0.00  deg2: 0.90  deg3: 0.98  deg4: 0.99
+    PC3 (evr 0.034): deg1: 0.00  deg2: 0.04  deg3: 0.18  deg4: 0.20
+    PC4 (evr 0.024): deg1: 0.04  deg2: 0.06  deg3: 0.59  deg4: 0.77
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.943, ℓ = 2.43 decades
+(c) vertex vs window midpoint (windows of 9 bins, 9 windows): slope +1.01   [full-range vertex 10^-0.21 = 0.62 y vs midpoint 0.81 y]
+(d) PC2 share 0.139 vs split-half noise share ≈ 0.0094 of centroid variance
+(e) matched banded null (200 draws, ℓ=2.43, noise ratio 0.10):  evr1 0.41–0.48 (obs 0.75)  evr2 0.17–0.22 (obs 0.14)  evr3 0.08–0.11 (obs 0.03)
+    PC2 quadratic R^2 0.83–0.92 (obs 0.90);  PC3 cubic R^2 0.59–0.80 (obs 0.18);  vertex slope 1.01–1.05 (obs +1.01);  vertex 10^-0.26–10^-0.09 (obs 10^-0.21)
+
+=== L59 T3  (17 bins, log10 range [-2.56, 2.00], midpoint -0.09 = 0.81 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.846): deg1: 0.84  deg2: 0.96  deg3: 0.97  deg4: 0.99
+    PC2 (evr 0.078): deg1: 0.06  deg2: 0.58  deg3: 0.88  deg4: 0.88
+    PC3 (evr 0.020): deg1: 0.05  deg2: 0.05  deg3: 0.31  deg4: 0.74
+    PC4 (evr 0.017): deg1: 0.05  deg2: 0.38  deg3: 0.58  deg4: 0.60
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.662, ℓ = 2.29 decades
+(c) vertex vs window midpoint (windows of 9 bins, 9 windows): slope +0.82   [full-range vertex 10^-0.00 = 1.00 y vs midpoint 0.81 y]
+(d) PC2 share 0.078 vs split-half noise share ≈ 0.0104 of centroid variance
+(e) matched banded null (200 draws, ℓ=2.29, noise ratio 0.10):  evr1 0.40–0.47 (obs 0.85)  evr2 0.17–0.22 (obs 0.08)  evr3 0.09–0.12 (obs 0.02)
+    PC2 quadratic R^2 0.82–0.92 (obs 0.58);  PC3 cubic R^2 0.59–0.80 (obs 0.31);  vertex slope 1.01–1.05 (obs +0.82);  vertex 10^-0.26–10^-0.09 (obs 10^-0.00)
+
+=== L35 T3  (17 bins, log10 range [-2.56, 2.00], midpoint -0.09 = 0.81 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.782): deg1: 0.91  deg2: 0.93  deg3: 0.97  deg4: 0.98
+    PC2 (evr 0.124): deg1: 0.01  deg2: 0.91  deg3: 0.99  deg4: 0.99
+    PC3 (evr 0.029): deg1: 0.05  deg2: 0.05  deg3: 0.20  deg4: 0.41
+    PC4 (evr 0.019): deg1: 0.02  deg2: 0.04  deg3: 0.38  deg4: 0.60
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.858, ℓ = 2.20 decades
+(c) vertex vs window midpoint (windows of 9 bins, 9 windows): slope +0.91   [full-range vertex 10^-0.14 = 0.72 y vs midpoint 0.81 y]
+(d) PC2 share 0.124 vs split-half noise share ≈ 0.0087 of centroid variance
+(e) matched banded null (200 draws, ℓ=2.20, noise ratio 0.09):  evr1 0.40–0.47 (obs 0.78)  evr2 0.17–0.22 (obs 0.12)  evr3 0.09–0.12 (obs 0.03)
+    PC2 quadratic R^2 0.82–0.91 (obs 0.91);  PC3 cubic R^2 0.59–0.79 (obs 0.20);  vertex slope 1.01–1.05 (obs +0.91);  vertex 10^-0.26–10^-0.09 (obs 10^-0.14)
+
+=== L46 R0  (17 bins, log10 range [-2.56, 2.00], midpoint -0.09 = 0.81 y) ===
+(a) polynomial ladder: R^2 of centroid PC_k vs orthogonal polynomials of log H, by max degree 1..4   (Guttman: PC_k needs degree k)
+    PC1 (evr 0.787): deg1: 0.92  deg2: 0.96  deg3: 0.97  deg4: 0.99
+    PC2 (evr 0.117): deg1: 0.02  deg2: 0.91  deg3: 0.98  deg4: 0.98
+    PC3 (evr 0.028): deg1: 0.00  deg2: 0.01  deg3: 0.33  deg4: 0.33
+    PC4 (evr 0.022): deg1: 0.03  deg2: 0.05  deg3: 0.47  deg4: 0.47
+(b) banded similarity: centroid distance = s(1-exp(-|Δt|/ℓ)) fits with R^2 0.858, ℓ = 2.45 decades
+(c) vertex vs window midpoint (windows of 9 bins, 9 windows): slope +0.92   [full-range vertex 10^-0.11 = 0.77 y vs midpoint 0.81 y]
+(d) PC2 share 0.117 vs split-half noise share ≈ 0.0097 of centroid variance
+(e) matched banded null (200 draws, ℓ=2.45, noise ratio 0.10):  evr1 0.41–0.48 (obs 0.79)  evr2 0.17–0.22 (obs 0.12)  evr3 0.08–0.11 (obs 0.03)
+    PC2 quadratic R^2 0.83–0.92 (obs 0.91);  PC3 cubic R^2 0.59–0.80 (obs 0.33);  vertex slope 1.01–1.05 (obs +0.92);  vertex 10^-0.26–10^-0.09 (obs 10^-0.11)

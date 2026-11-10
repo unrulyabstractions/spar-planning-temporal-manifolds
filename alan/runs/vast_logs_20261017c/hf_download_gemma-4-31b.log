@@ -1,0 +1,4 @@
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 12 files:   8%|▊         | 1/12 [00:00<00:01,  8.77it/s]Fetching 12 files:  83%|████████▎ | 10/12 [00:03<00:00,  2.64it/s]Fetching 12 files:  92%|█████████▏| 11/12 [01:31<00:11, 11.57s/it]Fetching 12 files: 100%|██████████| 12/12 [03:33<00:00, 28.64s/it]Fetching 12 files: 100%|██████████| 12/12 [03:33<00:00, 17.75s/it]
+[32m✓ Downloaded[0m
+  path: /workspace/.hf_home/hub/models--google--gemma-4-31B-it/snapshots/842da3794eaa0b77d5f08bae87a17459d91ff475

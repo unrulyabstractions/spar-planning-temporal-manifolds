@@ -1,0 +1,114 @@
+families ['elapsed_planning', 'frequency', 'future_event', 'mention', 'option_age', 'role']; 10 control configs (own-family ceiling: fit 6 / hold 4)
+
+=== L22 T3 ===
+smallest principal angle (deg) between rank-3 family nuisance subspaces:
+                  elapsed_planning  frequency  future_event  mention  option_age  role
+elapsed_planning                 0         45            49       41          39    53
+frequency                       45          0            39       45          35    64
+future_event                    49         39             0       43          42    63
+mention                         41         45            43        0          35    67
+option_age                      39         35            42       35           0    63
+role                            53         64            63       67          63     0
+
+augmentation: mean over held-out families (sd across families) by number of training families m
+  m   slope (sd)      pull    w2x on F (sd)   w2x F hold-cfgs   new-scenario w2x
+  0   +0.094 (0.078)  +0.42   0.41 (0.23)       0.43             0.91
+  1   +0.085 (0.089)  +0.38   0.45 (0.27)       0.47             0.92
+  2   +0.075 (0.088)  +0.34   0.50 (0.27)       0.52             0.92
+  3   +0.067 (0.085)  +0.32   0.56 (0.26)       0.58             0.93
+  4   +0.062 (0.083)  +0.31   0.61 (0.24)       0.63             0.93
+  5   +0.059 (0.081)  +0.29   0.66 (0.22)       0.68             0.93
+
+projection k=3: mean over held-out families (sd across families) by number of training families m
+  m   slope (sd)      pull    w2x on F (sd)   w2x F hold-cfgs   new-scenario w2x
+  1   +0.084 (0.082)  +0.35   0.41 (0.23)       0.41             0.91
+  2   +0.095 (0.081)  +0.41   0.42 (0.26)       0.44             0.91
+  3   +0.095 (0.082)  +0.41   0.42 (0.25)       0.43             0.91
+  4   +0.095 (0.083)  +0.41   0.42 (0.26)       0.42             0.91
+  5   +0.094 (0.084)  +0.40   0.42 (0.25)       0.42             0.91
+
+projection k=3m: mean over held-out families (sd across families) by number of training families m
+  m   slope (sd)      pull    w2x on F (sd)   w2x F hold-cfgs   new-scenario w2x
+  2   +0.079 (0.086)  +0.31   0.42 (0.24)       0.43             0.91
+  3   +0.073 (0.091)  +0.28   0.42 (0.23)       0.43             0.91
+  4   +0.067 (0.095)  +0.24   0.43 (0.25)       0.44             0.91
+  5   +0.063 (0.098)  +0.22   0.43 (0.24)       0.44             0.91
+
+own-family ceiling (hold configs), mean over families: slope +0.055, pull +0.24, w2x 0.68
+per held-out family at m=5 (augmentation): elapsed_planning: slope +0.03 w2x 0.48, frequency: slope +0.01 w2x 0.93, future_event: slope +0.07 w2x 0.71, mention: slope -0.00 w2x 0.60, option_age: slope +0.02 w2x 0.88, role: slope +0.22 w2x 0.36
+
+=== L26 T1 ===
+smallest principal angle (deg) between rank-3 family nuisance subspaces:
+                  elapsed_planning  frequency  future_event  mention  option_age  role
+elapsed_planning                 0         52            53       38          47    48
+frequency                       52          0            43       43          28    66
+future_event                    53         43             0       42          44    66
+mention                         38         43            42        0          36    55
+option_age                      47         28            44       36           0    63
+role                            48         66            66       55          63     0
+
+augmentation: mean over held-out families (sd across families) by number of training families m
+  m   slope (sd)      pull    w2x on F (sd)   w2x F hold-cfgs   new-scenario w2x
+  0   +0.111 (0.074)  +0.61   0.62 (0.17)       0.63             0.95
+  1   +0.091 (0.076)  +0.51   0.67 (0.26)       0.69             0.94
+  2   +0.078 (0.076)  +0.44   0.70 (0.30)       0.71             0.93
+  3   +0.069 (0.076)  +0.38   0.72 (0.31)       0.73             0.93
+  4   +0.063 (0.077)  +0.34   0.73 (0.32)       0.74             0.93
+  5   +0.059 (0.079)  +0.31   0.74 (0.33)       0.74             0.93
+
+projection k=3: mean over held-out families (sd across families) by number of training families m
+  m   slope (sd)      pull    w2x on F (sd)   w2x F hold-cfgs   new-scenario w2x
+  1   +0.101 (0.079)  +0.55   0.64 (0.17)       0.64             0.95
+  2   +0.101 (0.080)  +0.55   0.64 (0.17)       0.65             0.95
+  3   +0.097 (0.082)  +0.51   0.64 (0.17)       0.64             0.96
+  4   +0.097 (0.082)  +0.51   0.64 (0.17)       0.63             0.96
+  5   +0.095 (0.083)  +0.49   0.63 (0.19)       0.63             0.96
+
+projection k=3m: mean over held-out families (sd across families) by number of training families m
+  m   slope (sd)      pull    w2x on F (sd)   w2x F hold-cfgs   new-scenario w2x
+  2   +0.090 (0.085)  +0.46   0.65 (0.18)       0.65             0.95
+  3   +0.084 (0.090)  +0.41   0.65 (0.19)       0.66             0.95
+  4   +0.082 (0.092)  +0.38   0.64 (0.20)       0.65             0.95
+  5   +0.080 (0.093)  +0.37   0.66 (0.19)       0.67             0.95
+
+own-family ceiling (hold configs), mean over families: slope +0.047, pull +0.32, w2x 0.75
+per held-out family at m=5 (augmentation): elapsed_planning: slope +0.03 w2x 0.89, frequency: slope +0.01 w2x 0.92, future_event: slope +0.10 w2x 0.66, mention: slope -0.01 w2x 0.97, option_age: slope +0.02 w2x 0.88, role: slope +0.20 w2x 0.10
+
+=== L22 R0 ===
+smallest principal angle (deg) between rank-3 family nuisance subspaces:
+                  elapsed_planning  frequency  future_event  mention  option_age  role
+elapsed_planning                 0         48            50       47          42    57
+frequency                       48          0            35       42          34    67
+future_event                    50         35             0       40          33    62
+mention                         47         42            40        0          32    66
+option_age                      42         34            33       32           0    65
+role                            57         67            62       66          65     0
+
+augmentation: mean over held-out families (sd across families) by number of training families m
+  m   slope (sd)      pull    w2x on F (sd)   w2x F hold-cfgs   new-scenario w2x
+  0   +0.139 (0.077)  +0.66   0.44 (0.18)       0.45             0.92
+  1   +0.106 (0.072)  +0.56   0.46 (0.19)       0.47             0.92
+  2   +0.085 (0.067)  +0.48   0.49 (0.20)       0.50             0.93
+  3   +0.072 (0.062)  +0.42   0.53 (0.21)       0.54             0.93
+  4   +0.063 (0.057)  +0.39   0.56 (0.21)       0.58             0.93
+  5   +0.055 (0.051)  +0.37   0.60 (0.20)       0.61             0.93
+
+projection k=3: mean over held-out families (sd across families) by number of training families m
+  m   slope (sd)      pull    w2x on F (sd)   w2x F hold-cfgs   new-scenario w2x
+  1   +0.112 (0.086)  +0.53   0.46 (0.15)       0.47             0.92
+  2   +0.137 (0.077)  +0.66   0.43 (0.17)       0.44             0.92
+  3   +0.136 (0.078)  +0.66   0.43 (0.18)       0.44             0.92
+  4   +0.136 (0.077)  +0.66   0.43 (0.18)       0.44             0.92
+  5   +0.136 (0.078)  +0.66   0.42 (0.18)       0.43             0.92
+
+projection k=3m: mean over held-out families (sd across families) by number of training families m
+  m   slope (sd)      pull    w2x on F (sd)   w2x F hold-cfgs   new-scenario w2x
+  2   +0.103 (0.084)  +0.49   0.46 (0.14)       0.47             0.92
+  3   +0.091 (0.090)  +0.42   0.47 (0.14)       0.49             0.93
+  4   +0.078 (0.086)  +0.36   0.48 (0.14)       0.49             0.93
+  5   +0.071 (0.083)  +0.33   0.51 (0.16)       0.52             0.93
+
+own-family ceiling (hold configs), mean over families: slope +0.035, pull +0.19, w2x 0.78
+per held-out family at m=5 (augmentation): elapsed_planning: slope +0.08 w2x 0.66, frequency: slope +0.03 w2x 0.39, future_event: slope +0.07 w2x 0.76, mention: slope -0.01 w2x 0.68, option_age: slope +0.02 w2x 0.82, role: slope +0.14 w2x 0.32
+wrote figures/qwen3-14b_matrix_s0/scaling
+SCALING_DONE

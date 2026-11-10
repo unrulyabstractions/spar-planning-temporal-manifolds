@@ -260,9 +260,48 @@ education; the target model also ran on a startup domain). Findings this project
 
 ## Compute
 
-**Vast.ai is the program-provided compute** (per the kickoff deck); account and instance details are
-not yet recorded here. Use it for anything that needs more than the local machine, and record the
-instance type, image, and cost per run in the progress log.
+**Vast.ai is the program-provided compute** (per the kickoff deck), and budget is available (Alan,
+2026-09-29). Use it for anything that needs more than the local machine, and record the instance type,
+image, and cost per run in the progress log. Augusto's `relevance_aware_decoder/COST.md` in the shared repo
+documents a working procedure (48 GB card, ~$1 for a 5,520-prompt Qwen3-14B run).
+
+**Done 2026-09-30: `Qwen/Qwen3.5-27B` captured and analysed on a Vast.ai A100 80 GB** (results in
+`figures/qwen3.5-27b_*`, tier-1 activation subsets in `runs/qwen3.5-27b_*`, checksums in `snapshot/`; log in
+`progress-20260930.md`). On Qwen3.5 the single-scenario PC1 ordinality peaks at 0.3–0.5 L (`scripts/peak_cells.sh`
+picks such cells from the sweep), while rendering-invariance appears at ≈0.55–0.7 L. Facts established: Qwen3.5-27B is 64 layers × 5120, hybrid (48 gated-DeltaNet linear-attention +
+16 full-attention layers), 55.6 GB bf16, not MoE. `AutoModelForCausalLM` loads the text-only
+`Qwen3_5ForCausalLM` with the standard `model.embed_tokens/layers/norm` layout, and raw per-layer hooks are
+bit-exact against `output_hidden_states` (verified on the cached Qwen3.5-9B: `VERIFY OK`, all 32 layers). The
+no-think transition window is the same 9 tokens as Qwen3; the thinking-mode window is 7 tokens (Qwen3: 5) and
+capture derives it from the tokenizer. `flash-linear-attention` is a project dependency: on Qwen3.5-9B it is ~12% faster than the
+reference fallback and each path is deterministic, but the two paths are not bit-identical (some generations
+differ), so the kernel versions are recorded in every run's `meta.json` under `software`. Layer specs everywhere accept fractional depth (`0.55L`), see `ptm/depth.py`.
+Runbook: `scripts/vast_full_chain.sh` on the instance (inside tmux; `MODEL=... TAG=...`), then
+`scripts/vast_fetch.sh HOST PORT` locally; destroy the instance only after the fetch script prints
+"ALL TIER-1 FILES OK". Rent ≥ 300 GB disk (full shards ≈ 185 GB stay on the instance, hashed).
+**Vast containers have a cgroup CPU quota far below `nproc`** (7.68 cores vs 24 on the 2026-09-29 A100): cap
+BLAS/OpenMP threads (the runbook exports `OMP_NUM_THREADS=4` etc.) and never let a 24-thread analysis run beside
+a capture there, or the kernel-launching thread starves and the GPU idles.
+
+**Convention: check a rented Vast.ai instance every 10 minutes (Alan, 2026-10-03).** From the moment an instance is
+running until it is destroyed, run `scripts/vast_status.sh HOST PORT` every 10 minutes so compute budget is not
+wasted. In Claude Code, create a recurring `CronCreate` job for it at the start of the Vast session (jobs live only
+while the session is open and expire after 7 days: re-create it in every new session, and tell Alan when the checks
+will stop because the session is ending). Act on the verdict line: `WARN failure|idle|stalled|disk|unreachable` →
+diagnose immediately and report; `DONE` → finish the fetch/verification, delete the bucket key on the instance, and
+tell Alan the instance can be destroyed. Before renting, confirm the offer's disk (≥ 300 GB; a 32 GB default
+happened once) and upload bandwidth. Keep the GPU busy: upload finished runs while later ones capture
+(`scripts/vast_eager_upload.sh`) instead of after the chain, and run the later analyses beside the remaining captures
+(`vast_full_chain.sh` does this when the CPU quota is ≥ 12 cores; `DRY_RUN=1` tests the schedule without a GPU).
+Analyses stay on the instance, not local: reading the activations out of the bucket to this machine is billed egress
+(≈ 400 GB ≈ $48 per two-model run, vs ≈ $3 of idle GPU saved). Fetch results with `scripts/gcs_fetch_results.sh`
+(figures, logs, run metadata; `--subsets` adds the tier-1 activation subsets, ~20 GB per model).
+
+**Two-model runbook with GCS (2026-10-03, Qwen3.8-27B and Gemma 4 31B-it):** `scripts/vast_models_sequence.sh` runs
+`vast_full_chain.sh` per model on one instance, uploads each model's outputs to `gs://alan-captures-20261003/<tag>/`
+with rclone (service-account key on the instance, outside the repo), verifies with `rclone check` (MD5) and a file
+count, and only then deletes that model's shards and weights. huggingface_hub ≥ 1.x stores weights in a shared
+`hub/blobs` store: deleting a model folder frees nothing by itself (the script removes unreferenced blobs).
 
 ### Local hardware (scanned 2026-09-13), for prototyping
 

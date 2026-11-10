@@ -1,0 +1,23 @@
+run runs/qwen3-14b_dense_long_reward_h20y_n1500 (Qwen3-14B, dense long reward, H=20y, L=40); activations from shards; k1..k2 = 10..20
+L22 R0 (0.55 L) n=1500 (dropped 0 duplicates): m = 28.98 [k-2 form 26.76]  Gaussian, same covariance 33.21
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 67.00 48.65 42.59 36.73 32.41 28.74 26.54 24.06 21.13 18.82 17.12 14.64 12.85 10.32
+   1-D reference (log10 long_reward, same sampling) 1.22; mean |rank gap| to 20-NN 49.1 (1-D reference 5.5); local estimate vs log long_reward: Spearman +0.14, by decade (log10 long_reward) {"0": 11.04, "1": 19.67, "2": 30.62, "3": 29.61, "4": 28.43}
+   spline in log long_reward (quantile knots): held-out R² 0.458 [value 1-9 0.75, 10-99 0.71, >=100 0.42; line 0.334]; estimate on the residual 46.43; residual variance share by last digit 0.059 (permuted 0.006), by digit count 0.003
+   mean |Δ log10 H| to the 20-NN: 0.00 decades
+L29 R0 (0.72 L) n=1500 (dropped 0 duplicates): m = 18.46 [k-2 form 17.04]  Gaussian, same covariance 20.27
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 43.57 31.45 26.99 23.05 20.61 18.25 16.91 15.00 12.82 11.10 9.89 8.13 6.87 5.08
+   1-D reference (log10 long_reward, same sampling) 1.22; mean |rank gap| to 20-NN 31.1 (1-D reference 5.5); local estimate vs log long_reward: Spearman +0.29, by decade (log10 long_reward) {"0": 4.87, "1": 10.43, "2": 18.08, "3": 19.98, "4": 18.91}
+   spline in log long_reward (quantile knots): held-out R² 0.746 [value 1-9 0.67, 10-99 0.87, >=100 0.73; line 0.446]; estimate on the residual 30.39; residual variance share by last digit 0.059 (permuted 0.008), by digit count 0.007
+   mean |Δ log10 H| to the 20-NN: 0.00 decades
+L37 T3 (0.93 L) n=1500 (dropped 0 duplicates): m = 31.16 [k-2 form 28.77]  Gaussian, same covariance 34.59
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 77.49 55.90 47.19 39.46 34.96 30.85 28.40 25.46 21.79 19.02 17.20 14.78 13.22 11.22
+   1-D reference (log10 long_reward, same sampling) 1.22; mean |rank gap| to 20-NN 61.0 (1-D reference 5.5); local estimate vs log long_reward: Spearman -0.11, by decade (log10 long_reward) {"0": 14.31, "1": 25.27, "2": 35.04, "3": 31.07, "4": 27.48}
+   spline in log long_reward (quantile knots): held-out R² 0.342 [value 1-9 0.62, 10-99 0.61, >=100 0.31; line 0.216]; estimate on the residual 46.69; residual variance share by last digit 0.061 (permuted 0.006), by digit count 0.003
+   mean |Δ log10 H| to the 20-NN: 0.00 decades
+L22 T3 (0.55 L) n=1500 (dropped 0 duplicates): m = 27.49 [k-2 form 25.39]  Gaussian, same covariance 32.72
+   m_k at k=3,4,5,7,10,15,20,30,50,75,100,150,200,300: 65.51 47.76 40.33 34.42 30.37 27.30 25.23 22.44 19.28 16.90 15.35 13.28 11.83 10.02
+   1-D reference (log10 long_reward, same sampling) 1.22; mean |rank gap| to 20-NN 56.2 (1-D reference 5.5); local estimate vs log long_reward: Spearman +0.00, by decade (log10 long_reward) {"0": 9.35, "1": 22.27, "2": 29.38, "3": 28.38, "4": 24.98}
+   spline in log long_reward (quantile knots): held-out R² 0.406 [value 1-9 0.77, 10-99 0.72, >=100 0.36; line 0.289]; estimate on the residual 42.45; residual variance share by last digit 0.066 (permuted 0.006), by digit count 0.004
+   mean |Δ log10 H| to the 20-NN: 0.00 decades
+calibration N_m(0, I), n=1500, eq. (9) k=10..20: m=1: 1.08  m=2: 2.20  m=3: 3.31  m=5: 5.46  m=8: 8.31  m=10: 9.97  m=12: 11.55  m=15: 13.57  m=20: 16.44  m=30: 21.76
+wrote figures/qwen3-14b_dense_long_reward_h20y_n1500/intrinsic_dim.csv, figures/qwen3-14b_dense_long_reward_h20y_n1500/intrinsic_dim_kcurve.csv, figures/qwen3-14b_dense_long_reward_h20y_n1500/intrinsic_dim_kcurve.png

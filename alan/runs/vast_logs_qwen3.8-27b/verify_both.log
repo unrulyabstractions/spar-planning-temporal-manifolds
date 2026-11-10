@@ -1,0 +1,4 @@
+2026-10-03 11:25:42 tests: 87 passed, 34 skipped, 14 warnings in 21.98s
+2026-10-03 11:26:39 qwen3.8-27b: mem per gpu (GiB): [50.84] VERIFY OK 
+2026-10-03 11:26:58 gemma-4-31b: mem per gpu (GiB): [59.07] VERIFY OK 
+2026-10-03 11:26:58 VERIFY BOTH DONE

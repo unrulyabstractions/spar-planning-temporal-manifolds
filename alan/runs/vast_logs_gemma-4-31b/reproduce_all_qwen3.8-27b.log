@@ -1,0 +1,27 @@
+2026-10-03 11:28:30 START commit fe08805 model Qwen/Qwen3.8-27B tag qwen3.8-27b cap [--model Qwen/Qwen3.8-27B --batch-size 16]
+2026-10-03 11:28:30 datasets
+2026-10-03 11:28:33 datasets done
+2026-10-03 11:28:33 capture qwen3.8-27b_investment_n2000_s0 start
+2026-10-03 11:46:21 capture qwen3.8-27b_investment_n2000_s0 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-10-03 11:46:21 capture qwen3.8-27b_matrix_s0 start
+2026-10-03 11:58:23 analysis qwen3.8-27b_investment_n2000_s0 done
+2026-10-03 12:14:43 capture qwen3.8-27b_matrix_s0 done: 3240 samples, format adherence 3000/3240 = 0.926
+2026-10-03 12:14:43 capture qwen3.8-27b_extended_n2000_s0 start
+2026-10-03 12:32:33 capture qwen3.8-27b_extended_n2000_s0 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-10-03 12:32:33 capture qwen3.8-27b_phrasings_n2000_s0 start
+2026-10-03 12:42:37 analysis qwen3.8-27b_matrix_s0 done
+2026-10-03 12:46:49 analysis qwen3.8-27b_extended_n2000_s0 done
+2026-10-03 12:51:02 capture qwen3.8-27b_phrasings_n2000_s0 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-10-03 12:51:02 capture qwen3.8-27b_units_paired_n2000_s1 start
+2026-10-03 12:51:30 analysis qwen3.8-27b_phrasings_n2000_s0 done
+2026-10-03 13:08:08 capture qwen3.8-27b_units_paired_n2000_s1 done: 2000 samples, format adherence 2000/2000 = 1.000
+2026-10-03 13:08:08 all captures done; waiting for analyses
+2026-10-03 13:08:17 analysis qwen3.8-27b_units_paired_n2000_s1 done
+2026-10-03 13:08:17 checksums
+qwen3.8-27b_investment_n2000_s0: n=2000 index=b88e067807d4 T3sum=134194 R0sum=49403.3
+qwen3.8-27b_matrix_s0: n=3240 index=8290856c1cae T3sum=182125 R0sum=83267.1
+qwen3.8-27b_extended_n2000_s0: n=2000 index=74c31dba1317 T3sum=134312 R0sum=50363.4
+qwen3.8-27b_phrasings_n2000_s0: n=2000 index=2df103ba922d T3sum=130021 R0sum=44062.9
+qwen3.8-27b_units_paired_n2000_s1: n=2000 index=77bcf01a7fc1 T3sum=134399 R0sum=49489.5
+wrote snapshot/checksums_qwen3.8-27b.json
+2026-10-03 13:08:23 ALL DONE

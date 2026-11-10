@@ -1,0 +1,130 @@
+
+=== L22 T3  (erasure fit on 1440 train rows; PCA on 432 test rows: 6 new configs × 2 domains × 12 horizons × 3 renderings) ===
+variance budget of the test rows: rendering 0.640  domain 0.150  cell 0.823  config 0.015  prompt 0.854  horizon 0.022  horizon×cell 0.019  horizon×prompt (=residual) 0.123
+condition                                    rank removed | |rho1| |rho2| |rho3|  evr1  evr2  evr3 nPCh |   cent evr1/2/3 c_rho1 |  accR  accD   R2sr   R2h
+none                                            0   0.000 |   0.13   0.09   0.33  0.62  0.16  0.06    3 |  0.66/0.17/0.04   0.94 |  1.00  1.00   0.90  0.98
+rend                                            2   0.636 |   0.09   0.24   0.20  0.44  0.14  0.08    2 |  0.66/0.17/0.04   0.94 |  0.33  1.00   0.90  0.98
+rend+dom                                        3   0.788 |   0.19   0.18   0.31  0.26  0.13  0.10    3 |  0.66/0.17/0.04   0.94 |  0.33  0.50   0.90  0.98
+cell                                            5   0.821 |   0.33   0.45   0.68  0.27  0.14  0.10    4 |  0.66/0.17/0.04   0.94 |  0.33  0.50   0.90  0.98
+cell+par                                       10   0.831 |   0.33   0.45   0.65  0.28  0.14  0.10    4 |  0.67/0.16/0.04   0.94 |  0.33  0.50  -0.00  0.98
+cell+par orth                                  10   0.863 |   0.06   0.46   0.78  0.25  0.14  0.10    3 |  0.68/0.12/0.05   0.97 |  0.33  0.50  -0.00  0.98
+cell+par +cfg(in)                              15   0.838 |   0.37   0.55   0.67  0.30  0.14  0.10    4 |  0.67/0.16/0.04   0.94 |  0.33  0.50  -0.00  0.99
+cell+par +prompt(in)                           45   0.857 |   0.45   0.56   0.74  0.32  0.16  0.11    4 |  0.67/0.16/0.04   0.94 |  0.33  0.50  -0.00  0.99
+  sub-cell plain|climate                        0     nan |   0.92   0.31   0.10  0.36  0.17  0.10    2 |                   h-share 0.438 | 
+  sub-cell plain|investment                     0     nan |   0.93   0.04   0.04  0.31  0.18  0.12    1 |                   h-share 0.431 | 
+  sub-cell structured|climate                   0     nan |   0.89   0.24   0.14  0.30  0.14  0.12    1 |                   h-share 0.388 | 
+  sub-cell structured|investment                0     nan |   0.92   0.02   0.30  0.27  0.15  0.14    1 |                   h-share 0.406 | 
+  sub-cell varied|climate                       0     nan |   0.12   0.17   0.10  0.45  0.19  0.10    1 |                   h-share 0.154 | 
+  sub-cell varied|investment                    0     nan |   0.26   0.12   0.43  0.34  0.21  0.13    3 |                   h-share 0.201 | 
+sub-cell ceiling (mean of 6)                    0     nan |   0.67   0.15   0.18  0.34  0.17  0.12    1 |                   h-share 0.336 | 
+angles between sub-cell horizon directions (deg): centroid PC1 — pairs differing in rendering 55, in domain 35, in both 59; largest principal angle between top-2 centroid subspaces — rendering 73, domain 54, both 72   (random directions in R^5120: ~89)
+canonical 72-row subsample (mean of 50)         0     nan |   0.92   0.16   0.11  0.26  0.16  0.12    1 |                        | 
+canonical all rows, 12 horizons (n=1349)        0     nan |   0.94   0.12   0.09  0.24  0.15  0.12    1 |                   h-share 0.366 | 
+
+=== L37 T3  (erasure fit on 1440 train rows; PCA on 432 test rows: 6 new configs × 2 domains × 12 horizons × 3 renderings) ===
+variance budget of the test rows: rendering 0.533  domain 0.166  cell 0.759  config 0.019  prompt 0.804  horizon 0.027  horizon×cell 0.030  horizon×prompt (=residual) 0.169
+condition                                    rank removed | |rho1| |rho2| |rho3|  evr1  evr2  evr3 nPCh |   cent evr1/2/3 c_rho1 |  accR  accD   R2sr   R2h
+none                                            0   0.000 |   0.07   0.12   0.23  0.51  0.18  0.06    3 |  0.63/0.20/0.04   0.95 |  1.00  1.00   0.83  0.96
+rend                                            2   0.534 |   0.09   0.18   0.21  0.39  0.13  0.08    3 |  0.63/0.20/0.04   0.95 |  0.33  1.00   0.83  0.96
+rend+dom                                        3   0.699 |   0.10   0.13   0.48  0.24  0.12  0.09    3 |  0.63/0.20/0.04   0.95 |  0.33  0.50   0.83  0.96
+cell                                            5   0.760 |   0.28   0.49   0.58  0.21  0.12  0.08    4 |  0.63/0.20/0.04   0.95 |  0.33  0.50   0.83  0.96
+cell+par                                       10   0.773 |   0.28   0.52   0.56  0.22  0.12  0.08    4 |  0.64/0.19/0.04   0.95 |  0.33  0.50  -0.00  0.96
+cell+par orth                                  10   0.813 |   0.36   0.61   0.63  0.19  0.12  0.09    4 |  0.70/0.12/0.04   0.99 |  0.33  0.50  -0.00  0.96
+cell+par +cfg(in)                              15   0.783 |   0.33   0.54   0.55  0.23  0.12  0.08    4 |  0.64/0.19/0.04   0.95 |  0.33  0.50  -0.00  0.97
+cell+par +prompt(in)                           45   0.807 |   0.41   0.57   0.67  0.25  0.14  0.09    4 |  0.64/0.19/0.04   0.95 |  0.33  0.50  -0.00  0.97
+  sub-cell plain|climate                        0     nan |   0.94   0.18   0.06  0.33  0.15  0.10    1 |                   h-share 0.412 | 
+  sub-cell plain|investment                     0     nan |   0.82   0.34   0.00  0.27  0.19  0.15    3 |                   h-share 0.383 | 
+  sub-cell structured|climate                   0     nan |   0.92   0.14   0.18  0.27  0.14  0.14    1 |                   h-share 0.373 | 
+  sub-cell structured|investment                0     nan |   0.87   0.36   0.20  0.23  0.17  0.15    2 |                   h-share 0.360 | 
+  sub-cell varied|climate                       0     nan |   0.06   0.13   0.07  0.40  0.17  0.11    2 |                   h-share 0.162 | 
+  sub-cell varied|investment                    0     nan |   0.30   0.03   0.33  0.32  0.19  0.12    4 |                   h-share 0.195 | 
+sub-cell ceiling (mean of 6)                    0     nan |   0.65   0.20   0.14  0.30  0.17  0.13    2 |                   h-share 0.314 | 
+angles between sub-cell horizon directions (deg): centroid PC1 — pairs differing in rendering 63, in domain 46, in both 66; largest principal angle between top-2 centroid subspaces — rendering 75, domain 60, both 74   (random directions in R^5120: ~89)
+canonical 72-row subsample (mean of 50)         0     nan |   0.65   0.55   0.07  0.23  0.19  0.10    1 |                        | 
+canonical all rows, 12 horizons (n=1349)        0     nan |   0.88   0.38   0.01  0.20  0.20  0.10    2 |                   h-share 0.334 | 
+
+=== L22 R0  (erasure fit on 1440 train rows; PCA on 432 test rows: 6 new configs × 2 domains × 12 horizons × 3 renderings) ===
+variance budget of the test rows: rendering 0.657  domain 0.152  cell 0.841  config 0.013  prompt 0.867  horizon 0.023  horizon×cell 0.019  horizon×prompt (=residual) 0.110
+condition                                    rank removed | |rho1| |rho2| |rho3|  evr1  evr2  evr3 nPCh |   cent evr1/2/3 c_rho1 |  accR  accD   R2sr   R2h
+none                                            0   0.000 |   0.11   0.08   0.04  0.64  0.16  0.05    1 |  0.69/0.16/0.04   0.98 |  1.00  1.00   0.90  0.98
+rend                                            2   0.658 |   0.09   0.08   0.15  0.47  0.14  0.07    2 |  0.69/0.16/0.04   0.98 |  0.33  1.00   0.90  0.98
+rend+dom                                        3   0.812 |   0.11   0.16   0.38  0.29  0.13  0.10    2 |  0.69/0.16/0.04   0.98 |  0.33  0.50   0.90  0.98
+cell                                            5   0.844 |   0.12   0.59   0.85  0.31  0.13  0.10    2 |  0.69/0.16/0.04   0.98 |  0.33  0.50   0.90  0.98
+cell+par                                       10   0.854 |   0.15   0.59   0.85  0.31  0.13  0.11    2 |  0.69/0.16/0.04   0.98 |  0.33  0.50  -0.00  0.98
+cell+par orth                                  10   0.884 |   0.04   0.88   0.50  0.25  0.14  0.11    2 |  0.72/0.13/0.04   1.00 |  0.33  0.50  -0.00  0.98
+cell+par +cfg(in)                              15   0.860 |   0.16   0.61   0.85  0.33  0.14  0.11    2 |  0.69/0.16/0.04   0.98 |  0.33  0.50  -0.00  0.99
+cell+par +prompt(in)                           45   0.869 |   0.18   0.65   0.83  0.35  0.14  0.12    2 |  0.69/0.16/0.04   0.98 |  0.33  0.50  -0.00  0.99
+  sub-cell plain|climate                        0     nan |   0.96   0.06   0.15  0.41  0.14  0.08    1 |                   h-share 0.510 | 
+  sub-cell plain|investment                     0     nan |   0.92   0.15   0.12  0.38  0.16  0.11    1 |                   h-share 0.492 | 
+  sub-cell structured|climate                   0     nan |   0.93   0.08   0.07  0.32  0.13  0.09    1 |                   h-share 0.441 | 
+  sub-cell structured|investment                0     nan |   0.96   0.13   0.07  0.27  0.23  0.14    1 |                   h-share 0.410 | 
+  sub-cell varied|climate                       0     nan |   0.06   0.16   0.17  0.46  0.21  0.09    1 |                   h-share 0.187 | 
+  sub-cell varied|investment                    0     nan |   0.25   0.14   0.31  0.42  0.18  0.11    2 |                   h-share 0.194 | 
+sub-cell ceiling (mean of 6)                    0     nan |   0.68   0.12   0.15  0.38  0.18  0.10    1 |                   h-share 0.372 | 
+angles between sub-cell horizon directions (deg): centroid PC1 — pairs differing in rendering 61, in domain 32, in both 63; largest principal angle between top-2 centroid subspaces — rendering 71, domain 44, both 73   (random directions in R^5120: ~89)
+canonical 72-row subsample (mean of 50)         0     nan |   0.93   0.11   0.07  0.29  0.18  0.10    1 |                        | 
+canonical all rows, 12 horizons (n=1349)        0     nan |   0.95   0.02   0.01  0.28  0.17  0.10    1 |                   h-share 0.425 | 
+
+=== L29 R0  (erasure fit on 1440 train rows; PCA on 432 test rows: 6 new configs × 2 domains × 12 horizons × 3 renderings) ===
+variance budget of the test rows: rendering 0.481  domain 0.107  cell 0.613  config 0.041  prompt 0.685  horizon 0.112  horizon×cell 0.046  horizon×prompt (=residual) 0.203
+condition                                    rank removed | |rho1| |rho2| |rho3|  evr1  evr2  evr3 nPCh |   cent evr1/2/3 c_rho1 |  accR  accD   R2sr   R2h
+none                                            0   0.000 |   0.18   0.65   0.48  0.47  0.13  0.11    2 |  0.84/0.10/0.02   0.99 |  1.00  1.00   0.83  0.99
+rend                                            2   0.481 |   0.69   0.44   0.10  0.26  0.21  0.09    2 |  0.84/0.10/0.02   0.99 |  0.33  1.00   0.83  0.99
+rend+dom                                        3   0.589 |   0.78   0.04   0.09  0.30  0.12  0.07    1 |  0.84/0.10/0.02   0.99 |  0.33  0.50   0.83  0.99
+cell                                            5   0.613 |   0.79   0.02   0.14  0.32  0.12  0.07    1 |  0.84/0.10/0.02   0.99 |  0.33  0.50   0.83  0.99
+cell+par                                       10   0.645 |   0.83   0.06   0.12  0.32  0.13  0.07    1 |  0.84/0.10/0.02   0.99 |  0.33  0.50  -0.00  0.99
+cell+par orth                                  10   0.764 |   0.80   0.51   0.16  0.23  0.11  0.08    2 |  0.73/0.18/0.02   1.00 |  0.33  0.50  -0.00  0.99
+cell+par +cfg(in)                              15   0.658 |   0.83   0.09   0.23  0.33  0.13  0.07    1 |  0.84/0.10/0.02   0.99 |  0.33  0.50  -0.00  0.99
+cell+par +prompt(in)                           45   0.689 |   0.84   0.11   0.24  0.36  0.14  0.08    1 |  0.84/0.10/0.02   0.99 |  0.33  0.50  -0.00  0.99
+  sub-cell plain|climate                        0     nan |   0.77   0.15   0.32  0.45  0.13  0.09    3 |                   h-share 0.422 | 
+  sub-cell plain|investment                     0     nan |   0.83   0.08   0.05  0.46  0.13  0.08    2 |                   h-share 0.498 | 
+  sub-cell structured|climate                   0     nan |   0.92   0.10   0.13  0.48  0.15  0.08    1 |                   h-share 0.525 | 
+  sub-cell structured|investment                0     nan |   0.75   0.41   0.20  0.48  0.14  0.09    2 |                   h-share 0.530 | 
+  sub-cell varied|climate                       0     nan |   0.26   0.70   0.19  0.33  0.20  0.11    2 |                   h-share 0.264 | 
+  sub-cell varied|investment                    0     nan |   0.48   0.65   0.14  0.29  0.21  0.11    3 |                   h-share 0.306 | 
+sub-cell ceiling (mean of 6)                    0     nan |   0.67   0.35   0.17  0.42  0.16  0.09    2 |                   h-share 0.424 | 
+angles between sub-cell horizon directions (deg): centroid PC1 — pairs differing in rendering 28, in domain 33, in both 37; largest principal angle between top-2 centroid subspaces — rendering 68, domain 58, both 77   (random directions in R^5120: ~89)
+canonical 72-row subsample (mean of 50)         0     nan |   0.79   0.37   0.11  0.45  0.14  0.10    1 |                        | 
+canonical all rows, 12 horizons (n=1349)        0     nan |   0.77   0.43   0.09  0.44  0.13  0.09    2 |                   h-share 0.450 | 
+sweep L 2 T3: horizon share 0.008  none |rho1| 0.06  cell+par |rho1| 0.24  cell+par +prompt(in) |rho1| 0.29
+sweep L 4 T3: horizon share 0.003  none |rho1| 0.03  cell+par |rho1| 0.09  cell+par +prompt(in) |rho1| 0.16
+sweep L 6 T3: horizon share 0.003  none |rho1| 0.10  cell+par |rho1| 0.18  cell+par +prompt(in) |rho1| 0.26
+sweep L 8 T3: horizon share 0.004  none |rho1| 0.08  cell+par |rho1| 0.25  cell+par +prompt(in) |rho1| 0.25
+sweep L10 T3: horizon share 0.004  none |rho1| 0.14  cell+par |rho1| 0.22  cell+par +prompt(in) |rho1| 0.26
+sweep L12 T3: horizon share 0.003  none |rho1| 0.14  cell+par |rho1| 0.18  cell+par +prompt(in) |rho1| 0.24
+sweep L14 T3: horizon share 0.005  none |rho1| 0.06  cell+par |rho1| 0.22  cell+par +prompt(in) |rho1| 0.32
+sweep L16 T3: horizon share 0.007  none |rho1| 0.06  cell+par |rho1| 0.34  cell+par +prompt(in) |rho1| 0.44
+sweep L18 T3: horizon share 0.013  none |rho1| 0.14  cell+par |rho1| 0.31  cell+par +prompt(in) |rho1| 0.45
+sweep L20 T3: horizon share 0.019  none |rho1| 0.20  cell+par |rho1| 0.35  cell+par +prompt(in) |rho1| 0.47
+sweep L22 T3: horizon share 0.022  none |rho1| 0.13  cell+par |rho1| 0.33  cell+par +prompt(in) |rho1| 0.45
+sweep L24 T3: horizon share 0.026  none |rho1| 0.09  cell+par |rho1| 0.35  cell+par +prompt(in) |rho1| 0.44
+sweep L26 T3: horizon share 0.026  none |rho1| 0.10  cell+par |rho1| 0.33  cell+par +prompt(in) |rho1| 0.43
+sweep L28 T3: horizon share 0.027  none |rho1| 0.10  cell+par |rho1| 0.33  cell+par +prompt(in) |rho1| 0.44
+sweep L30 T3: horizon share 0.028  none |rho1| 0.03  cell+par |rho1| 0.35  cell+par +prompt(in) |rho1| 0.46
+sweep L32 T3: horizon share 0.027  none |rho1| 0.02  cell+par |rho1| 0.30  cell+par +prompt(in) |rho1| 0.42
+sweep L34 T3: horizon share 0.026  none |rho1| 0.02  cell+par |rho1| 0.28  cell+par +prompt(in) |rho1| 0.40
+sweep L36 T3: horizon share 0.026  none |rho1| 0.06  cell+par |rho1| 0.26  cell+par +prompt(in) |rho1| 0.39
+sweep L38 T3: horizon share 0.027  none |rho1| 0.09  cell+par |rho1| 0.29  cell+par +prompt(in) |rho1| 0.40
+sweep L40 T3: horizon share 0.027  none |rho1| 0.11  cell+par |rho1| 0.28  cell+par +prompt(in) |rho1| 0.39
+sweep L 2 R0: horizon share 0.004  none |rho1| 0.02  cell+par |rho1| 0.13  cell+par +prompt(in) |rho1| 0.13
+sweep L 4 R0: horizon share 0.005  none |rho1| 0.02  cell+par |rho1| 0.03  cell+par +prompt(in) |rho1| 0.04
+sweep L 6 R0: horizon share 0.006  none |rho1| 0.09  cell+par |rho1| 0.06  cell+par +prompt(in) |rho1| 0.13
+sweep L 8 R0: horizon share 0.009  none |rho1| 0.07  cell+par |rho1| 0.05  cell+par +prompt(in) |rho1| 0.08
+sweep L10 R0: horizon share 0.008  none |rho1| 0.03  cell+par |rho1| 0.13  cell+par +prompt(in) |rho1| 0.21
+sweep L12 R0: horizon share 0.008  none |rho1| 0.04  cell+par |rho1| 0.08  cell+par +prompt(in) |rho1| 0.14
+sweep L14 R0: horizon share 0.014  none |rho1| 0.11  cell+par |rho1| 0.03  cell+par +prompt(in) |rho1| 0.05
+sweep L16 R0: horizon share 0.016  none |rho1| 0.14  cell+par |rho1| 0.15  cell+par +prompt(in) |rho1| 0.19
+sweep L18 R0: horizon share 0.022  none |rho1| 0.15  cell+par |rho1| 0.31  cell+par +prompt(in) |rho1| 0.37
+sweep L20 R0: horizon share 0.024  none |rho1| 0.14  cell+par |rho1| 0.33  cell+par +prompt(in) |rho1| 0.41
+sweep L22 R0: horizon share 0.023  none |rho1| 0.11  cell+par |rho1| 0.15  cell+par +prompt(in) |rho1| 0.18
+sweep L24 R0: horizon share 0.038  none |rho1| 0.02  cell+par |rho1| 0.09  cell+par +prompt(in) |rho1| 0.23
+sweep L26 R0: horizon share 0.128  none |rho1| 0.22  cell+par |rho1| 0.86  cell+par +prompt(in) |rho1| 0.88
+sweep L28 R0: horizon share 0.130  none |rho1| 0.21  cell+par |rho1| 0.83  cell+par +prompt(in) |rho1| 0.85
+sweep L30 R0: horizon share 0.112  none |rho1| 0.15  cell+par |rho1| 0.83  cell+par +prompt(in) |rho1| 0.85
+sweep L32 R0: horizon share 0.090  none |rho1| 0.12  cell+par |rho1| 0.83  cell+par +prompt(in) |rho1| 0.85
+sweep L34 R0: horizon share 0.085  none |rho1| 0.04  cell+par |rho1| 0.84  cell+par +prompt(in) |rho1| 0.86
+sweep L36 R0: horizon share 0.078  none |rho1| 0.03  cell+par |rho1| 0.84  cell+par +prompt(in) |rho1| 0.85
+sweep L38 R0: horizon share 0.082  none |rho1| 0.04  cell+par |rho1| 0.82  cell+par +prompt(in) |rho1| 0.84
+sweep L40 R0: horizon share 0.085  none |rho1| 0.13  cell+par |rho1| 0.79  cell+par +prompt(in) |rho1| 0.81
+
+wrote figures/qwen3-14b_matrix_s0/leace

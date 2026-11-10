@@ -6,17 +6,18 @@ PC with log horizon) appears in the PCs below the dominant one.
 H(U-shape): in the plane of the 17 canonical-bin centroids, PC1 is linear in log horizon and PC2 is
 quadratic with a vertex near one year.
 
-Usage: hypothesis_checks.py RUN_DIR [--sink-position T4] [--sink-layers 14,22,29,37] [--ushape-cells 22:R0,22:T3,29:R0,29:T3,37:T3,37:R0]
+Usage: hypothesis_checks.py RUN_DIR [--sink-position T4] [--sink-layers 0.35L,0.55L,0.72L,0.92L] [--ushape-cells 0.55L:R0,0.55L:T3,0.72L:R0,0.72L:T3,0.92L:T3,0.92L:R0]
 """
 import argparse
 import numpy as np
 from scipy.stats import spearmanr
 from sklearn.decomposition import PCA
 from ptm.store import RunData
+from ptm.depth import resolve_cell, parse_layers
 
 ap = argparse.ArgumentParser(); ap.add_argument("run_dir")
-ap.add_argument("--sink-position", default="T4"); ap.add_argument("--sink-layers", default="14,22,29,37")
-ap.add_argument("--ushape-cells", default="22:R0,22:T3,29:R0,29:T3,37:T3,37:R0")
+ap.add_argument("--sink-position", default="T4"); ap.add_argument("--sink-layers", default="0.35L,0.55L,0.72L,0.92L")
+ap.add_argument("--ushape-cells", default="0.55L:R0,0.55L:T3,0.72L:R0,0.72L:T3,0.92L:T3,0.92L:R0")
 ap.add_argument("--variant-column", default=None, help="extra categorical column for the variant check (e.g. rendering, condition)")
 ap.add_argument("--ushape-range", default=None, help="restrict the centroid fit to horizons within [min,max] years, e.g. 0.0027,100 (the standard grid)")
 a = ap.parse_args()
@@ -25,7 +26,7 @@ has_h = df.horizon_years.notna().to_numpy(); y = np.log10(df.horizon_years.to_nu
 print(f"run {run.meta['model_name']} n={len(df)}")
 print(f"=== H(sink) at {a.sink_position}: |rho| of the k-th PC with log horizon (same PCA fit); evr_top1; top/median PC std ===")
 print("layer  evr_top1  k=0     k=1     k=2     k=5    top/median")
-for layer in [int(x) for x in a.sink_layers.split(",")]:
+for layer in parse_layers(a.sink_layers, run):
     X = run.get(layer, a.sink_position)[has_h]; Xc = X - X.mean(0)
     p = PCA(8, random_state=0).fit(Xc); Z = p.transform(Xc)
     s = np.linalg.svd(Xc, compute_uv=False)
@@ -42,7 +43,7 @@ ly = np.log10(labels.to_numpy())
 def fit(z, deg):
     c = np.polyfit(ly, z, deg); r = z - np.polyval(c, ly); return 1 - r.var() / z.var(), c
 for cell in a.ushape_cells.split(","):
-    layer, pos = cell.split(":"); layer = int(layer)
+    layer, pos = resolve_cell(cell, run)
     X = run.get(layer, pos)
     C = np.stack([X[has_h & (ht == h)].mean(0) for h in labels.index])
     Zc = PCA(2).fit_transform(C)
@@ -63,7 +64,7 @@ def variant_check(run: RunData, column: str, cells: str):
     print(f"\n=== H(variants) by {column} ({keys}) ===")
     print("cell     pooled|rho_pc1|  per-variant|rho_pc1|  silhouette(variant,PC1-3)  |rho(PC1,variant-mean)|")
     for cell in cells.split(","):
-        layer, pos = cell.split(":"); layer = int(layer)
+        layer, pos = resolve_cell(cell, run)
         X = run.get(layer, pos)[has_h]; yy = y[has_h]; vv = v[has_h]
         Z = PCA(3, random_state=0).fit_transform(X)
         pooled = abs(spearmanr(Z[:, 0], yy).statistic)
@@ -75,9 +76,9 @@ def variant_check(run: RunData, column: str, cells: str):
 
 
 if __name__ == "__main__" and "phrasing_id" in run.index.columns and run.index["phrasing_id"].nunique() > 1:
-    variant_check(run, "phrasing_id", "14:R0,22:T3,22:R0,29:R0,37:T3")
+    variant_check(run, "phrasing_id", "0.35L:R0,0.55L:T3,0.55L:R0,0.72L:R0,0.92L:T3")
 if __name__ == "__main__" and "horizon_unit" in run.index.columns and run.index["horizon_unit"].nunique() > 1:
-    variant_check(run, "horizon_unit", "14:R0,22:T3,22:R0,29:R0,37:T3")
+    variant_check(run, "horizon_unit", "0.35L:R0,0.55L:T3,0.55L:R0,0.72L:R0,0.92L:T3")
 
 if __name__ == "__main__" and a.variant_column and a.variant_column in run.index.columns:
-    variant_check(run, a.variant_column, "14:R0,22:T3,22:R0,29:R0,37:T3")
+    variant_check(run, a.variant_column, "0.35L:R0,0.55L:T3,0.55L:R0,0.72L:R0,0.92L:T3")

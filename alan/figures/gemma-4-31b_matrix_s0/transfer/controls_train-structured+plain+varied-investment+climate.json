@@ -1,0 +1,47 @@
+{
+  "tag": "train-structured+plain+varied-investment+climate",
+  "layer": 33,
+  "position": "T0",
+  "alpha": 1.0,
+  "controls": {
+    "mention": {
+      "n": 240,
+      "rmse": 0.8664740374254181,
+      "bias": 0.782183125194591,
+      "rmse_debiased": 0.3727825320386239,
+      "medae": 0.7452473199208781,
+      "rho": 0.9616518157993142,
+      "within2x": 0.09583333333333334,
+      "worst_group": 0.0,
+      "worst_group_name": "1 month",
+      "rho_resid_distractor": 0.37039374968694205
+    },
+    "role": {
+      "n": 240,
+      "rmse": 1.4133384563825713,
+      "bias": -1.148054535114088,
+      "rmse_debiased": 0.8243157020789091,
+      "medae": 1.2368707022719434,
+      "rho": 0.8422249670492816,
+      "within2x": 0.1125,
+      "worst_group": 0.0,
+      "worst_group_name": "10 years",
+      "rho_resid_distractor": 0.9678168513594961
+    },
+    "factual": {
+      "n": 240,
+      "rmse": 2.1726540283318294,
+      "bias": -1.637916429264663,
+      "rmse_debiased": 1.4274646396921435,
+      "medae": 1.4323794090906574,
+      "rho": 0.05014011242926241,
+      "within2x": 0.0875,
+      "worst_group": 0.0,
+      "worst_group_name": "10 years"
+    },
+    "scaling": {
+      "slope_mean": 0.7911181405186654,
+      "n": 360
+    }
+  }
+}
