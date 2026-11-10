@@ -37,9 +37,11 @@ class Reply:
     hit_token_cap: bool         # stopped at max_new_tokens rather than ending its turn
     seconds: float              # wall time of the batch this reply was generated in, divided by batch size
     error: Optional[str] = None # set when the request itself failed (hosted models); the other fields are empty
+    generated_ids: Optional[list[int]] = None   # local models: the exact generated token ids, up to (not including)
+                                                # the end-of-turn token; lets a later pass replay the reply exactly
 
 
-def _single_token_id(tok, candidates: tuple[str, ...], what: str) -> int:
+def single_token_id(tok, candidates: tuple[str, ...], what: str) -> int:
     """The id of whichever of `candidates` the tokenizer knows. Exactly one must be known."""
     found = {}
     for t in candidates:
@@ -56,7 +58,7 @@ def split_reply(tok, generated_ids: list[int], thinking: bool) -> tuple[Optional
     """(thinking text, answer text) from the generated token ids; see the module docstring."""
     if not thinking:
         return None, tok.decode(generated_ids, skip_special_tokens=True).strip()
-    eot = _single_token_id(tok, END_OF_THINKING_TOKENS, "end-of-thinking")
+    eot = single_token_id(tok, END_OF_THINKING_TOKENS, "end-of-thinking")
     if eot not in generated_ids:
         return tok.decode(generated_ids, skip_special_tokens=True).strip(), None
     k = generated_ids.index(eot)
@@ -88,7 +90,7 @@ class LocalChatModel:
         if off_gpu:
             raise RuntimeError(f"{model_id} did not fit on the GPUs (some weights are on {off_gpu}); "
                                f"offloaded generation would be far too slow for a baseline run")
-        self.end_ids = sorted({_single_token_id(self.tok, END_OF_TURN_TOKENS, "end-of-turn"), self.tok.eos_token_id})
+        self.end_ids = sorted({single_token_id(self.tok, END_OF_TURN_TOKENS, "end-of-turn"), self.tok.eos_token_id})
         self.input_device = self.model.get_input_embeddings().weight.device
 
     def chat_text(self, user_text: str, thinking: bool) -> str:
@@ -117,7 +119,7 @@ class LocalChatModel:
             ids = row if end is None else row[:end]
             thought, answer = split_reply(self.tok, ids, thinking)
             replies.append(Reply(thinking=thought, answer=answer, n_generated=len(ids),
-                                 hit_token_cap=end is None, seconds=seconds))
+                                 hit_token_cap=end is None, seconds=seconds, generated_ids=ids))
         return replies
 
     def describe(self) -> dict:

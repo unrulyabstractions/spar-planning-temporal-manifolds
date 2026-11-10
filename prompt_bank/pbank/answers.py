@@ -24,8 +24,9 @@ from typing import Optional
 from .records import PromptRecord
 
 # "I choose:" then optional markdown/brackets, then a single label character that does not start a longer word
-# (so "I choose: and ..." is not read as "a"), then an optional ")".
-_CHOICE = re.compile(r"I\s+choose\s*:\s*[*_`\s]*\(?\s*([A-Za-z0-9])(?![A-Za-z0-9])\s*\)?", re.IGNORECASE)
+# (so "I choose: and ..." is not read as "a"), then an optional ")". Group 1 is the label character. Public because
+# the steering package locates the label token with this same pattern, so the two can never disagree.
+CHOICE_PATTERN = re.compile(r"I\s+choose\s*:\s*[*_`\s]*\(?\s*([A-Za-z0-9])(?![A-Za-z0-9])\s*\)?", re.IGNORECASE)
 
 
 @dataclass
@@ -40,7 +41,7 @@ def parse_choice(answer: Optional[str], labels: tuple[str, str]) -> ParsedChoice
     if answer is None:
         return ParsedChoice(None, "no_answer", 0)
     by_char = {label.rstrip(")").lower(): label for label in labels}   # "a" -> "a)"
-    found = [by_char[m.group(1).lower()] for m in _CHOICE.finditer(answer) if m.group(1).lower() in by_char]
+    found = [by_char[m.group(1).lower()] for m in CHOICE_PATTERN.finditer(answer) if m.group(1).lower() in by_char]
     if not found:
         return ParsedChoice(None, "format_failure", 0)
     if len(set(found)) > 1:

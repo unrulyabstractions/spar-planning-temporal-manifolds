@@ -164,7 +164,8 @@ orders of a verification item); `notes`.
 **responses.jsonl** fields: `uid`, `model`, `thinking`, `answer` (text after the model closed its thinking; null if
 it never did), `choice_label`, `parse_status` (`ok`, `format_failure`, `conflicting`, `no_answer`),
 `n_choice_mentions`, `chosen_option`, `correct` (null when the prompt has no correct answer or no choice was
-read), `n_generated`, `hit_token_cap`, `seconds`.
+read), `n_generated`, `hit_token_cap`, `seconds`, `generated_ids` (the exact generated token ids up to the
+end-of-turn token; `../steering/extract.py` replays them to read activations at the answer label).
 
 **reviews/\*.jsonl** fields: `time`, `reviewer`, `uid`, `target` (`prompt` or a run name), `verdict`
 (`ok`/`problem`/`unsure`), `note`. The last line per (reviewer, uid, target) is that reviewer's current judgement.

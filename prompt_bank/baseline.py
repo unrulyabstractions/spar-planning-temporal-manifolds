@@ -11,7 +11,8 @@ default). The defaults reproduce the 2026-10-17 Gemma pilot's measured setup: ba
 What it writes, in runs/<model>__<bank>/ unless --out is given (see README.md for every field):
 
     run.json            model, software, settings, the bank's SHA-256, git commit, start/end times
-    responses.jsonl     one row per prompt: thinking, answer, parsed choice, correctness, token counts
+    responses.jsonl     one row per prompt: thinking, answer, parsed choice, correctness, token counts, and the
+                        generated token ids (which ../steering/extract.py replays to read activations)
     summary.json        accuracy, format failures and truncation per split and regime
 
 Resumable: rows are appended and flushed after every batch, and a rerun of the same command skips prompts
@@ -107,7 +108,8 @@ def main() -> None:
                              "choice_label": parsed.label, "parse_status": parsed.status,
                              "n_choice_mentions": parsed.n_mentions, "chosen_option": s.chosen_option,
                              "correct": s.correct, "n_generated": reply.n_generated,
-                             "hit_token_cap": reply.hit_token_cap, "seconds": round(reply.seconds, 2)})
+                             "hit_token_cap": reply.hit_token_cap, "seconds": round(reply.seconds, 2),
+                             "generated_ids": reply.generated_ids})
             append_jsonl(responses, rows)
             log(f"  [{len(done) + i + len(batch)}/{len(selected)}] {batch[0].uid}..{batch[-1].uid}: "
                 f"{sum(r['parse_status'] == 'ok' for r in rows)}/{len(rows)} parsed, "
