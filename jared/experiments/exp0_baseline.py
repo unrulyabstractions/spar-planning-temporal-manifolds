@@ -14,14 +14,15 @@ import json
 import numpy as np
 
 from common import parse_args
-from spar_horizon.behavior import behavior
+from spar_horizon.banks import build_records, variant_builder
+from spar_horizon.behavior import base_behavior, behavior
 from spar_horizon.extract import dense_track, extract
 from spar_horizon.geometry import (display_layer, label_probe, label_probe_sweep, probe_directions,
                                    probe_sweep, probe_track, sweep)
 from spar_horizon.model_io import load_model
 from spar_horizon.plots import (dense_panel, label_probe_panel, pca3_panels, pca3_stats, pca_panels,
                                 ratio_spec, track_panel)
-from spar_horizon.prompts import DELAY_YEARS, build_prompts
+from spar_horizon.prompts import subset
 from spar_horizon.runs import Manifest, resolve_out_dir, save_activations
 
 EXP = "exp0"
@@ -52,8 +53,8 @@ def think_report(ext, layer, rho, r2, rho_nf, r2_nf):
 def run(cfg, out=None, skip_behavior=False):
     out_dir = resolve_out_dir(EXP, cfg, out)
     manifest = Manifest(EXP, cfg, out_dir)
-    records = build_prompts(seed=cfg.seed, limit=cfg.limit)
-    print(f"{len(records)} prompts, model {cfg.model}, thinking {cfg.thinking}")
+    records = build_records(cfg)
+    print(f"{len(records)} prompts ({cfg.bank} bank), model {cfg.model}, thinking {cfg.thinking}")
     tokenizer, model, device = load_model(cfg)
     with manifest.phase("generate + extract"):
         ext = extract(tokenizer, model, device, [r["prompt"] for r in records], cfg)
@@ -84,7 +85,7 @@ def run(cfg, out=None, skip_behavior=False):
     evr, rho3, Z3 = pca3_stats(ext.activations, layer, has_horizon, log_horizons)
     pca3_panels(layer, Z3, evr, rho3, ext.tokens, has_horizon, log_horizons, ext.regions,
                 out_dir / "geometry_3d.png", title + ": PC1-3 (evr = explained variance)")
-    far = [DELAY_YEARS[r["delays"][1]] for r, k in zip(records, ext.kept) if k]
+    far = [r["far_delay_years"] for r, k in zip(records, ext.kept) if k]
     spec = ratio_spec(log_horizons, [f for f, h in zip(far, horizons) if h is not None])
     pca_panels(layer, rho, Z_all, ext.tokens, has_horizon, log_horizons, ext.regions,
                out_dir / "geometry_2d_ratio.png",
@@ -150,7 +151,10 @@ def run(cfg, out=None, skip_behavior=False):
     kept_rows = iter(zip(ext.forced_mask, ext.think_len, ext.think_text))
     rows = []
     for r, a, k in zip(records, ext.answers, ext.kept):
-        row = {"horizon": r["horizon"], "prompt": r["prompt"], "answer": a}
+        row = {"horizon": r["horizon"], "prompt": r["prompt"], "answer": a,
+               **{k: r[k] for k in ("near_label", "regime", "truth", "sample_uid",
+                                    "pair_id", "duration_id", "rendered_unit", "natural",
+                                    "delay_scale", "alan_range", "anchor") if k in r}}
         if k:
             forced, tl, tt = next(kept_rows)
             row.update(label=(a.strip()[:1] if a else None), forced=bool(forced), think_len=int(tl),
@@ -158,9 +162,13 @@ def run(cfg, out=None, skip_behavior=False):
         rows.append(row)
     (out_dir / "answers.json").write_text(json.dumps(rows, indent=1))
 
+    manifest.add(base_behavior=base_behavior(records, ext.answers))
     if not skip_behavior:
+        idx = subset(list(range(len(records))), cfg.behavior_n)
         with manifest.phase("behavior"):
-            manifest.add(behavior=behavior(tokenizer, model, device, records, ext.answers, cfg))
+            manifest.add(behavior=behavior(tokenizer, model, device, [records[i] for i in idx],
+                                           [ext.answers[i] for i in idx], cfg, variant_builder(cfg)),
+                         behavior_n=len(idx))
     manifest.write()
     return out_dir
 

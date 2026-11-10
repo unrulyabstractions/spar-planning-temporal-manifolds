@@ -120,13 +120,18 @@ def build_prompts(seed=0, limit=None, template="starter"):
     rng = random.Random(seed)
     records = []
     for horizon, rewards, delays in itertools.product(HORIZONS, REWARD_PAIRS, DELAY_PAIRS):
-        records.append({"prompt": choice_prompt(rewards, delays, horizon, template=template),
-                        "rewards": rewards, "delays": delays, "horizon": horizon})
+        records.append(_record(choice_prompt(rewards, delays, horizon, template=template), rewards, delays, horizon))
     for _ in range(N_NO_HORIZON):
         rewards, delays = rng.choice(REWARD_PAIRS), rng.choice(DELAY_PAIRS)
-        records.append({"prompt": choice_prompt(rewards, delays, None),
-                        "rewards": rewards, "delays": delays, "horizon": None})
+        records.append(_record(choice_prompt(rewards, delays, None), rewards, delays, None))
     return subset(records, limit)
+
+
+def _record(prompt, rewards, delays, horizon, **extra):
+    """One bank record; the delay years are carried so behavior and plots do
+    not need the delay table."""
+    return {"prompt": prompt, "rewards": rewards, "delays": delays, "horizon": horizon,
+            "near_delay_years": DELAY_YEARS[delays[0]], "far_delay_years": DELAY_YEARS[delays[1]], **extra}
 
 
 def subset(records, limit):
@@ -141,8 +146,8 @@ def build_implicit_prompts():
     records = []
     for horizon, sentence in IMPLICIT_HORIZONS.items():
         for rewards, delays in itertools.product(REWARD_PAIRS, DELAY_PAIRS):
-            records.append({"prompt": choice_prompt(rewards, delays, horizon, constraint=sentence),
-                            "rewards": rewards, "delays": delays, "horizon": horizon})
+            records.append(_record(choice_prompt(rewards, delays, horizon, constraint=sentence),
+                                   rewards, delays, horizon))
     return records
 
 
@@ -152,9 +157,8 @@ def build_unit_prompts():
     for years, spellings in UNIT_SPELLINGS.items():
         for spelling in spellings:
             for rewards, delays in itertools.product(REWARD_PAIRS, DELAY_PAIRS):
-                records.append({"prompt": choice_prompt(rewards, delays, years, horizon_str=spelling),
-                                "rewards": rewards, "delays": delays, "horizon": years,
-                                "spelling": spelling})
+                records.append(_record(choice_prompt(rewards, delays, years, horizon_str=spelling),
+                                       rewards, delays, years, spelling=spelling))
     return records
 
 

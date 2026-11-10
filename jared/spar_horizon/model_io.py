@@ -11,13 +11,22 @@ the think block is force-closed at `cfg.max_think_tokens` if needed, then
 `</think>\\n\\n` + prefill is appended and the answer is generated. Rows whose
 block was force-closed are marked `forced`.
 
-Generation is batched (left-padded, greedy) and verified token-identical to
-single-prompt generation. With `cfg.cache_dir` set, every prompt's
-`Generation` is stored under a key of the settings and its input ids, so a
-re-run skips generation; greedy decoding makes this exact.
+Without a prefill but with `cfg.choice_prefix` (the full bank: the FORMAT line
+asks for `I choose: <a) or b)>`), the model writes the prefix itself and the
+label is located after it in a `cfg.answer_window`-token window, as Alan's
+parser reads it (`locate_label`).
+
+Generation is batched (left-padded, greedy). Batched bf16 greedy decoding is not
+bit-stable: padding and batch composition change low-order bits, so a prompt
+can come out differently than alone or in another batch. With `cfg.cache_dir`
+set, every prompt's `Generation` is stored under a key of the settings and its
+input ids, and a re-run reuses it instead of regenerating; the first stored
+generation wins and is never overwritten, so the saved activations and every
+later run read the same trace.
 """
 
 import hashlib
+import os
 from dataclasses import dataclass, fields
 from pathlib import Path
 
@@ -95,8 +104,9 @@ def suffix_length(tokenizer, prompt, cfg):
 
 def label_ids(tokenizer, labels=("a", "b"), cfg=None):
     """Token ids of the label tokens as the model will emit them: with a
-    leading space after a prefill ending in ':' and no space otherwise."""
-    space = " " if (cfg is not None and cfg.prefill) else ""
+    leading space after a prefill or choice prefix ending in ':' and no
+    space otherwise."""
+    space = " " if (cfg is not None and (cfg.prefill or cfg.choice_prefix)) else ""
     ids = []
     for lab in labels:
         toks = tokenizer.encode(space + lab, add_special_tokens=False)
@@ -131,7 +141,7 @@ def cache_key(cfg, ids, system):
     """sha256 of everything that determines a greedy generation."""
     h = hashlib.sha256()
     h.update(repr((cfg.model, cfg.thinking, cfg.max_think_tokens, cfg.prefill, cfg.n_response,
-                   system)).encode())
+                   cfg.choice_prefix, cfg.answer_window if cfg.choice_prefix else None, system)).encode())
     h.update(np.asarray(ids, dtype=np.int64).tobytes())
     return h.hexdigest()
 
@@ -149,12 +159,23 @@ def cache_load(cfg, ids, system, device):
 
 
 def cache_store(cfg, ids, system, gen):
+    """Store `gen` unless the key already exists. Written to a temp file and hard-linked
+    into place, which fails if the target exists, so concurrent writers neither overwrite
+    an entry nor leave a partial file."""
     if not cfg.cache_dir:
         return
     d = Path(cfg.cache_dir)
     d.mkdir(parents=True, exist_ok=True)
-    np.savez(d / f"{cache_key(cfg, ids, system)}.npz", ids=gen.ids.cpu().numpy(), forced=gen.forced,
-             **{f: getattr(gen, f) for f in _INT_FIELDS})
+    target = d / f"{cache_key(cfg, ids, system)}.npz"
+    tmp = d / f"{target.name}.{os.getpid()}.tmp"
+    with open(tmp, "wb") as f:
+        np.savez(f, ids=gen.ids.cpu().numpy(), forced=gen.forced, **{k: getattr(gen, k) for k in _INT_FIELDS})
+    try:
+        os.link(tmp, target)
+    except FileExistsError:
+        pass
+    finally:
+        tmp.unlink()
 
 
 class _StepBar(StoppingCriteria):
@@ -199,69 +220,114 @@ def lead_length(tokenizer, ids, start, max_lead=MAX_LEAD):
     return n
 
 
+def locate_label(tokenizer, ids, start, cfg):
+    """Index of the label token at or after `start`. With `cfg.choice_prefix`
+    the label is the first letter-or-digit token after the model's own
+    prefix (markdown in between allowed), as Alan's parser reads it; if the
+    prefix never appears, or without one, it is the first letter-or-digit
+    token from `start` (a short markdown lead allowed)."""
+    if cfg.choice_prefix:
+        for j in range(start + 1, len(ids) + 1):
+            if cfg.choice_prefix in tokenizer.decode(ids[start:j]):
+                return j + lead_length(tokenizer, ids, j, max_lead=len(ids) - j)
+    return start + lead_length(tokenizer, ids, start)
+
+
+def answer_tokens(cfg):
+    """Tokens generated after the turn (or the think close): enough to hold
+    the model's own choice prefix when the label is located, else just the
+    answer window after the pinned prefill."""
+    return cfg.answer_window if cfg.choice_prefix else cfg.n_response + MAX_LEAD
+
+
 def _is_whitespace_token(tokenizer, tok_id):
     return tokenizer.decode([int(tok_id)]).strip() == ""
 
 
+def _generate_rows(tokenizer, model, device, id_lists, idx, cfg, results):
+    """Generate the prompts `idx` as one batch and store a Generation per
+    prompt in `results`."""
+    if cfg.thinking == "off":
+        rows = _greedy(model, tokenizer, device, [id_lists[i] for i in idx],
+                       answer_tokens(cfg), answer_tokens(cfg))
+        for i, row in zip(idx, rows):
+            plen = len(id_lists[i])
+            lead = locate_label(tokenizer, row, plen, cfg) - plen
+            results[i] = Generation(row, plen, plen + lead, 0, False, lead, lead)
+        return
+    tid, closer, pre = think_end_id(tokenizer), close_ids(tokenizer), prefill_ids(tokenizer, cfg)
+    rows = _greedy(model, tokenizer, device, [id_lists[i] for i in idx], cfg.max_think_tokens, 0)
+    second, meta = [], []
+    for i, row in zip(idx, rows):
+        plen = len(id_lists[i])
+        resp = row[plen:].tolist()
+        if tid in resp:
+            k = resp.index(tid)
+            tail = [tid]
+            nxt = plen + k + 1
+            # keep the model's own whitespace after </think>, if any
+            if nxt < row.shape[0] and _is_whitespace_token(tokenizer, row[nxt]):
+                tail.append(int(row[nxt]))
+            else:
+                tail += tokenizer.encode("\n\n", add_special_tokens=False)
+            head = row[:plen + k].tolist()
+            forced = False
+        else:
+            k = len(resp)
+            head = row.tolist()
+            tail = closer
+            forced = True
+        second.append(head + tail + pre)
+        meta.append((i, plen, k, forced, len(tail) + len(pre)))
+    rows2 = _greedy(model, tokenizer, device, second, answer_tokens(cfg), answer_tokens(cfg))
+    for j, ((i, plen, k, forced, pre_len), row) in enumerate(zip(meta, rows2)):
+        start = len(second[j])
+        lead = locate_label(tokenizer, row, start, cfg) - start
+        results[i] = Generation(row, plen, start + lead, k, forced, pre_len + lead, lead)
+
+
+def _free_memory(device):
+    backend = getattr(torch, str(device).split(":")[0], None)
+    if hasattr(backend, "empty_cache"):
+        backend.empty_cache()
+
+
 def generate_batch(tokenizer, model, device, prompts, cfg, system=None):
     """Greedy answers for a list of prompts, in batches of cfg.batch_size.
-    Returns one Generation per prompt; cached prompts are not regenerated."""
+    Returns one Generation per prompt; cached prompts are not regenerated.
+    If a batch runs out of device memory, it is retried and the rest of the
+    run continues at two thirds of the batch size, so a too-large
+    batch_size costs one batch, not the run."""
     texts = [chat_text(tokenizer, p, cfg, system) for p in prompts]
     id_lists = [tokenizer.encode(t, add_special_tokens=False) for t in texts]
     results = [cache_load(cfg, ids, system, device) for ids in id_lists]
     todo = [i for i, r in enumerate(results) if r is None]
     if len(todo) < len(prompts):
         print(f"generation cache: {len(prompts) - len(todo)}/{len(prompts)} prompts cached")
-    if cfg.thinking == "on":
-        tid, closer, pre = think_end_id(tokenizer), close_ids(tokenizer), prefill_ids(tokenizer, cfg)
-    batches = [todo[b:b + cfg.batch_size] for b in range(0, len(todo), cfg.batch_size)]
-    for idx in tqdm(batches, desc="generate", unit="batch", mininterval=2, dynamic_ncols=True,
-                    disable=not batches):
-        if cfg.thinking == "off":
-            rows = _greedy(model, tokenizer, device, [id_lists[i] for i in idx],
-                           cfg.n_response + MAX_LEAD, cfg.n_response + MAX_LEAD)
-            for i, row in zip(idx, rows):
-                plen = len(id_lists[i])
-                lead = lead_length(tokenizer, row, plen)
-                results[i] = Generation(row, plen, plen + lead, 0, False, lead, lead)
-        else:
-            rows = _greedy(model, tokenizer, device, [id_lists[i] for i in idx],
-                           cfg.max_think_tokens, 0)
-            second, meta = [], []
-            for i, row in zip(idx, rows):
-                plen = len(id_lists[i])
-                resp = row[plen:].tolist()
-                if tid in resp:
-                    k = resp.index(tid)
-                    tail = [tid]
-                    nxt = plen + k + 1
-                    # keep the model's own whitespace after </think>, if any
-                    if nxt < row.shape[0] and _is_whitespace_token(tokenizer, row[nxt]):
-                        tail.append(int(row[nxt]))
-                    else:
-                        tail += tokenizer.encode("\n\n", add_special_tokens=False)
-                    head = row[:plen + k].tolist()
-                    forced = False
-                else:
-                    k = len(resp)
-                    head = row.tolist()
-                    tail = closer
-                    forced = True
-                seq = head + tail + pre
-                second.append(seq)
-                meta.append((i, plen, k, forced, len(tail) + len(pre)))
-            rows2 = _greedy(model, tokenizer, device, second, cfg.n_response + MAX_LEAD,
-                            cfg.n_response + MAX_LEAD)
-            for j, ((i, plen, k, forced, pre_len), row) in enumerate(zip(meta, rows2)):
-                start = len(second[j])
-                lead = lead_length(tokenizer, row, start)
-                results[i] = Generation(row, plen, start + lead, k, forced, pre_len + lead, lead)
+    batch_size, done = cfg.batch_size, 0
+    bar = tqdm(total=len(todo), desc="generate", unit="prompt", mininterval=2, dynamic_ncols=True,
+               disable=not todo)
+    while done < len(todo):
+        idx = todo[done:done + batch_size]
+        try:
+            _generate_rows(tokenizer, model, device, id_lists, idx, cfg, results)
+        except torch.OutOfMemoryError:
+            if batch_size == 1:
+                raise
+            _free_memory(device)
+            batch_size = max(1, batch_size * 2 // 3)
+            print(f"out of memory at batch size {len(idx)}; continuing at batch size {batch_size}",
+                  flush=True)
+            continue
         for i in idx:
             g = results[i]
             # a label token with no letter or digit means the logits were garbage (e.g. NaN -> '!'):
             # keep the result for this run but never cache it
             if any(ch.isalnum() for ch in tokenizer.decode([int(g.ids[g.answer_start])])):
                 cache_store(cfg, id_lists[i], system, g)
+        done += len(idx)
+        bar.update(len(idx))
+    bar.close()
     return results
 
 
