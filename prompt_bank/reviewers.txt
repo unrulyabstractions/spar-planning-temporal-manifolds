@@ -1,0 +1,8 @@
+# Names offered in the review UI's "Reviewing as" drop-down, one per line.
+# Each reviewer's judgements are saved to <bank>/reviews/<name-as-slug>.jsonl.
+Alan McIntyre
+Augusto Nicola
+Ian Rios-Sialer
+Jared Eng-Denbaars
+Shantanu Darveshi
+Soham Takawadekar

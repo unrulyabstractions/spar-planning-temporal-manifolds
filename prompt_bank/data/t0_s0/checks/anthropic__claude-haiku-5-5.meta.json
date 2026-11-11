@@ -1,0 +1,18 @@
+{
+  "settings": {
+    "checker": "anthropic:claude-haiku-5-5",
+    "instructions": "You are checking prompts written for a research study. In the study, a language model is given each prompt and asked to choose between investment options. Your job is NOT to answer the prompt as the study's model would. Your job is to check that the prompt is clear and well-formed, and to work out its correct answer under the study's rule.\n\nThe study's rule: an option counts only if its payout arrives within the stated time horizon. A payout that arrives exactly at the end of the horizon counts. If exactly one option pays out within the horizon, that option is correct. If several do, the one with the largest payout is correct. If none does, no option is correct. If the prompt states no time horizon, no option is correct. When comparing durations written in different units, use 1 year = 365.25 days, 1 month = 1/12 year, 1 week = 7 days.\n\nRead the prompt between the markers and report:\n- stated_horizon: the time horizon exactly as the prompt states it, or \"none\" if it states none.\n- options: for each option, its label exactly as written (for example \"a)\" or \"2)\"), its payout as written, and when it pays out as written.\n- options_within_horizon: the labels of the options that pay out within the horizon (an empty list if none does).\n- expected_answer: the label of the correct option exactly as written, or \"none\" if no option is correct, or \"no_horizon\" if the prompt states no time horizon.\n- problems: anything that could make a careful reader misread the prompt or disagree about its correct answer. Each problem has a category and a one-sentence detail. Categories: \"grammar\" (spelling, grammar, number or unit formatting), \"ambiguity\" (a part of the prompt has more than one reasonable reading), \"inconsistency\" (parts of the prompt contradict each other), \"implausible\" (numbers or scenario unrealistic enough to distract a reader), \"instructions\" (the requested answer format is unclear), \"other\". Use an empty list if there are no problems.\n- verdict: \"ok\" if there are no problems, otherwise \"problem\".\n\nThese are intended and are not problems: the scenario is short and stylized; the payouts are lump sums; in some prompts no option is correct; some prompts state no horizon at all.\n\nReply with only a JSON object with exactly the keys stated_horizon, options (a list of objects with keys label, payout, timing), options_within_horizon, expected_answer, problems (a list of objects with keys category, detail), and verdict. Do not add any other text.\n\n<<<PROMPT\n{prompt}\nPROMPT>>>",
+    "max_new_tokens": 8192,
+    "thinking": null,
+    "reasoning_effort": "medium",
+    "batch_size": null
+  },
+  "prompts_sha256": "75901a42a31fc674e490561cfccca428199f5196eaa6bef79c34aa4af60d32d9",
+  "model": {
+    "model_id": "claude-haiku-5-5",
+    "via": "Anthropic API",
+    "effort": "medium",
+    "thinking": "adaptive, summarized",
+    "anthropic_client": "2.6.0"
+  }
+}

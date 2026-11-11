@@ -25,3 +25,6 @@
 .ripgreprc
 .idea
 .vscode
+
+# Local secrets (API keys). Never commit.
+.env

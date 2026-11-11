@@ -1,0 +1,41 @@
+[project]
+name = "pbank"
+version = "0.1.0"
+description = "Prompt bank for the Planning Temporal Manifolds project: generation, model checks, baseline runs and human review"
+requires-python = ">=3.12"
+dependencies = []          # building the T0 bank needs only the standard library
+
+[project.optional-dependencies]
+local = [                  # running a local Hugging Face model (checker or baseline)
+    "torch>=2.10",
+    "transformers>=5.2",
+    "accelerate>=1.0",
+    "flash-linear-attention>=0.5.2",   # fast kernels for Qwen3.5's linear-attention layers
+]
+hosted = [                     # hosted models: OpenRouter (OpenAI-compatible API) or Anthropic directly
+    "openai>=1.50",
+    "anthropic>=0.70",
+]
+review = ["flask>=3.0"]        # the review web UI
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["pbank*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{# The list of prompts: filters on top, one row per prompt with its checker and baseline status. #}
+{% block title %}Prompts{% endblock %}
+{% block content %}
+<form method="get" class="filters">
+  {% for name, (label, choices) in filter_defs.items() %}
+  <label>{{ label }}
+    <select name="{{ name }}">
+      {% for c in choices %}<option {% if filters[name] == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+    </select>
+  </label>
+  {% endfor %}
+  <label>Text or id<input name="q" value="{{ filters.q }}" placeholder="e.g. weeks, x0042"></label>
+  <button>Filter</button>
+  <a href="{{ url_for('index') }}">reset</a>
+</form>
+
+<p class="muted">{{ rows|length }} of {{ total }} prompts.
+  Checkers: {% for c in checkers %}<code>{{ c.name }}</code>{% if not loop.last %}, {% endif %}{% else %}none yet{% endfor %}.
+  Baseline runs: {% for r in runs %}<code>{{ r.name }}</code>{% if not loop.last %}, {% endif %}{% else %}none yet{% endfor %}.
+</p>
+
+<table>
+  <tr>
+    <th>id</th><th>split</th><th>regime</th><th>horizon</th><th>near option</th><th>far option</th><th>correct</th>
+    {% for c in checkers %}<th title="{{ c.name }}">check {{ loop.index }}</th>{% endfor %}
+    {% if checkers %}<th>checker feedback</th>{% endif %}
+    {% for r in runs %}<th title="{{ r.name }}">run {{ loop.index }}</th>{% endfor %}
+    <th>reviews</th>
+  </tr>
+  {% for rec in rows %}
+  <tr>
+    <td><a href="{{ url_for('item', uid=rec.uid) }}?{{ query }}">{{ rec.uid }}</a></td>
+    <td>{{ rec.split }}</td>
+    <td>{{ rec.regime }}</td>
+    <td>{{ rec.horizon or "—" }}{% if rec.rewritten %} <span class="muted">({{ rec.horizon_grid_value }})</span>{% endif %}
+        {% if rec.horizon_equals_a_delay %} <span class="warn" title="horizon equals a delay">tie</span>{% endif %}</td>
+    <td>{{ "{:,}".format(rec.near.reward) }} in {{ rec.near.delay }}</td>
+    <td>{{ "{:,}".format(rec.far.reward) }} in {{ rec.far.delay }}</td>
+    <td>{{ rec.correct_label or "—" }}</td>
+    {% for c in checkers %}
+      {% set row = c.rows.get(rec.uid) %}{% set s = checker_status(row) %}
+      <td class="{{ 'good' if s == 'agree' else ('muted' if s == 'missing' else 'bad') }}">{{ s }}
+        {% if row and row.verdict == "problem" %}<span class="warn">· flagged</span>{% endif %}</td>
+    {% endfor %}
+    {% if checkers %}
+    <td class="feedback">
+      {# Each reported problem: its category, then the checker's sentence (cut short; hover for all of it). #}
+      {% for p in checker_problems(rec.uid) %}
+        <div title="{{ p.checker }}: {{ p.detail }}"><span class="tag">{{ p.category }}</span>
+          {{ p.detail|truncate(110) }}</div>
+      {% endfor %}
+    </td>
+    {% endif %}
+    {% for r in runs %}
+      {% set row = r.rows.get(rec.uid) %}{% set s = run_status(row) %}
+      <td class="{{ 'good' if s == 'correct' else ('muted' if s in ('missing', 'answered') else 'bad') }}">
+        {% if row and row.choice_label %}{{ row.choice_label }} {% endif %}{{ s }}</td>
+    {% endfor %}
+    <td>
+      {% set s = reviews.get(rec.uid) %}
+      {% if s %}<span class="{{ 'bad' if s.problem else '' }}" title="judgements of the prompt and its responses">{{ s.count }}</span>
+        {% if s.mine %}<span class="muted">(you: {{ s.mine }})</span>{% endif %}{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}
