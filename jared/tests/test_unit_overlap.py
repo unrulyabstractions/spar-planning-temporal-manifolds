@@ -1,15 +1,10 @@
-"""analysis/unit_overlap.py on planted codes, laid out as the real units bank."""
-
-import sys
-from pathlib import Path
+"""pipeline/s3_analysis/by_datatype/unit_overlap.py on planted codes, laid out as the real units bank."""
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-
-import unit_overlap as uo  # noqa: E402
-from spar_horizon.full_bank import build_units_prompts  # noqa: E402
+import pipeline.s3_analysis.by_datatype.unit_overlap as uo
+from spar_horizon.full_bank import build_units_prompts
 
 
 @pytest.fixture(scope="module")

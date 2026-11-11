@@ -4,6 +4,9 @@ prompts)."""
 
 from statistics import mean
 
+import numpy as np
+from scipy.special import logsumexp
+
 from .model_io import generate_batch
 from .prompts import horizon_text
 
@@ -137,3 +140,130 @@ def print_behavior(r):
     print(f"  temporal reasoning  {pct('reasoning')} pick the only option that delivers in time)")
     print(f"  order stability     {pct('order')} keep their choice when the options swap places)")
     print(f"  label stability     {pct('label')} keep their choice when a/b becomes 1/2)")
+
+
+# --- the k-option banks (18_spec_multichoice.md §3) ---------------------------
+
+def _chosen(rec, answer):
+    """The label letter the answer picks, None if unparsed."""
+    index = parse_choice(answer, rec["labels"])
+    return None if index is None else rec["labels"][index]
+
+
+def _option(rec, label):
+    return next(o for o in rec["options"] if o["label"] == label)
+
+
+def _half_best(rec, half):
+    return next(o for o in rec["options"] if o["half"] == half and o["rank_in_half"] == 1)["label"]
+
+
+def _score(rec, label):
+    """(exact, correct half, best option of the chosen half) for a pick."""
+    half = _option(rec, label)["half"]
+    return label == rec["truth_label"], half == rec["truth"], label == _half_best(rec, half)
+
+
+def _half_logodds(rec, logits):
+    near, far = (logsumexp([logits[rec["labels"].index(lab)] for lab in rec[key]])
+                 for key in ("near_labels", "far_labels"))
+    return near - far
+
+
+def _truth_logodds(rec, logits):
+    """The truth's logit minus logsumexp of the rest of its half."""
+    half = rec["near_labels"] if rec["truth"] == "near" else rec["far_labels"]
+    rest = [logits[rec["labels"].index(lab)] for lab in half if lab != rec["truth_label"]]
+    return logits[rec["labels"].index(rec["truth_label"])] - logsumexp(rest)
+
+
+def _baseline_pick(rec, rule):
+    options = rec["options"]
+    if rule == "largest_payout":
+        return max(options, key=lambda o: o["payout"])["label"]
+    return min(options, key=lambda o: (o["delay_years"], -o["payout"]))["label"]
+
+
+def _uniform_scores(rec):
+    """Expected (exact, correct half, best of the chosen half) under a uniform pick."""
+    k = rec["n_options"]
+    return 1 / k, 0.5, 2 / k
+
+
+def gap_bins(rows, n_bins=3):
+    """`rows` = [(gap_in_half, exact hit)] split into `n_bins` equal-count bins by gap."""
+    rows = sorted(rows)
+    cuts = np.linspace(0, len(rows), n_bins + 1).astype(int)
+    return [{"gap_mean": float(np.mean([g for g, _ in part])), "exact": [int(sum(h for _, h in part)), len(part)]}
+            for part in (rows[a:b] for a, b in zip(cuts, cuts[1:])) if part]
+
+
+def multichoice_behavior(records, answers, label_logits=None):
+    """Behavior of a k-option bank from the base answers and the label logits alone.
+    `records`, `answers` and `label_logits` ([n, k], columns in each record's own `labels`
+    order, or None) are aligned: pass the kept prompts only. Returns a dict with, for each
+    regime and for `all`:
+    - `n`: parsed answers; `accuracy`: [hits, n] for `exact` (the truth option), `half` (the
+      truth's half) and `within_half` (the best option of the half chosen);
+    - `half_logodds`, `truth_logodds`: mean half log-odds (logsumexp near labels minus far)
+      and mean within-half log-odds (truth logit minus logsumexp of the rest of its half),
+      over all rows with logits; `C` = near mean minus both mean of the half log-odds;
+    - `pick_rate`: share of parsed answers per displayed position;
+    - `gap_bins`: exact accuracy against `gap_in_half`, in three equal-count bins;
+    - `consistency`: share of bases (two or more parsed renderings) whose renderings give
+      the same choice, and the mean std of the half log-odds across a base's renderings;
+    - `baselines`: mean exact, half and within-half accuracy of "largest payout",
+      "earliest delay, then largest" and a uniform pick."""
+    groups = {}
+    for i, (rec, answer) in enumerate(zip(records, answers)):
+        for name in (rec["regime"], "all"):
+            groups.setdefault(name, []).append((i, rec, _chosen(rec, answer)))
+    result = {}
+    for name, rows in groups.items():
+        parsed = [(i, rec, lab) for i, rec, lab in rows if lab is not None]
+        scores = np.array([_score(rec, lab) for _, rec, lab in parsed], int).reshape(-1, 3)
+        k = rows[0][1]["n_options"]
+        picks = np.bincount([rec["labels"].index(lab) for _, rec, lab in parsed], minlength=k)
+        out = {"n": len(parsed),
+               "accuracy": {key: [int(scores[:, j].sum()), len(parsed)] for j, key in enumerate(("exact", "half", "within_half"))},
+               "pick_rate": (picks / max(len(parsed), 1)).tolist(),
+               "gap_bins": gap_bins([(rec["gap_in_half"], bool(s[0])) for (_, rec, _), s in zip(parsed, scores)]),
+               "baselines": {
+                   rule: dict(zip(("exact", "half", "within_half"), np.mean(
+                       [_score(rec, _baseline_pick(rec, rule)) for _, rec, _ in rows], axis=0).tolist()))
+                   for rule in ("largest_payout", "earliest_then_largest")}}
+        out["baselines"]["uniform"] = dict(zip(("exact", "half", "within_half"),
+                                               np.mean([_uniform_scores(rec) for _, rec, _ in rows], axis=0).tolist()))
+        if label_logits is not None:
+            half = [_half_logodds(rec, label_logits[i]) for i, rec, _ in rows]
+            out["half_logodds"] = float(np.mean(half))
+            out["truth_logodds"] = float(np.mean([_truth_logodds(rec, label_logits[i]) for i, rec, _ in rows]))
+        out["consistency"] = _consistency(rows, label_logits)
+        result[name] = out
+    if label_logits is not None and {"near", "both"} <= set(result):
+        result["C"] = result["near"]["half_logodds"] - result["both"]["half_logodds"]
+    print_multichoice_behavior(result)
+    return result
+
+
+def _consistency(rows, label_logits):
+    bases = {}
+    for i, rec, lab in rows:
+        bases.setdefault(rec["pair_id"], []).append((i, rec, lab))
+    multi = [b for b in bases.values() if sum(lab is not None for _, _, lab in b) >= 2]
+    same = [len({lab for _, _, lab in b if lab is not None}) == 1 for b in multi]
+    spread = ([float(np.std([_half_logodds(rec, label_logits[i]) for i, rec, _ in b])) for b in bases.values() if len(b) >= 2]
+              if label_logits is not None else [])
+    return {"same_choice": [int(sum(same)), len(same)], "half_logodds_std": float(np.mean(spread)) if spread else None}
+
+
+def print_multichoice_behavior(r):
+    print("\nmultichoice behavior (base answers):")
+    for name in ("near", "both", "all"):
+        if name not in r:
+            continue
+        g = r[name]
+        acc = "  ".join(f"{key} {hits}/{n}" for key, (hits, n) in g["accuracy"].items())
+        print(f"  {name:<5} n={g['n']:<4} {acc}  same choice across renderings {g['consistency']['same_choice']}")
+    if "C" in r:
+        print(f"  half log-odds contrast C (near minus both) {r['C']:+.2f}")

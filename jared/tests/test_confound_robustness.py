@@ -1,11 +1,7 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-from confound_robustness import none_only  # noqa: E402
-from delay_margin import MIN_NONE  # noqa: E402
+from pipeline.s3_analysis.by_label.confound_robustness import none_only
+from pipeline.s3_analysis.by_label.delay_margin import MIN_NONE
 
 
 def test_none_only_keeps_none_rows_at_durations_with_enough_of_them():

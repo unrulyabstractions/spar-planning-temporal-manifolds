@@ -1,6 +1,6 @@
 # Plan and status: the time-horizon representation in Qwen3-8B, thinking on
 
-Last revised 2026-10-26 (audit: §4 corrected, §6 lists what was struck). Qwen3-14B
+Last revised 2026-11-09 (E16-E18 added to §3; §5 item 4 done; audit of 2026-10-26: §4 corrected, §6 lists what was struck). Qwen3-14B
 results are in `11`, the local checks in `12`, the graded claims in `13`.
 The question, what is done (§3: do not rerun it),
 what is established (§4), what is next (§5), and the dated decisions (§6).
@@ -16,7 +16,7 @@ representation, and what happens to it while the model reasons?
 |---|---|---|
 | R1 | Survives rewording (Alan's 4 constraint phrasings) | open on the full bank; starter bank, thinking off: transfer 0.99 |
 | R2 | Survives a domain change | deferred |
-| R3 | Encodes duration, not the unit word | passes at the suffix (unit share 0.02), with unit shifts of ~0.3 decades (§4) |
+| R3 | Encodes duration, not the unit word | passes at the suffix (unit share 0.02), with unit shifts of ~0.3 decades (§4); same-unit patch (E16, 24 pairs): the number is carried at the number tokens, not the unit token |
 | R4 | Invariant to option order, labels, rewards | thinking on: option order adds +2.5 near log-odds |
 | R5 | Causally used | partly: the decision reaches the answer slot from L24; curve steering at L24 moves it, the probe line does not; the horizon-vs-decision question is open (§4) |
 | R6 | Persists through reasoning | weak in the middle of the think block, re-formed at the close (§4) |
@@ -44,21 +44,26 @@ representation, and what happens to it while the model reasons?
 
 | what | date | output (`SPAR/results/horizon/`) | write-up |
 |---|---|---|---|
-| E0 full bank, thinking on (generation, activations, behavior) | 2026-10-04 | `exp0_Qwen3-8B_think-on_full/`, `gen_cache/` | `06_results_probes_full.md` |
+| E0 full bank, thinking on (generation, activations, behavior) | 2026-10-04 | `exp0_Qwen3-8B_think-on_full/`, `gen_cache/` | `pipeline/s1_data_vectors/docs/06_results_probes_full.md` |
 | E0 full bank, thinking off (record only) | 2026-10-04 | `exp0_Qwen3-8B_think-off_full/` | same |
-| E7 linear vs MLP probes, both modes | 2026-10-04 | `analysis/probe_*` | `06_results_probes_full.md`, spec `04_spec_probes.md` |
-| E8 run 1: patching map (thinking off), 4 decodability-chosen cells: all null | 2026-10-11 | `exp8_Qwen3-8B_full/` | `08_results_steering.md` §1-3, spec `07_spec_steering.md` |
-| E8 run 2: answer-slot ablation and steering at L24/27/30, answer-slot patching across prompts, both modes | 2026-10-12 | `exp8_Qwen3-8B_answer_slot/` | `08_results_steering.md` §5 |
-| Horizon-vs-decision check on the answer-slot subspace (local) | 2026-10-12 | `analysis/steering_decision_check.*` | `08_results_steering.md` §6 |
-| E8 run 3: L24 curve split into decision direction and rest, natural closes | 2026-10-14 | `exp8_Qwen3-8B_decision_L24/` | `08_results_steering.md` §9 |
-| E9: unit rewrites at the suffix, 22 durations x 2-4 units x 24 contexts | 2026-10-14 | `exp9_Qwen3-8B_units/`, `analysis/units.*` | `08_results_steering.md` §10 |
-| E8 at L22, decision split | 2026-10-18 | `exp8_Qwen3-8B_decision_L22/` | `08_results_steering.md` §12 |
-| E10: patch before reasoning, 96 pairs | 2026-10-18 | `exp10_Qwen3-8B_reasoning/` | `08_results_steering.md` §11 |
-| E11: Qwen3-14B E0 both modes, E8 answer slot, probe line, coherence | 2026-10-20/21, rest 2026-10-24 | `exp0_Qwen3-14B_*`, `exp8_Qwen3-14B_*`, `coherence_Qwen3-14B_think-on_full/` | `11_results_14b.md`, `13_evidence.md` |
+| E7 linear vs MLP probes, both modes | 2026-10-04 | `analysis/probe_*` | `pipeline/s1_data_vectors/docs/06_results_probes_full.md`, spec `pipeline/s1_data_vectors/docs/04_spec_probes.md` |
+| E8 run 1: patching map (thinking off), 4 decodability-chosen cells: all null | 2026-10-11 | `exp8_Qwen3-8B_full/` | `pipeline/s2_steering/docs/08_results_steering.md` §1-3, spec `pipeline/s2_steering/docs/07_spec_steering.md` |
+| E8 run 2: answer-slot ablation and steering at L24/27/30, answer-slot patching across prompts, both modes | 2026-10-12 | `exp8_Qwen3-8B_answer_slot/` | `pipeline/s2_steering/docs/08_results_steering.md` §5 |
+| Horizon-vs-decision check on the answer-slot subspace (local) | 2026-10-12 | `analysis/steering_decision_check.*` | `pipeline/s2_steering/docs/08_results_steering.md` §6 |
+| E8 run 3: L24 curve split into decision direction and rest, natural closes | 2026-10-14 | `exp8_Qwen3-8B_decision_L24/` | `pipeline/s2_steering/docs/08_results_steering.md` §9 |
+| E9: unit rewrites at the suffix, 22 durations x 2-4 units x 24 contexts | 2026-10-14 | `exp9_Qwen3-8B_units/`, `analysis/units.*` | `pipeline/s2_steering/docs/08_results_steering.md` §10 |
+| E8 at L22, decision split | 2026-10-18 | `exp8_Qwen3-8B_decision_L22/` | `pipeline/s2_steering/docs/08_results_steering.md` §12 |
+| E10: patch before reasoning, 96 pairs | 2026-10-18 | `exp10_Qwen3-8B_reasoning/` | `pipeline/s2_steering/docs/08_results_steering.md` §11 |
+| E11: Qwen3-14B E0 both modes, E8 answer slot, probe line, coherence | 2026-10-20/21, rest 2026-10-24 | `exp0_Qwen3-14B_*`, `exp8_Qwen3-14B_*`, `coherence_Qwen3-14B_think-on_full/` | `pipeline/s1_data_vectors/docs/11_results_14b.md`, `13_evidence.md` |
 | Local checks: natural closes and within-unit R², horizon vs delay | 2026-10-21 | `analysis/` | `12_results_local_checks.md` |
-| Unit-overlap bank E0, 8B both modes | 2026-10-25 | `exp0_Qwen3-8B_think-{on,off}_units/` | spec `14_spec_unit_overlap.md`; no results doc yet |
-| Pristine steering stage A (answer slot, fixed α) and stage B (suffix, thinking on) | 2026-10-30 | `exp8_Qwen3-8B_pristine/`, `exp13_Qwen3-8B_pristine_suffix/`, `analysis/crossing_split_pristine.*` | `22_results_phrase_steering.md` §1, spec `16` §5 |
-| E14: steering at the horizon phrase, thinking on, 4 transitions x 38 conditions | 2026-10-31 | `exp14_Qwen3-8B_phrase/` | `22_results_phrase_steering.md`, spec `21_spec_phrase_steering.md` |
+| Unit-overlap bank E0, 8B both modes | 2026-10-25 | `exp0_Qwen3-8B_think-{on,off}_units/` | spec `pipeline/s1_data_vectors/docs/14_spec_unit_overlap.md`; no results doc yet |
+| Pristine steering stage A (answer slot, fixed α) and stage B (suffix, thinking on) | 2026-10-30 | `exp8_Qwen3-8B_pristine/`, `exp13_Qwen3-8B_pristine_suffix/`, `analysis/crossing_split_pristine.*` | `pipeline/s2_steering/docs/22_results_phrase_steering.md` §1, spec `16` §5 |
+| E14: steering at the horizon phrase, thinking on, 4 transitions x 38 conditions | 2026-10-31 | `exp14_Qwen3-8B_phrase/` | `pipeline/s2_steering/docs/22_results_phrase_steering.md`, spec `pipeline/s2_steering/docs/21_spec_phrase_steering.md` |
+| 4- and 8-choice banks (implicit ROI, 246 prompts each), behavior plus reduced activations and structure probes, thinking on | 2026-11-06 | `exp0_Qwen3-8B_think-on_choice{4,8}/` | `pipeline/s2_steering/docs/26_results_overnight_choice_scan.md` §1, spec `pipeline/s2_steering/docs/26_spec_overnight_choice_scan.md` |
+| Phrase-steering scan (L10/14/18/22/26 x number, unit, suffix, answer x manifold, random; 10 prompts per cell): 34 of 40 cells, L26 incomplete; no cell reaches excess ≥ 4 | 2026-11-06 | `exp15_Qwen3-8B_scan/` | `pipeline/s2_steering/docs/26_results_overnight_choice_scan.md` §2 |
+| E16: phrase number patch, 24 same-unit crossing pairs, L16 (also L12, L22 for the number tokens). Number-token donor writes the donor's number 24/24, unit-token donor 0/24, fitted manifold step 3/24; screen, no significance claims | 2026-11-07 | `exp16_Qwen3-8B_patch/` | `pipeline/s2_steering/docs/30_results_overnight_patch_budget_implied.md` (27 section), spec `pipeline/s2_steering/docs/27_spec_phrase_number_patch.md` |
+| E17: +3,072 think tokens for force-closed choice4/8 traces. 65% / 62% close; accuracy criterion C1 fails narrowly, loops (C3) fail and stay open at 8,192 | 2026-11-07 | `exp17_Qwen3-8B_think_budget/` | `pipeline/s2_steering/docs/30_results_overnight_patch_budget_implied.md` (28 section), spec `pipeline/s2_steering/docs/28_spec_choice4_side.md` |
+| E18: implied horizons, 288 rows (M1-M4). Reference check C0 fails (explicit-twin accuracy 0.875 near), so provisional; no family differs significantly from its explicit twin (McNemar p = 0.11 / 0.34 / 0.69, n = 16 per cell) | 2026-11-07 | `exp18_Qwen3-8B_think-on_implied/` | `pipeline/s2_steering/docs/30_results_overnight_patch_budget_implied.md` (29 section), spec `pipeline/s2_steering/docs/29_spec_implied_horizon_side.md` |
 | Starter bank: v1 (thinking off, E0-E5), v3 (thinking on, E0, E6) | 2026-09 | `snapshots/v1_noprefill`, `snapshots/v3_think` (removed 2026-10-27; in git at `a93acf9`) | `history/` |
 
 ## 4. Established (Qwen3-8B, thinking on, full bank unless noted)
@@ -134,7 +139,8 @@ representation, and what happens to it while the model reasons?
   differ (random 5-8), 0 of 6 where they match. (The earlier 71-73% divided by
   all 96 pairs, including 25 that share a unit.) The subspace is causally the
   unit, reasoning reads it back as a written horizon, and nothing here tests
-  magnitude within a unit. Two limits: the random swap is not size-matched to
+  magnitude within a unit (E16 later did, 24 same-unit pairs: the number tokens carry
+  the number, 24/24, the unit token 0/24). Two limits: the random swap is not size-matched to
   the 8-dim subspace swap, and re-batching the unpatched prompts alone changes
   12 of 96 labels against the E0 cache.
 - **Ablation at L27/L30** removes 0.74-0.83 C, but the subspace there decodes
@@ -150,10 +156,10 @@ representation, and what happens to it while the model reasons?
    the choice only when it does.
 3. ~~Box: L24 curve split into decision and rest~~ done 2026-10-14 (`08` §9).
 4. ~~E10, patch before reasoning~~ done 2026-10-18 (`08` §11): the
-   last-token patch swaps the unit. Follow-up (box, ~30 min on 2 GPUs):
-   same-unit pairs only (e.g. "3 years" vs "39 years"), patching the number
-   tokens, and the top-8 subspace over the whole phrase. This is the causal
-   version of the within-unit question.
+   last-token patch swaps the unit. ~~Follow-up: same-unit pairs, number
+   tokens, top-8 subspace over the phrase~~ done 2026-11-07 as E16 (`30`, 27
+   section): the number tokens carry the number (24/24), the unit token does
+   not (0/24), the top-8 subspace gets 12/24 numbers.
 5. ~~E9 unit rewrites~~ done 2026-10-14 (`08` §10). Still open at the
    suffix: E2 with Alan's 4 phrasings (forward pass only, minutes).
 6. **Box, from the 2026-10-26 audit** (each needs a spec):
@@ -211,6 +217,10 @@ representation, and what happens to it while the model reasons?
 - **2026-11-01.** E14 (`22`): H1-H3 fail. Post hoc measures (first stated
   horizon, choice by where it lands) were added to `exp14_analysis.py`, labelled
   post hoc and gating nothing. The pre-registered H1 measure was kept as written.
+- **2026-11-06.** Overnight run (`26`): choice4 and choice8 banks run with reduced activations. The scan
+  stopped at 34 of 40 cells (L26 has only the number-token pair); the screen found no cell at excess ≥ 4,
+  and random controls matched the manifold cells. Extras were not run. Follow-ups, each needing a spec:
+  the L26 gap, explicit-ROI banks, a probe of the choice banks with the regime held fixed.
 
 ## 7. Facts that constrain the design
 
@@ -227,6 +237,8 @@ representation, and what happens to it while the model reasons?
   `local_checks.py` (see `../../CLAUDE.md`).
 - The unit word grows with the duration by design, so unit and log horizon
   are confounded on the bank (unit explains 0.97 of log horizon).
+  Consequence (30, addendum): the pooled fit's unit adjustment creates the PC1 slope of the manifold (raw per-horizon
+  means are flat, fitted slope -9.7 per decade); same-unit steps are unaffected.
 
 ## 8. Deferred
 

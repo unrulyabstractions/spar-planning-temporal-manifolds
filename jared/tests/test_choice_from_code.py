@@ -1,12 +1,7 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import choice_from_code as cc  # noqa: E402
-from synthetic_pooled import synthetic_pooled  # noqa: E402
+import pipeline.s3_analysis.by_label.choice_from_code as cc
+from synthetic_pooled import synthetic_pooled
 
 
 def test_alpha_coordinate_moves_by_alpha_along_the_direction():

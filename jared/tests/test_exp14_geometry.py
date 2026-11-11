@@ -1,12 +1,8 @@
-import sys
-from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import exp14_geometry as eg  # noqa: E402
-from spar_horizon.steering import curve_delta, fit_duration_effects  # noqa: E402
+from pipeline.s1_data_vectors.analysis import exp14_geometry as eg
+from spar_horizon.steering import curve_delta, fit_duration_effects
 
 
 def planted_states(seed=0, n=1200, d=24, noise=0.01):

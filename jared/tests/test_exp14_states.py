@@ -3,19 +3,16 @@ row order, keys and file handling on a tiny random-weight Qwen3. No model weight
 
 import argparse
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 from transformers import AutoTokenizer, Qwen3Config, Qwen3ForCausalLM
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "experiments"))
-import exp14_phrase_states as states  # noqa: E402
-from spar_horizon import steering as S  # noqa: E402
-from spar_horizon.config import Settings  # noqa: E402
-from spar_horizon.full_bank import build_full_prompts  # noqa: E402
+from pipeline.s1_data_vectors.experiments import exp14_phrase_states as states
+from spar_horizon import steering as S
+from spar_horizon.config import Settings
+from spar_horizon.full_bank import build_full_prompts
 
 MODEL = "Qwen/Qwen3.5-0.8B"
 GENERATION = {"model": MODEL, "thinking": "on", "n_response": 6, "max_think_tokens": 3, "prefill": "",
@@ -106,7 +103,7 @@ def test_main_writes_states_under_the_model_folder_and_skips_when_present(tok, t
     prompts_file = tmp_path / "phrase_prompts.json"
     records = write_prompts_file(prompts_file, 6)
     monkeypatch.setattr(states, "load_model", lambda cfg: (tok, tiny, "cpu"))
-    parser_args = argparse.Namespace(prompts=str(prompts_file), model=None, limit=4, batch_size=2,
+    parser_args = argparse.Namespace(prompts=str(prompts_file), model=None, layers=None, limit=4, batch_size=2,
                                      out=str(tmp_path / "out"))
     states.main(parser_args)
     out_dir = tmp_path / "out" / "exp14_Qwen3.5-0.8B_phrase"
@@ -128,8 +125,34 @@ def test_model_override_names_the_output_folder(tok, tiny, tmp_path, monkeypatch
     prompts_file.write_text(json.dumps(meta))
     seen = []
     monkeypatch.setattr(states, "load_model", lambda cfg: seen.append(cfg.model) or (tok, tiny, "cpu"))
-    parser_args = argparse.Namespace(prompts=str(prompts_file), model=MODEL, limit=None, batch_size=2,
+    parser_args = argparse.Namespace(prompts=str(prompts_file), model=MODEL, layers=None, limit=None, batch_size=2,
                                      out=str(tmp_path / "out"))
     states.main(parser_args)
     assert seen == [MODEL]
     assert json.loads((tmp_path / "out" / "exp14_Qwen3.5-0.8B_phrase" / "states.json").read_text())["model"] == MODEL
+
+
+def test_other_layers_get_their_own_file_with_the_same_keys_and_their_own_skip_rule(tok, tiny, tmp_path, monkeypatch):
+    prompts_file = tmp_path / "phrase_prompts.json"
+    write_prompts_file(prompts_file, 4)
+    monkeypatch.setattr(states, "load_model", lambda cfg: (tok, tiny, "cpu"))
+    out_dir = tmp_path / "out" / "exp14_Qwen3.5-0.8B_phrase"
+
+    def run(layers):
+        states.main(argparse.Namespace(prompts=str(prompts_file), model=None, layers=layers, limit=None,
+                                       batch_size=2, out=str(tmp_path / "out")))
+
+    run(None)
+    run("10,14")
+    assert states.states_name((10, 14)) == "states_L10-14" and states.states_name(states.LAYERS) == "states"
+    assert json.loads((out_dir / "states_L10-14.json").read_text())["layers"] == [10, 14]
+    default, other = np.load(out_dir / "states.npz"), np.load(out_dir / "states_L10-14.npz")
+    assert {k for k in other.files if "|" in k} == {f"L{layer}|{role}" for layer in (10, 14) for role in ("number", "unit")}
+    assert default["sample_uids"].tolist() == other["sample_uids"].tolist()
+    # the layer both files hold is the same state, whichever run extracted it
+    np.testing.assert_allclose(default["L14|unit"], other["L14|unit"], atol=1e-4)
+    assert not np.allclose(other["L10|unit"], other["L14|unit"])
+
+    monkeypatch.setattr(states, "load_model", lambda cfg: pytest.fail("loaded the model although the file exists"))
+    run("10,14")
+    run(None)

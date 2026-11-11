@@ -1,16 +1,12 @@
 """Crossing logic of analysis/stage_markers.py on toy curves."""
 
 import json
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-
-from stage_markers import first_crossing, last_crossing, verdict_s1  # noqa: E402
-from steering_analysis import saved_decision  # noqa: E402
+from pipeline.s1_data_vectors.analysis.stage_markers import first_crossing, last_crossing, verdict_s1
+from pipeline.s2_steering.analysis.steering_analysis import saved_decision
 
 
 def test_first_crossing_gives_layer_and_interpolated_position():

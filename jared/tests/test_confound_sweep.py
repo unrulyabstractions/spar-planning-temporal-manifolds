@@ -1,10 +1,6 @@
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-import confound_sweep as cs  # noqa: E402
+import pipeline.s3_analysis.by_label.confound_sweep as cs
 
 
 def planted(seed=0, n_durations=12, per=20, d=24):

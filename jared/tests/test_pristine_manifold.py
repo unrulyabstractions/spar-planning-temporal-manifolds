@@ -1,10 +1,7 @@
-import sys
-from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-from pristine_manifold import median_ci, percent, unit_lookup  # noqa: E402
+from pipeline.s1_data_vectors.analysis.pristine_manifold import median_ci, percent, unit_lookup
 
 
 def test_percent_is_symmetric_in_over_and_under_reading():
@@ -29,7 +26,7 @@ def test_median_ci_resamples_whole_groups():
 
 
 def test_systematic_shift_averages_prompt_noise_within_a_rendering():
-    from pristine_manifold import systematic_shift
+    from pipeline.s1_data_vectors.analysis.pristine_manifold import systematic_shift
     # one rendering, four bases: shifts +0.3 and -0.3 decades cancel to no systematic shift
     shift = np.array([0.3, -0.3, 0.3, -0.3])
     labels = {"durations": np.array(["2 years"] * 4), "units": np.array(["months"] * 4),
@@ -42,7 +39,7 @@ def test_systematic_shift_averages_prompt_noise_within_a_rendering():
 
 
 def test_systematic_shift_is_not_inflated_by_reasoning_noise():
-    from pristine_manifold import systematic_shift
+    from pipeline.s1_data_vectors.analysis.pristine_manifold import systematic_shift
     rng = np.random.default_rng(0)
     n_render, n_base, noise = 400, 4, 0.3
 
@@ -75,7 +72,7 @@ def fake_part(bank, n_rows, kept, anchors, layer_value):
 
 
 def test_pooled_rows_line_up_with_their_labels_and_drop_anchors():
-    from pristine_manifold import cell_matrix, pooled_labels
+    from pipeline.s1_data_vectors.analysis.pristine_manifold import cell_matrix, pooled_labels
     # old run: rows 0 and 2 kept (row 1 had no horizon); fill run: row 1 is an anchor
     parts = [fake_part("full", 3, [0, 2], [False, False], 100), fake_part("fill", 3, [0, 1, 2], [False, True, False], 200)]
     labels = pooled_labels(parts)
@@ -86,7 +83,7 @@ def test_pooled_rows_line_up_with_their_labels_and_drop_anchors():
 
 
 def test_gated_jobs_pool_a_mode_whose_anchors_match_before_the_trace():
-    from pristine_manifold import gated_jobs
+    from pipeline.s1_data_vectors.analysis.pristine_manifold import gated_jobs
     jobs = [("off", "pre-label", 16), ("on", "suffix newline", 16), ("on", "pre-label", 16)]
     # thinking on: the suffix matches, the cell after the trace does not (traces diverged)
     anchors = {"off": {"cells": {"pre-label L16": {"median": 0.0}}},

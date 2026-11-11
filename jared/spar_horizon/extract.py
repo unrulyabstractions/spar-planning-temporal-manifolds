@@ -11,6 +11,10 @@ the kept layout):
 - prelabel: the single token right before the label, whatever the model put
   there (the prefill colon or a markdown lead); its state predicts the label
 - answer: `cfg.n_response` tokens from the label token
+- prompt (choice banks, `prompt_positions=True`; appended after `answer`): the horizon
+  phrase's number tokens (mean of their states) and unit token (the last phrase token), then
+  for each option in prompt order its label token (the `a` of `a)`) and its line-end `.`
+  (`keep_idx`/`keep_ids` of the number slot hold the last number token, not the mean)
 
 The layout is the same width for every prompt, so no prompt is skipped for
 its answer formatting; force-closed and natural think closes share it.
@@ -23,7 +27,8 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from .model_io import generate_batch, label_ids, prefill_ids, suffix_length
+from .model_io import chat_text, generate_batch, label_ids, prefill_ids, suffix_length
+from .steering import phrase_positions
 
 
 @dataclass
@@ -42,9 +47,10 @@ class Extraction:
     lead: np.ndarray = None          # per kept prompt
     keep_idx: np.ndarray = None      # [n_kept, n_positions] absolute token index
     keep_ids: np.ndarray = None      # [n_kept, n_positions] token id
-    label_logits: np.ndarray = None  # [n_kept, 2] logits of the a/b label ids at the prelabel token (form as written, see label_pair)
+    label_logits: np.ndarray = None  # [n_kept, k] logits of the record's label ids (a/b: k = 2) at the prelabel token (form as written, see label_pair)
     think_text: list = field(default_factory=list)   # per kept prompt
     generations: list = field(default_factory=list)  # Generation per kept prompt (not saved)
+    option_order: np.ndarray = None  # [n_kept, k] index into the record's `options` of the option on each prompt line (prompt_positions only)
 
     @property
     def n_layers(self):
@@ -57,11 +63,11 @@ def think_positions(prompt_len, think_len, fractions):
     return [prompt_len + round(f * (think_len - 1)) for f in fractions]
 
 
-def layout(n_suffix, n_think, n_pre, n_response):
-    """Region boundaries for the kept layout, in order."""
+def layout(n_suffix, n_think, n_pre, n_response, n_prompt=0):
+    """Region boundaries for the kept layout, in order; `prompt` is present only when n_prompt > 0."""
     bounds, start = {}, 0
     for name, n in (("suffix", n_suffix), ("think", n_think), ("pre", n_pre),
-                    ("prelabel", 1), ("answer", n_response)):
+                    ("prelabel", 1), ("answer", n_response), *((("prompt", n_prompt),) if n_prompt else ())):
         bounds[name] = (start, start + n)
         start += n
     return bounds
@@ -76,6 +82,37 @@ def keep_positions(g, cfg, n_suffix, n_pre):
                  np.arange(g.answer_start, g.answer_start + cfg.n_response)]
 
 
+def prompt_side_positions(tokenizer, prompt, rec, cfg):
+    """Token indices in the chat-templated `prompt` for a choice-bank record: `number` (the
+    horizon phrase's tokens but the last), `unit` (its last token), and per option line, in
+    prompt order, `labels` (the token holding the label letter), `ends` (the token holding the
+    line's final `.`) and `order` (index of that line's option in `rec["options"]`). Found
+    from the character offsets of the rendered text, not by re-tokenizing pieces."""
+    text = chat_text(tokenizer, prompt, cfg)
+    base = text.index(prompt)
+    spans = tokenizer(text, add_special_tokens=False, return_offsets_mapping=True)["offset_mapping"]
+
+    def token_holding(char):
+        return next(i for i, (a, b) in enumerate(spans) if a <= char < b)
+
+    phrase = phrase_positions(tokenizer, text, rec["horizon_text"])
+    if len(phrase) < 2:
+        raise ValueError(f"horizon phrase {rec['horizon_text']!r} has {len(phrase)} token(s), need a number and a unit")
+    labels, ends, order = [], [], []
+    for line_start in (base + prompt.index(f"\n{lab}) ") + 1 for lab in _line_labels(prompt, rec)):
+        line_end = text.index("\n", line_start) - 1
+        assert text[line_end] == ".", f"option line does not end in '.': {text[line_start:line_end + 1]!r}"
+        labels.append(token_holding(line_start))
+        ends.append(token_holding(line_end))
+        order.append([o["label"] for o in rec["options"]].index(text[line_start]))
+    return {"number": phrase[:-1], "unit": phrase[-1], "labels": labels, "ends": ends, "order": order}
+
+
+def _line_labels(prompt, rec):
+    """The record's labels in the order their lines appear in `prompt`."""
+    return sorted(rec["labels"], key=lambda lab: prompt.index(f"\n{lab}) "))
+
+
 def label_pair(tokenizer, label_token, spaced, unspaced):
     """The a/b ids in the form of the token the model wrote as its label: after a
     markdown lead like ' **' the label is unspaced, and the spaced pair would be
@@ -83,22 +120,26 @@ def label_pair(tokenizer, label_token, spaced, unspaced):
     return spaced if tokenizer.decode([int(label_token)]).startswith(" ") else unspaced
 
 
-def extract(tokenizer, model, device, prompts, cfg, layers=None):
+def extract(tokenizer, model, device, prompts, cfg, layers=None, records=None, prompt_positions=False):
     """Generate every answer (batched), then one forward pass per prompt keeping
     hidden states at the positions described above. `layers` restricts which
-    hidden_states indices are kept. Returns an Extraction."""
+    hidden_states indices are kept. `records` (aligned with `prompts`) gives each prompt's
+    `labels` for the label logits, the a/b pair when a record has none. `prompt_positions` (choice
+    banks, needs `records` with `options` and `horizon_text`) appends the `prompt` region described
+    above. Returns an Extraction."""
     n_suffix = suffix_length(tokenizer, prompts[0], cfg)
     end_id = tokenizer.convert_tokens_to_ids("<|im_end|>")
-    spaced, unspaced = label_ids(tokenizer, cfg=cfg), label_ids(tokenizer)
+    label_sets = {}   # labels -> (spaced ids, unspaced ids)
     gens = generate_batch(tokenizer, model, device, prompts, cfg)
     n_think = len(cfg.think_fractions) if cfg.thinking == "on" else 0
     n_pre = 2 + len(prefill_ids(tokenizer, cfg)) if cfg.thinking == "on" else 0
-    regions = layout(n_suffix, n_think, n_pre, cfg.n_response)
-    n_positions = regions["answer"][1]
+    n_options = len(records[0]["options"]) if prompt_positions else 0
+    regions = layout(n_suffix, n_think, n_pre, cfg.n_response, 2 + 2 * n_options if prompt_positions else 0)
+    n_positions = list(regions.values())[-1][1]
     activations, label_counts = None, [Counter() for _ in range(n_positions)]
     turn_len, answers, kept = cfg.n_response, [], []
-    forced_mask, think_len, lead, keep_idx, keep_ids, label_logits, think_text = ([] for _ in range(7))
-    for g in tqdm(gens, desc="extract", unit="prompt", mininterval=2, dynamic_ncols=True):
+    forced_mask, think_len, lead, keep_idx, keep_ids, label_logits, think_text, option_order = ([] for _ in range(8))
+    for i, g in enumerate(tqdm(gens, desc="extract", unit="prompt", mininterval=2, dynamic_ncols=True)):
         start = g.answer_start
         if g.ids.shape[0] < start + cfg.n_response:
             kept.append(False)
@@ -113,10 +154,19 @@ def extract(tokenizer, model, device, prompts, cfg, layers=None):
         if end_id in response:
             turn_len = min(turn_len, response.index(end_id) + 1)
         keep = keep_positions(g, cfg, n_suffix, n_pre)
+        if prompt_positions:
+            side = prompt_side_positions(tokenizer, prompts[i], records[i], cfg)
+            assert len(side["labels"]) == n_options and g.ids[:g.prompt_len].tolist() == tokenizer.encode(
+                chat_text(tokenizer, prompts[i], cfg), add_special_tokens=False)
+            keep = np.r_[keep, side["number"][-1], side["unit"], np.column_stack([side["labels"], side["ends"]]).ravel()]
+            option_order.append(side["order"])
         for pos, tok_id in enumerate(g.ids[keep]):
             label_counts[pos][tokenizer.decode(tok_id)] += 1
         hs = out.hidden_states if layers is None else [out.hidden_states[l] for l in layers]
         per_layer = [h[0, keep].float().cpu().numpy() for h in hs]
+        if prompt_positions:
+            for vectors, h in zip(per_layer, hs):
+                vectors[regions["prompt"][0]] = h[0, side["number"]].float().mean(0).cpu().numpy()
         if activations is None:
             activations = [[] for _ in per_layer]
         for layer, vectors in zip(activations, per_layer):
@@ -126,7 +176,10 @@ def extract(tokenizer, model, device, prompts, cfg, layers=None):
         lead.append(g.lead)
         keep_idx.append(keep)
         keep_ids.append(g.ids[keep].cpu().numpy())
-        labels = label_pair(tokenizer, g.ids[start], spaced, unspaced)
+        labels = tuple(records[i]["labels"]) if records is not None and "labels" in records[i] else ("a", "b")
+        if labels not in label_sets:
+            label_sets[labels] = (label_ids(tokenizer, labels, cfg), label_ids(tokenizer, labels))
+        labels = label_pair(tokenizer, g.ids[start], *label_sets[labels])
         label_logits.append(out.logits[0, start - 1, list(labels)].float().cpu().numpy())
         think_text.append(g.think_text(tokenizer) if cfg.thinking == "on" else "")
     skipped = len(prompts) - sum(kept)
@@ -136,6 +189,11 @@ def extract(tokenizer, model, device, prompts, cfg, layers=None):
     tokens = [_token_label(c) for c in label_counts]
     for k, f in enumerate(cfg.think_fractions if n_think else ()):
         tokens[regions["think"][0] + k] = f"think@{f:g}*"
+    if prompt_positions:
+        start = regions["prompt"][0]
+        tokens[start:start + 2] = ["phrase number (mean)", "phrase unit"]
+        for j in range(n_options):
+            tokens[start + 2 + 2 * j:start + 4 + 2 * j] = [f"option {j + 1} label", f"option {j + 1} end"]
     print(f"suffix tokens: {n_suffix}  think positions: {n_think}  pre tokens: {n_pre}  "
           f"answers: {dict(label_counts[answer_pos])}  (turn closes after {turn_len} tokens)  "
           f"skipped: {skipped}")
@@ -143,14 +201,14 @@ def extract(tokenizer, model, device, prompts, cfg, layers=None):
         print(f"think length: median {int(np.median(think_lens))}, max {max(think_lens)}  "
               f"force-closed at budget: {forced}/{len(gens)}")
     first = label_counts[answer_pos]
-    if first and first.most_common(1)[0][0].strip() not in ("a", "b", "1", "2"):
+    if first and first.most_common(1)[0][0].strip() not in tuple("abcdefgh12345678"):
         print(f"WARNING: the token at the answer position is usually {first.most_common(1)[0][0]!r}, "
               f"not a label; the answer-token geometry is not about the choice.")
     return Extraction([np.stack(a) for a in activations], tokens, answers, np.array(kept), answer_pos,
                       think_lens, forced, regions, tuple(cfg.think_fractions) if n_think else (),
                       np.array(forced_mask), np.array(think_len), np.array(lead), np.stack(keep_idx),
                       np.stack(keep_ids), np.stack(label_logits), think_text,
-                      [g for g, k in zip(gens, kept) if k])
+                      [g for g, k in zip(gens, kept) if k], np.array(option_order) if prompt_positions else None)
 
 
 def dense_track(model, ext, layer, coef, intercept):

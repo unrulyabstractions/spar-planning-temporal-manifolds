@@ -1,10 +1,6 @@
-import sys
-from pathlib import Path
-
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "analysis"))
-from written_unit import durations, horizon_units, parse_number, summarize  # noqa: E402
+from pipeline.s3_analysis.by_datatype.written_unit import durations, horizon_units, parse_number, summarize
 
 
 @pytest.mark.parametrize("text, value", [("36", 36), ("1,200", 1200), ("1.5", 1.5), ("three", 3),
