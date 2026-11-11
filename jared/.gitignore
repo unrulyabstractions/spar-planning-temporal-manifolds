@@ -4,3 +4,18 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 .claude/
+steering/
+*.claude
+*.mcp
+# empty placeholders the Claude Code sandbox creates over home dotfiles; committed by accident in a81e44b
+.bash_profile
+.bashrc
+.gitconfig
+.gitmodules
+.idea
+.mcp.json
+.profile
+.ripgreprc
+.vscode
+.zprofile
+.zshrc

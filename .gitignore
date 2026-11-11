@@ -1,2 +1,30 @@
+# Claude Code's sandbox masks these paths with empty placeholder files
+# (or /dev/null mounts) inside the repo. They are never real content here,
+# and committing them breaks clones (empty JSON, files where dirs belong).
+.mcp.json
+.claude/agents
+.claude/commands
+.claude/hooks
+.claude/skills
+.claude/workflows
+.claude/routines
+.claude/output-styles
+.claude/launch.json
+.claude/loop.md
+.claude/scheduled_tasks.json
+.claude/settings.json
+.claude/settings.local.json
+.claude/.cc-writes/
+.claude/worktrees/
+.bashrc
+.bash_profile
+.profile
+.zshrc
+.zprofile
+.gitconfig
+.ripgreprc
+.idea
+.vscode
+
 # Local secrets (API keys). Never commit.
 .env
