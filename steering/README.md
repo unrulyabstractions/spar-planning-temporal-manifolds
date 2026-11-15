@@ -26,6 +26,10 @@ uv run python extract.py --bank ../prompt_bank/data/t0_s0 \
     --run ../prompt_bank/runs/gemma-4-31B-it__t0_s0 --layers 38       # 2. activations at the answer label
 uv run python fit.py --activations activations/gemma-4-31B-it__t0_s0 \
     --bank ../prompt_bank/data/t0_s0 --layer 38                        # 3. directions, curve, diagnostics
+uv run python bundle.py --fit fits/gemma-4-31B-it__t0_s0/default/L38_label \
+    --activations activations/gemma-4-31B-it__t0_s0                    # 4. one bundle per method, for hand-over
+uv run python tools/check_hook.py --method methods/gemma-4-31B-it/caa__gemma-4-31B-it__t0_s0__default__L38_label \
+    --bank ../prompt_bank/data/t0_s0                                   # gate: the hook and the method on this model
 ```
 
 1. **Generate.** `baseline.py` runs the model once over the bank and stores every reply's exact generated token
@@ -35,6 +39,9 @@ uv run python fit.py --activations activations/gemma-4-31B-it__t0_s0 \
    It is cheap: minutes even for 31B, against hours for generation. So other layers can be extracted later
    without regenerating.
 3. **Fit.** `fit.py` runs on the CPU, takes seconds, and needs no GPU.
+4. **Bundle.** `bundle.py` packages the fit's methods: one directory per method, with what it is, how to apply
+   it and what it was fitted on (below). `tools/check_hook.py --method` then checks on the GPU that the hook
+   and the method behave in that model's real generation setup.
 
 Each step writes its own directory with its settings, inputs and their SHA-256 hashes. Each refuses to overwrite
 an earlier output, and refuses inputs that don't match: a different bank, different weights, or an altered array.
@@ -63,13 +70,29 @@ an earlier output, and refuses inputs that don't match: a different bank, differ
 All of these are command-line options, recorded in each output's JSON. Defaults follow the report where it says
 something.
 
-1. **"None" prompts are included by default.** The report's Methods section says they are "used for extraction";
-   `--regimes near_only both` leaves them out. Evidence from Jared's Qwen3 runs:
+1. **"None" prompts are included by default.** The report's Methods section says they are "used for extraction".
+   `--no-include-none` leaves them out of everything: CAA, the controls and the curve. Evidence from Jared's Qwen3
+   runs:
    - the model's choices on "none" prompts are confident but follow option order and model-specific habits;
    - the 8B's long-minus-short difference of means steered backwards because of the regime mix
      (`origin/jared`, `jared/08_results_steering.md`).
 
-   The team should decide this.
+   What leaving them out costs, on the t0_s0 extraction split:
+   - **The curve's range.** All 24 grid horizons below 10 days are pure "none", so the curve starts at 10 days, and
+     the next ten horizons rest on 1–9 prompts each. The verification grid (0.88–124 years) stays inside the range.
+   - **CAA's short class** shrinks from 350 prompts (279 none + 71 near_only) to 71. The two classes then differ
+     perfectly in which answer is correct, so CAA gets closer to a "choose far" direction. On the Qwen3.5-2B smoke run
+     its cosine with the choice direction rose from 0.862 to 0.904.
+
+   The default follows the written spec for the first pass (Alan, 2026-11-14). Switching it needs only a refit: the
+   activations of "none" prompts are always extracted.
+
+   Two selection rules apply whatever the options:
+   - verification-grid prompts are never fitted on, even if `extract.py` was run on them;
+   - no-horizon prompts are never used.
+
+   `--exclude-horizons` leaves out given stated horizons, e.g. to hold them out for calibration. fit.json counts the
+   prompts left out for each reason.
 2. **The CAA classes are not balanced by regime.** With D the far delay, H/D >= 4 holds only "both" prompts (the
    ones where "far" is the answer). H/D <= 1/4 holds "none" and "near_only" prompts. On the t0_s0 bank that is
    57 against 279 + 71.
@@ -105,13 +128,116 @@ something.
    gives a margin >= 0, except on near-ties, which can land one bf16 step (0.125) below zero. extract.json reports
    the smallest margin. A clearly negative one would mean the replay does not reproduce the generation.
 
+## Applying an edit inside the model
+
+```python
+from steer.edits import LinearEdit, CurveEdit
+from steer.hooks import steering, replay_logits
+
+caa = LinearEdit(direction, typical_norm)          # kind "push":   x = strength, a fraction of the typical norm
+slide = CurveEdit(manifold, mode="snap")           # kind "target": x = shift along the curve, in decades
+
+with steering(local_chat_model.model, caa, x=0.1, layer=38, positions="generated"):
+    replies = local_chat_model.generate(texts, thinking=True, max_new_tokens=8192)
+
+logits = replay_logits(model, prompt_ids, answer_ids, slide, x=0.5, layer=38)   # one teacher-forced pass
+```
+
+- **Edits** (`steer/edits.py`) are torch counterparts of the numpy references. An edit returns a displacement
+  `delta(h, x, ctx)` at every position.
+  - `x` is a number, or a tensor with one value per row.
+  - `ctx` (an `EditContext`) carries per-token roles (pad / prompt / generated), positions and per-row facts. CAA and
+    the curve ignore it; it is in the signature for edits that need it.
+- **The hook** (`steer/hooks.py`) decides where the displacement is applied:
+  - `positions="all"`, `"prompt"`, `"generated"`, or a callable on the context;
+  - padding is never edited.
+
+  It reads each pass's `cache_position` and `attention_mask` from the model's forward call, so it works inside
+  batched, left-padded `generate()` with the key-value cache. Unedited positions keep their bits, and a zero edit
+  reproduces the unhooked model exactly.
+- **`record=[]`** collects each pass's context and the per-token norm of the applied displacement, for audits and for
+  matching random controls' sizes token by token.
+- **Before steering a new model**, or after a transformers upgrade, run `tools/check_hook.py`. It checks the zero edit,
+  the roles and the effect in that model's real generation setup, and exits 1 on failure.
+  - **The tests** cover a tiny Qwen3 and Qwen3.5-0.8B.
+  - **On Gemma 4 31B, layer 38, thinking on,** the gate has passed twice:
+    - locally, with CPU offload, on 2 prompts;
+    - on a rented A100 80 GB, on 8 prompts.
+
+    `progress-20261114.md` and `progress-20261115.md` have the outputs.
+  - **Not yet run on Gemma:** `check_hook.py --method` with a real bundle.
+
+## Handing a method over: bundles
+
+```
+python bundle.py --fit fits/<run>/default/L38_label --activations activations/<run>
+    -> methods/<model>/{caa,reward,choice,curve-snap,curve-displace}__<run>__default__L38_label/
+```
+
+```python
+from steer.methods import load
+m = load("methods/gemma-4-31B-it/caa__gemma-4-31B-it__t0_s0__default__L38_label")   # checks every file's SHA-256
+with steering(model, m.edit, x=0.1, layer=m.layer, positions=m.positions): ...
+null = m.refit("activations/<run>", "../prompt_bank/data/t0_s0", horizons=shuffled)  # same recipe, other labels
+```
+
+Each bundle is one method, self-describing (format `steer-method/1`, see `steer/methods.py`). `method.json` carries:
+- the kind (push or target) and the edit class;
+- the layer and its convention, the site, the default positions;
+- the request x: name, unit, sign, and the typical norm or the curve's range;
+- what the method was fitted on: model and revision, baseline run, bank and activations hashes, settings,
+  include-none, prompts left out per reason;
+- how it was trained: closed form, not selected by search;
+- the code commits of extraction, fit and bundling;
+- the SHA-256 of every other file.
+
+The other files:
+- `arrays.npz`: the parameters;
+- `fit.json` and `fit_uids.jsonl`: the fit's diagnostics, and the prompts it was fitted on with their classes;
+- `search.jsonl`: a snapshot of every fit run on those activations.
+
+`reward` and `choice` are concept controls fitted by the same recipe.
+
+`Method.refit(activations, bank, uids=, horizons=)` reruns the same fit on other prompts or relabelled horizons. It
+is how the evaluation team builds label-shuffled nulls and held-out-horizon refits. It refuses verification-grid and
+no-horizon prompts, and activations other than the ones fitted from. `tools/check_hook.py --method <bundle>` runs the
+hook gate with the bundled method itself.
+
+`methods/` is git-ignored like `activations/` and `fits/`: bundles are published with the upload scripts, not committed.
+
+## Publishing outputs
+
+Where outputs are hosted is not decided yet, so there is one script per destination. They take the same paths:
+
+```
+python tools/upload_hf.py  ../prompt_bank/runs/<run> activations/<run> fits/<run> methods/<model>     # dry run
+python tools/upload_hf.py  ... --upload --repo-id ORG/NAME [--prefix v1] [--public]
+python tools/upload_gcs.py ... --upload --dest BUCKET/PREFIX --key KEY.json                           # or $GCS_KEY
+```
+
+Both work the same way:
+- **Dry run by default:** nothing leaves the machine without `--upload`.
+- **Names mirror the repository** (`steering/methods/...`, `prompt_bank/runs/...`), so a download unpacked at a
+  checkout's root sits where the code expects it.
+- **`SHA256SUMS`** is uploaded too: check a download with `sha256sum -c SHA256SUMS`.
+- **A destination that already has files is refused,** never overwritten.
+- **Credential-looking files** (`.env*`, `*.pem`, `*.key`, names with credential / secret / token), `.git` contents
+  and symbolic links are refused.
+- **Uploads are verified afterwards:** rclone's MD5 check plus a file count for GCS; each file's remote hash for
+  Hugging Face.
+
+They follow the team's earlier uploads:
+- GCS through rclone with a service-account key file, as in `phrasing_study/scripts/run_pipeline.sh`;
+- Hugging Face through `huggingface_hub`, as in `multiturn_planning/scripts/upload_hf.py`, with new repos private.
+
+Credentials are the tools' own (`$GCS_KEY` or application-default credentials; `HF_TOKEN` or `hf auth login`).
+The scripts never read or print a key.
+
 ## Not here yet
 
-- applying the edits inside the model during generation (the numpy edits in `steer/directions.py` and
-  `steer/manifold.py` are the reference; `steer.layers.edit` is the hook they plug into);
 - switch points, the gate and calibration (alpha_k);
-- the linear-vs-manifold comparison on held-out *horizons* (fit.py's held-out check holds out prompts; every
-  horizon stays in training);
+- the linear-vs-manifold comparison on held-out *horizons*. fit.py's held-out check holds out prompts; every horizon
+  stays in training unless `--exclude-horizons` is given;
 - repeated cross-validation.
 
 ## Files
@@ -121,10 +247,14 @@ activations/<run>/extract.json         settings, model, software, bank and run i
 activations/<run>/index.jsonl          one row per extracted prompt (steer/activations.py lists the fields)
 activations/<run>/skipped.jsonl        prompts not extracted, with the reason (no answer, format failure, ...)
 activations/<run>/L38_label.npy        float32 [n, d]; also L38_prelabel.npy
-fits/<run>/<name>/L38_label/fit.json   settings, inputs, class sizes, diagnostics
+fits/<run>/search.jsonl               append-only: one line per fit.py run on these activations (written, refused,
+                                      error), with settings, code commit and headline diagnostics
+fits/<run>/<name>/L38_label/fit.json   settings, inputs, class sizes, prompts left out per reason, diagnostics
 fits/<run>/<name>/L38_label/directions.npz   caa, reward, choice, random [n, d], typical_norm, raw norms
 fits/<run>/<name>/L38_label/manifold.npz     the curve (Manifold.load)
 fits/<run>/<name>/L38_label/per_horizon.jsonl  per stated horizon: count, regimes, choices, CAA projection, t-hat
+fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, horizon, H/D, reward multiplier,
+                                              option order, label style, far label, choice, CAA/reward class, fold
 ```
 
 `activations/` and `fits/` are git-ignored: both can be regenerated from a baseline run.
@@ -133,14 +263,24 @@ fits/<run>/<name>/L38_label/per_horizon.jsonl  per stated horizon: count, regime
 
 | file | what it does |
 |---|---|
+| `bundle.py` | stage 3: package a fit's methods as bundles for the evaluation team |
 | `extract.py` | stage 1: replay the baseline's replies, read activations at the label |
-| `fit.py` | stage 2: directions, curve, controls, diagnostics |
+| `fit.py` | stage 2: directions, curve, controls, diagnostics (command-line wrapper around `steer/fitting.py`) |
 | `steer/layers.py` | layer convention; `capture` and `edit` hooks |
 | `steer/sites.py` | locate the answer-label token |
 | `steer/activations.py` | on-disk format and loader (checks hashes) |
+| `steer/fitting.py` | the fit as a function, `fit(X, records, chosen, FitSettings)`, for refits on other prompts or labels |
 | `steer/directions.py` | difference of means, thresholds, random controls, linear edit |
 | `steer/manifold.py` | per-horizon means, PCA, local-linear curve, projection, curve edit |
 | `steer/stats.py` | Spearman, grouped folds |
+| `steer/edits.py` | the edits as torch functions: `LinearEdit`, `CurveEdit` (snap / displace), `EditContext` |
+| `steer/hooks.py` | `steering(...)`: apply an edit during generation; `replay_logits(...)`: the replay readout |
+| `steer/methods.py` | the bundle format: `write_bundle`, `load`, `Method.refit` |
+| `steer/provenance.py` | the code commit outputs record (dirty if steering/ or prompt_bank/ has edits) |
+| `tools/check_hook.py` | gate before steering a model: zero edit exact, roles right, strong edit has an effect |
+| `tools/upload_hf.py`, `tools/upload_gcs.py` | publish outputs (dry run by default; checksummed, verified, never overwrite) |
+| `tools/compare_fits.py` | compare two fit output trees exactly (arrays bit for bit), e.g. before and after a refactor |
+| `tools/vast_smoke.sh` | the pipeline on a rented GPU box, one gated stage at a time (setup, weights, tests, hook, baseline, extract, label audit, fit, bundle, method gate, checksums) |
 
 ## Tests
 
@@ -149,6 +289,16 @@ fits/<run>/<name>/L38_label/per_horizon.jsonl  per stated horizon: count, regime
 - the layer convention: tiny Qwen3, the Gemma 4 module tree, and real Qwen3.5-0.8B on a GPU;
 - the label locator, on the real Gemma 4 and Qwen3.5 tokenizers;
 - CAA recovering a planted direction;
-- the curve recovering a planted helix, and both edit modes' properties.
+- the curve recovering a planted helix, and both edit modes' properties;
+- bundles: every method loads with the fit's exact parameters, refit on the same prompts reproduces them bit for
+  bit, a tampered file is refused, and a within-order horizon shuffle gives a label-shuffled null;
+- uploads: what is collected and refused, GCS through real rclone into a local directory (then `sha256sum -c`),
+  Hugging Face through a fake hub that records commits (private by default, no overwrite, corruption caught);
+- the torch edits against the numpy references (float64 to 1e-10; float32 to one polyline vertex), and zero
+  requests giving exactly zero displacements;
+- the hook in real `generate()` calls: roles, position masks, padding, exact zero edit, generated-only leaving the
+  first token alone, replay. On a tiny Qwen3, and on Qwen3.5-0.8B in bf16 on a GPU;
+- `fit.py` end to end on synthetic activations over the real bank (`tests/fixtures.py`), and `tools/compare_fits.py`
+  telling identical trees from ones that differ by one ulp.
 
 Tests that need a cached model or a GPU skip without one.

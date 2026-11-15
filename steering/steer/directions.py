@@ -63,7 +63,7 @@ def steer_linear(h: np.ndarray, direction: np.ndarray, strength: float, norm: fl
     """The linear edit: h + strength * norm * direction, for any leading shape of h (last axis is d).
 
     `strength` is a fraction of the typical activation norm `norm` (see typical_norm); its sign sets the sense.
-    This is the numpy reference; an edit inside the model applies the same formula to a torch tensor
-    (see steer.layers.edit).
+    This is the numpy reference; inside the model the same formula is steer.edits.LinearEdit, applied by
+    steer.hooks.steering (tests/test_edits.py checks they agree).
     """
     return h + strength * norm * direction

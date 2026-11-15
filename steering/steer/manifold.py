@@ -106,7 +106,8 @@ class Manifold:
 
     def steer(self, H: np.ndarray, delta: float, mode: str) -> np.ndarray:
         """Slide each row of H along the curve by `delta` decades (clamped to the observed range); see the module
-        docstring for the two modes. Returns an array of H's shape, float64."""
+        docstring for the two modes. Returns an array of H's shape, float64. The numpy reference for
+        steer.edits.CurveEdit, which applies the same edit inside the model."""
         if mode not in STEER_MODES:
             raise ValueError(f"mode must be one of {STEER_MODES}")
         H2 = np.atleast_2d(H).astype(np.float64)

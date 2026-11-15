@@ -77,17 +77,35 @@ class LocalChatModel:
         replies = model.generate(["prompt 1", "prompt 2"], thinking=True, max_new_tokens=8192)
     """
 
-    def __init__(self, model_id: str, dtype: str = "bfloat16"):
+    def __init__(self, model_id: str, dtype: str = "bfloat16", allow_offload: bool = False,
+                 offload_headroom_gib: float = 4.0):
+        """allow_offload: let weights that don't fit on the GPUs stay in CPU RAM (accelerate moves each offloaded
+        block to the GPU to run it, so the arithmetic is unchanged, only far slower). For smoke tests of a model too
+        big for the local GPUs; refused by default, because a baseline run offloaded would take days. With it, each
+        GPU keeps `offload_headroom_gib` free of weights for the key-value cache and activations: left to itself,
+        device_map="auto" fills the GPUs to ~150 MB free, and generation then runs out of memory as the cache grows
+        (Gemma 4 31B on 2 x 16 GB, 2026-11-14)."""
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         self.model_id = model_id
         self.tok = AutoTokenizer.from_pretrained(model_id)
         self.tok.padding_side = "left"
-        self.model = AutoModelForCausalLM.from_pretrained(model_id, dtype=getattr(torch, dtype), device_map="auto")
+        max_memory = None
+        if allow_offload:
+            import os
+            ram_gib = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 2**30
+            max_memory = {i: f"{torch.cuda.get_device_properties(i).total_memory / 2**30 - offload_headroom_gib:.1f}GiB"
+                          for i in range(torch.cuda.device_count())} | {"cpu": f"{0.85 * ram_gib:.0f}GiB"}
+        self.max_memory = max_memory
+        self.model = AutoModelForCausalLM.from_pretrained(model_id, dtype=getattr(torch, dtype), device_map="auto",
+                                                          max_memory=max_memory)
         self.model.eval()
         off_gpu = sorted({str(p.device) for p in self.model.parameters() if p.device.type != "cuda"})
-        if off_gpu:
+        self.offloaded = off_gpu
+        if off_gpu and allow_offload:
+            log(f"{model_id}: some weights are offloaded to {off_gpu} (allow_offload): a smoke test, slow")
+        elif off_gpu:
             raise RuntimeError(f"{model_id} did not fit on the GPUs (some weights are on {off_gpu}); "
                                f"offloaded generation would be far too slow for a baseline run")
         self.end_ids = sorted({single_token_id(self.tok, END_OF_TURN_TOKENS, "end-of-turn"), self.tok.eos_token_id})
@@ -144,6 +162,8 @@ class LocalChatModel:
             # implementation; the two are each deterministic but not bit-identical, so record which ran.
             "flash_linear_attention": version("flash-linear-attention"),
             "gpus": [torch.cuda.get_device_name(i) for i in range(torch.cuda.device_count())],
+            "offloaded_to": self.offloaded,      # non-empty only for a smoke test run with allow_offload
+            "max_memory": self.max_memory,       # GPU weight budget set for allow_offload (None: device_map default)
         }
 
 

@@ -5,8 +5,16 @@
     python baseline.py --bank data/t0_s0 --model Qwen/Qwen3.5-2B --limit 8   # local smoke test
 
 Settings follow the report (Appendix A.6, "Models"): thinking on, greedy decoding, a token cap (8,192 by
-default). The defaults reproduce the 2026-10-17 Gemma pilot's measured setup: batch 4 on one A100 80 GB
-(about 13 s per prompt; batch 4 keeps a runaway trace from running out of memory).
+default). The defaults reproduce the 2026-10-17 Gemma pilot's setup: batch 4 on one A100 80 GB, which keeps a
+runaway trace from running out of memory (batch 16 does run out at 4,096 new tokens).
+
+Speed per A100 (tools/step_times.py):
+- the pilot (other prompts, batch 4): 25.4 s per prompt, about 92 ms per decoding step. Its often-quoted "13 s" was
+  wall time with two GPUs working in parallel.
+- a 2026-11-15 run on this bank (batch 8, 4,096-token cap): 75.1 s per prompt, about 147 ms per decoding step. A
+  runaway reply holds its whole batch to the cap.
+
+See README.md, "Where to run what".
 
 What it writes, in runs/<model>__<bank>/ unless --out is given (see README.md for every field):
 
@@ -65,6 +73,8 @@ def main() -> None:
     p.add_argument("--max-new-tokens", type=int, default=8192)
     p.add_argument("--no-thinking", action="store_true", help="turn thinking mode off (default: on)")
     p.add_argument("--limit", type=int, help="only the first N prompts (smoke tests)")
+    p.add_argument("--allow-offload", action="store_true",
+                   help="smoke tests only: let weights that don't fit on the GPUs stay in CPU RAM (recorded in run.json)")
     args = p.parse_args()
 
     records = load_prompts(args.bank)
@@ -90,7 +100,7 @@ def main() -> None:
     todo = [r for r in selected if r.uid not in done]
     log(f"{args.model} on {args.bank}: {len(selected)} selected, {len(done)} already answered, {len(todo)} to run")
     if todo:
-        model = LocalChatModel(args.model)
+        model = LocalChatModel(args.model, allow_offload=args.allow_offload)
         out.mkdir(parents=True, exist_ok=True)
         meta = json.loads(run_json.read_text()) if run_json.exists() else {"started_utc": utc_now()}
         meta.update(settings=settings, bank_name=args.bank.name, model=model.describe(), code_commit=git_commit())
