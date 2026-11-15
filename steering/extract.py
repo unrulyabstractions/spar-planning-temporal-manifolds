@@ -35,9 +35,10 @@ from pathlib import Path
 import numpy as np
 
 from pbank.local_model import LocalChatModel, log, model_revision
-from pbank.provenance import git_commit, utc_now
+from pbank.provenance import utc_now
 from pbank.records import load_prompts, prompts_sha256, read_jsonl, write_jsonl
 from steer.activations import POSITIONS, array_name, file_sha256
+from steer.provenance import code_commit
 from steer.layers import capture, check_layer
 from steer.sites import locate_label
 
@@ -152,7 +153,7 @@ def main() -> None:
         np.save(out / name, np.stack(vectors).astype(np.float32))
         hashes[name] = {"sha256": file_sha256(out / name), "shape": [len(vectors), int(vectors[0].shape[0])]}
     meta = {
-        "started_utc": started, "finished_utc": utc_now(), "code_commit": git_commit(),
+        "started_utc": started, "finished_utc": utc_now(), "code_commit": code_commit(),
         "settings": {"bank_prompts_sha256": bank_sha, "split": args.split, "layers": layers,
                      "positions": list(POSITIONS), "limit": args.limit, "replay": "teacher-forced, batch 1, bf16"},
         "bank_name": args.bank.name, "run_name": args.run.name, "run_settings": settings,

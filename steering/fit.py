@@ -50,9 +50,10 @@ from pathlib import Path
 import numpy as np
 
 from pbank.local_model import log
-from pbank.provenance import git_commit, utc_now
+from pbank.provenance import utc_now
 from pbank.records import load_prompts, prompts_sha256, write_jsonl
 from steer import activations
+from steer.provenance import code_commit
 from pbank.durations import Duration
 from steer.fitting import FitSettings, fit, select
 
@@ -116,7 +117,7 @@ def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None
     result.manifold.save(out / "manifold.npz")
     write_jsonl(out / "per_horizon.jsonl", result.per_horizon)
     array = activations.array_name(args.layer, args.site)
-    meta = {"created_utc": utc_now(), "code_commit": git_commit(),
+    meta = {"created_utc": utc_now(), "code_commit": code_commit(),
             "inputs": {"activations": args.activations.name, "array": array,
                        "array_sha256": acts.meta["arrays"][array]["sha256"], "bank_name": args.bank.name,
                        "bank_prompts_sha256": acts.meta["settings"]["bank_prompts_sha256"],
