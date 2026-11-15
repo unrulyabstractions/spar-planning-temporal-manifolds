@@ -199,6 +199,34 @@ hook gate with the bundled method itself.
 
 `methods/` is git-ignored like `activations/` and `fits/`: bundles are published with the upload scripts, not committed.
 
+## Publishing outputs
+
+Where outputs are hosted is not decided yet, so there is one script per destination. They take the same paths:
+
+```
+python tools/upload_hf.py  ../prompt_bank/runs/<run> activations/<run> fits/<run> methods/<model>     # dry run
+python tools/upload_hf.py  ... --upload --repo-id ORG/NAME [--prefix v1] [--public]
+python tools/upload_gcs.py ... --upload --dest BUCKET/PREFIX --key KEY.json                           # or $GCS_KEY
+```
+
+Both work the same way:
+- **Dry run by default:** nothing leaves the machine without `--upload`.
+- **Names mirror the repository** (`steering/methods/...`, `prompt_bank/runs/...`), so a download unpacked at a
+  checkout's root sits where the code expects it.
+- **`SHA256SUMS`** is uploaded too: check a download with `sha256sum -c SHA256SUMS`.
+- **A destination that already has files is refused,** never overwritten.
+- **Credential-looking files** (`.env*`, `*.pem`, `*.key`, names with credential / secret / token), `.git` contents
+  and symbolic links are refused.
+- **Uploads are verified afterwards:** rclone's MD5 check plus a file count for GCS; each file's remote hash for
+  Hugging Face.
+
+They follow the team's earlier uploads:
+- GCS through rclone with a service-account key file, as in `phrasing_study/scripts/run_pipeline.sh`;
+- Hugging Face through `huggingface_hub`, as in `multiturn_planning/scripts/upload_hf.py`, with new repos private.
+
+Credentials are the tools' own (`$GCS_KEY` or application-default credentials; `HF_TOKEN` or `hf auth login`).
+The scripts never read or print a key.
+
 ## Not here yet
 
 - switch points, the gate and calibration (alpha_k);
@@ -244,6 +272,7 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 | `steer/methods.py` | the bundle format: `write_bundle`, `load`, `Method.refit` |
 | `steer/provenance.py` | the code commit outputs record (dirty if steering/ or prompt_bank/ has edits) |
 | `tools/check_hook.py` | gate before steering a model: zero edit exact, roles right, strong edit has an effect |
+| `tools/upload_hf.py`, `tools/upload_gcs.py` | publish outputs (dry run by default; checksummed, verified, never overwrite) |
 | `tools/compare_fits.py` | compare two fit output trees exactly (arrays bit for bit), e.g. before and after a refactor |
 
 ## Tests
@@ -256,6 +285,8 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 - the curve recovering a planted helix, and both edit modes' properties;
 - bundles: every method loads with the fit's exact parameters, refit on the same prompts reproduces them bit for
   bit, a tampered file is refused, and a within-order horizon shuffle gives a label-shuffled null;
+- uploads: what is collected and refused, GCS through real rclone into a local directory (then `sha256sum -c`),
+  Hugging Face through a fake hub that records commits (private by default, no overwrite, corruption caught);
 - the torch edits against the numpy references (float64 to 1e-10; float32 to one polyline vertex), and zero
   requests giving exactly zero displacements;
 - the hook in real `generate()` calls: roles, position masks, padding, exact zero edit, generated-only leaving the
