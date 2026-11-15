@@ -121,13 +121,44 @@ something.
    gives a margin >= 0, except on near-ties, which can land one bf16 step (0.125) below zero. extract.json reports
    the smallest margin. A clearly negative one would mean the replay does not reproduce the generation.
 
+## Applying an edit inside the model
+
+```python
+from steer.edits import LinearEdit, CurveEdit
+from steer.hooks import steering, replay_logits
+
+caa = LinearEdit(direction, typical_norm)          # kind "push":   x = strength, a fraction of the typical norm
+slide = CurveEdit(manifold, mode="snap")           # kind "target": x = shift along the curve, in decades
+
+with steering(local_chat_model.model, caa, x=0.1, layer=38, positions="generated"):
+    replies = local_chat_model.generate(texts, thinking=True, max_new_tokens=8192)
+
+logits = replay_logits(model, prompt_ids, answer_ids, slide, x=0.5, layer=38)   # one teacher-forced pass
+```
+
+- **Edits** (`steer/edits.py`) are torch counterparts of the numpy references. An edit returns a displacement
+  `delta(h, x, ctx)` at every position.
+  - `x` is a number, or a tensor with one value per row.
+  - `ctx` (an `EditContext`) carries per-token roles (pad / prompt / generated), positions and per-row facts. CAA and
+    the curve ignore it; it is in the signature for edits that need it.
+- **The hook** (`steer/hooks.py`) decides where the displacement is applied:
+  - `positions="all"`, `"prompt"`, `"generated"`, or a callable on the context;
+  - padding is never edited.
+
+  It reads each pass's `cache_position` and `attention_mask` from the model's forward call, so it works inside
+  batched, left-padded `generate()` with the key-value cache. Unedited positions keep their bits, and a zero edit
+  reproduces the unhooked model exactly.
+- **`record=[]`** collects each pass's context and the per-token norm of the applied displacement, for audits and for
+  matching random controls' sizes token by token.
+- **Before steering a new model**, or after a transformers upgrade, run `tools/check_hook.py`. It checks the zero edit,
+  the roles and the effect in that model's real generation setup, and exits 1 on failure. The tests cover only a tiny
+  Qwen3 and Qwen3.5-0.8B; Gemma 4 31B has not been run yet.
+
 ## Not here yet
 
-- applying the edits inside the model during generation (the numpy edits in `steer/directions.py` and
-  `steer/manifold.py` are the reference; `steer.layers.edit` is the hook they plug into);
 - switch points, the gate and calibration (alpha_k);
-- the linear-vs-manifold comparison on held-out *horizons* (fit.py's held-out check holds out prompts; every
-  horizon stays in training);
+- the linear-vs-manifold comparison on held-out *horizons*. fit.py's held-out check holds out prompts; every horizon
+  stays in training unless `--exclude-horizons` is given;
 - repeated cross-validation.
 
 ## Files
@@ -162,6 +193,10 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 | `steer/directions.py` | difference of means, thresholds, random controls, linear edit |
 | `steer/manifold.py` | per-horizon means, PCA, local-linear curve, projection, curve edit |
 | `steer/stats.py` | Spearman, grouped folds |
+| `steer/edits.py` | the edits as torch functions: `LinearEdit`, `CurveEdit` (snap / displace), `EditContext` |
+| `steer/hooks.py` | `steering(...)`: apply an edit during generation; `replay_logits(...)`: the replay readout |
+| `steer/provenance.py` | the code commit outputs record (dirty if steering/ or prompt_bank/ has edits) |
+| `tools/check_hook.py` | gate before steering a model: zero edit exact, roles right, strong edit has an effect |
 | `tools/compare_fits.py` | compare two fit output trees exactly (arrays bit for bit), e.g. before and after a refactor |
 
 ## Tests
@@ -172,6 +207,10 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 - the label locator, on the real Gemma 4 and Qwen3.5 tokenizers;
 - CAA recovering a planted direction;
 - the curve recovering a planted helix, and both edit modes' properties;
+- the torch edits against the numpy references (float64 to 1e-10; float32 to one polyline vertex), and zero
+  requests giving exactly zero displacements;
+- the hook in real `generate()` calls: roles, position masks, padding, exact zero edit, generated-only leaving the
+  first token alone, replay. On a tiny Qwen3, and on Qwen3.5-0.8B in bf16 on a GPU;
 - `fit.py` end to end on synthetic activations over the real bank (`tests/fixtures.py`), and `tools/compare_fits.py`
   telling identical trees from ones that differ by one ulp.
 

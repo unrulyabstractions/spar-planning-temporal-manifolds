@@ -15,6 +15,9 @@ Modules:
     steer.directions   mean-difference directions (CAA, reward contrast), random controls, the linear edit
     steer.manifold     the manifold curve: PCA of per-horizon means, a smooth curve in log-time, the curve edit
     steer.stats        small statistics helpers (rank correlation, grouped folds)
+    steer.edits        the edits as torch functions (linear, curve slide), with the EditContext they receive
+    steer.hooks        applying an edit inside the model: during generation, and in a teacher-forced replay
+    steer.provenance   the code commit every output records
 
 The prompts, their regimes and correct answers, and the model runner come from ../prompt_bank (package pbank);
 nothing here builds or changes prompts.

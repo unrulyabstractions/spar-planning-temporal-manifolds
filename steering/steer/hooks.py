@@ -1,0 +1,152 @@
+"""Applying an edit (steer/edits.py) inside the model: during generation, and in a teacher-forced replay.
+
+    with steering(model, edit, x=0.1, layer=38, positions="generated"):
+        replies = local_chat_model.generate(texts, thinking=True, max_new_tokens=8192)
+
+    logits = replay_logits(model, prompt_ids, answer_ids, edit, x=0.1, layer=38)   # next-token logits after answer_ids
+
+Which positions are edited (`positions`):
+  "all"        every real token: the prompt and everything generated
+  "prompt"     the prompt only: the prefill pass, so the edited prompt states are what generation attends to
+  "generated"  generated tokens only: each decode step's token (the prompt's states, and so the first generated
+               token, are unedited)
+  a callable   ctx -> [batch, tokens] bool, given the EditContext with roles already filled in
+Padding is never edited.
+
+How roles are known. A forward pre-hook on the model reads the `cache_position` (absolute index of each token of
+this pass) and `attention_mask` (0 at left padding) that generate() passes on every step. The pass whose first
+position is 0 is the prefill: its tokens are the prompt, and its length is the prompt length; later passes (with
+the key-value cache) are generated tokens. Without a cache_position, the positions are inferred from the attention
+mask's length. replay_logits runs one pass over prompt + answer and states the prompt length itself.
+
+The edit is computed in its own dtype (float32 unless set otherwise) and cast back to the model's dtype once:
+h_new = where(mask, (h + delta).to(dtype), h). Unedited positions keep their original bits, and an edit whose
+delta is exactly 0 (CAA at strength 0, `displace` at shift 0) reproduces the unhooked model exactly.
+"""
+
+from __future__ import annotations
+
+from contextlib import contextmanager
+from typing import Callable, Iterator, Optional, Union
+
+import torch
+
+from steer.edits import ROLE_GENERATED, ROLE_PAD, ROLE_PROMPT, EditContext
+from steer.layers import check_layer, decoder_layers
+
+POSITIONS = ("all", "prompt", "generated")
+
+
+def _mask(positions: Union[str, Callable], ctx: EditContext) -> torch.Tensor:
+    if callable(positions):
+        mask = positions(ctx)
+    elif positions == "all":
+        mask = ctx.role != ROLE_PAD
+    elif positions == "prompt":
+        mask = ctx.role == ROLE_PROMPT
+    elif positions == "generated":
+        mask = ctx.role == ROLE_GENERATED
+    else:
+        raise ValueError(f"positions must be one of {POSITIONS} or a callable")
+    return mask & (ctx.role != ROLE_PAD)
+
+
+class _PassState:
+    """What the pre-hook learned about the current forward pass."""
+
+    def __init__(self, prompt_len: Optional[int]):
+        self.fixed_prompt_len = prompt_len
+        self.prompt_len: Optional[int] = prompt_len
+        self.cache_position: Optional[torch.Tensor] = None
+        self.attention_mask: Optional[torch.Tensor] = None
+
+    def pre_hook(self, module, args, kwargs):
+        self.cache_position = kwargs.get("cache_position")
+        self.attention_mask = kwargs.get("attention_mask")
+        if self.fixed_prompt_len is None:
+            first = self._positions(self._seq_len(args, kwargs), None)
+            if first is not None and int(first[0]) == 0:          # a prefill: this pass is the whole prompt
+                self.prompt_len = self._seq_len(args, kwargs)
+
+    @staticmethod
+    def _seq_len(args, kwargs) -> int:
+        ids = kwargs.get("input_ids", args[0] if args else None)
+        if ids is None:
+            ids = kwargs["inputs_embeds"]
+        return ids.shape[1]
+
+    def _positions(self, seq_len: int, device) -> Optional[torch.Tensor]:
+        """Absolute index [seq_len] of each token of this pass."""
+        if self.cache_position is not None:
+            return self.cache_position.to(device) if device is not None else self.cache_position
+        if self.attention_mask is not None and self.attention_mask.ndim == 2:
+            total = self.attention_mask.shape[1]
+            return torch.arange(total - seq_len, total, device=device)
+        return torch.arange(seq_len, device=device)
+
+    def context(self, h: torch.Tensor, rows) -> EditContext:
+        batch, seq_len = h.shape[:2]
+        pos = self._positions(seq_len, h.device)
+        if self.prompt_len is None:
+            raise RuntimeError("steering hook: no prefill pass seen, so the prompt length is unknown")
+        role = torch.where(pos < self.prompt_len, ROLE_PROMPT, ROLE_GENERATED).expand(batch, seq_len).clone()
+        if self.attention_mask is not None and self.attention_mask.ndim == 2:
+            am = self.attention_mask.to(h.device)
+            real = am.gather(1, pos.clamp(max=am.shape[1] - 1).expand(batch, seq_len)) != 0
+            role[~real] = ROLE_PAD
+        return EditContext(role=role, position=pos.expand(batch, seq_len), mask=torch.zeros_like(role, dtype=torch.bool),
+                           rows=rows)
+
+
+@contextmanager
+def steering(model, edit, x, layer: int, positions: Union[str, Callable] = "all", rows: Optional[list[dict]] = None,
+             prompt_len: Optional[int] = None, record: Optional[list] = None) -> Iterator[None]:
+    """Apply `edit` with request `x` at `layer` (steer.layers convention) on every forward pass inside the block.
+
+    rows: per-row facts passed to the edit in ctx.rows (in batch order). prompt_len: set it for a single
+    teacher-forced pass (replay); during generate() it is read from the prefill pass. record: if a list is given,
+    each pass appends its EditContext (with the mask filled in) and the L2 norm of the applied displacement per token
+    [batch, tokens] (0 where unedited), for audits and for matching random controls' sizes token by token.
+    """
+    check_layer(model, layer)
+    state = _PassState(prompt_len)
+
+    def hook(module, args, output):
+        h = output[0] if isinstance(output, tuple) else output
+        ctx = state.context(h, rows)
+        ctx.mask = _mask(positions, ctx)
+        if ctx.mask.any():
+            delta = edit.delta(h, x, ctx)
+            edited = (h.to(delta.dtype) + delta).to(h.dtype)
+            new = torch.where(ctx.mask[..., None], edited, h)
+        else:
+            delta, new = None, h
+        if record is not None:
+            size = torch.zeros(h.shape[:2], device=h.device) if delta is None else \
+                (delta.norm(dim=-1) * ctx.mask).float()
+            record.append({"ctx": ctx, "delta_norm": size.cpu()})
+        if isinstance(output, tuple):
+            return (new,) + tuple(output[1:])
+        return new
+
+    handles = [model.register_forward_pre_hook(state.pre_hook, with_kwargs=True),
+               decoder_layers(model)[layer - 1].register_forward_hook(hook)]
+    try:
+        yield
+    finally:
+        for handle in handles:
+            handle.remove()
+
+
+@torch.no_grad()
+def replay_logits(model, prompt_ids: list[int], answer_ids: list[int], edit, x, layer: int,
+                  positions: Union[str, Callable] = "all", rows: Optional[list[dict]] = None) -> torch.Tensor:
+    """Next-token logits (float32 [vocab]) after prompt_ids + answer_ids, in one teacher-forced pass (batch 1) with
+    the edit applied. With answer_ids = the model's own reply up to the token before its answer label, these are
+    the label probabilities at the answer slot, steered (the "replay readout"). positions "prompt" / "generated"
+    split the sequence at len(prompt_ids)."""
+    device = next(model.parameters()).device
+    ids = torch.tensor([list(prompt_ids) + list(answer_ids)], device=device)
+    with steering(model, edit, x, layer, positions, rows, prompt_len=len(prompt_ids)):
+        out = model(input_ids=ids, attention_mask=torch.ones_like(ids), use_cache=False)
+    return out.logits[0, -1].float()
