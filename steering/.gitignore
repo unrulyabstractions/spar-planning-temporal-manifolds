@@ -6,3 +6,4 @@ __pycache__/
 # Outputs: regenerable from a baseline run with extract.py and fit.py. Commit a particular one deliberately if needed.
 activations/
 fits/
+methods/

@@ -54,7 +54,13 @@ def make_activations(directory: Path, layers=(15,), seed: int = 0, splits=("extr
             arrays[name] = {"sha256": file_sha256(directory / name), "shape": [len(t), D]}
     write_jsonl(directory / "index.jsonl", index)
     write_jsonl(directory / "skipped.jsonl", [])
-    meta = {"settings": {"bank_prompts_sha256": prompts_sha256(records), "layers": list(layers)},
-            "run_settings": {"model": "synthetic", "thinking": False}, "arrays": arrays}
+    # The same top-level fields as a real extract.json (extract.py), with synthetic values.
+    meta = {"started_utc": "2026-01-01T00:00:00Z", "finished_utc": "2026-01-01T00:00:00Z", "code_commit": "synthetic",
+            "settings": {"bank_prompts_sha256": prompts_sha256(records), "split": "+".join(splits),
+                         "layers": list(layers), "positions": ["label", "prelabel"], "limit": None},
+            "bank_name": BANK.name, "run_name": "synthetic-run",
+            "run_settings": {"model": "synthetic/tiny", "thinking": False},
+            "model": {"model_id": "synthetic/tiny", "model_revision": "none"},
+            "counts": {"selected": len(index), "kept": len(index), "skipped": 0}, "arrays": arrays}
     (directory / "extract.json").write_text(json.dumps(meta, indent=2) + "\n")
     return directory

@@ -26,6 +26,10 @@ uv run python extract.py --bank ../prompt_bank/data/t0_s0 \
     --run ../prompt_bank/runs/gemma-4-31B-it__t0_s0 --layers 38       # 2. activations at the answer label
 uv run python fit.py --activations activations/gemma-4-31B-it__t0_s0 \
     --bank ../prompt_bank/data/t0_s0 --layer 38                        # 3. directions, curve, diagnostics
+uv run python bundle.py --fit fits/gemma-4-31B-it__t0_s0/default/L38_label \
+    --activations activations/gemma-4-31B-it__t0_s0                    # 4. one bundle per method, for hand-over
+uv run python tools/check_hook.py --method methods/gemma-4-31B-it/caa__gemma-4-31B-it__t0_s0__default__L38_label \
+    --bank ../prompt_bank/data/t0_s0                                   # gate: the hook and the method on this model
 ```
 
 1. **Generate.** `baseline.py` runs the model once over the bank and stores every reply's exact generated token
@@ -35,6 +39,9 @@ uv run python fit.py --activations activations/gemma-4-31B-it__t0_s0 \
    It is cheap: minutes even for 31B, against hours for generation. So other layers can be extracted later
    without regenerating.
 3. **Fit.** `fit.py` runs on the CPU, takes seconds, and needs no GPU.
+4. **Bundle.** `bundle.py` packages the fit's methods: one directory per method, with what it is, how to apply
+   it and what it was fitted on (below). `tools/check_hook.py --method` then checks on the GPU that the hook
+   and the method behave in that model's real generation setup.
 
 Each step writes its own directory with its settings, inputs and their SHA-256 hashes. Each refuses to overwrite
 an earlier output, and refuses inputs that don't match: a different bank, different weights, or an altered array.
@@ -154,6 +161,44 @@ logits = replay_logits(model, prompt_ids, answer_ids, slide, x=0.5, layer=38)   
   the roles and the effect in that model's real generation setup, and exits 1 on failure. The tests cover only a tiny
   Qwen3 and Qwen3.5-0.8B; Gemma 4 31B has not been run yet.
 
+## Handing a method over: bundles
+
+```
+python bundle.py --fit fits/<run>/default/L38_label --activations activations/<run>
+    -> methods/<model>/{caa,reward,choice,curve-snap,curve-displace}__<run>__default__L38_label/
+```
+
+```python
+from steer.methods import load
+m = load("methods/gemma-4-31B-it/caa__gemma-4-31B-it__t0_s0__default__L38_label")   # checks every file's SHA-256
+with steering(model, m.edit, x=0.1, layer=m.layer, positions=m.positions): ...
+null = m.refit("activations/<run>", "../prompt_bank/data/t0_s0", horizons=shuffled)  # same recipe, other labels
+```
+
+Each bundle is one method, self-describing (format `steer-method/1`, see `steer/methods.py`). `method.json` carries:
+- the kind (push or target) and the edit class;
+- the layer and its convention, the site, the default positions;
+- the request x: name, unit, sign, and the typical norm or the curve's range;
+- what the method was fitted on: model and revision, baseline run, bank and activations hashes, settings,
+  include-none, prompts left out per reason;
+- how it was trained: closed form, not selected by search;
+- the code commits of extraction, fit and bundling;
+- the SHA-256 of every other file.
+
+The other files:
+- `arrays.npz`: the parameters;
+- `fit.json` and `fit_uids.jsonl`: the fit's diagnostics, and the prompts it was fitted on with their classes;
+- `search.jsonl`: a snapshot of every fit run on those activations.
+
+`reward` and `choice` are concept controls fitted by the same recipe.
+
+`Method.refit(activations, bank, uids=, horizons=)` reruns the same fit on other prompts or relabelled horizons. It
+is how the evaluation team builds label-shuffled nulls and held-out-horizon refits. It refuses verification-grid and
+no-horizon prompts, and activations other than the ones fitted from. `tools/check_hook.py --method <bundle>` runs the
+hook gate with the bundled method itself.
+
+`methods/` is git-ignored like `activations/` and `fits/`: bundles are published with the upload scripts, not committed.
+
 ## Not here yet
 
 - switch points, the gate and calibration (alpha_k);
@@ -184,6 +229,7 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 
 | file | what it does |
 |---|---|
+| `bundle.py` | stage 3: package a fit's methods as bundles for the evaluation team |
 | `extract.py` | stage 1: replay the baseline's replies, read activations at the label |
 | `fit.py` | stage 2: directions, curve, controls, diagnostics (command-line wrapper around `steer/fitting.py`) |
 | `steer/layers.py` | layer convention; `capture` and `edit` hooks |
@@ -195,6 +241,7 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 | `steer/stats.py` | Spearman, grouped folds |
 | `steer/edits.py` | the edits as torch functions: `LinearEdit`, `CurveEdit` (snap / displace), `EditContext` |
 | `steer/hooks.py` | `steering(...)`: apply an edit during generation; `replay_logits(...)`: the replay readout |
+| `steer/methods.py` | the bundle format: `write_bundle`, `load`, `Method.refit` |
 | `steer/provenance.py` | the code commit outputs record (dirty if steering/ or prompt_bank/ has edits) |
 | `tools/check_hook.py` | gate before steering a model: zero edit exact, roles right, strong edit has an effect |
 | `tools/compare_fits.py` | compare two fit output trees exactly (arrays bit for bit), e.g. before and after a refactor |
@@ -207,6 +254,8 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 - the label locator, on the real Gemma 4 and Qwen3.5 tokenizers;
 - CAA recovering a planted direction;
 - the curve recovering a planted helix, and both edit modes' properties;
+- bundles: every method loads with the fit's exact parameters, refit on the same prompts reproduces them bit for
+  bit, a tampered file is refused, and a within-order horizon shuffle gives a label-shuffled null;
 - the torch edits against the numpy references (float64 to 1e-10; float32 to one polyline vertex), and zero
   requests giving exactly zero displacements;
 - the hook in real `generate()` calls: roles, position masks, padding, exact zero edit, generated-only leaving the
