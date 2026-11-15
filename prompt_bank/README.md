@@ -34,18 +34,37 @@ deterministic and a no-op when the prompts already exist, and checks and baselin
 holds the model in bf16: Gemma 4 31B-it is 62.6 GB of weights and Qwen3.5-27B is 55.6 GB, so both need an
 A100/H100 80 GB (on Vast.ai).
 
-**Generation time is not settled.** Two measurements of Gemma 4 31B on one A100 disagree by a factor of about 6:
-- the 2026-10-17 pilot: about 13 s per prompt at batch 4, which would make the 700 prompts about 2.5 GPU-hours;
-- a 2026-11-15 run (A100 SXM4 80 GB, batch 8, `--max-new-tokens 4096`): 75.6 and 74.7 s per prompt over two batches
-  (`../steering/progress-20261115.md`).
+**Generation time.** A batch decodes until its longest reply stops, so the time per prompt is (ms per decoding step) ×
+(the batch's longest reply) / (batch size). Two measurements of Gemma 4 31B, per A100 80 GB, from
+`tools/step_times.py`:
 
-In the 2026-11-15 run:
-- **Step time.** That is about 148 ms per decoding step.
-- **Runaway replies.** One reply in each batch ran to the 4,096-token cap without answering, so each batch cost the
-  full cap. That was 3 of 16 replies; the mean reply was 1,661 tokens.
-- **Projection.** At that rate the 700 prompts take about 15 GPU-hours, and more at the default 8,192 cap.
-- **Not diagnosed.** The cause of the difference is unknown. Plan budgets on the measured figure until it is.
+| | 2026-10-17 pilot (`alan/` pilot prompts) | 2026-11-15 run (this bank, first 16 prompts) |
+|---|---|---|
+| GPUs, batch, token cap | 2 × A100 (one process each), batch 4, cap 8,192 | 1 × A100 SXM4, batch 8, cap 4,096 |
+| replies: median / mean / at the cap | 716 / 747 tokens / 0 of 384 | 1,306 / 1,661 tokens / 3 of 16 |
+| decoding steps per prompt | 270 | 512 (every batch ran to the cap) |
+| ms per decoding step (median) | 91.9 | 146.7 |
+| **seconds per prompt per GPU** | **25.4** | **75.1** |
+| 700 prompts | 4.9 GPU-hours | 14.6 GPU-hours |
+
+- **Correction.** This README used to say "about 13 s per prompt at batch 4 on one A100", so about 2.5 GPU-hours for 700
+  prompts. 13 s (12.7) was the pilot's wall time per prompt with **two** GPUs working in parallel; per GPU it was
+  25.4 s.
+- **Why the per-GPU figures differ by about 3** (1.9 × 1.6):
+  - this bank's prompts draw longer replies, and a runaway reply in a batch holds the whole batch to the cap, so there
+    are 1.9 × the decoding steps per prompt;
+  - each step is 1.6 × slower at batch 8 and longer contexts. In the pilot, steps slow from about 91 ms (longest reply
+    ≤ 1,500) to about 109 ms (> 3,000) at batch 4.
+
+  The 2026-11-15 run is only 16 prompts, and it differs from the pilot in other ways too: transformers 5.22.2 vs
+  5.17, and pbank's `LocalChatModel` vs the pilot's own capture code. So the 1.6 is not attributed further.
+- **Planning figure.** Budget on the measured 2026-11-15 rate for this bank: about 15 GPU-hours at cap 4,096, and more
+  at the default 8,192. Even the pilot's 92 ms per step is about 3 × the memory-bandwidth floor (62 GB of weights at
+  about 2 TB/s is about 31 ms). Where that overhead goes has not been profiled.
 - **Batch size.** Batch 16 runs out of memory on 80 GB at 4,096 new tokens; batch 8 fits.
+
+Details: `../steering/progress-20261115.md`.
+
 For a smoke test of a model too big for the local GPUs, `--allow-offload` keeps the weights that don't fit in
 CPU RAM, leaving 4 GiB per GPU for the key-value cache. It is recorded in run.json. On 2 x 16 GB it ran Gemma 4
 31B at about 3.6 s per decoding step: fine for 2 prompts, useless for a run.
@@ -215,6 +234,7 @@ model before relying on its counts.** The review page shows the raw answer next 
 | `generate.py` | step 1: build the bank, run a checker |
 | `baseline.py` | step 2: run a model on the bank |
 | `review.py` | step 3: the review web page (templates in `templates/`) |
+| `tools/step_times.py` | seconds per prompt and ms per decoding step, from a baseline run's records or the 2026-10-17 pilot's |
 | `pbank/durations.py` | durations as written, exact comparison, the 48-point grid, unit rewrites |
 | `pbank/records.py` | the prompt record, the decision rule, JSONL files, the prompts hash |
 | `pbank/t0.py` | the T0 template and the two prompt sets |

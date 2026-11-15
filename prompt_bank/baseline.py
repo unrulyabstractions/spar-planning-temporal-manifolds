@@ -8,9 +8,11 @@ Settings follow the report (Appendix A.6, "Models"): thinking on, greedy decodin
 default). The defaults reproduce the 2026-10-17 Gemma pilot's setup: batch 4 on one A100 80 GB, which keeps a
 runaway trace from running out of memory (batch 16 does run out at 4,096 new tokens).
 
-Speed is not settled:
-- the pilot measured about 13 s per prompt;
-- a 2026-11-15 run at batch 8 with a 4,096-token cap measured about 75 s per prompt.
+Speed per A100 (tools/step_times.py):
+- the pilot (other prompts, batch 4): 25.4 s per prompt, about 92 ms per decoding step. Its often-quoted "13 s" was
+  wall time with two GPUs working in parallel.
+- a 2026-11-15 run on this bank (batch 8, 4,096-token cap): 75.1 s per prompt, about 147 ms per decoding step. A
+  runaway reply holds its whole batch to the cap.
 
 See README.md, "Where to run what".
 
