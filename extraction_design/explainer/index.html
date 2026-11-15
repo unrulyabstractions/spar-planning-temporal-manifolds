@@ -300,7 +300,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
       <ul>
         <li><b>CAA's classes differ in which answer is correct</b>, not only in horizon (§09).</li>
         <li><b><code>curve-snap</code> at Δ = 0 is not the identity</b>, and it changes generations (§05).</li>
-        <li><b>Gemma generation is slow</b>: 148 ms per decoding step measured on an A100, about 15 h for the full baseline. Not yet diagnosed (§11).</li>
+        <li><b>Gemma generation is slow</b>: about 15 GPU-hours for the full baseline, not 2.5. Long replies and one runaway reply per batch explain most of it (§11).</li>
         <li><b>Needed from you</b>: held-out horizons, null families and K, whether <code>EditContext</code> is enough, and the preferred host (§13).</li>
       </ul>
     </div>
@@ -650,13 +650,25 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
     <div class="check"><i>8</i><b>Destroy, don't stop</b><p>A stopped instance keeps billing its disk: $0.28/h for 200 GB.</p></div>
   </div>
   <div class="vs">
-    <div class="vs-card"><span class="who">Measured, A100, batch 8</span><span class="big">148 ms</span><span>per decoding step: 605 s per batch of 8 at the 4,096 cap (75.6 and 74.7 s per prompt)</span></div>
-    <div class="vs-card"><span class="who">Runaway replies</span><span class="big">3 / 16</span><span>hit the cap with no answer, one in every batch. Mean reply 1,661 tokens.</span></div>
-    <div class="vs-card"><span class="who">700-prompt baseline</span><span class="big">≈ 15 h</span><span>88 batches × 10 min at cap 4,096. The spec's 8,192 cap can double batches with a runaway reply.</span></div>
+    <div class="vs-card"><span class="who">Per A100, this bank</span><span class="big">75.1 s</span><span>per prompt at batch 8, cap 4,096: 14.6 GPU-hours for 700 prompts</span></div>
+    <div class="vs-card"><span class="who">Per A100, 2026-10-17 pilot</span><span class="big">25.4 s</span><span>per prompt at batch 4 on other prompts. The quoted "13 s" was wall time with two GPUs in parallel.</span></div>
+    <div class="vs-card"><span class="who">The gap, about 3×</span><span class="big">1.9 × 1.6</span><span>1.9 × the decoding steps per prompt (longer replies; a runaway holds its batch to the cap) × 1.6 × slower steps (146.7 vs 91.9 ms)</span></div>
   </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Per A100 80 GB</th><th>2026-10-17 pilot (<code>alan/</code> prompts)</th><th>2026-11-15 run (<code>t0_s0</code>, 16 prompts)</th></tr></thead>
+    <tbody>
+      <tr><td>GPUs, batch, token cap</td><td>2 × A100 (one process each), batch 4, cap 8,192</td><td>1 × A100 SXM4, batch 8, cap 4,096</td></tr>
+      <tr><td>replies: median / mean / at the cap</td><td class="num">716 / 747 / 0 of 384</td><td class="num">1,306 / 1,661 / 3 of 16</td></tr>
+      <tr><td>decoding steps per prompt</td><td class="num">270</td><td class="num">512</td></tr>
+      <tr><td>ms per decoding step (median)</td><td class="num">91.9</td><td class="num">146.7</td></tr>
+      <tr class="em"><td>seconds per prompt per GPU</td><td class="num">25.4</td><td class="num">75.1</td></tr>
+      <tr><td>700 prompts</td><td class="num">4.9 GPU-hours</td><td class="num">14.6 GPU-hours</td></tr>
+    </tbody>
+  </table></div>
+  <p class="col muted">A batch decodes until its longest reply stops, so the time per prompt is (ms per step) × (the batch's longest reply) / (batch size). Computed by <code>prompt_bank/tools/step_times.py</code> from each run's records. The runs also differ in transformers version (5.17 vs 5.22.2) and generation code, so the 1.6 is not attributed further.</p>
   <div class="caveat">
-    <div class="eyebrow">Open: generation is slower than planned</div>
-    <p>A 2026-10-17 pilot measured about 13 s per prompt at batch 4, about 2.5 GPU-hours for 700 prompts. That has not been reconciled with this measurement. <code>prompt_bank/README.md</code> now gives both figures and says to plan on the measured one. 148 ms per step is well above the memory-bandwidth floor of about 31 ms (62 GB of weights per step at about 2 TB/s), and the cause is not diagnosed. It stands between us and a full Gemma run, and it sets the cost of every generation readout in <code>[eval §9]</code>.</p>
+    <div class="eyebrow">Open: how to budget and speed up generation</div>
+    <p><b>Plan on about 15 GPU-hours</b> for this bank at cap 4,096, and more at the spec's 8,192. The largest lever is the runaway reply: one long reply makes the other seven slots in its batch wait. A lower cap, smaller batches, or generation that refills finished slots would each help, with trade-offs; none is decided. <b>Not yet explained:</b> even the pilot's 92 ms per step is about 3 × the memory-bandwidth floor of about 31 ms (62 GB of weights per step at about 2 TB/s). That needs a profile of <code>generate()</code> on Gemma 4's layer layout. The evaluation design's cost estimate <code>[eval §9]</code> quotes the old 13 s figure.</p>
   </div>
 </section>
 

@@ -454,19 +454,40 @@ Measured on the A100 (batch 8, thinking on, cap 4,096 new tokens):
 [16/64] x0009..x0016: 6/8 parsed, max 4096 tokens, 74.7 s/prompt
 ```
 
-- **Speed.** Each batch took about 605 s for 4,096 decoding steps, about 148 ms per step.
-- **Reply lengths.** The 16 replies averaged 1,661 generated tokens. 3 of the 16 hit the cap without answering, and
-  every batch had one, so every batch cost the full cap.
-- **Projection.** At that rate the 700-prompt baseline is about 88 batches × 10 min ≈ **15 hours** at cap 4,096. At the
-  spec's 8,192 cap, batches with a runaway reply cost up to twice as much.
-- **Earlier estimate.** A 2026-10-17 pilot measured about 13 s per prompt at batch 4, about 2.5 GPU-hours for 700
-  prompts. That has not been reconciled with this measurement. `prompt_bank/README.md` now gives both figures and
-  says to plan on the measured one.
-- **Not diagnosed.** 148 ms per step is well above the memory-bandwidth floor (about 31 ms: 62 GB of weights read per
-  step at about 2 TB/s).
+A batch decodes until its longest reply stops. So the time per prompt is (ms per decoding step) × (the batch's longest
+reply) / (batch size). `prompt_bank/tools/step_times.py` computes both quantities from a run's records. The
+2026-10-17 pilot's figures come from its committed logs:
+
+| Per A100 80 GB | 2026-10-17 pilot (`alan/` pilot prompts) | 2026-11-15 run (`t0_s0`, first 16 prompts) |
+|---|---|---|
+| GPUs, batch, token cap | 2 × A100 (one process each), batch 4, cap 8,192 | 1 × A100 SXM4, batch 8, cap 4,096 |
+| replies: median / mean / at the cap | 716 / 747 tokens / 0 of 384 | 1,306 / 1,661 tokens / 3 of 16 |
+| decoding steps per prompt | 270 | 512 (every batch ran to the cap) |
+| ms per decoding step (median) | 91.9 | 146.7 |
+| **seconds per prompt per GPU** | **25.4** | **75.1** |
+| 700 prompts | 4.9 GPU-hours | 14.6 GPU-hours |
+
+- **The often-quoted "13 s per prompt" was the pilot's wall time with two GPUs in parallel.** Per GPU it was 25.4 s,
+  4.9 GPU-hours for 700 prompts, not 2.5. `prompt_bank/README.md` now says so.
+- **Why the per-GPU figures differ by about 3** (1.9 × 1.6):
+  - `t0_s0` draws longer replies, and a runaway reply holds its whole batch to the cap, so there are 1.9 × the
+    decoding steps per prompt;
+  - each step is 1.6 × slower, at batch 8 and longer contexts. In the pilot, steps slow from about 91 ms (longest reply
+    ≤ 1,500) to about 109 ms (> 3,000) at batch 4.
+
+  The runs also differ in transformers version (5.17 vs 5.22.2) and generation code, so the 1.6 is not attributed
+  further. The 2026-11-15 figures rest on 16 prompts.
+- **Planning figure:** about 15 GPU-hours for this bank at cap 4,096, and more at the spec's 8,192.
+- **The largest lever is the runaway reply,** not the GPU: one long reply makes the other seven slots in its batch wait.
+  Options include a lower cap, smaller batches, or generation that refills finished slots. None is decided, and each
+  has trade-offs: a lower cap changes which replies get parsed.
+- **Not yet explained:** even the pilot's 92 ms per step is about 3 × the memory-bandwidth floor (62 GB of weights read
+  per step at about 2 TB/s, about 31 ms). That needs a profile of `generate()` on Gemma 4's layer layout, which can be
+  done locally on a model with the real layer layout but fewer layers.
 
 This is the main thing standing between the current state and a full Gemma run. It also sets the cost of every
-generation readout the evaluation pipeline plans `[eval §9]`.
+generation readout the evaluation pipeline plans `[eval §9]`. Note that the evaluation design's cost estimate quotes
+the old 13 s figure.
 
 ## 12. Getting the outputs
 
