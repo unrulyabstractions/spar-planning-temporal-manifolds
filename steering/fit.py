@@ -1,7 +1,7 @@
 """Stage 2 of 2: compute the steering directions and the manifold curve from extracted activations.
 
     python fit.py --activations activations/gemma-4-31B-it__t0_s0 --bank ../prompt_bank/data/t0_s0 --layer 38
-    python fit.py ... --regimes near_only both --name no-none       # leave the "none" regime out
+    python fit.py ... --no-include-none --name no-none               # leave the "none" regime out
 
 For one layer and site it writes fits/<activations name>/<name>/L<layer>_<site>/:
 
@@ -22,9 +22,12 @@ Definitions (report, Appendix A.3; details in the steer modules):
   cosine with CAA measures how much of CAA is "which option was chosen" rather than "how long the horizon is".
 * Manifold: per-horizon means -> PCA (k components) -> local-linear curve in log10(days) (steer/manifold.py).
 
-Which prompts: those with a stated horizon whose regime is in --regimes (default: all three, as the report's
-Methods section says "none" prompts are used for extraction). The no-horizon (null) prompts are never used: they
-have no horizon to place on the curve.
+Which prompts: extraction-split prompts with a stated horizon. "None"-regime prompts are included by default, as the
+report's Methods section says they are "used for extraction"; --no-include-none leaves them out of everything (CAA,
+the controls and the curve). --exclude-horizons leaves out every prompt at the given stated horizons, e.g. to hold
+them out for calibration. Verification-grid prompts are never used, even if extract.py was run on them, and neither
+are the no-horizon (null) prompts, which have no horizon to place on the curve. fit.json counts the prompts left out
+for each reason.
 
 Diagnostics, all in fit.json:
 
@@ -50,7 +53,8 @@ from pbank.local_model import log
 from pbank.provenance import git_commit, utc_now
 from pbank.records import load_prompts, prompts_sha256, write_jsonl
 from steer import activations
-from steer.fitting import FIT_REGIMES, FitSettings, fit, select
+from pbank.durations import Duration
+from steer.fitting import FitSettings, fit, select
 
 HERE = Path(__file__).resolve().parent
 
@@ -61,7 +65,10 @@ def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None
     p.add_argument("--bank", type=Path, required=True, help="the bank the activations were extracted from")
     p.add_argument("--layer", type=int, required=True)
     p.add_argument("--site", default="label", choices=activations.POSITIONS)
-    p.add_argument("--regimes", nargs="+", default=list(FIT_REGIMES), choices=FIT_REGIMES)
+    p.add_argument("--include-none", action=argparse.BooleanOptionalAction, default=True,
+                   help='use "none"-regime prompts (default: yes, as the report says)')
+    p.add_argument("--exclude-horizons", nargs="+", default=[], metavar="HORIZON",
+                   help='stated horizons (grid values, e.g. "3 years") whose prompts are left out of the fit')
     p.add_argument("--caa-long-min", type=float, default=4.0, help="H/D at or above which a prompt is 'long'")
     p.add_argument("--caa-short-max", type=float, default=0.25, help="H/D at or below which a prompt is 'short'")
     p.add_argument("--reward-high-min", type=float, default=25)
@@ -83,16 +90,22 @@ def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None
         sys.exit(f"{out} exists; choose another --name")
 
     # The prompts this fit uses, and the per-prompt quantities it needs.
-    use = select(acts.uids, records, args.regimes)
+    grid = {r.horizon_grid_value for r in records.values() if r.horizon_grid_value}
+    for h in args.exclude_horizons:
+        if h not in grid:
+            sys.exit(f"--exclude-horizons {h!r} is not a stated horizon of {args.bank.name}; grid values look like "
+                     f"{sorted(grid, key=lambda g: Duration.parse(g).days)[:3]}")
+    selection = select(acts.uids, records, args.include_none, args.exclude_horizons)
+    use = selection.rows
     X = acts.X[use]
     recs = [records[acts.uids[i]] for i in use]
     chosen = np.array([acts.index[i]["chosen_option"] for i in use])
-    settings = FitSettings(regimes=tuple(args.regimes), caa_long_min=args.caa_long_min,
+    settings = FitSettings(caa_long_min=args.caa_long_min,
                            caa_short_max=args.caa_short_max, reward_high_min=args.reward_high_min,
                            reward_low_max=args.reward_low_max, n_random=args.n_random, components=args.components,
                            bandwidth=args.bandwidth, folds=args.folds, seed=args.seed)
     log(f"layer {args.layer} {args.site}: {len(use)} of {len(acts.uids)} extracted prompts, "
-        f"regimes {dict(Counter(r.regime for r in recs))}, d = {X.shape[1]}")
+        f"regimes {dict(Counter(r.regime for r in recs))}, d = {X.shape[1]}; left out {selection.excluded}")
     result = fit(X, recs, chosen, settings)
     diagnostics, norm = result.diagnostics, result.typical_norm
     caa, reward, choice = result.caa, result.reward, result.choice
@@ -109,7 +122,8 @@ def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None
                        "bank_prompts_sha256": acts.meta["settings"]["bank_prompts_sha256"],
                        "model": acts.meta["run_settings"]["model"], "thinking": acts.meta["run_settings"]["thinking"]},
             "settings": {k: v for k, v in vars(args).items() if k not in ("activations", "bank")},
-            "n_prompts": result.n_prompts, "regimes": result.regime_counts, "diagnostics": diagnostics}
+            "n_prompts": result.n_prompts, "regimes": result.regime_counts, "excluded": selection.excluded,
+            "diagnostics": diagnostics}
     (out / "fit.json").write_text(json.dumps(meta, indent=2) + "\n")
 
     c, m = diagnostics["caa"], diagnostics["manifold"]

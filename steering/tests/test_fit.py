@@ -69,3 +69,43 @@ def test_compare_fits_finds_identity_and_one_ulp_changes(tmp_path):
     changed = subprocess.run(cmd, capture_output=True, text=True)
     print([line for line in changed.stdout.splitlines() if line.startswith("DIFFER")])
     assert changed.returncode == 1 and "caa: values differ" in changed.stdout
+
+
+def fit_json(out):
+    return json.loads((out / "fit.json").read_text())
+
+
+def test_include_none_is_the_default_and_can_be_switched_off(tmp_path):
+    acts = make_activations(tmp_path / "acts")
+    on = fit_json(run_fit(acts, tmp_path / "fits"))
+    off = fit_json(run_fit(acts, tmp_path / "fits", "--no-include-none", "--name", "no-none"))
+    print(f"include none: n {on['n_prompts']}, excluded {on['excluded']}, CAA short {on['diagnostics']['caa']['short_by_regime']}")
+    print(f"no none:      n {off['n_prompts']}, excluded {off['excluded']}, CAA short {off['diagnostics']['caa']['short_by_regime']}, "
+          f"curve range {off['diagnostics']['manifold']['t_range_log10_days']}")
+    assert on["settings"]["include_none"] is True and off["settings"]["include_none"] is False
+    assert on["excluded"] == {"not_extraction_split": 0, "no_horizon": 29, "none_regime": 0, "excluded_horizon": 0}
+    assert off["excluded"]["none_regime"] == 279 and off["n_prompts"] == 192 and "none" not in off["regimes"]
+    assert off["diagnostics"]["caa"]["short_by_regime"] == {"near_only": 71}
+    assert off["diagnostics"]["manifold"]["t_range_log10_days"][0] == pytest.approx(1.0)   # 10 days
+
+
+def test_verification_prompts_are_never_fitted_on(tmp_path):
+    acts = make_activations(tmp_path / "acts", splits=("extraction", "verification"))
+    meta = fit_json(run_fit(acts, tmp_path / "fits"))
+    print(f"activations of all 700 prompts: fitted {meta['n_prompts']}, excluded {meta['excluded']}")
+    assert meta["excluded"]["not_extraction_split"] == 200 and meta["n_prompts"] == 471
+
+
+def test_exclude_horizons_leaves_out_exactly_those_prompts(tmp_path):
+    acts = make_activations(tmp_path / "acts")
+    meta = fit_json(run_fit(acts, tmp_path / "fits", "--exclude-horizons", "3 years", "10 days", "--name", "held-out"))
+    lines = (tmp_path / "fits" / "acts" / "held-out" / "L15_label" / "per_horizon.jsonl").read_text().splitlines()
+    per_horizon = [json.loads(line) for line in lines]
+    from pbank.records import load_prompts
+    expected = sum(r.split == "extraction" and r.horizon_grid_value in ("3 years", "10 days") for r in load_prompts(BANK))
+    print(f"excluded {meta['excluded']} (bank has {expected} extraction prompts at those horizons); "
+          f"{len(per_horizon)} horizons left on the curve")
+    assert meta["excluded"]["excluded_horizon"] == expected > 0
+    assert {"3 years", "10 days"}.isdisjoint(h["horizon"] for h in per_horizon) and len(per_horizon) == 46
+    with pytest.raises(SystemExit, match="not a stated horizon"):
+        run_fit(acts, tmp_path / "fits", "--exclude-horizons", "3 yrs", "--name", "typo")

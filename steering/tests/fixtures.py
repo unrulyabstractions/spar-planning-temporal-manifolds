@@ -1,6 +1,6 @@
 """A synthetic extract.py output over the real t0_s0 bank, for end-to-end tests of fit.py without a model.
 
-Every extraction-split prompt gets one activation per site:
+Every prompt of the chosen splits (default: the extraction split, as extract.py) gets one activation per site:
 
     h = offset + curve(t) @ B.T + PLANT_CHOICE * s * c + noise
 
@@ -25,7 +25,7 @@ PLANT_CHOICE = 0.5
 NOISE = 0.05
 
 
-def make_activations(directory: Path, layers=(15,), seed: int = 0) -> Path:
+def make_activations(directory: Path, layers=(15,), seed: int = 0, splits=("extraction",)) -> Path:
     directory = Path(directory)
     directory.mkdir(parents=True)
     records = load_prompts(BANK)
@@ -35,7 +35,7 @@ def make_activations(directory: Path, layers=(15,), seed: int = 0) -> Path:
     offset = rng.standard_normal(D)
     from steer.fitting import log10_days
     index, rows = [], []
-    for r in (r for r in records if r.split == "extraction"):
+    for r in (r for r in records if r.split in splits):
         t = log10_days(r.horizon_grid_value) if r.horizon is not None else 0.0
         chosen = r.correct_option or ("far" if len(index) % 2 else "near")
         index.append({"row": len(index), "uid": r.uid, "choice_label": "a", "chosen_option": chosen,

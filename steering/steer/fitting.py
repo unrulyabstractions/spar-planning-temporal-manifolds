@@ -22,7 +22,6 @@ FIT_REGIMES = ("none", "near_only", "both")
 @dataclass(frozen=True)
 class FitSettings:
     """Every setting that changes the fit (fit.py's options of the same names)."""
-    regimes: tuple = FIT_REGIMES
     caa_long_min: float = 4.0
     caa_short_max: float = 0.25
     reward_high_min: float = 25
@@ -52,10 +51,39 @@ def log10_days(duration: str) -> float:
     return float(np.log10(float(Duration.parse(duration).days)))
 
 
-def select(uids: list[str], records: dict, regimes) -> list[int]:
-    """Indices into `uids` of the prompts a fit uses: a stated horizon and a regime in `regimes`."""
-    return [i for i, uid in enumerate(uids)
-            if records[uid].horizon is not None and records[uid].regime in regimes]
+def fit_regimes(include_none: bool) -> tuple:
+    """The regimes a fit uses. "none" prompts (no option pays off within the horizon, so no answer is correct) are
+    in by default, as the report's Methods section says they are "used for extraction"."""
+    return FIT_REGIMES if include_none else tuple(r for r in FIT_REGIMES if r != "none")
+
+
+@dataclass(frozen=True)
+class Selection:
+    rows: list[int]          # indices into the activation set's rows, in row order
+    excluded: dict           # reason -> number of extracted prompts left out for it
+
+
+def select(uids: list[str], records: dict, include_none: bool = True, exclude_horizons=()) -> Selection:
+    """The prompts a fit uses, out of an activation set's `uids`. In order, a prompt is left out if it is:
+      * not in the extraction split (the verification grid is never fitted on, whatever extract.py was run on);
+      * a no-horizon (null control) prompt: it has no horizon to place on the curve;
+      * in the "none" regime, when include_none is false;
+      * at a stated horizon in `exclude_horizons` (grid values, e.g. "3 years"), held out for calibration.
+    The first applicable reason is counted."""
+    exclude = set(exclude_horizons)
+    regimes = fit_regimes(include_none)
+    rows, excluded = [], {"not_extraction_split": 0, "no_horizon": 0, "none_regime": 0, "excluded_horizon": 0}
+    for i, uid in enumerate(uids):
+        r = records[uid]
+        reason = ("not_extraction_split" if r.split != "extraction" else
+                  "no_horizon" if r.horizon is None else
+                  "none_regime" if r.regime not in regimes else
+                  "excluded_horizon" if r.horizon_grid_value in exclude else None)
+        if reason:
+            excluded[reason] += 1
+        else:
+            rows.append(i)
+    return Selection(rows=rows, excluded=excluded)
 
 
 def cross_validated_t(X, t, groups, folds_of, k, bandwidth) -> np.ndarray:

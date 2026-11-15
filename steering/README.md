@@ -63,13 +63,29 @@ an earlier output, and refuses inputs that don't match: a different bank, differ
 All of these are command-line options, recorded in each output's JSON. Defaults follow the report where it says
 something.
 
-1. **"None" prompts are included by default.** The report's Methods section says they are "used for extraction";
-   `--regimes near_only both` leaves them out. Evidence from Jared's Qwen3 runs:
+1. **"None" prompts are included by default.** The report's Methods section says they are "used for extraction".
+   `--no-include-none` leaves them out of everything: CAA, the controls and the curve. Evidence from Jared's Qwen3
+   runs:
    - the model's choices on "none" prompts are confident but follow option order and model-specific habits;
    - the 8B's long-minus-short difference of means steered backwards because of the regime mix
      (`origin/jared`, `jared/08_results_steering.md`).
 
-   The team should decide this.
+   What leaving them out costs, on the t0_s0 extraction split:
+   - **The curve's range.** All 24 grid horizons below 10 days are pure "none", so the curve starts at 10 days, and
+     the next ten horizons rest on 1–9 prompts each. The verification grid (0.88–124 years) stays inside the range.
+   - **CAA's short class** shrinks from 350 prompts (279 none + 71 near_only) to 71. The two classes then differ
+     perfectly in which answer is correct, so CAA gets closer to a "choose far" direction. On the Qwen3.5-2B smoke run
+     its cosine with the choice direction rose from 0.862 to 0.904.
+
+   The default follows the written spec for the first pass (Alan, 2026-11-14). Switching it needs only a refit: the
+   activations of "none" prompts are always extracted.
+
+   Two selection rules apply whatever the options:
+   - verification-grid prompts are never fitted on, even if `extract.py` was run on them;
+   - no-horizon prompts are never used.
+
+   `--exclude-horizons` leaves out given stated horizons, e.g. to hold them out for calibration. fit.json counts the
+   prompts left out for each reason.
 2. **The CAA classes are not balanced by regime.** With D the far delay, H/D >= 4 holds only "both" prompts (the
    ones where "far" is the answer). H/D <= 1/4 holds "none" and "near_only" prompts. On the t0_s0 bank that is
    57 against 279 + 71.
