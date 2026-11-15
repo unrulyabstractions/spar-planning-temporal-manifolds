@@ -134,13 +134,15 @@ fits/<run>/<name>/L38_label/per_horizon.jsonl  per stated horizon: count, regime
 | file | what it does |
 |---|---|
 | `extract.py` | stage 1: replay the baseline's replies, read activations at the label |
-| `fit.py` | stage 2: directions, curve, controls, diagnostics |
+| `fit.py` | stage 2: directions, curve, controls, diagnostics (command-line wrapper around `steer/fitting.py`) |
 | `steer/layers.py` | layer convention; `capture` and `edit` hooks |
 | `steer/sites.py` | locate the answer-label token |
 | `steer/activations.py` | on-disk format and loader (checks hashes) |
+| `steer/fitting.py` | the fit as a function, `fit(X, records, chosen, FitSettings)`, for refits on other prompts or labels |
 | `steer/directions.py` | difference of means, thresholds, random controls, linear edit |
 | `steer/manifold.py` | per-horizon means, PCA, local-linear curve, projection, curve edit |
 | `steer/stats.py` | Spearman, grouped folds |
+| `tools/compare_fits.py` | compare two fit output trees exactly (arrays bit for bit), e.g. before and after a refactor |
 
 ## Tests
 
@@ -149,6 +151,8 @@ fits/<run>/<name>/L38_label/per_horizon.jsonl  per stated horizon: count, regime
 - the layer convention: tiny Qwen3, the Gemma 4 module tree, and real Qwen3.5-0.8B on a GPU;
 - the label locator, on the real Gemma 4 and Qwen3.5 tokenizers;
 - CAA recovering a planted direction;
-- the curve recovering a planted helix, and both edit modes' properties.
+- the curve recovering a planted helix, and both edit modes' properties;
+- `fit.py` end to end on synthetic activations over the real bank (`tests/fixtures.py`), and `tools/compare_fits.py`
+  telling identical trees from ones that differ by one ulp.
 
 Tests that need a cached model or a GPU skip without one.

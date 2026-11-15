@@ -11,6 +11,7 @@ Modules:
     steer.layers       which module is "layer L"; reading and editing the residual stream there
     steer.sites        finding the answer-label token in a generated reply
     steer.activations  the on-disk format of extract.py's output
+    steer.fitting      the fit as a library function (fit.py is its command-line wrapper)
     steer.directions   mean-difference directions (CAA, reward contrast), random controls, the linear edit
     steer.manifold     the manifold curve: PCA of per-horizon means, a smooth curve in log-time, the curve edit
     steer.stats        small statistics helpers (rank correlation, grouped folds)

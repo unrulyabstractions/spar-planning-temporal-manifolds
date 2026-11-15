@@ -46,33 +46,16 @@ from pathlib import Path
 
 import numpy as np
 
-from pbank.durations import Duration
 from pbank.local_model import log
 from pbank.provenance import git_commit, utc_now
 from pbank.records import load_prompts, prompts_sha256, write_jsonl
 from steer import activations
-from steer.directions import mean_difference, random_directions, threshold_masks, typical_norm
-from steer.manifold import fit_manifold
-from steer.stats import grouped_folds, spearman
+from steer.fitting import FIT_REGIMES, FitSettings, fit, select
 
 HERE = Path(__file__).resolve().parent
-FIT_REGIMES = ("none", "near_only", "both")
 
 
-def log10_days(duration: str) -> float:
-    return float(np.log10(float(Duration.parse(duration).days)))
-
-
-def cross_validated_t(X, t, groups, folds_of, k, bandwidth) -> np.ndarray:
-    """t-hat of every prompt from a curve fitted without its fold."""
-    t_hat = np.empty(len(X))
-    for test in folds_of:
-        m = fit_manifold(X[~test], t[~test], [g for g, te in zip(groups, test) if not te], k, bandwidth)
-        t_hat[test] = m.project_t(X[test])
-    return t_hat
-
-
-def main() -> None:
+def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--activations", type=Path, required=True, help="directory written by extract.py")
     p.add_argument("--bank", type=Path, required=True, help="the bank the activations were extracted from")
@@ -89,87 +72,36 @@ def main() -> None:
     p.add_argument("--folds", type=int, default=5, help="folds for the held-out curve check")
     p.add_argument("--seed", type=int, default=0, help="seeds the random controls and the fold assignment")
     p.add_argument("--name", default="default", help="name of this fit's settings (output subdirectory)")
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     acts = activations.load(args.activations, args.layer, args.site)
     records = {r.uid: r for r in load_prompts(args.bank)}
     if acts.meta["settings"]["bank_prompts_sha256"] != prompts_sha256(records.values()):
         sys.exit(f"{args.activations} was extracted from a different bank than {args.bank}")
-    out = HERE / "fits" / args.activations.name / args.name / f"L{args.layer:02d}_{args.site}"
+    out = Path(fits_root) / args.activations.name / args.name / f"L{args.layer:02d}_{args.site}"
     if out.exists():
         sys.exit(f"{out} exists; choose another --name")
 
     # The prompts this fit uses, and the per-prompt quantities it needs.
-    use = [i for i, uid in enumerate(acts.uids)
-           if records[uid].horizon is not None and records[uid].regime in args.regimes]
+    use = select(acts.uids, records, args.regimes)
     X = acts.X[use]
     recs = [records[acts.uids[i]] for i in use]
     chosen = np.array([acts.index[i]["chosen_option"] for i in use])
-    regime = np.array([r.regime for r in recs], dtype=object)   # object: elements stay plain str (clean JSON keys)
-    t = np.array([log10_days(r.horizon_grid_value) for r in recs])
-    groups = [r.horizon_grid_value for r in recs]
-    hd = np.array([r.h_over_far_delay for r in recs])
-    mult = np.array([r.reward_multiplier for r in recs])
+    settings = FitSettings(regimes=tuple(args.regimes), caa_long_min=args.caa_long_min,
+                           caa_short_max=args.caa_short_max, reward_high_min=args.reward_high_min,
+                           reward_low_max=args.reward_low_max, n_random=args.n_random, components=args.components,
+                           bandwidth=args.bandwidth, folds=args.folds, seed=args.seed)
     log(f"layer {args.layer} {args.site}: {len(use)} of {len(acts.uids)} extracted prompts, "
-        f"regimes {dict(Counter(regime))}, d = {X.shape[1]}")
-
-    # Directions.
-    long_, short = threshold_masks(hd, args.caa_long_min, args.caa_short_max)
-    caa = mean_difference(X, long_, short)
-    high, low = threshold_masks(mult, args.reward_high_min, args.reward_low_max)
-    reward = mean_difference(X, high, low)
-    choice = mean_difference(X, chosen == "far", chosen == "near")
-    random = random_directions(X.shape[1], args.n_random, args.seed)
-    norm = typical_norm(X)
-
-    # Manifold curve, and its check on held-out prompts.
-    manifold = fit_manifold(X, t, groups, args.components, args.bandwidth)
-    folds = grouped_folds([r.pair_id or r.uid for r in recs], args.folds, args.seed)
-    t_cv = cross_validated_t(X, t, groups, folds, args.components, args.bandwidth)
-    err = np.abs(t_cv - t)
-    t_lo, t_hi = manifold.t_range
-
-    names = sorted(set(groups), key=lambda g: t[groups.index(g)])
-    per_horizon = []
-    for g, tm, zm in zip(names, manifold.t_means, manifold.z_means):
-        mask = np.array([x == g for x in groups])
-        mean = X[mask].mean(axis=0, dtype=np.float64)
-        per_horizon.append({"horizon": g, "log10_days": round(float(tm), 4), "n": int(mask.sum()),
-                            "regimes": dict(Counter(regime[mask])),
-                            "chose_far": int((chosen[mask] == "far").sum()), "chose_near": int((chosen[mask] == "near").sum()),
-                            "caa_projection": float(mean @ caa.vector),
-                            "t_hat": float(manifold.project_t(mean[None])[0])})
-
-    by_regime = lambda mask: dict(Counter(regime[mask]))
-    diagnostics = {
-        "caa": {"n_long": caa.n_plus, "n_short": caa.n_minus, "long_by_regime": by_regime(long_),
-                "short_by_regime": by_regime(short), "raw_norm": caa.raw_norm,
-                "raw_norm_over_typical_norm": caa.raw_norm / norm,
-                "cos_reward": float(caa.vector @ reward.vector), "cos_choice": float(caa.vector @ choice.vector),
-                "max_abs_cos_random": float(np.abs(random @ caa.vector).max()),
-                "spearman_logH_vs_mean_projection": spearman([h["log10_days"] for h in per_horizon],
-                                                             [h["caa_projection"] for h in per_horizon])},
-        "reward": {"n_high": reward.n_plus, "n_low": reward.n_minus, "raw_norm": reward.raw_norm},
-        "choice": {"n_far": choice.n_plus, "n_near": choice.n_minus, "raw_norm": choice.raw_norm},
-        "typical_norm": norm,
-        "manifold": {
-            "components": args.components, "bandwidth_decades": args.bandwidth,
-            "explained_variance_of_means": [round(float(v), 4) for v in manifold.explained],
-            "t_range_log10_days": [t_lo, t_hi],
-            "in_sample_median_abs_err_decades": float(np.median(np.abs(
-                [h["t_hat"] - h["log10_days"] for h in per_horizon]))),
-            "held_out": {"folds": args.folds, "spearman": spearman(t, t_cv),
-                         "median_abs_err_decades": float(np.median(err)),
-                         "median_abs_err_by_regime": {r: float(np.median(err[regime == r])) for r in sorted(set(regime))},
-                         "share_at_range_ends": float(np.mean((t_cv <= t_lo) | (t_cv >= t_hi)))},
-        },
-    }
+        f"regimes {dict(Counter(r.regime for r in recs))}, d = {X.shape[1]}")
+    result = fit(X, recs, chosen, settings)
+    diagnostics, norm = result.diagnostics, result.typical_norm
+    caa, reward, choice = result.caa, result.reward, result.choice
 
     out.mkdir(parents=True)
-    np.savez(out / "directions.npz", caa=caa.vector, reward=reward.vector, choice=choice.vector, random=random,
+    np.savez(out / "directions.npz", caa=caa.vector, reward=reward.vector, choice=choice.vector, random=result.random,
              typical_norm=norm, caa_raw_norm=caa.raw_norm, reward_raw_norm=reward.raw_norm)
-    manifold.save(out / "manifold.npz")
-    write_jsonl(out / "per_horizon.jsonl", per_horizon)
+    result.manifold.save(out / "manifold.npz")
+    write_jsonl(out / "per_horizon.jsonl", result.per_horizon)
     array = activations.array_name(args.layer, args.site)
     meta = {"created_utc": utc_now(), "code_commit": git_commit(),
             "inputs": {"activations": args.activations.name, "array": array,
@@ -177,7 +109,7 @@ def main() -> None:
                        "bank_prompts_sha256": acts.meta["settings"]["bank_prompts_sha256"],
                        "model": acts.meta["run_settings"]["model"], "thinking": acts.meta["run_settings"]["thinking"]},
             "settings": {k: v for k, v in vars(args).items() if k not in ("activations", "bank")},
-            "n_prompts": len(use), "regimes": dict(Counter(regime)), "diagnostics": diagnostics}
+            "n_prompts": result.n_prompts, "regimes": result.regime_counts, "diagnostics": diagnostics}
     (out / "fit.json").write_text(json.dumps(meta, indent=2) + "\n")
 
     c, m = diagnostics["caa"], diagnostics["manifold"]
