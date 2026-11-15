@@ -32,8 +32,20 @@ deterministic and a no-op when the prompts already exist, and checks and baselin
 
 **Where to run what.** Building and reviewing need only a laptop. A local checker or baseline needs a GPU that
 holds the model in bf16: Gemma 4 31B-it is 62.6 GB of weights and Qwen3.5-27B is 55.6 GB, so both need an
-A100/H100 80 GB (on Vast.ai). The 2026-10-17 pilot measured Gemma at about 13 s per prompt at batch 4 on one A100,
-so the 700 prompts take about 2.5 GPU-hours.
+A100/H100 80 GB (on Vast.ai).
+
+**Generation time is not settled.** Two measurements of Gemma 4 31B on one A100 disagree by a factor of about 6:
+- the 2026-10-17 pilot: about 13 s per prompt at batch 4, which would make the 700 prompts about 2.5 GPU-hours;
+- a 2026-11-15 run (A100 SXM4 80 GB, batch 8, `--max-new-tokens 4096`): 75.6 and 74.7 s per prompt over two batches
+  (`../steering/progress-20261115.md`).
+
+In the 2026-11-15 run:
+- **Step time.** That is about 148 ms per decoding step.
+- **Runaway replies.** One reply in each batch ran to the 4,096-token cap without answering, so each batch cost the
+  full cap. That was 3 of 16 replies; the mean reply was 1,661 tokens.
+- **Projection.** At that rate the 700 prompts take about 15 GPU-hours, and more at the default 8,192 cap.
+- **Not diagnosed.** The cause of the difference is unknown. Plan budgets on the measured figure until it is.
+- **Batch size.** Batch 16 runs out of memory on 80 GB at 4,096 new tokens; batch 8 fits.
 For a smoke test of a model too big for the local GPUs, `--allow-offload` keeps the weights that don't fit in
 CPU RAM, leaving 4 GiB per GPU for the key-value cache. It is recorded in run.json. On 2 x 16 GB it ran Gemma 4
 31B at about 3.6 s per decoding step: fine for 2 prompts, useless for a run.

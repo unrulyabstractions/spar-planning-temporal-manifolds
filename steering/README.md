@@ -158,8 +158,14 @@ logits = replay_logits(model, prompt_ids, answer_ids, slide, x=0.5, layer=38)   
 - **`record=[]`** collects each pass's context and the per-token norm of the applied displacement, for audits and for
   matching random controls' sizes token by token.
 - **Before steering a new model**, or after a transformers upgrade, run `tools/check_hook.py`. It checks the zero edit,
-  the roles and the effect in that model's real generation setup, and exits 1 on failure. The tests cover only a tiny
-  Qwen3 and Qwen3.5-0.8B; Gemma 4 31B has not been run yet.
+  the roles and the effect in that model's real generation setup, and exits 1 on failure.
+  - **The tests** cover a tiny Qwen3 and Qwen3.5-0.8B.
+  - **On Gemma 4 31B, layer 38, thinking on,** the gate has passed twice:
+    - locally, with CPU offload, on 2 prompts;
+    - on a rented A100 80 GB, on 8 prompts.
+
+    `progress-20261114.md` and `progress-20261115.md` have the outputs.
+  - **Not yet run on Gemma:** `check_hook.py --method` with a real bundle.
 
 ## Handing a method over: bundles
 
@@ -274,6 +280,7 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 | `tools/check_hook.py` | gate before steering a model: zero edit exact, roles right, strong edit has an effect |
 | `tools/upload_hf.py`, `tools/upload_gcs.py` | publish outputs (dry run by default; checksummed, verified, never overwrite) |
 | `tools/compare_fits.py` | compare two fit output trees exactly (arrays bit for bit), e.g. before and after a refactor |
+| `tools/vast_smoke.sh` | the pipeline on a rented GPU box, one gated stage at a time (setup, weights, tests, hook, baseline, extract, label audit, fit, bundle, method gate, checksums) |
 
 ## Tests
 

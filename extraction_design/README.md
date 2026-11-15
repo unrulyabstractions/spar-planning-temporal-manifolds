@@ -459,8 +459,9 @@ Measured on the A100 (batch 8, thinking on, cap 4,096 new tokens):
   every batch had one, so every batch cost the full cap.
 - **Projection.** At that rate the 700-prompt baseline is about 88 batches × 10 min ≈ **15 hours** at cap 4,096. At the
   spec's 8,192 cap, batches with a runaway reply cost up to twice as much.
-- **Earlier estimate.** `prompt_bank/README.md` quotes a 2026-10-17 pilot: about 13 s per prompt at batch 4, about
-  2.5 GPU-hours for 700 prompts. That has not been reconciled with this measurement, and the README needs updating.
+- **Earlier estimate.** A 2026-10-17 pilot measured about 13 s per prompt at batch 4, about 2.5 GPU-hours for 700
+  prompts. That has not been reconciled with this measurement. `prompt_bank/README.md` now gives both figures and
+  says to plan on the measured one.
 - **Not diagnosed.** 148 ms per step is well above the memory-bandwidth floor (about 31 ms: 62 GB of weights read per
   step at about 2 TB/s).
 
@@ -499,10 +500,7 @@ python tools/upload_gcs.py ... --upload --dest BUCKET/PREFIX --key KEY.json
 - a minimum class size in `fit.py` (§9.5);
 - a within-regime CAA contrast (§9.2);
 - recording the code commit when shipping without `.git` (§11.2.6);
-- the throughput problem (§11.3);
-- stale lines in the READMEs:
-  - `prompt_bank/README.md`'s 2.5-hour estimate;
-  - `steering/README.md`'s "Gemma 4 31B has not been run yet".
+- the throughput problem (§11.3).
 
 **Not built:**
 - shared random-draw files;

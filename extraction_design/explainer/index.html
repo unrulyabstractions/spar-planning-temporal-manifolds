@@ -656,7 +656,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
   </div>
   <div class="caveat">
     <div class="eyebrow">Open: generation is slower than planned</div>
-    <p><code>prompt_bank/README.md</code> quotes a 2026-10-17 pilot at about 13 s per prompt at batch 4, about 2.5 GPU-hours for 700 prompts. That has not been reconciled with this measurement. 148 ms per step is well above the memory-bandwidth floor of about 31 ms (62 GB of weights per step at about 2 TB/s), and the cause is not diagnosed. It stands between us and a full Gemma run, and it sets the cost of every generation readout in <code>[eval §9]</code>.</p>
+    <p>A 2026-10-17 pilot measured about 13 s per prompt at batch 4, about 2.5 GPU-hours for 700 prompts. That has not been reconciled with this measurement. <code>prompt_bank/README.md</code> now gives both figures and says to plan on the measured one. 148 ms per step is well above the memory-bandwidth floor of about 31 ms (62 GB of weights per step at about 2 TB/s), and the cause is not diagnosed. It stands between us and a full Gemma run, and it sets the cost of every generation readout in <code>[eval §9]</code>.</p>
   </div>
 </section>
 
@@ -702,7 +702,6 @@ cd &lt;download&gt;/&lt;prefix&gt; &amp;&amp; sha256sum -c SHA256SUMS           
         <li>Decide: a minimum class size in <code>fit.py</code>; a within-regime CAA contrast.</li>
         <li>Fix: recording the commit when code ships without <code>.git</code>.</li>
         <li>Diagnose: generation throughput.</li>
-        <li>Update stale README lines: the 2.5-hour estimate in <code>prompt_bank/README.md</code>, and "Gemma 4 31B has not been run yet" in <code>steering/README.md</code>.</li>
         <li>Not built: shared random-draw files, an answer-letter control direction, switch-point and α<sub>k</sub> code.</li>
       </ul>
     </div>

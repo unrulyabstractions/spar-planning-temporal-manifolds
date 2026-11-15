@@ -5,8 +5,14 @@
     python baseline.py --bank data/t0_s0 --model Qwen/Qwen3.5-2B --limit 8   # local smoke test
 
 Settings follow the report (Appendix A.6, "Models"): thinking on, greedy decoding, a token cap (8,192 by
-default). The defaults reproduce the 2026-10-17 Gemma pilot's measured setup: batch 4 on one A100 80 GB
-(about 13 s per prompt; batch 4 keeps a runaway trace from running out of memory).
+default). The defaults reproduce the 2026-10-17 Gemma pilot's setup: batch 4 on one A100 80 GB, which keeps a
+runaway trace from running out of memory (batch 16 does run out at 4,096 new tokens).
+
+Speed is not settled:
+- the pilot measured about 13 s per prompt;
+- a 2026-11-15 run at batch 8 with a 4,096-token cap measured about 75 s per prompt.
+
+See README.md, "Where to run what".
 
 What it writes, in runs/<model>__<bank>/ unless --out is given (see README.md for every field):
 
