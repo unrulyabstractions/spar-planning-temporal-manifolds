@@ -9,7 +9,13 @@ For one layer and site it writes fits/<activations name>/<name>/L<layer>_<site>/
                      typical_norm (the strength unit); raw norms
     manifold.npz     the curve (steer/manifold.py, Manifold.load)
     per_horizon.jsonl  one row per stated horizon: count, regimes, its mean's position along CAA and on the curve
+    fit_uids.jsonl   one row per fitted prompt: its activation row, uid, regime, horizon, H/D, reward multiplier,
+                     option order, label style, far option's label, baseline choice, CAA and reward class, fold
     fit.json         settings, inputs and their hashes, class sizes, and the diagnostics printed below
+
+and appends one line to fits/<activations name>/search.jsonl on every run, whatever the outcome (written, refused,
+error): when, which code, which settings, and the headline diagnostics. It is the record of what was tried before a
+fit was chosen, so it is append-only and written by this script, not by hand.
 
 Definitions (report, Appendix A.3; details in the steer modules):
 
@@ -60,7 +66,7 @@ from steer.fitting import FitSettings, fit, select
 HERE = Path(__file__).resolve().parent
 
 
-def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None:
+def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--activations", type=Path, required=True, help="directory written by extract.py")
     p.add_argument("--bank", type=Path, required=True, help="the bank the activations were extracted from")
@@ -80,13 +86,42 @@ def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None
     p.add_argument("--folds", type=int, default=5, help="folds for the held-out curve check")
     p.add_argument("--seed", type=int, default=0, help="seeds the random controls and the fold assignment")
     p.add_argument("--name", default="default", help="name of this fit's settings (output subdirectory)")
-    args = p.parse_args(argv)
+    return p.parse_args(argv)
 
+
+def recorded_settings(args: argparse.Namespace) -> dict:
+    return {k: v for k, v in vars(args).items() if k not in ("activations", "bank")}
+
+
+def append_search(path: Path, row: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as f:
+        f.write(json.dumps(row) + "\n")
+
+
+def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None:
+    args = parse_args(argv)
+    search = Path(fits_root) / args.activations.name / "search.jsonl"
+    entry = {"time_utc": utc_now(), "code_commit": code_commit(), "activations": args.activations.name,
+             "bank": args.bank.name, "settings": recorded_settings(args)}
+    try:
+        summary = run(args, Path(fits_root))
+    except SystemExit as e:
+        append_search(search, {**entry, "outcome": "refused", "reason": str(e.code)})
+        raise
+    except Exception as e:
+        append_search(search, {**entry, "outcome": "error", "reason": f"{type(e).__name__}: {e}"})
+        raise
+    append_search(search, {**entry, "outcome": "written", **summary})
+
+
+def run(args: argparse.Namespace, fits_root: Path) -> dict:
+    """The fit for parsed `args`, written under `fits_root`; returns the search-log summary."""
     acts = activations.load(args.activations, args.layer, args.site)
     records = {r.uid: r for r in load_prompts(args.bank)}
     if acts.meta["settings"]["bank_prompts_sha256"] != prompts_sha256(records.values()):
         sys.exit(f"{args.activations} was extracted from a different bank than {args.bank}")
-    out = Path(fits_root) / args.activations.name / args.name / f"L{args.layer:02d}_{args.site}"
+    out = fits_root / args.activations.name / args.name / f"L{args.layer:02d}_{args.site}"
     if out.exists():
         sys.exit(f"{out} exists; choose another --name")
 
@@ -116,13 +151,20 @@ def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None
              typical_norm=norm, caa_raw_norm=caa.raw_norm, reward_raw_norm=reward.raw_norm)
     result.manifold.save(out / "manifold.npz")
     write_jsonl(out / "per_horizon.jsonl", result.per_horizon)
+    write_jsonl(out / "fit_uids.jsonl", (
+        {"row": i, "uid": r.uid, "regime": r.regime, "horizon": r.horizon, "horizon_grid_value": r.horizon_grid_value,
+         "h_over_far_delay": r.h_over_far_delay, "reward_multiplier": r.reward_multiplier, "near_first": r.near_first,
+         "label_style": "/".join(r.labels), "far_label": r.far_label, "chosen_option": acts.index[i]["chosen_option"],
+         "choice_label": acts.index[i]["choice_label"], "caa_class": str(cc) or None, "reward_class": str(rc) or None,
+         "fold": int(f)}
+        for i, r, cc, rc, f in zip(use, recs, result.caa_class, result.reward_class, result.fold)))
     array = activations.array_name(args.layer, args.site)
     meta = {"created_utc": utc_now(), "code_commit": code_commit(),
             "inputs": {"activations": args.activations.name, "array": array,
                        "array_sha256": acts.meta["arrays"][array]["sha256"], "bank_name": args.bank.name,
                        "bank_prompts_sha256": acts.meta["settings"]["bank_prompts_sha256"],
                        "model": acts.meta["run_settings"]["model"], "thinking": acts.meta["run_settings"]["thinking"]},
-            "settings": {k: v for k, v in vars(args).items() if k not in ("activations", "bank")},
+            "settings": recorded_settings(args),
             "n_prompts": result.n_prompts, "regimes": result.regime_counts, "excluded": selection.excluded,
             "diagnostics": diagnostics}
     (out / "fit.json").write_text(json.dumps(meta, indent=2) + "\n")
@@ -140,6 +182,11 @@ def main(argv: list[str] | None = None, fits_root: Path = HERE / "fits") -> None
         f"{h['median_abs_err_decades']:.3f} decades, by regime {h['median_abs_err_by_regime']}, "
         f"at range ends {h['share_at_range_ends']:.1%}")
     log(f"wrote {out}")
+    return {"out": str(out.relative_to(fits_root)), "n_prompts": result.n_prompts, "excluded": selection.excluded,
+            "headline": {"caa_cos_choice": c["cos_choice"], "caa_cos_reward": c["cos_reward"],
+                         "caa_spearman_logH": c["spearman_logH_vs_mean_projection"],
+                         "curve_held_out_spearman": h["spearman"],
+                         "curve_held_out_median_abs_err_decades": h["median_abs_err_decades"]}}
 
 
 if __name__ == "__main__":

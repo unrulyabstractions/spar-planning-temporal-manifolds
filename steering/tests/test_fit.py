@@ -22,7 +22,8 @@ def run_fit(acts, fits_root, *extra):
 def test_fit_writes_its_outputs_and_recovers_the_planted_structure(tmp_path):
     acts = make_activations(tmp_path / "acts")
     out = run_fit(acts, tmp_path / "fits")
-    assert sorted(p.name for p in out.iterdir()) == ["directions.npz", "fit.json", "manifold.npz", "per_horizon.jsonl"]
+    assert sorted(p.name for p in out.iterdir()) == ["directions.npz", "fit.json", "fit_uids.jsonl", "manifold.npz",
+                                                    "per_horizon.jsonl"]
     meta = json.loads((out / "fit.json").read_text())
     d = meta["diagnostics"]
     print(f"synthetic fit: n {meta['n_prompts']}, regimes {meta['regimes']}; cos(CAA, choice) "
@@ -109,3 +110,50 @@ def test_exclude_horizons_leaves_out_exactly_those_prompts(tmp_path):
     assert {"3 years", "10 days"}.isdisjoint(h["horizon"] for h in per_horizon) and len(per_horizon) == 46
     with pytest.raises(SystemExit, match="not a stated horizon"):
         run_fit(acts, tmp_path / "fits", "--exclude-horizons", "3 yrs", "--name", "typo")
+
+
+def read_jsonl(path):
+    return [json.loads(line) for line in path.read_text().splitlines()]
+
+
+def test_fit_uids_lists_every_fitted_prompt_with_its_classes(tmp_path):
+    acts = make_activations(tmp_path / "acts", splits=("extraction", "verification"))
+    out = run_fit(acts, tmp_path / "fits")
+    meta, rows = fit_json(out), read_jsonl(out / "fit_uids.jsonl")
+    from collections import Counter
+    from pbank.records import load_prompts
+    bank = {r.uid: r for r in load_prompts(BANK)}
+    index = read_jsonl(acts / "index.jsonl")
+    caa = Counter(r["caa_class"] for r in rows)
+    print(f"fit_uids: {len(rows)} rows; CAA classes {dict(caa)}; reward classes {dict(Counter(r['reward_class'] for r in rows))}; "
+          f"folds {dict(sorted(Counter(r['fold'] for r in rows).items()))}")
+    print(f"first row: {rows[0]}")
+    assert len(rows) == meta["n_prompts"] == 471
+    assert caa["long"] == meta["diagnostics"]["caa"]["n_long"] and caa["short"] == meta["diagnostics"]["caa"]["n_short"]
+    assert {r["fold"] for r in rows} == set(range(5))
+    for row in rows:
+        rec = bank[row["uid"]]
+        assert index[row["row"]]["uid"] == row["uid"] and rec.split == "extraction"
+        assert row["far_label"] == (rec.labels[1] if rec.near_first else rec.labels[0])
+        assert (row["caa_class"] == "long") == (rec.h_over_far_delay >= 4)
+        assert (row["caa_class"] == "short") == (rec.h_over_far_delay <= 0.25)
+
+
+def test_search_log_records_every_run_and_only_grows(tmp_path):
+    acts = make_activations(tmp_path / "acts")
+    fits = tmp_path / "fits"
+    run_fit(acts, fits)                                                   # written
+    with pytest.raises(SystemExit):
+        run_fit(acts, fits)                                               # refused: exists
+    first_two = (fits / "acts" / "search.jsonl").read_text()
+    run_fit(acts, fits, "--no-include-none", "--name", "no-none")         # written
+    with pytest.raises(FileNotFoundError):
+        fit.main(["--activations", str(acts), "--bank", str(BANK), "--layer", "12"], fits_root=fits)   # error: no L12
+    log = read_jsonl(fits / "acts" / "search.jsonl")
+    for row in log:
+        print(f"{row['outcome']:8s} {row['settings']['name']:8s} L{row['settings']['layer']} "
+              f"include_none={row['settings']['include_none']} {row.get('reason', row.get('out'))}")
+    assert [r["outcome"] for r in log] == ["written", "refused", "written", "error"]
+    assert (fits / "acts" / "search.jsonl").read_text().startswith(first_two)    # earlier lines untouched
+    assert log[0]["headline"]["curve_held_out_spearman"] > 0.99 and log[2]["settings"]["include_none"] is False
+    assert all(len(r["code_commit"]) >= 40 or r["code_commit"] == "unknown" for r in log)

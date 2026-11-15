@@ -137,10 +137,14 @@ activations/<run>/extract.json         settings, model, software, bank and run i
 activations/<run>/index.jsonl          one row per extracted prompt (steer/activations.py lists the fields)
 activations/<run>/skipped.jsonl        prompts not extracted, with the reason (no answer, format failure, ...)
 activations/<run>/L38_label.npy        float32 [n, d]; also L38_prelabel.npy
-fits/<run>/<name>/L38_label/fit.json   settings, inputs, class sizes, diagnostics
+fits/<run>/search.jsonl               append-only: one line per fit.py run on these activations (written, refused,
+                                      error), with settings, code commit and headline diagnostics
+fits/<run>/<name>/L38_label/fit.json   settings, inputs, class sizes, prompts left out per reason, diagnostics
 fits/<run>/<name>/L38_label/directions.npz   caa, reward, choice, random [n, d], typical_norm, raw norms
 fits/<run>/<name>/L38_label/manifold.npz     the curve (Manifold.load)
 fits/<run>/<name>/L38_label/per_horizon.jsonl  per stated horizon: count, regimes, choices, CAA projection, t-hat
+fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, horizon, H/D, reward multiplier,
+                                              option order, label style, far label, choice, CAA/reward class, fold
 ```
 
 `activations/` and `fits/` are git-ignored: both can be regenerated from a baseline run.

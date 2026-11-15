@@ -45,6 +45,9 @@ class FitResult:
     diagnostics: dict           # fit.json "diagnostics"
     regime_counts: dict         # fit.json "regimes"
     n_prompts: int
+    caa_class: np.ndarray       # per row: "long", "short" or "" (in neither CAA class)
+    reward_class: np.ndarray    # per row: "high", "low" or ""
+    fold: np.ndarray            # per row: the held-out fold it was predicted in (0 .. folds-1)
 
 
 def log10_days(duration: str) -> float:
@@ -154,6 +157,10 @@ def fit(X: np.ndarray, recs: list, chosen: np.ndarray, s: FitSettings) -> FitRes
                          "share_at_range_ends": float(np.mean((t_cv <= t_lo) | (t_cv >= t_hi)))},
         },
     }
+    fold = np.full(len(recs), -1)
+    for f, test in enumerate(folds):
+        fold[test] = f
     return FitResult(caa=caa, reward=reward, choice=choice, random=random, typical_norm=norm, manifold=manifold,
                      per_horizon=per_horizon, diagnostics=diagnostics, regime_counts=dict(Counter(regime)),
-                     n_prompts=len(recs))
+                     n_prompts=len(recs), caa_class=np.where(long_, "long", np.where(short, "short", "")),
+                     reward_class=np.where(high, "high", np.where(low, "low", "")), fold=fold)
