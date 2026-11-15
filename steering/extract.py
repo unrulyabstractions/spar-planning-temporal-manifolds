@@ -81,6 +81,8 @@ def main() -> None:
     p.add_argument("--split", default="extraction", choices=["extraction", "verification", "all"])
     p.add_argument("--out", type=Path, help="output directory (default: activations/<run name>)")
     p.add_argument("--limit", type=int, help="only the first N prompts (smoke tests)")
+    p.add_argument("--allow-offload", action="store_true",
+                   help="smoke tests only: let weights that don't fit on the GPUs stay in CPU RAM (recorded)")
     args = p.parse_args()
 
     records = load_prompts(args.bank)
@@ -104,7 +106,7 @@ def main() -> None:
         sys.exit(f"the cached weights of {model_id} ({now}) are not those the run used ({then})")
 
     selected = [r for r in records if args.split == "all" or r.split == args.split][:args.limit]
-    model = LocalChatModel(model_id)
+    model = LocalChatModel(model_id, allow_offload=args.allow_offload)
     layers = sorted(set(args.layers))
     for layer in layers:
         check_layer(model.model, layer)

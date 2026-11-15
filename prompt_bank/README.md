@@ -34,6 +34,9 @@ deterministic and a no-op when the prompts already exist, and checks and baselin
 holds the model in bf16: Gemma 4 31B-it is 62.6 GB of weights and Qwen3.5-27B is 55.6 GB, so both need an
 A100/H100 80 GB (on Vast.ai). The 2026-10-17 pilot measured Gemma at about 13 s per prompt at batch 4 on one A100,
 so the 700 prompts take about 2.5 GPU-hours.
+For a smoke test of a model too big for the local GPUs, `--allow-offload` keeps the weights that don't fit in
+CPU RAM, leaving 4 GiB per GPU for the key-value cache. It is recorded in run.json. On 2 x 16 GB it ran Gemma 4
+31B at about 3.6 s per decoding step: fine for 2 prompts, useless for a run.
 
 **Hosted checkers** run either through the Anthropic API (`anthropic:<id>`, Claude models only, ids such as
 `claude-haiku-5-5`; key `ANTHROPIC_API_KEY`) or through [OpenRouter](https://openrouter.ai) (`openrouter:<id>`,

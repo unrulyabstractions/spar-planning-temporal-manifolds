@@ -65,6 +65,8 @@ def main() -> None:
     p.add_argument("--max-new-tokens", type=int, default=8192)
     p.add_argument("--no-thinking", action="store_true", help="turn thinking mode off (default: on)")
     p.add_argument("--limit", type=int, help="only the first N prompts (smoke tests)")
+    p.add_argument("--allow-offload", action="store_true",
+                   help="smoke tests only: let weights that don't fit on the GPUs stay in CPU RAM (recorded in run.json)")
     args = p.parse_args()
 
     records = load_prompts(args.bank)
@@ -90,7 +92,7 @@ def main() -> None:
     todo = [r for r in selected if r.uid not in done]
     log(f"{args.model} on {args.bank}: {len(selected)} selected, {len(done)} already answered, {len(todo)} to run")
     if todo:
-        model = LocalChatModel(args.model)
+        model = LocalChatModel(args.model, allow_offload=args.allow_offload)
         out.mkdir(parents=True, exist_ok=True)
         meta = json.loads(run_json.read_text()) if run_json.exists() else {"started_utc": utc_now()}
         meta.update(settings=settings, bank_name=args.bank.name, model=model.describe(), code_commit=git_commit())

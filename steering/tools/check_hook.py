@@ -51,6 +51,8 @@ def main() -> None:
     p.add_argument("--thinking", action=argparse.BooleanOptionalAction, default=None,
                    help="default: as the method was fitted with --method, else on")
     p.add_argument("--strong", type=float, default=4.0, help="strength of the effect check, in typical norms")
+    p.add_argument("--allow-offload", action="store_true",
+                   help="let weights that don't fit on the GPUs stay in CPU RAM (a local smoke test of a big model)")
     args = p.parse_args()
     method = None
     if args.method:
@@ -69,7 +71,7 @@ def main() -> None:
 
     texts = [r.text for r in load_prompts(args.bank) if r.split == "extraction"][:args.n]
     t0 = time.time()
-    lcm = LocalChatModel(args.model)
+    lcm = LocalChatModel(args.model, allow_offload=args.allow_offload)
     d = lcm.model.config.get_text_config().hidden_size
     edit = LinearEdit(random_directions(d, 1, seed=0)[0], typical_norm=1.0)
     print(f"{args.model}: d = {d}, layer {args.layer}, {len(texts)} prompts, thinking {args.thinking}, "
