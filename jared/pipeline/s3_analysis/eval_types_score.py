@@ -16,7 +16,10 @@ Per type:
   for base + swap rows by regime, and for the explicit twins
 - near_rate by regime (two-option rows): share choosing the earlier option; mean near log-odds
   (logit(near label) - logit(far label) at the label slot)
-- order agreement: share of swap rows that chose the same option (by text) as their base row
+- chance_accuracy: what a uniform random pick scores on the same rows
+- accuracy on natural and on forced closes separately; share choosing the last-listed option
+- order agreement: share of swap rows that chose the same option (by text) as their base row, and
+  share of swap pairs where both picks are correct (differs when truth is a set)
 - horizon_in_think: share of explicit-horizon base rows whose think text states the horizon string
 - type extras: stale-horizon following (horizon_revised), lean following (sycophancy_lean),
   term error (free_form), expected log delay vs log horizon (k-option types)
@@ -111,6 +114,11 @@ def score_type(rows):
     out["accuracy_by_regime"] = {g: share(r["parsed"] in r["truth_labels"] for r in main if r["regime"] == g)
                                  for g in sorted({r["regime"] for r in main})}
     out["twin_accuracy"] = share(r["parsed"] in r["truth_labels"] for r in twins)
+    out["chance_accuracy"] = round(float(np.mean([len(r["truth_labels"]) / len(r["labels"]) for r in main])), 3) if main else None
+    # forced closes answer after a cut-off trace; their choices are often positional
+    out["accuracy_natural_close"] = share(r["parsed"] in r["truth_labels"] for r in main if not r["forced"])
+    out["accuracy_forced_close"] = share(r["parsed"] in r["truth_labels"] for r in main if r["forced"])
+    out["chose_last_listed"] = share(r["parsed"] == r["labels"][-1] for r in labelled if r["variant"] in ("base", "swap"))
     two = [r for r in labelled if r["variant"] in ("base", "swap") and "near_label" in r]
     if two:
         out["near_rate_by_regime"] = {g: share(r["parsed"] == r["near_label"] for r in two if r["regime"] == g)
@@ -124,6 +132,9 @@ def score_type(rows):
     base = {r["twin_id"]: r for r in labelled if r["variant"] == "base"}
     pairs = [(base[r["twin_id"]], r) for r in labelled if r["variant"] == "swap" and r["twin_id"] in base]
     out["order_agreement"] = share(option_text(b, b["parsed"]) == option_text(s, s["parsed"]) for b, s in pairs)
+    # with set-valued truth two different picks can both be right
+    out["order_both_correct"] = share(b["parsed"] in b["truth_labels"] and s["parsed"] in s["truth_labels"]
+                                      for b, s in pairs if b["truth_labels"])
     explicit = [r for r in kept if r["variant"] == "base" and r["horizon_text"]
                 and r["horizon_text"] in (r["prompt"] if isinstance(r["prompt"], str)
                                           else " ".join(m["content"] for m in r["prompt"]))]
@@ -168,14 +179,15 @@ def fmt(s):
 
 
 def markdown(summary):
-    head = ("| type | kept | parsed | forced | think med | acc | acc near | acc both | twin acc | order agree | "
-            "horizon in think |\n|---|---|---|---|---|---|---|---|---|---|---|\n")
+    head = ("| type | kept | parsed | forced | think med | acc | chance | acc natural | acc near | acc both | twin acc | "
+            "order agree | last listed |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n")
     lines = []
     for t, s in summary.items():
         by = s["accuracy_by_regime"]
         lines.append(f"| {t} | {s['kept']}/{s['n']} | {fmt(s['parsed'])} | {fmt(s['forced'])} | {s['think_len_median']} | "
-                     f"{fmt(s['accuracy'])} | {fmt(by.get('near'))} | {fmt(by.get('both'))} | {fmt(s['twin_accuracy'])} | "
-                     f"{fmt(s['order_agreement'])} | {fmt(s.get('horizon_in_think'))} |")
+                     f"{fmt(s['accuracy'])} | {s['chance_accuracy']} | {fmt(s['accuracy_natural_close'])} | {fmt(by.get('near'))} | "
+                     f"{fmt(by.get('both'))} | {fmt(s['twin_accuracy'])} | {fmt(s['order_agreement'])} | "
+                     f"{fmt(s['chose_last_listed'])} |")
     return head + "\n".join(lines) + "\n"
 
 
