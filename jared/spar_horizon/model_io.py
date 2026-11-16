@@ -83,21 +83,37 @@ def template_kwargs(tokenizer, cfg):
     return {"enable_thinking": cfg.thinking == "on"}
 
 
+def chat_messages(prompt, system=None):
+    """The message list for `prompt`: the user's text (with an optional system message), or a
+    whole conversation already given as messages (system, earlier turns, last user turn), which
+    the eval-type banks use for system-prompt and multi-turn prompts."""
+    if isinstance(prompt, str):
+        return ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": prompt}]
+    if system:
+        raise ValueError("a prompt given as messages carries its own system message")
+    if prompt[-1]["role"] != "user":
+        raise ValueError("the last message must be the user's")
+    return list(prompt)
+
+
+def last_user_text(prompt):
+    return prompt if isinstance(prompt, str) else prompt[-1]["content"]
+
+
 def chat_text(tokenizer, prompt, cfg, system=None):
     """Chat-templated prompt. With thinking off the prefill is appended here."""
-    messages = ([{"role": "system", "content": system}] if system else []) + [
-        {"role": "user", "content": prompt}]
     text = tokenizer.apply_chat_template(
-        messages, tokenize=False, add_generation_prompt=True, **template_kwargs(tokenizer, cfg))
+        chat_messages(prompt, system), tokenize=False, add_generation_prompt=True, **template_kwargs(tokenizer, cfg))
     if cfg.thinking == "off" and cfg.prefill:
         text += cfg.prefill
     return text
 
 
 def suffix_length(tokenizer, prompt, cfg):
-    """Number of template (+ prefill) tokens after the user content."""
+    """Number of template (+ prefill) tokens after the (last) user content."""
     text = chat_text(tokenizer, prompt, cfg)
-    end_char = text.index(prompt) + len(prompt)
+    last = last_user_text(prompt)
+    end_char = text.rindex(last) + len(last)
     enc = tokenizer(text, return_offsets_mapping=True)
     return sum(1 for s, _ in enc["offset_mapping"] if s >= end_char)
 
