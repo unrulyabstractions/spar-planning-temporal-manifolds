@@ -49,3 +49,16 @@ def test_score_type_on_always_truth_and_always_a():
     assert perfect["near_rate_by_regime"]["near"]["p"] == 1.0 and perfect["near_rate_by_regime"]["both"]["p"] == 0.0
     always_a = score_type([answered(r, "a") for r in recs])
     assert always_a["order_agreement"]["p"] == 0.0     # "a" names the other option after the swap
+
+
+def test_extras_follow_record_fields_not_type_names():
+    for original, reworded, key in [("horizon_revised", "horizon_revised_clear", "chose_stale_truth"),
+                                    ("sycophancy_lean", "sycophancy_lean_clear", "chose_lean")]:
+        for t in (original, reworded):
+            recs = [r for r in build(t) if r["choice_prefix"] == "I choose:"]
+            assert key in score_type([answered(r, "a") for r in recs]), t
+    rows = [{**r, "answer": "x", "forced": False, "think_len": 10, "think_text": "",
+             "response_text": f"</think>\n\nI choose a term of: {r['horizon_text']}. My reasoning: x"}
+            for r in build("free_form_anchor")]
+    term = score_type(rows)["term"]
+    assert term["n"] == 21 and term["share_within_factor_1.5"]["p"] == 1.0
