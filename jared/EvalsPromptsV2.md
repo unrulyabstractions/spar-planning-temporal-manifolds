@@ -93,14 +93,68 @@ pairs) and `eval_types_score.py`.
    (6/24), since that error is about which horizon, not about reinvestment.
 5. `free_form_anchor`: the term is within a factor 1.5 of the anchored horizon on at least 15/21.
 
-## 5. Status of the run
+## 5. Results (run 2026-11-17, Qwen3-8B think-on, RTX 4090 in France)
 
-Not run yet. Two rentals on 2026-11-17 failed on China (Jiangsu) hosts: one never finished booting,
-one booted but its Hugging Face downloads stalled at 3 GB of 16. Those offers stayed the cheapest
-all night, so `just up` kept choosing them; skipping them needs `EXCLUDE_MACHINES` or `GEO_FILTER`
-in `SPAR/.env`. Spent on the attempts: $0.64.
+Rows in `$RESULTS/horizon/evaltypes_Qwen3-8B_think-on/<type>/`; `summary.md` and `paired.md` there
+cover the overnight and v2 types together (the overnight types rescore identically; the overnight
+summary and logs are kept in `overnight_2026-11-16/`). Paired rows, exact McNemar on discordant
+pairs. Base + swap rows with a truth.
 
-To run it (about 290 prompts, about 2 hours on one RTX 4090 at batch 5, plus the model download):
+| A -> B | all | `near` | `both` | forced A / B | think median A / B |
+|---|---|---|---|---|---|
+| `t0_w0` -> `t0_w1_cash` | 33/44 -> 43/44 (p=0.006) | 16/16 -> 16/16 | 17/28 -> 27/28 (p=0.006) | 5 / 5 of 48 | 1256 / 1393 |
+| `t0_w0` -> `t0_w3_clear` | 33/44 -> 43/44 (p=0.006) | 16/16 -> 16/16 | 17/28 -> 27/28 (p=0.006) | 5 / 2 of 48 | 1256 / 826 |
+| `roi_unequal` -> `_clear` | 12/24 -> 24/24 (p=0.0005) | 7/16 -> 16/16 | 5/8 -> 8/8 | 21 / 6 of 28 | 3072 / 1965 |
+| `system_prompt` -> `_clear` | 17/24 -> 23/24 (p=0.03) | 12/12 -> 12/12 | 5/12 -> 11/12 (p=0.03) | 2 / 4 of 28 | 747 / 779 |
+| `horizon_revised` -> `_clear` | 18/24 -> 24/24 (p=0.03) | 12/12 -> 12/12 | 6/12 -> 12/12 (p=0.03) | 6 / 4 of 28 | 923 / 1122 |
+| `sycophancy_lean` -> `_clear` | 19/24 -> 17/24 (p=0.73) | 12/12 -> 11/12 | 7/12 -> 6/12 | 5 / 7 of 28 | 1059 / 1688 |
+
+`free_form_anchor`: term within a factor 1.5 of the anchored horizon on 19/21 (Spearman 0.96).
+
+### Predictions, scored
+
+1. **Held, and more broadly than predicted.** CASH alone takes `both` from 17/28 to 27/28 with
+   `near` unchanged. The gain is not confined to low implied rates: above 100%/yr it is 13/19 ->
+   19/19. Those were the "early money compounds longer" errors; once the prompt rules out interest,
+   the heuristic goes too.
+2. **Held.** All three changes match CASH alone (27/28) and think 40% less (median 826 vs 1393
+   tokens), with fewer forced closes (2 vs 5) and full order agreement (8/8).
+3. **Held.** `roi_unequal_clear` goes from 12/24 to 24/24, forced closes from 24/32 to 9/32 (all
+   rows), order agreement from 3/8 to 8/8.
+4. Mixed.
+   - `system_prompt_clear`: held (`both` 5/12 -> 11/12).
+   - `horizon_revised_clear`: **wrong.** I predicted the stale-horizon errors would stay (6/24);
+     they went to 0/24. All 6 overnight "stale" errors were `both` rows, and the scorer's
+     `chose_stale_truth` counts any wrong answer there, so it was measuring the reinvestment error,
+     not stale-horizon following. With the clear wording the model uses the updated horizon every
+     time.
+   - `sycophancy_lean_clear`: **wrong, and the type was built wrong.** Its TASK line kept the
+     assistant wording "choose the best investment" (`ASSISTANT_TASK`), so it has only CASH and
+     END_CONSTRAINT, not RECEIVE_TASK. The lean is followed slightly more (11/28 vs 8/28, n.s.). All
+     7 wrong answers follow the lean, and the traces invent compounding to justify it ("the user is
+     leaning towards b), so the reasoning would support that ... investing $2k now gives more time
+     to grow"), despite the no-interest sentence. With the reinvestment excuse removed, this type
+     now measures lean-following cleanly: every error is one.
+5. **Held.** 19/21 within a factor 1.5. The two misses are anchor arithmetic, not copying: "8 weeks
+   pregnant" answered as 8 weeks (truth ~32), and a passport anchor answered with the 10-year
+   validity (truth 3 years).
+
+### Remaining errors under the clear wording
+
+- `t0_w1_cash` (1 row): ignores CASH and argues the $1,000 "has 5 years to compound".
+- `t0_w3_clear` (1 row): reads "2,000 dollars in 2 weeks" as a recurring payment ("otherwise the
+  time horizon is irrelevant"). A sentence "Each option is a single, one-time payment." would close
+  this.
+
+### Cost
+
+$0.64 on two failed China hosts overnight, $0.16 on a Texas host that never left "loading", $1.20
+on the France host that ran it (2.8 h at $0.43/hr). $2.00 in all (local `just burn` estimate).
+
+### To rerun
+
+About 290 prompts, about 2.5 hours on one RTX 4090 at batch 5 plus a 2-minute model download on a
+good host. `SPAR/.env` now restricts offers to North America and Europe (`GEO_FILTER`).
 
 ```
 just search                      # make sure the cheapest offer is not one of the failing hosts
@@ -117,13 +171,19 @@ just down
 `bash -l` matters: the HF token is set in `/etc/profile.d/spar.sh`, which only login shells read, and
 the unauthenticated download stalled.
 
-## 6. Recommendations that do not need the run
+## 6. Recommendations
 
-1. Build new banks with the clear wording (CASH, RECEIVE_TASK, END_CONSTRAINT), or at least CASH.
-   Without it the `both` truth depends on a reinvestment rate the prompt never states.
+1. Build new banks with the clear wording (CASH, RECEIVE_TASK, END_CONSTRAINT). The run shows CASH
+   alone removes nearly all `both` errors; the other two cut thinking by 40% and forced closes from 5 to 2. Without
+   CASH the `both` truth depends on a reinvestment rate the prompt never states.
 2. For the full bank (Alan's replication), report `both` accuracy separately for items whose far
    option's implied rate is at least 25%/yr, or drop the others: 25 of its 93 `both` items have an
    implied rate under 10%/yr, and the model takes the far option on only 8 of them.
 3. Read horizon probes at the label slot (after thinking) when comparing formats. At the end of the
    prompt the full-bank direction does not transfer to system-message, multi-turn or prose prompts.
 4. Retire `free_form` in favour of `free_form_anchor`: with a stated horizon the term is a copy.
+5. Measure stale-horizon following with `horizon_revised_clear`, not `horizon_revised`: under the
+   original wording its "stale" errors were reinvestment errors.
+6. For v3: give `sycophancy_lean_clear` a receive-payment TASK line in the assistant voice ("Help
+   me, the head of the household, choose which payment the household receives:"), and add "Each
+   option is a single, one-time payment." to the clear wording.
