@@ -76,6 +76,9 @@ class EvalType:
     plan: tuple = PLAN
     twins: bool = True                 # whether the explicit reference twin is meaningful
     shuffle_base: bool = True          # base option order drawn per item (False: the order make_item gives)
+    # Seeds the item draws instead of type_id. Types that share it and draw the same way get the same
+    # items and option orders, so a rewording can be compared with its original prompt by prompt.
+    item_seed: str = ""
 
 
 def log_years(h):
@@ -210,7 +213,7 @@ def make_record(et, item, k, variant, order, prompt, truth, options):
 
 def build_records(et, seed=0):
     """The type's records: base items, their swaps and their explicit twins (module docstring)."""
-    rng = random.Random(f"{et.type_id}-{seed}")
+    rng = random.Random(f"{et.item_seed or et.type_id}-{seed}")
     records, seen = [], {}
     for k, regime in enumerate(et.plan):
         item = et.make_item(rng, k, regime)
