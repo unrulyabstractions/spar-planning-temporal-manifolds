@@ -2,7 +2,10 @@
 # Box queue: the v2 eval types (EvalsPromptsV2.md), most important first, through queue_evaltypes.sh.
 # Batch 5: larger batches ran out of memory on a 24 GB RTX 4090 at 3,072 think tokens.
 #
-#   tmux new -d -s evaltypes2 'bash /workspace/SPAR/spar-planning-temporal-manifolds/jared/pipeline/s1_data_vectors/queues/queue_evaltypes_v2.sh; bash'
+# Run it in a login shell (bash -l): the HF token is set in /etc/profile.d/spar.sh, and without it
+# Hugging Face downloads went unauthenticated and stalled.
+#
+#   tmux new -d -s evaltypes2 'bash -l /workspace/SPAR/spar-planning-temporal-manifolds/jared/pipeline/s1_data_vectors/queues/queue_evaltypes_v2.sh; bash'
 
 cd "$(dirname "$0")/../../.." || exit 1
 export BATCH=${BATCH:-5}
