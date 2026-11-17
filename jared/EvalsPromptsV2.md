@@ -93,6 +93,37 @@ pairs) and `eval_types_score.py`.
    (6/24), since that error is about which horizon, not about reinvestment.
 5. `free_form_anchor`: the term is within a factor 1.5 of the anchored horizon on at least 15/21.
 
-## 5. Results
+## 5. Status of the run
 
-(Filled in after the run.)
+Not run yet. Two rentals on 2026-11-17 failed on China (Jiangsu) hosts: one never finished booting,
+one booted but its Hugging Face downloads stalled at 3 GB of 16. Those offers stayed the cheapest
+all night, so `just up` kept choosing them; skipping them needs `EXCLUDE_MACHINES` or `GEO_FILTER`
+in `SPAR/.env`. Spent on the attempts: $0.64.
+
+To run it (about 290 prompts, about 2 hours on one RTX 4090 at batch 5, plus the model download):
+
+```
+just search                      # make sure the cheapest offer is not one of the failing hosts
+just up 3h
+just push
+just ssh "tmux new -d -s evaltypes2 'bash -l /workspace/SPAR/spar-planning-temporal-manifolds/jared/pipeline/s1_data_vectors/queues/queue_evaltypes_v2.sh; bash'"
+just hold                        # the parallel model download keeps the GPU idle; just unhold once generation starts
+# ... when $LOGS/evaltypes.done exists:
+just down
+~/miniconda3/envs/mp/bin/python -m pipeline.s3_analysis.eval_types_score  ~/SPAR/results/horizon/evaltypes_Qwen3-8B_think-on
+~/miniconda3/envs/mp/bin/python -m pipeline.s3_analysis.eval_types_paired ~/SPAR/results/horizon/evaltypes_Qwen3-8B_think-on
+```
+
+`bash -l` matters: the HF token is set in `/etc/profile.d/spar.sh`, which only login shells read, and
+the unauthenticated download stalled.
+
+## 6. Recommendations that do not need the run
+
+1. Build new banks with the clear wording (CASH, RECEIVE_TASK, END_CONSTRAINT), or at least CASH.
+   Without it the `both` truth depends on a reinvestment rate the prompt never states.
+2. For the full bank (Alan's replication), report `both` accuracy separately for items whose far
+   option's implied rate is at least 25%/yr, or drop the others: 25 of its 93 `both` items have an
+   implied rate under 10%/yr, and the model takes the far option on only 8 of them.
+3. Read horizon probes at the label slot (after thinking) when comparing formats. At the end of the
+   prompt the full-bank direction does not transfer to system-message, multi-turn or prose prompts.
+4. Retire `free_form` in favour of `free_form_anchor`: with a stated horizon the term is a copy.
