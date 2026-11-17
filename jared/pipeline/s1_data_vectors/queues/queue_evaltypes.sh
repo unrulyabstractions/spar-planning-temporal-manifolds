@@ -40,6 +40,9 @@ step() {   # step <name> <command...>: run once, log to <name>.log, mark <name>.
 }
 
 log "queue on $(nvidia-smi -L | wc -l) GPU(s), out $OUT, types: $TYPES"
+# Fetch the weights with parallel downloads first: from_pretrained fetches one file at a time, and on a
+# slow host (1.7 MB/s per connection on 2026-11-17) that alone took hours.
+step evaltypes_model $PY -c "from huggingface_hub import snapshot_download; print(snapshot_download('$MODEL', max_workers=8))" || exit 1
 step evaltypes_smoke $PY -m pipeline.s1_data_vectors.experiments.exp0_evaltypes --model $MODEL --types "$TYPES" \
     --limit 2 --max-think-tokens 64 --batch-size $BATCH --out "$OUT/smoke" || exit 1
 step evaltypes_score_smoke $PY -m pipeline.s3_analysis.eval_types_score "$OUT/smoke/evaltypes_Qwen3-8B_think-on" || exit 1
