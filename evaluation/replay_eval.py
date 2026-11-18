@@ -45,7 +45,23 @@ def read_jsonl(p: Path) -> list[dict]:
 
 
 def write_json(p: Path, obj) -> None:
-    p.write_text(json.dumps(obj, indent=2, default=str) + "\n")
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_text(json.dumps(obj, indent=2, default=str) + "\n")
+    tmp.replace(p)                                          # atomic: an interrupted write never looks finished
+
+
+def write_jsonl_atomic(p: Path, rows) -> None:
+    tmp = p.with_name(p.name + ".tmp")
+    with open(tmp, "w") as f:
+        for r in rows:
+            f.write(json.dumps(r) + "\n")
+    tmp.replace(p)
+
+
+def savez_atomic(p: Path, **arrays) -> None:
+    tmp = p.with_name(p.stem + ".tmp.npz")
+    np.savez(tmp, **arrays)
+    tmp.replace(p)
 
 
 def find_key(obj, names):
@@ -188,12 +204,8 @@ def build_items(args, M: Model, settings: dict) -> None:
             "agrees_with_pbank_parse": theirs == what if theirs else None,
             "parse_status": r.get("parse_status"), "n_generated": r.get("n_generated"),
         })
-    with open(out / "items.jsonl", "w") as f:
-        for it in items:
-            f.write(json.dumps(it) + "\n")
-    with open(out / "skipped.jsonl", "w") as f:
-        for s in skipped:
-            f.write(json.dumps(s) + "\n")
+    write_jsonl_atomic(out / "skipped.jsonl", skipped)
+    write_jsonl_atomic(out / "items.jsonl", items)          # last: its presence marks the stage as done
     disagree = sum(1 for it in items if it["agrees_with_pbank_parse"] is False)
     print(f"items: {len(items)} readable, {len(skipped)} skipped, {disagree} disagree with pbank's parse")
     if args.extraction_index:
@@ -422,7 +434,7 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict) -> None:
         diffs = [float((rep.run([it], fac.caa.edit, 0.0, fac.positions)[0][0])
                        - float(rep.plain(it)[it["far_id"]] - rep.plain(it)[it["near_id"]])) for it in items[:n0]]
         agrees = float(np.mean([(y > 0) == (it["chosen"] == "far") for y, it in zip(y0, items)]))
-        np.savez(adir / "_none.npz", y=y0, mass=m0)
+        savez_atomic(adir / "_none.npz", y=y0, mass=m0)
         write_json(out / "n0_check.json", {"n_checked": n0, "max_abs_diff_vs_hook_free": max(map(abs, diffs)) if diffs else None,
                                           "replay_matches_generated_choice": agrees})
         print(f"N0: zero edit vs hook-free max |diff| {max(map(abs, diffs)) if diffs else float('nan'):.3g}; "
@@ -441,7 +453,7 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict) -> None:
         rec["y_plus"], rec["mass_plus"] = rep.run(items, edit, arm["x"], positions)
         if not arm.get("single"):
             rec["y_minus"], rec["mass_minus"] = rep.run(items, edit, -arm["x"], positions)
-        np.savez(path, **rec)
+        savez_atomic(path, **rec)
         el = time.time() - t0
         print(f"[{n + 1}/{len(arms)}] {arm['arm']} x={arm['x']:g}  ({el / 60:.1f} min)", flush=True)
 
@@ -496,9 +508,7 @@ def stage_gencheck(args, M, settings, cal: dict) -> None:
                              "chose_far": (what == far_char) if idx is not None else None,
                              "reason": None if idx is not None else what,
                              "n_generated": len(ids), "hit_cap": len(ids) >= settings["max_new_tokens"]})
-        with open(path, "w") as f:
-            for r in rows:
-                f.write(json.dumps(r) + "\n")
+        write_jsonl_atomic(path, rows)
         ok = [r for r in rows if r["parsed"]]
         print(f"gencheck {name}: {len(ok)}/{len(rows)} parsed, P(far) "
               f"{np.mean([r['chose_far'] for r in ok]) if ok else float('nan'):.2f}, {(time.time() - t0) / 60:.1f} min")
