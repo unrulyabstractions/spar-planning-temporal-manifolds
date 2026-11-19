@@ -11,16 +11,25 @@ through pbank's LocalChatModel with batched greedy generation:
   1. zero edit:   a hooked run with strength 0 gives exactly the unhooked token ids, for every prompt (null N0);
   2. roles:       the first pass is the prompt (left padding where the attention mask is 0), every later pass is one
                   generated token per row, and positions advance by one per pass;
-  3. effect:      a strong edit (x = --strong, all positions) changes at least one reply, so the hook is applied;
-  4. method at 0: with --method, the bundled method at x = 0 must reproduce the unhooked ids exactly, except
+  3. effect:      a strong edit (x = --strong, at --positions) changes at least one reply, so the hook is applied;
+                  the number of changed choices (parsed "I choose:") is reported beside the number of changed replies;
+  4. method at 0: with --method, the bundled method at x = 0 (at --positions) must reproduce the unhooked ids, except
                   curve-snap, whose x = 0 is not the identity by design (it removes the off-curve offset): for it the
                   number of changed replies is reported, not checked.
 
-Checks 1-2 use a random unit direction at strength 0, so they test the hook itself. Without --method, check 3 uses
-the same direction at --strong typical norms. With --method (a bundle from bundle.py), the model and layer come from
-the bundle, and check 3 applies the method itself at x = --strong, in its own units (strength for push methods,
-decades for curve slides). It uses the first --n prompts of the bank's extraction split, writes nothing, and exits 1 if
-any check fails. Run it before the first steered generation on a new model, method or transformers version.
+--positions label / prelabel edit one token per row: the answer-label token of the row's unhooked reply (the site
+extract.py reads as "label"), or the token before it ("prelabel", whose state predicts the label). The index comes
+from the unhooked reply (steer.sites.locate_label), and two more checks apply to checks 3 and 4: exactly one token
+per row is edited, and each steered reply equals the unhooked one up to and including the edited token (so the
+edited token was the intended one). An edit at the label token cannot change the choice: the label is already
+written when that state is computed.
+
+Checks 1-2 use a random unit direction at strength 0, at all positions, so they test the hook itself. Without
+--method, check 3 uses the same direction at --strong typical norms. With --method (a bundle from bundle.py), the
+model and layer come from the bundle, and check 3 applies the method itself at x = --strong, in its own units
+(strength for push methods, decades for curve slides). It uses the first --n prompts of the bank's extraction split,
+writes nothing, and exits 1 if any check fails. Run it before the first steered generation on a new model, method or
+transformers version.
 """
 
 from __future__ import annotations
@@ -33,11 +42,15 @@ from pathlib import Path
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from pbank.answers import parse_choice  # noqa: E402
 from pbank.local_model import LocalChatModel  # noqa: E402
 from pbank.records import load_prompts  # noqa: E402
 from steer.directions import random_directions  # noqa: E402
 from steer.edits import ROLE_GENERATED, ROLE_PAD, ROLE_PROMPT, LinearEdit  # noqa: E402
-from steer.hooks import steering  # noqa: E402
+from steer.hooks import at_generated, steering  # noqa: E402
+from steer.sites import locate_label  # noqa: E402
+
+SITE_OFFSET = {"label": 0, "prelabel": -1}      # generated index relative to the label token
 
 
 def main() -> None:
@@ -51,6 +64,8 @@ def main() -> None:
     p.add_argument("--thinking", action=argparse.BooleanOptionalAction, default=None,
                    help="default: as the method was fitted with --method, else on")
     p.add_argument("--strong", type=float, default=4.0, help="strength of the effect check, in typical norms")
+    p.add_argument("--positions", default="all", choices=["all", "prompt", "generated", *SITE_OFFSET],
+                   help="where checks 3 and 4 apply the edit (default all, as the bundles do)")
     p.add_argument("--allow-offload", action="store_true",
                    help="let weights that don't fit on the GPUs stay in CPU RAM (a local smoke test of a big model)")
     args = p.parse_args()
@@ -69,7 +84,8 @@ def main() -> None:
     if args.thinking is None:
         args.thinking = True
 
-    texts = [r.text for r in load_prompts(args.bank) if r.split == "extraction"][:args.n]
+    records = [r for r in load_prompts(args.bank) if r.split == "extraction"][:args.n]
+    texts = [r.text for r in records]
     t0 = time.time()
     lcm = LocalChatModel(args.model, allow_offload=args.allow_offload)
     d = lcm.model.config.get_text_config().hidden_size
@@ -79,6 +95,14 @@ def main() -> None:
 
     gen = lambda: lcm.generate(texts, thinking=args.thinking, max_new_tokens=args.max_new_tokens)
     base = gen()
+    sites = None
+    if args.positions in SITE_OFFSET:
+        found = [locate_label(lcm.tok, r.generated_ids, tuple(rec.labels), args.thinking) for r, rec in zip(base, records)]
+        if any(s is None for s in found):
+            sys.exit(f"--positions {args.positions}: {sum(s is None for s in found)} unhooked replies have no label")
+        sites = [s.label_index + SITE_OFFSET[args.positions] for s in found]
+        print(f"{args.positions} token at generated index {sites} (label at {[s.label_index for s in found]})", flush=True)
+    positions = at_generated(sites) if sites is not None else args.positions
     record: list = []
     with steering(lcm.model, edit, 0.0, args.layer, "all", record=record):
         zero = gen()
@@ -91,10 +115,12 @@ def main() -> None:
             lcm.model(**batch)
         norm = acts[args.layer].float().norm(dim=-1).mean().item()
     strong_edit = method.edit if method else LinearEdit(edit.direction, typical_norm=norm)
-    with steering(lcm.model, strong_edit, args.strong, args.layer, "all"):
+    rec_strong: list = []
+    with steering(lcm.model, strong_edit, args.strong, args.layer, positions, record=rec_strong):
         strong = gen()
     if method:
-        with steering(lcm.model, method.edit, 0.0, args.layer, "all"):
+        rec_zero: list = []
+        with steering(lcm.model, method.edit, 0.0, args.layer, positions, record=rec_zero):
             method_zero = gen()
 
     failures = []
@@ -115,11 +141,26 @@ def main() -> None:
     if not (roles_ok and lead_pads_ok):
         failures.append("roles or positions are not as expected")
 
+    def site_check(name: str, rec: list, replies: list) -> None:
+        """--positions label/prelabel: one edited token per row, and the replies agree with the unhooked ones up to it."""
+        if sites is None:
+            return
+        per_row = sum(r["ctx"].mask.sum(1).cpu() for r in rec).tolist()
+        prefix_ok = [a.generated_ids[:k + 1] == b.generated_ids[:k + 1] for a, b, k in zip(base, replies, sites)]
+        print(f"   {name}: edited tokens per row {per_row}; replies equal to unhooked up to the edited token "
+              f"{sum(prefix_ok)}/{len(prefix_ok)}", flush=True)
+        if per_row != [1] * len(sites) or not all(prefix_ok):
+            failures.append(f"{name}: not exactly the {args.positions} token was edited")
+
+    choice = lambda reply, rec: parse_choice(reply.answer, tuple(rec.labels)).label
     changed = sum(a.generated_ids != b.generated_ids for a, b in zip(base, strong))
+    moved = sum(choice(a, r) != choice(b, r) for a, b, r in zip(base, strong, records))
     what = (f"{method.meta['method']} at x = {args.strong} ({method.meta['request']['name']})" if method else
             f"strength {args.strong} x typical norm {norm:.3g}")
-    print(f"3. effect: {what} changed {changed}/{len(base)} replies; first reply "
-          f"{(base[0].answer or '')[:60]!r} -> {(strong[0].answer or '')[:60]!r}", flush=True)
+    print(f"3. effect: {what} at positions {args.positions} changed {changed}/{len(base)} replies, "
+          f"{moved}/{len(base)} choices; first reply {(base[0].answer or '')[:60]!r} -> {(strong[0].answer or '')[:60]!r}",
+          flush=True)
+    site_check("strong edit", rec_strong, strong)
     if changed == 0:
         failures.append("a strong edit changed nothing: is the hook applied?")
 
@@ -128,6 +169,7 @@ def main() -> None:
         snap = method.meta["method"] == "curve-snap"
         print(f"4. {method.meta['method']} at x = 0: {moved}/{len(base)} replies changed"
               + (" (reported only: snap at 0 removes the off-curve offset)" if snap else ""), flush=True)
+        site_check("method at x = 0", rec_zero, method_zero)
         if moved and not snap:
             failures.append(f"{method.meta['method']} at x = 0 changed the output")
 

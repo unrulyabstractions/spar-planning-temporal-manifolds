@@ -152,13 +152,17 @@ logits = replay_logits(model, prompt_ids, answer_ids, slide, x=0.5, layer=38)   
   - `positions="all"`, `"prompt"`, `"generated"`, or a callable on the context;
   - padding is never edited.
 
-  It reads each pass's `cache_position` and `attention_mask` from the model's forward call, so it works inside
-  batched, left-padded `generate()` with the key-value cache. Unedited positions keep their bits, and a zero edit
+  It reads each pass's token positions from the model's forward call (`cache_position`, else `attention_mask`,
+  else `position_ids`), so it works inside batched, left-padded `generate()` with the key-value cache, and at
+  batch 1, where transformers 5.22.2 passes neither a cache position nor a mask. Unedited positions keep their bits, and a zero edit
   reproduces the unhooked model exactly.
 - **`record=[]`** collects each pass's context and the per-token norm of the applied displacement, for audits and for
   matching random controls' sizes token by token.
 - **Before steering a new model**, or after a transformers upgrade, run `tools/check_hook.py`. It checks the zero edit,
-  the roles and the effect in that model's real generation setup, and exits 1 on failure.
+  the roles and the effect in that model's real generation setup, and exits 1 on failure. `--positions` applies the
+  edit at `all` (the bundles' default), `prompt`, `generated`, or one token per row: `label` (the answer-label token,
+  which can no longer change the choice) or `prelabel` (the token whose state predicts the label); for the last two
+  it also checks that exactly that token was edited (`steer.hooks.at_generated`).
   - **The tests** cover a tiny Qwen3 and Qwen3.5-0.8B.
   - **On Gemma 4 31B, layer 38, thinking on,** the gate has passed twice:
     - locally, with CPU offload, on 2 prompts;
