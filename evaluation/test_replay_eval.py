@@ -72,3 +72,11 @@ def test_switch_point_shift_in_decades():
     mk = lambda loc: s * (logr - loc)
     st = analyze.arm_stats(items, mk(0.0), {"y_plus": mk(-0.1), "y_minus": mk(0.1)}, 0.1)
     assert abs(st["delta_log10_H"] - 0.1) < 1e-3      # +x acts as a 10^0.1 longer horizon
+
+
+def test_check_loops_detects_repeats_only():
+    import check_loops
+    block = list(range(64))
+    assert check_loops.is_looping(list(range(5000, 5500)) + block * 4)       # stuck: one block over and over
+    assert not check_loops.is_looping(list(range(2000)))                     # progressing: nothing repeats
+    assert not check_loops.is_looping(block * 2)                             # too short to call

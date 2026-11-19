@@ -28,7 +28,7 @@ RUN_DIR=$ROOT/prompt_bank/runs/$RUN
 ACT=$ROOT/steering/activations/$RUN
 FIT=$ROOT/steering/fits/$RUN/default/L${LAYER}_label
 METHODS=$ROOT/steering/methods/$SHORT
-DRAWS=$ROOT/evaluation/draws/$SHORT/L${LAYER}_label
+DRAWS=$ROOT/evaluation/draws/$RUN/$SHORT/L${LAYER}_label   # per run: covariance/real_diff depend on the activations
 OUT=$ROOT/evaluation/results/$RUN
 THINKFLAG=$([ "$THINK" = 1 ] && echo "" || echo "--no-thinking")
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -81,7 +81,7 @@ CAA=$(ls -d "$METHODS"/caa__"${RUN}"__default__L"${LAYER}"_label)
 
 stamp "shared draws"
 [ -f "$DRAWS/SHA256SUMS" ] || { set_aside "$DRAWS"; (cd "$ROOT/evaluation" && $PY shared_draws.py make --activations "$ACT" --bank "$BANK/prompts.jsonl" \
-    --model "$MODEL" --layer "$LAYER" --site label --out draws/); }
+    --model "$MODEL" --layer "$LAYER" --site label --out "draws/$RUN/"); }
 
 stamp "replay evaluation: $STAGES"
 (cd "$ROOT/evaluation" && $PY -u replay_eval.py $STAGES --bank "$BANK" --run "$RUN_DIR" --activations "$ACT" \

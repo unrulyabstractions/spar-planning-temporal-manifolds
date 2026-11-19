@@ -126,4 +126,28 @@ shared draws → `replay_eval.py items calibrate replay gencheck` → `analyze.p
 Not yet: damage-matched null (N6), concept-control comparisons beyond reporting, C3–C8 except the C2 signatures,
 bootstrap CIs, the replay-vs-generation agreement statistic (the raw generation table is there).
 Tests: `python -m pytest -q test_replay_eval.py` (label location on the real Qwen3 tokenizer, strata shuffle, the
-meaning/letter and switch-point arithmetic).
+meaning/letter and switch-point arithmetic, the loop detector).
+
+The calibration health bound (the worst held-out item keeps ≥ 95% of its unsteered label mass, `--min_mass_ratio`) is an
+untested default and probably too strict: on Qwen3-1.7B with thinking on, it stopped calibration at x = 0.02.
+
+## Loop check: `check_loops.py`
+
+Counts how many token-cap hits in a generation run are repetition loops (a 64-token block repeated ≥ 3× in the last 1024
+tokens) rather than long reasoning. Reads `responses.jsonl` of any prompt_bank run; `--bank` adds a breakdown by regime.
+
+```
+python check_loops.py --run ../prompt_bank/runs/<model>__<bank> --bank ../prompt_bank/data/<bank>
+```
+
+On Qwen3-1.7B with thinking on (greedy, cap 4096), 323 of 337 cap hits are loops, so the 330 missing answers are mostly a
+decoding problem. The Qwen3 model cards advise against greedy decoding in thinking mode (recommended: temperature 0.6,
+top-p 0.95, top-k 20).
+
+## Example reports: `reports/`
+
+Saved outputs of plumbing runs, as examples of what the runner produces (`results/` itself is gitignored). These are
+small models, so the numbers are not evidence about steering.
+
+- `Qwen3-1.7B__t0_s0__think_report.md`: report card of the full thinking-on run (2026-11-19, ~9–10 h on an 8 GB GPU).
+- `Qwen3-1.7B__t0_s0__think_loops.txt`: `check_loops.py` on the same run.
