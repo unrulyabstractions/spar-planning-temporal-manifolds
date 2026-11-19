@@ -1,0 +1,7 @@
+Qwen3-1.7B__t0_s0__think: loop = a 64-token block repeated >= 3x in the last 1024 tokens
+group          responses answered hit cap cap+loop answered+loop
+all                  700      370     337      323            76
+both                 186       70     117      108            12
+near_only            206       87     122      118            24
+no_horizon            29       26       4        4             2
+none                 279      187      94       93            38

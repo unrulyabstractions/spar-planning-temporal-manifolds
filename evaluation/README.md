@@ -3,7 +3,7 @@
 Code side of [`evaluation_design/`](../evaluation_design/README.md) (the design proposal). Owner: Evaluations
 (random-vector baselines: Augusto). Drafted with Claude, 2026-11-18.
 
-For now it holds one thing: the **shared random draws**, the random directions that every steering method is compared
+It holds the **shared random draws** (below) and a first **evaluation runner** (replay readout, last section). The draws are, the random directions that every steering method is compared
 against (`[eval §4.1]` item 6, `[eval §6]`; asked for in `extraction_design/README.md` §8.2 item 6 and §13).
 
 ## Shared random draws: `shared_draws.py`
@@ -90,3 +90,64 @@ cd evaluation && python -m pytest -q test_shared_draws.py
 
 Synthetic bank and activations: reproducibility, golden values, row-order invariance, iso-only = full, rows used, that
 covariance draws follow the activations' variance, refusals, and `verify` catching tampered draws or other activations.
+
+## Evaluation runner (replay readout): `replay_eval.py`, `analyze.py`, `run_local.sh`
+
+First version of the pipeline in `evaluation_design/` §9, stages 0–5, on the replay readout plus a small generation check.
+Built only on extraction's documented interface (`steer.methods.load`, `Method.refit`, `steer.edits.LinearEdit`,
+`steer.hooks.replay_logits` / `steering`, `pbank.local_model.LocalChatModel`), not on its internals.
+
+```
+evaluation/run_local.sh                                          # Qwen3-1.7B, thinking off: the whole loop in ~15 min
+THINK=1 CAP=4096 BATCH=4 TAG=think GEN_PAIRS=8 evaluation/run_local.sh   # thinking on
+```
+
+`run_local.sh` chains baseline → extract (all splits) → fit → bundle → hook gate (`check_hook.py --method` on CAA) →
+shared draws → `replay_eval.py items calibrate replay gencheck` → `analyze.py`. Every stage skips what exists.
+
+- **items:** the prompts that can be read out. The answer label is located here independently (regex after the
+  end-of-thinking token), then compared with extract.py's `label_index` (`label_crosscheck.json`). Prompts that pbank
+  could not parse, or whose thinking never closed, are listed in `skipped.jsonl`, never dropped silently.
+- **calibrate (P4):** CAA refitted without fold 0 of the extraction split; x swept on that fold's scored prompts; the
+  smallest x whose order-balanced |mean odd effect| reaches 1 logit while the label mass stays ≥ 95% of unsteered.
+  The sign is a result, not a criterion. If no healthy x reaches the target, the largest healthy x is used and
+  `calibration.json` says so.
+- **replay:** every arm at +x and −x on the verification grid: the 5 bundles (`curve-snap` also at x = 0), and K
+  draws of each null family: isotropic, covariance, real differences (the shared draws), in-span (random directions in
+  the curve's subspace) and label-shuffled refits (`Method.refit`, horizons permuted within option order × regime) of
+  CAA and both curves. Readout: y = logit(far) − logit(near) at the answer slot, and the label mass. Also the N0 check:
+  zero edit vs a hook-free forward pass.
+- **gencheck:** steered generation on a subset of verification pairs (none, CAA ±x, isotropic[0] ±x, curve-displace
+  ±shift), in the baseline's thinking mode and cap: choice, parse failures, cap hits, reply length.
+- **analyze.py → `report.md`:** per arm, the odd (steering) and even (disruption) parts; meaning vs letter by
+  verification pair (C1); the switch point of P(far) vs log10(H/D) and its shift Δlog10 H* (P1); plateaus and slope
+  (C2); label mass. Each method is ranked against each null family of its kind (push vs curve).
+
+Not yet: damage-matched null (N6), concept-control comparisons beyond reporting, C3–C8 except the C2 signatures,
+bootstrap CIs, the replay-vs-generation agreement statistic (the raw generation table is there).
+Tests: `python -m pytest -q test_replay_eval.py` (label location on the real Qwen3 tokenizer, strata shuffle, the
+meaning/letter and switch-point arithmetic, the loop detector).
+
+The calibration health bound (the worst held-out item keeps ≥ 95% of its unsteered label mass, `--min_mass_ratio`) is an
+untested default and probably too strict: on Qwen3-1.7B with thinking on, it stopped calibration at x = 0.02.
+
+## Loop check: `check_loops.py`
+
+Counts how many token-cap hits in a generation run are repetition loops (a 64-token block repeated ≥ 3× in the last 1024
+tokens) rather than long reasoning. Reads `responses.jsonl` of any prompt_bank run; `--bank` adds a breakdown by regime.
+
+```
+python check_loops.py --run ../prompt_bank/runs/<model>__<bank> --bank ../prompt_bank/data/<bank>
+```
+
+On Qwen3-1.7B with thinking on (greedy, cap 4096), 323 of 337 cap hits are loops, so the 330 missing answers are mostly a
+decoding problem. The Qwen3 model cards advise against greedy decoding in thinking mode (recommended: temperature 0.6,
+top-p 0.95, top-k 20).
+
+## Example reports: `reports/`
+
+Saved outputs of plumbing runs, as examples of what the runner produces (`results/` itself is gitignored). These are
+small models, so the numbers are not evidence about steering.
+
+- `Qwen3-1.7B__t0_s0__think_report.md`: report card of the full thinking-on run (2026-11-19, ~9–10 h on an 8 GB GPU).
+- `Qwen3-1.7B__t0_s0__think_loops.txt`: `check_loops.py` on the same run.
