@@ -128,8 +128,10 @@ bootstrap CIs, the replay-vs-generation agreement statistic (the raw generation 
 Tests: `python -m pytest -q test_replay_eval.py` (label location on the real Qwen3 tokenizer, strata shuffle, the
 meaning/letter and switch-point arithmetic, the loop detector).
 
-The calibration health bound (the worst held-out item keeps ≥ 95% of its unsteered label mass, `--min_mass_ratio`) is an
-untested default and probably too strict: on Qwen3-1.7B with thinking on, it stopped calibration at x = 0.02.
+The calibration health bound (the mean label mass over the held-out items, at the worse of ±x, stays ≥ 95% of unsteered;
+`--min_mass_ratio`) is an untested default. On Qwen3-1.7B with thinking on, it stopped calibration at x = 0.02, but
+loosening it would not have helped: the sweep in `calibration.json` gets CAA no further than +0.27 logits (target 1)
+even at 75% of the unsteered mass. Worth revisiting on a larger model.
 
 ## Loop check: `check_loops.py`
 
