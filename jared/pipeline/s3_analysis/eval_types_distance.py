@@ -2,7 +2,8 @@
 row, so later steering runs (E8 answer slot, E13 suffix, E14 horizon phrase) can be read against
 distance.
 
-    python -m pipeline.s3_analysis.eval_types_distance $RESULTS/evaltypes_Qwen3-8B_think-on
+    python -m pipeline.s3_analysis.eval_types_distance $RESULTS/evaltypes_Qwen3-8B_think-on \
+        $RESULTS/exp0_Qwen3-8B_think-on_full
 
 Matched original. Each row is compared with the same decision written in Alan's template:
 - types with twins: a `base` row against its item's `twin` row (same options, same order, horizon
@@ -11,17 +12,29 @@ Matched original. Each row is compared with the same decision written in Alan's 
   and variant (`t0_w0` is Alan's wording, so it is the reference at distance 0);
 - `free_form` / `free_form_anchor` have no twin; they get only the unpaired distance below.
 
-Distance, per layer and position (suffix_end = last prompt token, where E13 steers and the stand-in
-for E14's horizon phrase, which is not saved; prelabel = the token before the answer label, where
-E8 steers): cosine distance between the two hidden states after subtracting the mean over all rows,
-divided by the median distance between two different original prompts of the same regime. So 0 is
-"same state as Alan's prompt" and 1 is "as far as another of Alan's prompts".
+Positions: suffix_end = last prompt token (where E13 steers; the stand-in for E14's horizon phrase,
+which is not saved); prelabel = the token before the answer label (where E8 steers).
 
-Unpaired distance, for every row: cosine distance to the mean of the original prompts, divided by
-the median of the same for the originals themselves (originals sit near 1).
+Distance, per layer and position, in three spaces:
+- full: the whole 4096-d hidden state;
+- horizon: its coordinates in the steering subspace, the top PCs of the full bank's per-horizon
+  averages (`steering.fit_cell`, the basis E8/E13 steer in; 8 dimensions);
+- bank_pca: its coordinates in the full bank's top principal components covering 90% of the bank's
+  variance (the space Alan's prompts span).
+In each: cosine distance after subtracting the mean over all eval rows, divided by the median
+distance between two *different* original prompts of the same regime. So 0 is "same state as Alan's
+prompt" and 1 is "as far as another of Alan's prompts".
+
+Two more per row: probe_shift = |readout of the row - readout of its original| in decades, from the
+full bank's ridge probe for log horizon (`fit_cell`'s w); outside_bank_pca = the share of the row's
+variance about the bank mean that lies outside the bank's top PCs.
+
+Unpaired distance (full space), for every row: cosine distance to the mean of the original prompts,
+divided by the median of the same for the originals themselves (originals sit near 1).
 
 A type's score is the median over its rows, with a bootstrap 90% interval over rows. The ranking
-uses L18 suffix_end. Writes `eval_distance.json`, `eval_distance.md` and `eval_distance_rows.json`.
+uses the full space at L18 suffix_end. Writes `eval_distance.json`, `eval_distance.md` and
+`eval_distance_rows.json`.
 """
 
 import json
@@ -30,10 +43,14 @@ from pathlib import Path
 
 import numpy as np
 from scipy.stats import spearmanr
+from sklearn.decomposition import PCA
 
 from spar_horizon.eval_types import TYPES
+from spar_horizon.steering import fit_cell
 
-POSITIONS = {"suffix_end": 4, "prelabel": 10}   # indices into the 17 saved tokens
+POSITIONS = {"suffix_end": 4, "prelabel": 10}   # indices into the 17 saved tokens (same in the bank)
+SPACES = ("full", "horizon", "bank_pca")
+BANK_VARIANCE = 0.90
 RANK_CELL = "L18_suffix_end"
 WORDING_REFERENCE = {"t0_w1_cash": "t0_w0", "t0_w3_clear": "t0_w0"}
 REFERENCE_TYPE = "t0_w0"
@@ -202,9 +219,36 @@ def median_ci(values, rng):
             "ci90": [round(float(q), 3) for q in np.percentile(boot, [5, 95])]}
 
 
+# ---- the bank's spaces ----
+
+def load_bank_layer(bank_dir, layer):
+    """Full-bank states at the POSITIONS [n, positions, d] and log10 horizons, prompts with a horizon."""
+    z = np.load(Path(bank_dir) / "activations.npz")
+    keep = z["kept"] & np.isfinite(z["horizons"])
+    X = np.asarray(z[f"L{layer}"][:, list(POSITIONS.values())], dtype=np.float32)[keep]
+    return X, np.log10(z["horizons"][keep])
+
+
+def fit_bank_spaces(Xb, log_h):
+    """The steering cell (mean, probe w and b, horizon basis) and the bank's top PCs."""
+    cell = fit_cell(Xb, log_h)
+    pca = PCA(n_components=BANK_VARIANCE, svd_solver="full").fit(Xb)
+    return {"cell": cell, "pca_mean": pca.mean_, "pca_basis": pca.components_}
+
+
+def project(bank, X):
+    """The rows of X [n, d] in each space, the probe readout and the share outside the bank PCs."""
+    cell = bank["cell"]
+    about_bank = X - bank["pca_mean"]
+    coords = about_bank @ bank["pca_basis"].T
+    outside = 1.0 - np.sum(coords ** 2, axis=1) / np.sum(about_bank ** 2, axis=1)
+    return {"full": X, "horizon": (X - cell["mean"]) @ cell["basis"].T, "bank_pca": coords,
+            "readout": (X - cell["mean"]) @ cell["w"] + cell["b"], "outside": outside}
+
+
 # ---- the run ----
 
-def compute(run_dir):
+def compute(run_dir, bank_dir):
     rows_by_type = load_rows(run_dir)
     layers, states = load_states(run_dir, rows_by_type)
     match = match_originals(rows_by_type)
@@ -214,18 +258,41 @@ def compute(run_dir):
     original_uids = [r["sample_uid"] for r in originals]
     original_regimes = [r["regime"] for r in originals]
     uids = list(states)
+    index = {u: i for i, u in enumerate(uids)}
     stacked = np.stack([states[u] for u in uids])            # (n, layers, positions, d)
+    repeats = repeated_prompts(uids, prompt_of)
 
-    rows_out = {u: {"distance": {}} for u in uids}
-    scales = {}
+    distance = {u: {} for u in uids}
+    cells, repeat = {}, {}
     for li, layer in enumerate(layers):
-        for pi, pos_name in enumerate(POSITIONS):
-            cell = f"L{layer}_{pos_name}"
-            paired, unpaired, scales[cell] = cell_distances(stacked[:, li, pi], uids, original_uids,
-                                                            original_regimes, matched)
+        Xb_layer, log_h = load_bank_layer(bank_dir, layer)
+        for pi, pos in enumerate(POSITIONS):
+            name = f"L{layer}_{pos}"
+            bank = fit_bank_spaces(Xb_layer[:, pi], log_h)
+            proj = project(bank, stacked[:, li, pi])
+            cells[name] = {"bank_pca_k": int(bank["pca_basis"].shape[0]),
+                           "horizon_k": int(bank["cell"]["basis"].shape[0]),
+                           "originals_outside_bank_pca": round(float(np.median(
+                               proj["outside"][[index[u] for u in original_uids]])), 4)}
             for u in uids:
-                rows_out[u]["distance"][cell] = {"paired": round(paired[u], 4) if u in paired else None,
-                                                 "unpaired": round(unpaired[u], 4)}
+                orig = matched[u]
+                distance[u][name] = {"probe_shift": None if orig is None else
+                                     round(float(abs(proj["readout"][index[u]] - proj["readout"][index[orig]])), 4),
+                                     "outside_bank_pca": round(float(proj["outside"][index[u]]), 4)}
+            for space in SPACES:
+                paired, unpaired, scale = cell_distances(proj[space], uids, original_uids, original_regimes, matched)
+                cells[name][f"scale_{space}"] = round(scale, 4)
+                for u in uids:
+                    distance[u][name][space] = {"paired": round(paired[u], 4) if u in paired else None}
+                    if space == "full":
+                        distance[u][name][space]["unpaired"] = round(unpaired[u], 4)
+                if layer == 18:
+                    repeat[f"{name} {space}"] = repeat_gaps(proj[space], repeats, scale)
+            if layer == 18:
+                gaps = [abs(proj["readout"][i] - proj["readout"][j]) for i, j in repeats]
+                repeat[f"{name} probe_shift"] = {"n": len(gaps), "median": round(float(np.median(gaps)), 4),
+                                                 "max": round(float(max(gaps)), 4)}
+        print(f"L{layer} done", flush=True)
 
     row_labels = []
     for type_id, rows in rows_by_type.items():
@@ -237,30 +304,31 @@ def compute(run_dir):
                 "twin_id": r["twin_id"], "regime": r["regime"], "horizon": r["horizon"],
                 "horizon_text": r["horizon_text"], "original_uid": orig, "pairing": match[u][1],
                 "prompt_identical_to_original": None if orig is None else r["prompt"] == prompt_of[orig],
-                "distance": rows_out[u]["distance"]})
-    return layers, scales, row_labels, repeat_check(stacked, uids, prompt_of, layers, scales)
+                "distance": distance[u]})
+    return layers, cells, row_labels, repeat
 
 
-def repeat_check(stacked, uids, prompt_of, layers, scales):
-    """The same prompt run twice (a v2 type's twin is its original type's twin, rerun a day later):
-    scaled distance between the two states at each position of L18. Should be near 0."""
-    first, gaps = {}, {pos: [] for pos in POSITIONS}
-    li = layers.index(18)
-    means = stacked[:, li].mean(axis=0)                      # centred like every other distance
+def repeated_prompts(uids, prompt_of):
+    """Index pairs of twin rows with the same prompt: a v2 type's twin is its original type's twin,
+    rerun a day later on another box."""
+    first, pairs = {}, []
     for i, u in enumerate(uids):
-        if not u.endswith("_twin"):
-            continue
-        j = first.setdefault(prompt_of[u], i)
-        if j != i:
-            for pi, pos in enumerate(POSITIONS):
-                d = cosine_distance(stacked[i, li, pi] - means[pi], stacked[j, li, pi] - means[pi])
-                d /= scales[f"L18_{pos}"]
-                gaps[pos].append(float(d))
-    return {pos: {"n": len(g), "median": round(float(np.median(g)), 4) if g else None,
-                  "max": round(max(g), 4) if g else None} for pos, g in gaps.items()}
+        if u.endswith("_twin"):
+            j = first.setdefault(prompt_of[u], i)
+            if j != i:
+                pairs.append((i, j))
+    return pairs
 
 
-def type_table(layers, row_labels, run_dir):
+def repeat_gaps(Z, pairs, scale):
+    """Scaled distance between the two runs of each repeated prompt: the noise floor. Centred like
+    every other distance."""
+    Zc = Z - Z.mean(axis=0)
+    gaps = [float(cosine_distance(Zc[i], Zc[j])) / scale for i, j in pairs]
+    return {"n": len(gaps), "median": round(float(np.median(gaps)), 4), "max": round(max(gaps), 4)}
+
+
+def type_table(row_labels, run_dir):
     rng = np.random.default_rng(0)
     summary = _json(Path(run_dir) / "summary.json")
     probe = _json(Path(run_dir) / "probe_transfer.json").get("types", {})
@@ -269,9 +337,13 @@ def type_table(layers, row_labels, run_dir):
         rows = [r for r in row_labels if r["type_id"] == type_id and r["variant"] != "twin"]
         by_cell = {}
         for cell in rows[0]["distance"]:
-            paired = [r["distance"][cell]["paired"] for r in rows if r["distance"][cell]["paired"] is not None]
-            by_cell[cell] = {"paired": median_ci(paired, rng),
-                             "unpaired": median_ci([r["distance"][cell]["unpaired"] for r in rows], rng)}
+            d = [r["distance"][cell] for r in rows]
+            by_cell[cell] = {space: {"paired": median_ci([x[space]["paired"] for x in d
+                                                          if x[space]["paired"] is not None], rng)}
+                             for space in SPACES}
+            by_cell[cell]["full"]["unpaired"] = median_ci([x["full"]["unpaired"] for x in d], rng)
+            by_cell[cell]["probe_shift"] = median_ci([x["probe_shift"] for x in d if x["probe_shift"] is not None], rng)
+            by_cell[cell]["outside_bank_pca"] = median_ci([x["outside_bank_pca"] for x in d], rng)
         s = summary.get(type_id, {})
         out[type_id] = {
             "family": family(type_id), "changes": CHANGES.get(type_id, ""), "steering": steering_sites(type_id),
@@ -280,11 +352,13 @@ def type_table(layers, row_labels, run_dir):
             "probe_spearman": {c: (probe.get(type_id, {}).get(c) or {}).get("spearman")
                                for c in ("L18_suffix_end", "L18_prelabel")},
             "distance": by_cell}
-    ranked = sorted((t for t in out if out[t]["distance"][RANK_CELL]["paired"]),
-                    key=lambda t: out[t]["distance"][RANK_CELL]["paired"]["median"])
-    for i, t in enumerate(ranked, 1):
-        out[t]["rank"] = i
-    by_unpaired = sorted(out, key=lambda t: out[t]["distance"][RANK_CELL]["unpaired"]["median"])
+    for space in SPACES:
+        key = "rank" if space == "full" else f"rank_{space}"
+        ranked = sorted((t for t in out if out[t]["distance"][RANK_CELL][space]["paired"]),
+                        key=lambda t: out[t]["distance"][RANK_CELL][space]["paired"]["median"])
+        for i, t in enumerate(ranked, 1):
+            out[t][key] = i
+    by_unpaired = sorted(out, key=lambda t: out[t]["distance"][RANK_CELL]["full"]["unpaired"]["median"])
     for i, t in enumerate(by_unpaired, 1):
         out[t]["rank_unpaired"] = i
     return out
@@ -294,111 +368,150 @@ def _json(path):
     return json.loads(path.read_text()) if path.exists() else {}
 
 
-def _median(types, t, cell, kind="paired"):
-    v = types[t]["distance"][cell][kind]
+def _value(types, t, cell, measure, kind="paired"):
+    """A type's median of one measure: a space name (paired/unpaired) or probe_shift/outside_bank_pca."""
+    v = types[t]["distance"][cell][measure]
+    if measure in SPACES:
+        v = v[kind]
     return None if v is None else v["median"]
 
 
+def _spearman(xs, ys):
+    pairs = [(x, y) for x, y in zip(xs, ys) if x is not None and y is not None]
+    rho, p = spearmanr(*zip(*pairs))
+    return {"n": len(pairs), "spearman": round(float(rho), 3), "p": round(float(p), 3)}
+
+
 def checks(types, layers, row_labels):
-    """Rank stability across layers, identical prompts, and the correlations used as a preview."""
-    out = {"rank_stability": {}, "identical_prompts": {}, "preview": {}}
+    """Rank stability across layers, agreement between spaces, identical prompts, and the
+    correlations with behaviour used as a preview."""
+    out = {"rank_stability": {}, "space_agreement": {}, "identical_prompts": {}, "preview": {}}
     paired_types = [t for t in types if "rank" in types[t] and t != REFERENCE_TYPE]
-    for pos in POSITIONS:
-        cells = [f"L{n}_{pos}" for n in layers if n in (14, 18, 22)]
-        for a, b in zip(cells, cells[1:]):
-            rho = spearmanr([_median(types, t, a) for t in paired_types],
-                            [_median(types, t, b) for t in paired_types])[0]
-            out["rank_stability"][f"{a} vs {b}"] = round(float(rho), 3)
+    for space in SPACES:
+        for pos in POSITIONS:
+            cells = [f"L{n}_{pos}" for n in layers if n in (14, 18, 22)]
+            for a, b in zip(cells, cells[1:]):
+                out["rank_stability"][f"{space} {a} vs {b}"] = _spearman(
+                    [_value(types, t, a, space) for t in paired_types],
+                    [_value(types, t, b, space) for t in paired_types])["spearman"]
     for pos in POSITIONS:
         cell = f"L18_{pos}"
-        same = [r["distance"][cell]["paired"] for r in row_labels
+        for a, b in (("full", "horizon"), ("full", "bank_pca"), ("horizon", "bank_pca"), ("horizon", "probe_shift")):
+            out["space_agreement"][f"{cell} {a} vs {b}"] = _spearman(
+                [_value(types, t, cell, a) for t in paired_types], [_value(types, t, cell, b) for t in paired_types])
+        same = [r["distance"][cell]["full"]["paired"] for r in row_labels
                 if r["prompt_identical_to_original"] and r["pairing"] == "twin"]
-        differ = [r["distance"][cell]["paired"] for r in row_labels
-                  if r["prompt_identical_to_original"] is False]
-        out["identical_prompts"][cell] = {"n_identical": len(same),
-                                          "max_identical": round(max(same), 4) if same else None,
-                                          "median_different": round(float(np.median(differ)), 3)}
-    rho = spearmanr([_median(types, t, RANK_CELL) for t in paired_types],
-                    [_median(types, t, RANK_CELL, "unpaired") for t in paired_types])[0]
-    out["paired_vs_unpaired_rank"] = round(float(rho), 3)
+        out["identical_prompts"][cell] = {"n": len(same), "max_full": round(max(same), 4) if same else None}
+    out["paired_vs_unpaired_rank"] = _spearman([_value(types, t, RANK_CELL, "full") for t in paired_types],
+                                               [_value(types, t, RANK_CELL, "full", "unpaired") for t in paired_types])
     for cell in ("L18_suffix_end", "L18_prelabel"):
-        for target in ("accuracy", "probe_spearman"):
-            pairs = [(_median(types, t, cell),
-                      types[t]["accuracy"] if target == "accuracy" else types[t]["probe_spearman"][cell])
-                     for t in paired_types]
-            pairs = [(d, y) for d, y in pairs if y is not None]
-            rho, p = spearmanr(*zip(*pairs))
-            out["preview"][f"{cell} vs {target}"] = {"n": len(pairs), "spearman": round(float(rho), 3),
-                                                      "p": round(float(p), 3)}
+        for measure in (*SPACES, "probe_shift", "outside_bank_pca"):
+            for target in ("accuracy", "probe_spearman"):
+                ys = [types[t]["accuracy"] if target == "accuracy" else types[t]["probe_spearman"][cell]
+                      for t in paired_types]
+                out["preview"][f"{cell} {measure} vs {target}"] = _spearman(
+                    [_value(types, t, cell, measure) for t in paired_types], ys)
     return out
 
 
-def _fmt(v):
+def _fmt(v, ci=True):
     if v is None:
         return "-"
-    return f"{v['median']:.2f} [{v['ci90'][0]:.2f}, {v['ci90'][1]:.2f}]"
+    return f"{v['median']:.2f} [{v['ci90'][0]:.2f}, {v['ci90'][1]:.2f}]" if ci else f"{v['median']:.2f}"
 
 
-def markdown(types, scales, check):
+def markdown(types, cells, check, repeat):
+    order = sorted(types, key=lambda t: (types[t].get("rank", 99), types[t]["rank_unpaired"]))
     lines = [
         "# Eval types ranked by distance from Alan's prompt (Qwen3-8B, thinking on)",
         "",
         "Distance = cosine distance of the hidden state to the same decision in Alan's template, after "
         "centring, divided by the median distance between two different Alan prompts of the same regime "
         "(0 = same state, 1 = as far as another Alan prompt). Median over the type's rows [bootstrap 90%]. "
-        "Unpaired = distance to the mean Alan prompt (originals sit near 1). "
-        f"Ranked by {RANK_CELL}. E14's horizon-phrase position is not saved: suffix_end stands in for it.",
+        f"Ranked by the full space at {RANK_CELL}. E14's horizon-phrase position is not saved: suffix_end "
+        "stands in for it.",
+        "",
+        "## Full 4096-d state",
         "",
         "| rank | type | family | what changes | n | L18 suffix | L18 prelabel | L14 suffix | L22 suffix "
         "| unpaired L18 suffix (rank) | E8 / E13 / E14 | accuracy | probe ρ L18 suffix |",
         "|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
-    order = sorted(types, key=lambda t: (types[t].get("rank", 99), types[t]["rank_unpaired"]))
     for t in order:
         x = types[t]
         d = x["distance"]
-        n = (d[RANK_CELL]["paired"] or {}).get("n", 0)
+        n = (d[RANK_CELL]["full"]["paired"] or {}).get("n", 0)
         acc = "-" if x["accuracy"] is None else f"{x['accuracy']:.2f}"
         rho = x["probe_spearman"]["L18_suffix_end"]
         st = x["steering"]
         lines.append(
-            f"| {x.get('rank', '-')} | {t} | {x['family']} | {x['changes']} | {n} | {_fmt(d['L18_suffix_end']['paired'])} "
-            f"| {_fmt(d['L18_prelabel']['paired'])} | {_fmt(d['L14_suffix_end']['paired'])} "
-            f"| {_fmt(d['L22_suffix_end']['paired'])} | {d[RANK_CELL]['unpaired']['median']:.2f} ({x['rank_unpaired']}) "
+            f"| {x.get('rank', '-')} | {t} | {x['family']} | {x['changes']} | {n} "
+            f"| {_fmt(d['L18_suffix_end']['full']['paired'])} | {_fmt(d['L18_prelabel']['full']['paired'])} "
+            f"| {_fmt(d['L14_suffix_end']['full']['paired'])} | {_fmt(d['L22_suffix_end']['full']['paired'])} "
+            f"| {d[RANK_CELL]['full']['unpaired']['median']:.2f} ({x['rank_unpaired']}) "
             f"| {st['E8']} / {st['E13']} / {st['E14']} | {acc} | {'-' if rho is None else f'{rho:.2f}'} |")
-    lines += ["", "## Checks", "",
-              "Rank agreement between layers (Spearman over paired types): "
-              + ", ".join(f"{k}: {v:.2f}" for k, v in check["rank_stability"].items()) + ".", "",
-              f"Paired vs unpaired ranking at {RANK_CELL}: Spearman {check['paired_vs_unpaired_rank']:.2f}.", ""]
+
+    c18s, c18p = cells["L18_suffix_end"], cells["L18_prelabel"]
+    lines += [
+        "", "## Three spaces at L18", "",
+        f"horizon = the {c18s['horizon_k']}-d steering subspace (top PCs of the full bank's per-horizon averages); "
+        f"bank PCA = the full bank's top PCs covering {BANK_VARIANCE:.0%} of its variance "
+        f"(k = {c18s['bank_pca_k']} at suffix, {c18p['bank_pca_k']} at prelabel); outside = share of the row's "
+        f"variance outside them (Alan's prompts in this run: {c18s['originals_outside_bank_pca']:.2f} at suffix, "
+        f"{c18p['originals_outside_bank_pca']:.2f} at prelabel); probe shift = |probe readout - original's| in decades. "
+        "Rank in brackets.",
+        "",
+        "| type | suffix: full | horizon | bank PCA | outside | probe shift | prelabel: full | horizon | bank PCA | outside | probe shift |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for t in order:
+        x, row = types[t], [f"| {t} "]
+        for cell in ("L18_suffix_end", "L18_prelabel"):
+            d = x["distance"][cell]
+            for space in SPACES:
+                rank = x.get("rank" if space == "full" else f"rank_{space}") if cell == RANK_CELL else None
+                row.append(f"| {_fmt(d[space]['paired'], ci=False)}{f' ({rank})' if rank else ''} ")
+            row.append(f"| {_fmt(d['outside_bank_pca'], ci=False)} | {_fmt(d['probe_shift'], ci=False)} ")
+        lines.append("".join(row) + "|")
+
+    lines += ["", "## Checks", ""]
+    lines.append("Rank agreement between layers (Spearman over paired types): "
+                 + ", ".join(f"{k}: {v:.2f}" for k, v in check["rank_stability"].items()) + ".")
+    lines.append("")
+    lines.append("Agreement between spaces at L18 (Spearman over paired types): "
+                 + ", ".join(f"{k}: {v['spearman']:.2f}" for k, v in check["space_agreement"].items()) + ".")
+    lines.append("")
+    lines.append(f"Paired vs unpaired ranking at {RANK_CELL}: Spearman {check['paired_vs_unpaired_rank']['spearman']:.2f}.")
     for cell, v in check["identical_prompts"].items():
-        lines.append(f"Rows whose prompt is word for word their twin's, {cell}: n = {v['n_identical']}, "
-                     f"max distance {v['max_identical']} (rows that differ: median {v['median_different']}).")
-    for pos, v in check["repeated_prompts"].items():
-        lines.append(f"Same twin prompt in two runs (v2 type vs its original), L18_{pos}: n = {v['n']}, "
-                     f"median distance {v['median']}, max {v['max']}: the noise floor at this position.")
-    lines += ["", "## Preview: distance vs behaviour (Spearman over paired types)", "",
-              "| distance | against | n | Spearman | p |", "|---|---|---|---|---|"]
+        lines.append(f"Rows whose prompt is word for word their twin's, {cell}: n = {v['n']}, max full distance {v['max_full']}.")
+    lines += ["", "Noise floor: the same twin prompt run on two boxes (v2 type vs its original), L18:", "",
+              "| cell, measure | n | median | max |", "|---|---|---|---|"]
+    for k, v in repeat.items():
+        lines.append(f"| {k} | {v['n']} | {v['median']:.3f} | {v['max']:.3f} |")
+    lines += ["", "## Preview: distance vs behaviour (Spearman over paired types, uncorrected)", "",
+              "| cell | measure | against | n | Spearman | p |", "|---|---|---|---|---|---|"]
     for k, v in check["preview"].items():
-        cell, target = k.split(" vs ")
-        lines.append(f"| {cell} | {target} | {v['n']} | {v['spearman']:.2f} | {v['p']:.3f} |")
-    lines += ["", "Scale (median distance between two Alan prompts): "
-              + ", ".join(f"{c} {s:.3f}" for c, s in scales.items() if c.startswith(("L14", "L18", "L22"))) + "."]
+        cell, measure, _, target = k.split(" ")
+        lines.append(f"| {cell} | {measure} | {target} | {v['n']} | {v['spearman']:.2f} | {v['p']:.3f} |")
+    lines += ["", "Scales (median distance between two Alan prompts), L18: "
+              + ", ".join(f"{c} {k.removeprefix('scale_')} {v:.3f}" for c in ("L18_suffix_end", "L18_prelabel")
+                          for k, v in cells[c].items() if k.startswith("scale_")) + "."]
     return "\n".join(lines) + "\n"
 
 
-def main(run_dir):
+def main(run_dir, bank_dir):
     run_dir = Path(run_dir)
-    layers, scales, row_labels, repeats = compute(run_dir)
-    types = type_table(layers, row_labels, run_dir)
+    layers, cells, row_labels, repeat = compute(run_dir, bank_dir)
+    types = type_table(row_labels, run_dir)
     check = checks(types, layers, row_labels)
-    check["repeated_prompts"] = repeats
+    check["repeated_prompts"] = repeat
     (run_dir / "eval_distance_rows.json").write_text(json.dumps(row_labels, indent=1))
     (run_dir / "eval_distance.json").write_text(json.dumps(
-        {"rank_cell": RANK_CELL, "layers": layers, "scales": scales, "checks": check, "types": types}, indent=1))
-    md = markdown(types, scales, check)
+        {"rank_cell": RANK_CELL, "layers": layers, "cells": cells, "checks": check, "types": types}, indent=1))
+    md = markdown(types, cells, check, repeat)
     (run_dir / "eval_distance.md").write_text(md)
     print(md)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2])

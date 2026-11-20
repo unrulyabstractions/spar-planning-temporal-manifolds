@@ -193,7 +193,8 @@ the unauthenticated download stalled.
 Goal: rank the existing eval types by how far Qwen3-8B's internal state for them is from its state
 for Alan's prompt, and label every row, so the steering runs (E8 answer slot, E13 suffix, E14
 horizon phrase) can be read against distance. Script:
-`python -m pipeline.s3_analysis.eval_types_distance $RESULTS/evaltypes_Qwen3-8B_think-on`. It writes
+`python -m pipeline.s3_analysis.eval_types_distance $RESULTS/evaltypes_Qwen3-8B_think-on
+$RESULTS/exp0_Qwen3-8B_think-on_full` (the full bank supplies the subspaces below). It writes
 `eval_distance.md` (the full table), `eval_distance.json` (per type, every layer and position, CIs)
 and `eval_distance_rows.json` (per row: type, family, variant, regime, horizon, matched original,
 pairing, distances) into the run directory. CPU only, about a minute.
@@ -248,6 +249,51 @@ further out: +0.6 (sycophancy_lean), +1.0 (system_prompt), +1.5 (horizon_revised
   and the old file is in `overnight_2026-11-16/`.)
 - Distance vs accuracy: -0.05 (p = 0.83). How far a prompt is from Alan's says nothing about
   whether the model gets it right; accuracy is set by the wording (cash sentence), not the format.
+
+**The same distance in the subspaces steering uses** (L18). The full-space cosine is dominated by
+format directions, so it is repeated in two subspaces fitted on the full bank:
+- *horizon*: the 8-d steering subspace (top PCs of the bank's per-horizon averages, `fit_cell`'s
+  basis, the one E8/E13 steer in);
+- *bank PCA*: the bank's top PCs covering 90% of its variance (k = 20 at the last prompt token, 56 at
+  the label slot).
+Plus two direct measures: *probe shift*, |bank probe readout - its Alan twin's| in decades, and
+*outside*, the share of a row's variance outside the bank PCs. Noise floors (same prompt, two
+boxes) at the last prompt token are small: horizon 0.03, bank PCA 0.02, probe shift 0.04 decades.
+
+| type | full | horizon | bank PCA | outside | probe shift (decades) |
+|---|---|---|---|---|---|
+| Alan's prompts (t0_w0, twins) | 0 | 0 | 0 | 0.16 | 0 |
+| unit_mismatch | 1.27 | 1.90 | 0.90 | 0.31 | 0.45 |
+| distractor_temporal | 2.19 | 1.30 | 1.29 | 0.59 | 0.30 |
+| t0_w1_cash | 2.59 | 1.57 | 1.43 | 0.60 | 0.68 |
+| city_values | 4.05 | 5.18 | 2.44 | 0.75 | 0.22 |
+| role_fund_manager | 4.11 | 6.40 | 2.18 | 0.69 | 0.11 |
+| public_health | 4.18 | 3.83 | 2.25 | 0.78 | 1.70 |
+| coding_agent | 5.58 | 8.78 | 3.11 | 0.74 | 1.06 |
+| system_prompt | 6.26 | 7.59 | 3.85 | 0.79 | 2.34 |
+| prose_natural | 7.22 | 10.52 | 4.74 | 0.87 | 4.85 |
+| multiturn_analyst | 7.77 | 9.37 | 4.68 | 0.78 | 6.14 |
+| json_io | 7.84 | 11.98 | 5.19 | 0.88 | 9.93 |
+
+(All types in `eval_distance.md`.) What it shows:
+- The three spaces rank the types alike (Spearman 0.92-0.97), so the ranking is not an artefact of
+  the full space.
+- In the steering subspace, almost every type is further from its Alan twin than two Alan prompts
+  with *different horizons* are from each other (distance > 1). Format moves the state along the
+  steering axes more than the horizon itself does. Role and domain changes (fund manager, coding
+  agent, city) move it more there than their full-space rank suggests; the distractor and the cash
+  sentence less.
+- Most of each eval type's state lies outside the bank's top PCs (30-88%, against 16% for Alan's
+  prompts). `roi_unequal` is word for word its twin and still 84% outside: the bank's PCs do not
+  cover the 8-option layout, so for multi-option types even the matched original is off-bank.
+- The bank probe reads the horizon decades off on the reformatted prompts: 9.9 decades on JSON, 6.1
+  on multi-turn, 4.9 on prose, 2.3 on system message; under 1 on the template-preserving types.
+- Against behaviour (25 types, 20 uncorrected tests): horizon-subspace distance predicts probe
+  transfer slightly better than the full space (-0.49, p = 0.01, against -0.41); probe shift does
+  most (-0.68, p < 0.001), but it is partly the same measurement. No space predicts accuracy at the
+  last prompt token (|ρ| <= 0.22). At the label slot horizon distance correlates with accuracy
+  (+0.52, p = 0.008), but the label-slot noise floor there is as large as the signal (median 0.45,
+  max 2.7), so I would not read anything into it.
 
 **For the steering runs.** Join results on `sample_uid` with `eval_distance_rows.json` and plot the
 steering effect against `distance.L18_suffix_end.paired` (or the type's median). Which modality

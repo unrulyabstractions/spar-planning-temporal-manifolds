@@ -65,3 +65,26 @@ def test_originals_scale_same_regime_only():
     X = np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 1.0]])
     # identical within each regime, orthogonal across: only within-regime pairs count
     assert originals_scale(X, ["near", "near", "both", "both"]) == 0.0
+
+
+def test_project_spaces():
+    from pipeline.s3_analysis.eval_types_distance import fit_bank_spaces, project
+    rng = np.random.default_rng(1)
+    d, n = 32, 200
+    # a bank whose horizon lives along axis 0 and whose other variance spans axes 1-3 only
+    log_h = rng.uniform(-2, 1.5, n)
+    Xb = np.zeros((n, d))
+    Xb[:, 0] = 3 * log_h
+    Xb[:, 1:4] = rng.normal(size=(n, 3))
+    bank = fit_bank_spaces(Xb, log_h)
+    inside = np.zeros((1, d))
+    inside[0, 0] = 3.0
+    outside = np.zeros((1, d))
+    outside[0, 10] = 5.0
+    p = project(bank, np.vstack([inside, outside]) + bank["pca_mean"])
+    assert p["bank_pca"].shape[1] == bank["pca_basis"].shape[0] <= 4
+    assert np.isclose(p["outside"][0], 0.0, atol=1e-4) and np.isclose(p["outside"][1], 1.0, atol=1e-2)
+    # the probe reads log horizon off axis 0, so a step of 3 along it is about one decade
+    assert abs((p["readout"][0] - p["readout"][1]) - 1.0) < 0.1
+    # the horizon subspace contains axis 0
+    assert np.abs(bank["cell"]["basis"][:, 0]).max() > 0.99
