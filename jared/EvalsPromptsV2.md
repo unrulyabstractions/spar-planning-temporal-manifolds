@@ -187,3 +187,73 @@ the unauthenticated download stalled.
 6. For v3: give `sycophancy_lean_clear` a receive-payment TASK line in the assistant voice ("Help
    me, the head of the household, choose which payment the household receives:"), and add "Each
    option is a single, one-time payment." to the clear wording.
+
+## 7. Distance from Alan's prompt (2026-11-20, local, saved activations)
+
+Goal: rank the existing eval types by how far Qwen3-8B's internal state for them is from its state
+for Alan's prompt, and label every row, so the steering runs (E8 answer slot, E13 suffix, E14
+horizon phrase) can be read against distance. Script:
+`python -m pipeline.s3_analysis.eval_types_distance $RESULTS/evaltypes_Qwen3-8B_think-on`. It writes
+`eval_distance.md` (the full table), `eval_distance.json` (per type, every layer and position, CIs)
+and `eval_distance_rows.json` (per row: type, family, variant, regime, horizon, matched original,
+pairing, distances) into the run directory. CPU only, about a minute.
+
+**Distance.** Each row is compared with the same decision in Alan's template: a `base` row with its
+item's twin (same options, order and horizon; 4 pairs per type), and the wording ladder with the
+`t0_w0` row of the same item (48 pairs). Cosine distance of the hidden states after subtracting the
+mean over all rows, divided by the median distance between two *different* Alan prompts of the same
+regime. So 0 = same state as Alan's prompt, 1 = as far as another Alan prompt with other numbers.
+`free_form` and `free_form_anchor` have no twin; they only get the unpaired distance (to the mean Alan
+prompt; Alan prompts sit near 1), which ranks the paired types similarly (Spearman 0.77).
+
+**Ranking** (L18, last prompt token; median [bootstrap 90%]):
+
+| rank | type | distance | | rank | type | distance |
+|---|---|---|---|---|---|---|
+| 1 | roi_unequal (text = twin) | 0.00 | | 14 | role_fund_manager | 4.11 |
+| 2 | t0_w0 (reference) | 0.00 | | 15 | public_health | 4.18 |
+| 3 | unit_mismatch | 1.27 [1.09, 1.44] | | 16 | t0_w3_clear | 4.29 [4.23, 4.35] |
+| 4 | roi_unequal_clear | 1.64 | | 17 | horizon_revised_clear | 5.19 |
+| 5 | implicit_vague | 1.78 | | 18 | coding_agent | 5.58 |
+| 6 | distractor_temporal | 2.19 | | 19 | role_assistant | 6.13 |
+| 7 | roi_equal_10 | 2.31 | | 20 | system_prompt | 6.26 |
+| 8 | implicit_concrete | 2.40 | | 21 | sycophancy_lean | 6.78 |
+| 9 | t0_w1_cash | 2.59 [2.54, 2.65] | | 22 | prose_natural | 7.22 |
+| 10 | city_no_values | 2.93 | | 23 | system_prompt_clear | 7.24 |
+| 11 | horizon_revised | 3.71 | | 24 | sycophancy_lean_clear | 7.36 |
+| 12 | loss_framing | 3.72 | | 25 | multiturn_analyst | 7.77 |
+| 13 | city_values | 4.05 | | 26 | json_io | 7.84 |
+
+The order follows how much of the template a type rewrites: one phrase (unit, distractor, implicit
+horizon) < the TASK/SITUATION line (domains, fund manager) < the speaker (assistant, sycophancy,
+system message) < the whole layout (prose, multi-turn, JSON). The clear wording moves every type
+further out: +0.6 (sycophancy_lean), +1.0 (system_prompt), +1.5 (horizon_revised), +1.6
+(roi_unequal); on Alan's own prompt the cash sentence alone is 2.6 and all three changes 4.3.
+
+**Checks.**
+- The ranking does not depend on the layer: Spearman 0.99 between L14, L18 and L22 at the last
+  prompt token, 0.97 at the label slot.
+- `roi_unequal` rows are word for word their twins: distance 0.00 at both positions.
+- The same twin prompt run on two different boxes (a v2 type and its original): median 0.11, max
+  0.16 at the last prompt token. That is the noise floor; every non-identical type is above 1.2.
+- At the label slot (after thinking) the same check gives median 0.47, max 1.66, as large as most
+  type distances there (0.4-2.8): one flipped token changes the whole trace. **Use the last prompt
+  token for ranking; label-slot distances mostly measure the trace, not the prompt.**
+
+**Preview against behaviour** (Spearman over the 25 paired types, no correction for the 4 tests):
+- Distance vs the full-bank probe's transfer (Spearman of its readout, L18 last prompt token): -0.41, p = 0.04.
+  Types further from Alan's prompt are read worse by the probe trained on Alan's prompts. This is
+  the first hint that a direction found on the bank, so also steering along it, will weaken with
+  distance. (`probe_transfer` was rerun to cover the v2 types; the 20 overnight types are unchanged,
+  and the old file is in `overnight_2026-11-16/`.)
+- Distance vs accuracy: -0.05 (p = 0.83). How far a prompt is from Alan's says nothing about
+  whether the model gets it right; accuracy is set by the wording (cash sentence), not the format.
+
+**For the steering runs.** Join results on `sample_uid` with `eval_distance_rows.json` and plot the
+steering effect against `distance.L18_suffix_end.paired` (or the type's median). Which modality
+applies to each type is in `eval_distance.json` (`steering`): E8 needs a label answer (not the two
+free-form types); E14 steers a life-event phrase in the implicit and anchor types, and has two
+horizon phrases (stale, updated) in `horizon_revised*`. E14's position is not saved, so its own
+distance needs a short GPU pass that saves the horizon-phrase token; until then the last prompt
+token stands in. Only 4 pairs per twin type: per-type medians are tight here, but a steering
+comparison per type will have few rows; the wording ladder (48 pairs) is the well-powered rung.
