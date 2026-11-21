@@ -349,7 +349,7 @@ step crosses; specific = curve minus random, in units of the type's own contrast
   not the direction it reads there. It is the only type whose options are not money or public
   goods (engineering projects that deliver a benefit after a delay). Why is untested.
 - **The patching ceiling is format-independent.** Onset at L24-25 in almost every type and both
-  modes (L24 transfer 0.4-0.8). Exceptions: `implicit_vague` thinking on (onset L27), and sycophancy
+  modes (L24 transfer 0.3-0.8). Exceptions: `implicit_vague` thinking on (onset L27), and sycophancy
   thinking off, where patching barely transfers before L28-30: the decision there follows the user's
   stated lean, not the horizon.
 - **Thinking off is unreliable on the eval types, as feared.** 8 of 21 fail the gate, mostly
