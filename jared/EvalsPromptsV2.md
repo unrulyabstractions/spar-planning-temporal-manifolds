@@ -303,3 +303,69 @@ horizon phrases (stale, updated) in `horizon_revised*`. E14's position is not sa
 distance needs a short GPU pass that saves the horizon-phrase token; until then the last prompt
 token stands in. Only 4 pairs per twin type: per-type medians are tight here, but a steering
 comparison per type will have few rows; the wording ladder (48 pairs) is the well-powered rung.
+
+## 8. E19: the bank's answer-slot steering on the eval types (2026-11-21, RTX 4090 in Estonia, $0.18)
+
+Question: do the steering vectors fitted on Alan's prompts (full bank, E8's L24 pre-label cells) still
+move the choice on the new prompt types, and does that weaken with distance (§7)?
+
+Run: `evaltypes_steering_prepare` (local) -> `exp19_evaltypes_steer` (box, 9 min) ->
+`eval_types_steer` (local; writes `eval_steer.{json,md}` into `results/horizon/exp19_Qwen3-8B_evaltypes/`).
+21 two-option label types, near and both rows (base, swap, twin), 636 rows thinking off and 625
+thinking on. Thinking off feeds the prompt with "I choose:" prefilled. Thinking on feeds E0's own
+trace, from gen_cache, cut before the label. Its unsteered log-odds reproduce E0's saved ones (median
+|gap| 0.25 logits, max 1.0, all 625 choices agree). The 11 rows dropped are twins whose cached
+generation is the v2 rerun, not the one the activations came from. Per row: unsteered, curve ±2 decades,
+random direction of the same length ±2. Per type: within-type answer-slot patching, all layers (ceiling).
+Left out: `json_io`, `loss_framing`, the multi-option and free-form types.
+
+Gate, fixed before the run (accuracy >= 0.65, order agreement >= 0.75, near/both contrast >= 2
+logits): thinking off 13 of 21 types pass, thinking on 19 of 21.
+
+**Results** (toward = shift toward the answer the steered horizon makes rational, on the rows the
+step crosses; specific = curve minus random, in units of the type's own contrast; raw = curve shift in logits):
+
+| | thinking off | thinking on |
+|---|---|---|
+| bank (E8) | 0.38-0.39 | 0.14-0.15 |
+| `t0_w0` (Alan's wording, this run) | specific 0.30, raw 3.4 logits | 0.12, 2.2 logits |
+| gated types, range of specific | 0.12-0.51, except coding_agent 0.00 | 0.04-0.24, except coding_agent -0.01 |
+| gated types, range of raw shift | 3.4-8.8 logits, prose 2.0, coding_agent 0.6 (CI spans 0) | 1.2-3.1 logits, coding_agent -0.2 (CI spans 0) |
+| random direction, same length | <= 0.05 everywhere | <= 0.03 everywhere |
+| label flips (rows that switch answer) | 0-13 per type | 0-3 per type |
+
+- **Steering transfers to almost every format.** The bank's curve moves the choice on prompts
+  far from Alan's: system message (specific 0.34 off / 0.16 on), prose, multi-turn, fund manager (0.51
+  off), sycophancy (0.24 on). Every gated type except one is clearly above its random control.
+- **Distance does not predict how well it transfers.** Across gated types, no distance (full, horizon
+  subspace, probe shift; L18 suffix or L24 pre-label) correlates with the effect beyond chance (10 tests per
+  mode; the strongest, L24 pre-label full distance vs effect over ceiling thinking on, is -0.47,
+  p = 0.04, uncorrected). The raw shift does not fall with distance either (Spearman +0.17 off, -0.14 on).
+  Contrast-scaled effects are smaller on types the model is very sure of (city, multi-turn), because
+  the raw shift is similar and the contrast larger.
+- **`coding_agent` is the exception: steering does nothing in either mode.** Its decision is in
+  the slot as usual (patch transfer 0.52 at L24 off, 0.46 on, onset L24-25), its gate passes, its
+  contrast is large (30). So the decision sits where steering acts, but the bank's horizon curve is
+  not the direction it reads there. It is the only type whose options are not money or public
+  goods (engineering projects that deliver a benefit after a delay). Why is untested.
+- **The patching ceiling is format-independent.** Onset at L24-25 in almost every type and both
+  modes (L24 transfer 0.4-0.8). Exceptions: `implicit_vague` thinking on (onset L27), and sycophancy
+  thinking off, where patching barely transfers before L28-30: the decision there follows the user's
+  stated lean, not the horizon.
+- **Thinking off is unreliable on the eval types, as feared.** 8 of 21 fail the gate, mostly
+  on order agreement (0.25-0.62), and `t0_w0` itself fails (order 0.62). Sycophancy thinking off
+  follows the user's lean: accuracy 0.25 (`sycophancy_lean`) and 0.46 (`_clear`), negative contrast.
+  The thinking-on gate is the one to trust.
+- **Thinking-on steering moves log-odds but almost never the answer.** A 1-3 logit shift against a
+  12-35 logit contrast: 0-3 flips per type. As on the bank, a ±2-decade step at the answer slot is
+  too small to flip a reasoned decision.
+
+**What to do next** (each needs a spec):
+1. `coding_agent`: check whether its L24 pre-label states lie on the bank's curve (the probe readout
+   and the curve coordinates of near vs both rows). This tells whether the horizon is encoded
+   differently there or not read at all.
+2. A dose curve (±1, ±2, ±4 decades) thinking on, on 4-5 types, to see whether larger steps flip
+   reasoned answers, and whether the dose needed grows with distance.
+3. Distance as a predictor is not supported at the answer slot. If it matters, it should show where
+   format changes the input: steering before the reasoning (E13-style, at the suffix), where §7's
+   distances are measured. That costs about 10x more (generation).
