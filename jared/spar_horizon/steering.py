@@ -534,16 +534,17 @@ def prompt_patch(model, layer, positions, donor, basis=None, add=False):
 
     def read_padding(_module, args, kwargs):
         mask = kwargs.get("attention_mask")
-        if mask is not None and mask.dim() == 2:
-            padding["left"] = (mask == 0).sum(1).tolist()
+        if mask is None:
+            # generate drops an all-ones mask (transformers 5.18 generation/utils.py, "We can drop
+            # the mask altogether"), so no mask means no row is padded. This hit E14's one-prompt
+            # batches on the box and E20's equal-length smoke batch.
+            ids = kwargs.get("input_ids")
+            rows = (ids if ids is not None else kwargs.get("inputs_embeds", args[0] if args else None)).shape[0]
+            padding["left"] = [0] * rows
             return
-        # A batch of one row is never padded, and generate on the box (CUDA) passes no 2-D
-        # mask for it (E14 crashed on the last, one-prompt batch of a condition).
-        ids = kwargs.get("input_ids")
-        rows = (ids if ids is not None else kwargs.get("inputs_embeds", args[0] if args else None)).shape[0]
-        if rows != 1:
+        if mask.dim() != 2:
             raise ValueError("prompt_patch needs the 2-D attention mask to locate each row's prompt")
-        padding["left"] = [0]
+        padding["left"] = (mask == 0).sum(1).tolist()
 
     def patch(_module, _inputs, out):
         h = out[0] if isinstance(out, tuple) else out

@@ -304,17 +304,22 @@ def test_prompt_patch_applies_to_the_prefill_and_not_to_decode_steps(tiny):
     assert out[0, len(seq)].item() == donor_logits[0].argmax().item()   # first token read from the patched prefill
 
 
-def test_prompt_patch_of_one_row_needs_no_mask_and_a_batch_does(tiny):
+def test_prompt_patch_without_a_mask_treats_every_row_as_unpadded(tiny):
+    # generate drops an all-ones mask, for one row (E14 on the box) or for equal-length rows (E20 smoke)
     layer, seq = 2, SEQS[0]
     donor = [seq[0]] + [(t + 1) % 64 for t in seq[1:]]
     values = [hidden_at(tiny, donor, layer)]
-    with S.prompt_patch(tiny, layer, [list(range(len(seq)))], values):
-        patched = tiny(input_ids=torch.tensor([seq])).logits[0, -1]   # no attention mask, as on the box
     donor_logits, _, _ = S.forward(tiny, "cpu", [donor], PAD)
+    with S.prompt_patch(tiny, layer, [list(range(len(seq)))], values):
+        patched = tiny(input_ids=torch.tensor([seq])).logits[0, -1]
     assert torch.allclose(patched, donor_logits[0], atol=1e-4)
-    with pytest.raises(ValueError, match="2-D attention mask"):
-        with S.prompt_patch(tiny, layer, [[0], [0]], values * 2):
-            tiny(input_ids=torch.tensor([seq, seq]))
+    # two rows of the same length, only the second patched: it reads as the donor, the first as itself
+    own_logits, _, _ = S.forward(tiny, "cpu", [seq], PAD)
+    own = hidden_at(tiny, seq, layer)
+    with S.prompt_patch(tiny, layer, [list(range(len(seq)))] * 2, [own, values[0]]):
+        batch = tiny(input_ids=torch.tensor([seq, seq])).logits[:, -1]
+    assert torch.allclose(batch[0], own_logits[0], atol=1e-4)
+    assert torch.allclose(batch[1], donor_logits[0], atol=1e-4)
 
 
 def test_subspace_patch_swaps_only_the_span_of_the_basis(tiny):
