@@ -131,6 +131,49 @@ meaning/letter and switch-point arithmetic, the loop detector).
 The calibration health bound (the worst held-out item keeps ≥ 95% of its unsteered label mass, `--min_mass_ratio`) is an
 untested default and probably too strict: on Qwen3-1.7B with thinking on, it stopped calibration at x = 0.02.
 
+## Transfer to the eval types: `transfer_eval.py`
+
+Stage 6 of `evaluation_design/` §9 (transfer), on the replay readout: do T0's methods, at the strength frozen on T0,
+also steer the horizon on Jared's eval types, realistic variations of the T0 prompts (system prompts, multi-turn,
+other domains, implied horizons, distractors; `jared/EvalsPromptTypes.md` on branch `jared-eval-types`)?
+
+```
+# in jared/ on jared-eval-types: one bank per eval type
+python -m pipeline.s1_data_vectors.analysis.export_evaltype_banks     # -> ~/SPAR/results/horizon/evaltype_banks/
+# then, with the T0 run
+TRANSFER=1 evaluation/run_local.sh                                    # TRANSFER_TYPES="t0_w0 coding_agent": a subset
+```
+
+- **Banks.** pbank's schema, tier `evaltype`, split `transfer`. Fitting, calibration and the shared draws take only split
+  `extraction`, and the T0 replay only `verification`, so these prompts never reach them. The eval-type record (type,
+  variant, twin, its own regime and truth) is kept in `notes`. Conversation-rendered types (`system_prompt`,
+  `system_prompt_clear`, `multiturn_analyst`) keep their messages in `notes["messages"]`; their `text` is a transcript,
+  for reading and hashing only.
+- **baseline:** the unsteered reply to every `near_only`/`both` prompt, with the T0 run's model, thinking mode, cap and
+  batch size, in baseline.py's file format (`transfer/<type>/run/`). It is generated here, not by
+  `prompt_bank/baseline.py`, which sends `text` as one user turn: a conversation is rendered from `notes["messages"]`
+  (a single user text renders exactly as pbank's `chat_text`, checked in the tests). Resumes; refuses a run with other
+  settings; the run's hash covers every turn of a conversation.
+- **items, replay:** replay_eval's own stages, per type in `transfer/<type>/` (`stage_replay(..., split="transfer")`):
+  label location and `skipped.jsonl`, the unsteered pass and the N0 check, every arm at ±x with x read from the T0 run's
+  `calibration.json` (never recalibrated). The shuffled-label refits use the T0 bank and activations, as on T0.
+- **report → `transfer/transfer_report.{md,json}`:** per type and group (`prompts`: the type's base and swap prompts;
+  `twins`: the same options in the T0 template with the horizon stated), next to T0's verification grid: per method and
+  control the meaning (order-balanced, on the 40 base/swap pairs of a type), the odd part over all items, Δlog10 H*, the
+  label mass at ±x, the unsteered label mass and accuracy, and each statistic ranked against each null family
+  (analyze.py's `arm_results` and `compare_to_nulls`). Types without a bank or results are listed as not run.
+- **The switch point only where it applies:** a group needs ≥ 5 readable items with each correct option. `city_no_values`
+  gives no values, so its `both` prompts have no correct answer and no switch point is fitted. Eval-type horizons sit
+  ≥ 0.25 decades from both delays, so even where it is fitted the location is less pinned down than on the T0 grid: read
+  meaning and odd first.
+- **Cost.** The 19 exported types hold 2,630 `near_only`/`both` prompts, about 13 × T0's grid, and every arm is replayed
+  on each; the shuffled refits are redone per type. With thinking on, the baseline dominates (at the 75 s per prompt
+  measured for Gemma 4 31B in `prompt_bank/README.md`, about 55 GPU-hours). `TRANSFER_TYPES` runs a subset.
+
+Tests: `python -m pytest -q test_transfer_eval.py` (conversation rendering on the real Qwen3 tokenizer, the baseline
+with a fake model, the replay stage on the transfer split with fake edits, the report on hand-made arm results, and
+analyze.py's report card after its refactor into `arm_results` / `compare_to_nulls`).
+
 ## Loop check: `check_loops.py`
 
 Counts how many token-cap hits in a generation run are repetition loops (a 64-token block repeated ≥ 3× in the last 1024

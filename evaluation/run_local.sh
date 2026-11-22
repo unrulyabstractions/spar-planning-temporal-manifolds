@@ -7,6 +7,8 @@
 #
 # Settings (environment): MODEL, LAYER, THINK (0/1), CAP (max new tokens), BATCH, TAG (run name suffix), K (draws per
 # null family), PY (python), STAGES (which runner stages), GEN_PAIRS.
+# Opt-in transfer to the eval types (off by default): TRANSFER=1, with TRANSFER_BANKS (export_evaltype_banks.py's
+# output) and TRANSFER_TYPES (space-separated; default: every bank there).
 set -euo pipefail
 
 MODEL=${MODEL:-Qwen/Qwen3-1.7B}
@@ -90,3 +92,12 @@ stamp "replay evaluation: $STAGES"
 stamp "report card"
 (cd "$ROOT/evaluation" && $PY analyze.py --out "$OUT")
 stamp "done: $OUT/report.md"
+
+if [ "${TRANSFER:-0}" = 1 ]; then
+    TRANSFER_BANKS=${TRANSFER_BANKS:-$HOME/SPAR/results/horizon/evaltype_banks}
+    stamp "transfer to the eval types: $TRANSFER_BANKS"
+    (cd "$ROOT/evaluation" && $PY -u transfer_eval.py baseline items replay report --banks "$TRANSFER_BANKS" \
+        ${TRANSFER_TYPES:+--types $TRANSFER_TYPES} --t0-bank "$BANK" --t0-run "$RUN_DIR" --t0-out "$OUT" \
+        --activations "$ACT" --methods "$METHODS_RUN" --draws "$DRAWS" --k "$K" --out "$OUT/transfer")
+    stamp "done: $OUT/transfer/transfer_report.md"
+fi
