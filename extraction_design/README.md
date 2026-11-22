@@ -1,8 +1,8 @@
 # Extraction pipeline for horizon steering: what it hands over, and how to use it
 
 **Status:** built, tested and on `main`, including the hook fix and single-token edits of 2026-11-19 (§6). Two
-later additions are also on `main`: the horizon site (§6) and `fit.py --draws` (§8.2 item 6). The within-regime CAA
-methods (§5, §9.2) are on branch `within-regime-caa`, not yet merged. On Gemma 4 31B the
+later additions are also on `main`: the horizon site (§6) and `fit.py --draws` (§8.2 item 6), the within-regime CAA
+methods (§5, §9.2) and seeded sampling (§11.3). On Gemma 4 31B the
 pipeline has run only at smoke scale (16 prompts). No full-run methods exist yet. A complete practice hand-over from a
 small model is published (§12). **Owner:** Extraction (prompt bank and steering methods: Alan). Drafted with Claude,
 2026-11-15; updated 2026-11-22.
@@ -60,7 +60,7 @@ What exists now:
 | Practice hand-over: Qwen3.5-2B, thinking off, all 700 prompts | published on Hugging Face (§12) | `steering/progress-20261117.md` |
 | Shared random draws | built by the evaluation team, on `main`; `fit.py --draws` reads them | `evaluation/shared_draws.py` (§8.2 item 6) |
 | Horizon site: activations at the tokens that state the horizon, all layers; `at_prompt` | on `main` | tests; Qwen3.5-0.8B/2B (§6, §10) |
-| Within-regime CAA: `caa-none`, `caa-near_only`, `caa-both`, `caa-within` | branch `within-regime-caa` | tests; Qwen3.5-2B (§5, §9.2) |
+| Within-regime CAA: `caa-none`, `caa-near_only`, `caa-both`, `caa-within` | on `main` | tests; Qwen3.5-2B (§5, §9.2) |
 | Full Gemma 4 31B baseline, fit and bundles | **not run** | throughput and decoding, §11.3 |
 
 ## 2. Glossary
@@ -369,8 +369,8 @@ The curve bundles' `request` reads:
  "t_range_log10_days": [-3.46, 5.26], "clamped": "t-hat + x is clamped to t_range"}
 ```
 
-The two `"unknown"` commits are a real gap, described in §11.2. The code was shipped to the rented machine without
-its `.git` directory, so `extract.py` and `fit.py` could not name their commit.
+The two `"unknown"` commits were a real gap, described in §11.2 and since closed. The code was shipped to the rented
+machine without its `.git` directory, so `extract.py` and `fit.py` could not name their commit.
 
 **Loading and refitting** [`steering/steer/methods.py`]:
 
@@ -458,8 +458,8 @@ What it is for:
      digits. The names agree for layers 10 and above.
 7. **Versioning.**
    - Every output records the SHA-256 of its inputs and the code commit; bundles record a hash for every file.
-   - A gap was found on the rented GPU: with the code shipped without `.git`, the commit is recorded as `"unknown"`
-     (§11.2).
+   - On a machine without `.git` the commit comes from a stamp written before the code is copied (§11.2 item 6).
+     Outputs of the 2026-11-15 rented-GPU run predate it and say `"unknown"`.
 
 ## 9. Fitting choices that matter for evaluation
 
@@ -481,7 +481,7 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
    On a Qwen3.5-2B smoke run that cosine was 0.862 with "none" kept and 0.904 without. This is the C2 confound in
    numbers.
 
-   **Within-regime CAA** (branch `within-regime-caa`; asked for by the evaluation team on 2026-11-18, to separate
+   **Within-regime CAA** (asked for by the evaluation team on 2026-11-18, to separate
    "longer horizon" from "pick the far option"). Inside one regime the correct answer is the same for every prompt.
    - **Classes.** H/D cannot define them: within `none` or `near_only` the far option does not pay off, so H/D < 1
      for every prompt. Instead, inside a regime, long is the third of its prompts with the longest horizons and short
@@ -574,11 +574,21 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 and stops at the first failure:
 
 ```
-crlf  setup  weights  tests  hook  baseline  extract  audit  fit  bundle  method  sums
+crlf  version  setup  weights  tests  hook  horizon  baseline  extract  audit  draws  fit  bundle  method  sums
 ```
 
+- **Before copying the code to the box,** stamp it in the git checkout (§11.2 item 6):
+  `cd prompt_bank && python -m pbank.provenance stamp`. The `version` stage fails if the outputs would record
+  `"unknown"`.
+- **`horizon`** runs `extract_horizon.py` on all 700 prompts; it needs no baseline run.
+- **`draws`** runs the evaluation team's `shared_draws.py` and verifies its output; `fit` then uses the draws.
+- **`method`** runs the hook gate on every bundle of the run.
+
 - **Settings** come from the environment: `MODEL` (default Gemma 4 31B-it), `LAYER` (38), `N` (64 prompts), `BATCH`
-  (8), `MAX_NEW` (4096), `RUN` (smoke).
+  (8), `MAX_NEW` (4096), `RUN` (smoke), `THINKING` (on), `DECODING` (auto, as `baseline.py`), `SAMPLING` (extra
+  sampling options for a model without a generation config) and `DRAWS_MIN_ROWS` (100).
+- **Rehearsed locally on 2026-11-22** in a copy without `.git`, on Qwen3.5-0.8B: every stage but `setup`, `weights`
+  and `tests` ran and passed, the hook gate on all nine bundles included [`steering/progress-20261122.md`].
 - **The `audit` stage** prints every label site with its decoded neighbours and fails if any decoded token differs
   from the parsed choice.
 - **The HF token** reaches the box only through ssh's stdin, never on disk or on a command line:
@@ -605,8 +615,13 @@ crlf  setup  weights  tests  hook  baseline  extract  audit  fit  bundle  method
 5. **No `/workspace`.** The image `vastai/pytorch:cuda-12.8.1-auto` has no `/workspace`, which the team justfile
    assumes.
 6. **Shipping without `.git` loses provenance.** `just push`-style rsync leaves out dotfiles, including `.git`, so
-   every output records its code commit as `"unknown"`. **Not fixed yet.** Options: ship `.git`, or pass the commit in
-   an environment variable that `provenance.py` reads.
+   every output recorded its code commit as `"unknown"`. **Fixed on 2026-11-22:**
+   - `python -m pbank.provenance stamp`, run in the git checkout before copying, writes `CODE_STAMP.json`: the commit
+     and the SHA-256 of every tracked file (dotfiles left out, since such a copy drops them).
+   - Without git, outputs record the stamped commit if the code files still match their hashes, and the commit with
+     `-modified` if any was edited on the box.
+   - Rejected: passing the commit in an environment variable, which would keep vouching for the commit after the code
+     was edited; and shipping `.git`, which is large and changes how the team's `just push` works.
 7. **Bandwidth is billed by some hosts.** The host billed $40/TB in both directions, so the 64 GB download (weights
    plus packages) cost $2.50, more than the GPU time. Filter offers on download cost.
 8. **Destroy, don't stop.** A stopped instance keeps billing its disk: $0.28/h for 200 GB.
@@ -666,8 +681,7 @@ same block of reasoning until the token cap, so the reply never reaches an answe
   - on prompts that greedy had answered, sampling changed 5 of 26 choices, so a readout from generated answers would
     need several samples per prompt.
 - **Gemma 4 31B:** 3 of the first 16 replies hit the cap (table above). They are not loops (below).
-- **Decided (Alan, 2026-11-22): seeded sampling for thinking-on runs, and a default cap of 4,096 tokens.** Built on
-  branch `seeded-sampling`:
+- **Decided (Alan, 2026-11-22): seeded sampling for thinking-on runs, and a default cap of 4,096 tokens.** Built:
   - `baseline.py --decoding {auto,greedy,sample}`. `auto`, the default, samples when thinking is on and is greedy
     when it is off. The cap is `--max-new-tokens`, default 4,096 (it was 8,192).
   - Sampling values come from the model's own generation config (Gemma 4: temperature 1.0, top-p 0.95, top-k 64)
@@ -741,17 +755,16 @@ against the real interfaces: <https://huggingface.co/datasets/CodeReclaimers/spa
 - **The horizon site** (§6): activations at the tokens that state the horizon, every token separately, all layers,
   with the audit and the per-prompt rows for the hook. Still to do: run it on Gemma 4 31B.
 - **`fit.py`'s random baseline from the shared draw files** (§8.2 item 6).
-- **A within-regime CAA** as comparison methods (§9.2), on branch `within-regime-caa`.
+- **A within-regime CAA** as comparison methods (§9.2).
 
 **Decisions on the extraction side:**
 - whether sampling should stay the default for Gemma once a sampled Gemma smoke run exists (§11.3);
 - the throughput problem (§11.3);
 - the bundles' default positions, and whether to fit the Gemma methods at the prelabel site (§4, §6, §9.6);
-- a minimum class size in `fit.py` (§9.5);
-- recording the code commit when shipping without `.git` (§11.2.6).
+- a minimum class size in `fit.py` (§9.5).
 
 **To do:**
-- merge branch `within-regime-caa`;
+- a 16-prompt sampled smoke run on Gemma 4 31B, with the horizon extraction for all 700 prompts (§11.1);
 - run `extract_horizon.py` on Gemma 4 31B, and `shared_draws.py` after the Gemma extraction;
 - re-run the hook gate on Gemma 4 31B with the fixed hook (§10).
 
