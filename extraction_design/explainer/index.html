@@ -251,7 +251,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
   <div class="eyebrow">Planning Temporal Manifolds · Extraction · hand-over to Evaluations</div>
   <h1>What extraction hands over, and how to use it</h1>
   <p class="lede">Extraction turns the T0 prompt bank and one model's activations into steering methods: a linear direction, a manifold curve, two concept controls and random directions. This page describes each method, how to apply it inside the model during generation, how it is packaged, what has been checked, and what is still open. It answers the evaluation design item by item.</p>
-  <p class="meta">Built, tested and on <code>main</code> (merged 2026-11-15) · Gemma 4 31B run only at smoke scale (16 prompts); no full-run methods yet · Extraction (Alan), drafted with Claude, 2026-11-15 · statements that had become false were corrected on 2026-11-22; everything added since is only in the reference version, <code>extraction_design/README.md</code> · answers <code>evaluation_design/README.md</code></p>
+  <p class="meta">Built, tested and on <code>main</code> (merged 2026-11-15) · Gemma 4 31B run only at smoke scale (16 prompts, plus the horizon extraction for all 700); no full-run methods yet · Extraction (Alan), drafted with Claude, 2026-11-15 · statements that had become false were corrected on 2026-11-22; everything added since is only in the reference version, <code>extraction_design/README.md</code> · answers <code>evaluation_design/README.md</code></p>
   <nav class="toc" aria-label="Contents">
     <a href="#summary"><span class="toc-n">00</span><span><span class="toc-q">Summary</span> <span class="toc-a">the hand-over on one screen</span></span></a>
     <a href="#status"><span class="toc-n">01</span><span><span class="toc-q">Purpose and status</span> <span class="toc-a">what exists, what doesn't yet</span></span></a>
@@ -628,7 +628,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
       <tr><td>Hugging Face upload</td><td>A100 outputs, 14 files</td><td>created private; 14/14 remote hashes verified</td><td><code>progress-20261115.md</code></td></tr>
     </tbody>
   </table></div>
-  <p class="col muted">Not yet on Gemma: the hook gate after the 2026-11-19 fix, <code>check_hook --method</code> with a real bundle, a full-size fit, and steered generation beyond the gate's strong-edit check. Checks made since 2026-11-15, on Qwen3.5-2B, are in the README's §10.</p>
+  <p class="col muted">Not yet on Gemma: a full-size fit, and steered generation beyond the gate's strong-edit check. Checks made since 2026-11-15, on Qwen3.5-2B, are in the README's §10.</p>
 </section>
 
 <hr>
@@ -715,7 +715,7 @@ cd &lt;download&gt;/&lt;prefix&gt; &amp;&amp; sha256sum -c SHA256SUMS           
       <ul>
         <li>Decided 2026-11-22: seeded sampling for thinking-on runs, default cap 4,096 tokens (README §11.3). Decide: the bundles' default positions and the fitting site; a minimum class size in <code>fit.py</code>.</li>
         <li>Diagnose: generation throughput.</li>
-        <li>To do: a small sampled Gemma run; run the horizon extraction and the hook gate on Gemma.</li>
+        <li>To do: the full 700-prompt Gemma baseline (the 16-prompt sampled run of 2026-11-22 answered 16 of 16; README §11.3).</li>
         <li>Not built: an answer-letter control direction, switch-point and gate code.</li>
       </ul>
     </div>
