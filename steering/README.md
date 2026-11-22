@@ -358,7 +358,7 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 | `tools/check_hook.py` | gate before steering a model: zero edit exact, roles right, strong edit has an effect |
 | `tools/upload_hf.py`, `tools/upload_gcs.py` | publish outputs (dry run by default; checksummed, verified, never overwrite) |
 | `tools/compare_fits.py` | compare two fit output trees exactly (arrays bit for bit), e.g. before and after a refactor |
-| `tools/vast_smoke.sh` | the pipeline on a rented GPU box, one gated stage at a time (setup, weights, tests, hook, baseline, extract, label audit, fit, bundle, method gate, checksums) |
+| `tools/vast_smoke.sh` | the pipeline on a rented GPU box, one gated stage at a time (code version, setup, weights, tests, hook, horizon site, baseline, extract, label audit, shared draws, fit, bundle, method gate, checksums) |
 
 ## Tests
 

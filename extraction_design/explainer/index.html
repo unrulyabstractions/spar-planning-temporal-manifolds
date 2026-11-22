@@ -598,7 +598,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
   </figure>
   <div class="checks">
     <div class="check"><b>"None" prompts are included by default</b><p>This follows the written spec ("used for extraction"). One recorded switch, <code>--no-include-none</code>, removes them from CAA, the controls and the curve together. Switching later is only a refit. Leaving them out moves the curve's start from 30 s to 10 days and shrinks CAA's short class from 350 prompts to 71.</p></div>
-    <div class="check"><b>CAA partly encodes "which answer is correct"</b><p>Its classes are not balanced by regime (figure, right). <code>fit.json</code> reports CAA's cosine with the <code>choice</code> direction: 0.862 with "none" kept and 0.904 without, on a Qwen3.5-2B smoke run. That is C2 in numbers. The evaluation team asked for a within-regime contrast as a comparison method. It is built on branch <code>within-regime-caa</code>: long against short horizons inside one regime, as <code>caa-none</code>, <code>caa-near_only</code>, <code>caa-both</code> and the pooled <code>caa-within</code> (README §9.2).</p></div>
+    <div class="check"><b>CAA partly encodes "which answer is correct"</b><p>Its classes are not balanced by regime (figure, right). <code>fit.json</code> reports CAA's cosine with the <code>choice</code> direction: 0.862 with "none" kept and 0.904 without, on a Qwen3.5-2B smoke run. That is C2 in numbers. The evaluation team asked for a within-regime contrast as a comparison method. It is built: long against short horizons inside one regime, as <code>caa-none</code>, <code>caa-near_only</code>, <code>caa-both</code> and the pooled <code>caa-within</code> (README §9.2).</p></div>
     <div class="check"><b>Concept controls are our definitions</b><p>The report names a reward-contrast control without defining it. <code>reward</code> is multiplier ≥ 25 minus ≤ 5. <code>choice</code> is chose far minus chose near.</p></div>
     <div class="check"><b><code>fit.py</code> has no minimum class size</b><p>On the 16-prompt smoke run it wrote a fit whose CAA long class held one prompt. Until a minimum is decided, check the class sizes in <code>fit.json</code>.</p></div>
   </div>
@@ -639,7 +639,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
     <h2>The run script, the gotchas, and the throughput problem</h2>
   </div>
   <div class="readings">
-    <div class="reading"><h3>The run script</h3><p><code>steering/tools/vast_smoke.sh STAGE …</code>, run on the box from the repository root, executes <code>crlf setup weights tests hook baseline extract audit fit bundle method sums</code> and stops at the first failure. Settings: <code>MODEL</code>, <code>LAYER</code> (38), <code>N</code>, <code>BATCH</code> (8), <code>MAX_NEW</code> (4096). The <code>audit</code> stage fails if any decoded label token differs from the parsed choice.</p></div>
+    <div class="reading"><h3>The run script</h3><p><code>steering/tools/vast_smoke.sh STAGE …</code>, run on the box from the repository root, executes <code>crlf version setup weights tests hook horizon baseline extract audit draws fit bundle method sums</code> and stops at the first failure. Stamp the code first (<code>python -m pbank.provenance stamp</code>) so outputs can name their commit without <code>.git</code>. Settings: <code>MODEL</code>, <code>LAYER</code> (38), <code>N</code>, <code>BATCH</code> (8), <code>MAX_NEW</code> (4096). The <code>audit</code> stage fails if any decoded label token differs from the parsed choice.</p></div>
     <div class="reading"><h3>The token</h3><p>The Hugging Face token reaches the box only through ssh's stdin: <code>printf '%s\n' "$TOKEN" | ssh BOX 'read -r HF_TOKEN; export HF_TOKEN; …'</code>. It is never on disk or on a command line.</p></div>
     <div class="reading"><h3>The run</h3><p>One A100 SXM4 80 GB on vast.ai, 2026-11-15: 92 minutes, $4.62. The 63 GB weights downloaded in 55 s.</p></div>
   </div>
@@ -707,16 +707,15 @@ cd &lt;download&gt;/&lt;prefix&gt; &amp;&amp; sha256sum -c SHA256SUMS           
       <h3>From the evaluation team</h3>
       <ul>
         <li>Answered: a first held-out horizon list for C8 (5 weeks, 15 months, 16 years, 210 years; not final); shared draws built on their side; <code>EditContext</code> is enough; host is Hugging Face.</li>
-        <li>Requested and built: the horizon site, <code>extract_horizon.py</code>; <code>fit.py</code>'s random baseline from the shared draws; a within-regime CAA (branch <code>within-regime-caa</code>).</li>
+        <li>Requested and built: the horizon site, <code>extract_horizon.py</code>; <code>fit.py</code>'s random baseline from the shared draws; a within-regime CAA.</li>
       </ul>
     </div>
     <div class="stack">
       <h3>Extraction's side</h3>
       <ul>
-        <li>Decided 2026-11-22: seeded sampling for thinking-on runs, default cap 4,096 tokens (README §11.3; branch <code>seeded-sampling</code>). Decide: the bundles' default positions and the fitting site; a minimum class size in <code>fit.py</code>.</li>
-        <li>Fix: recording the commit when code ships without <code>.git</code>.</li>
+        <li>Decided 2026-11-22: seeded sampling for thinking-on runs, default cap 4,096 tokens (README §11.3). Decide: the bundles' default positions and the fitting site; a minimum class size in <code>fit.py</code>.</li>
         <li>Diagnose: generation throughput.</li>
-        <li>To do: merge branch <code>within-regime-caa</code>; run the horizon extraction and the hook gate on Gemma.</li>
+        <li>To do: a small sampled Gemma run; run the horizon extraction and the hook gate on Gemma.</li>
         <li>Not built: an answer-letter control direction, switch-point and gate code.</li>
       </ul>
     </div>

@@ -28,3 +28,6 @@
 
 # Local secrets (API keys). Never commit.
 .env
+
+# Written by `python -m pbank.provenance stamp` before copying the code to a machine without .git
+CODE_STAMP.json
