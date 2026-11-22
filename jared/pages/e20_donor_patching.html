@@ -107,6 +107,20 @@ tr:last-child td { border-bottom: 0; }
 ul.caveats { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; max-width: 70ch; }
 ul.caveats li { color: var(--ink-2); }
 ul.caveats b { color: var(--ink); font-weight: 600; }
+.loopstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.loopstats div { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.loopstats b { font-size: 1.4rem; font-weight: 600; }
+.loopstats span { font-size: 0.85rem; color: var(--ink-2); }
+.loops { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+@media (max-width: 420px) { .loops { grid-template-columns: 1fr; } }
+.loop { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.loop header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.loop .tag { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-2); }
+.loopmeta { font-size: 0.88rem; color: var(--ink-2); }
+.loopmeta b { color: var(--ink); font-weight: 600; }
+.loop blockquote { margin: 0; padding: 8px 12px; border-left: 2px solid var(--axis); background: var(--chip); border-radius: 0 6px 6px 0;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; color: var(--ink); overflow-wrap: anywhere; }
+.loop .repeat { font-size: 0.84rem; color: var(--ink-2); }
 footer { font-size: 0.82rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -172,6 +186,57 @@ footer { font-size: 0.82rem; color: var(--muted); display: flex; flex-direction:
       <div class="scroll"><svg class="chart" id="svg-arms" role="img" aria-label="Interval plot of three interventions on four prompt types"></svg></div>
     </div>
     <p>The coding-agent prompts make the point most clearly. Steering along the bank's horizon direction at the answer slot (E19, a separate run) did nothing there. The donor patch still moves them by +13 log-odds. So the decision reads the horizon phrase in this domain too, just not along the direction fitted on investment prompts.</p>
+  </section>
+
+  <section>
+    <h2>Steering vectors barely move the answer, and CAA moves it the wrong way. Patches move it.</h2>
+    <p>A steering vector adds one fixed direction for "longer horizon" to every prompt. CAA (contrastive activation addition) takes that direction as the mean activation of long-horizon prompts minus short-horizon prompts. A patch instead copies the real state from the same prompt with another horizon. With thinking on, all of them are scored the same way: how far the near-vs-far log-odds move toward the answer the new horizon makes rational.</p>
+    <div class="figure" id="fig-compare">
+      <h3>Shift toward the rational answer, in near-vs-far log-odds</h3>
+      <div class="sub">95% bootstrap intervals where we have per-prompt data. E14's bank-level numbers are single values. The answer-slot steers (E8) add the vector after the model's reasoning, with that reasoning held fixed. The phrase interventions (E14, E20) act on the prompt, and the model then reasons again.</div>
+      <div class="legend"><span><i class="fill-effects"></i>Steering vector</span><span><i class="fill-random"></i>Control (random or probe line)</span><span><i class="fill-donor"></i>Patch (real state from a re-horizoned prompt)</span></div>
+      <div class="scroll"><svg class="chart" id="svg-compare" role="img" aria-label="Interval plot comparing steering vectors, controls and patches"></svg></div>
+    </div>
+    <p><b>Why CAA goes backwards.</b> In the original bank, every short horizon is in the regime where neither option arrives in time, and the model answers those like the long-horizon cases. Every prompt where only the near option arrives sits in the long half. So "long minus short" mostly encodes "the near option is the right answer", and adding more of it pushes the model toward near. A longer horizon should push it the other way. Refitting on prompts with natural closes did not fix it (E8 run 3), so the cause is the composition of the bank, not traces cut off at the reasoning limit.</p>
+    <p><b>Why the fitted curve is weak.</b> It moves the stated horizon by about one decade within the same unit (6 months becomes 66 months), which rarely crosses a delay. The real change a donor causes at the phrase is mostly in other directions: the fitted step explains 2% of its variance (E14, R² 0.02).</p>
+  </section>
+
+  <section>
+    <h2>When the reasoning loops</h2>
+    <p>A trace that reaches the 3,072-token limit is cut off, and the answer is read right after. Most of these traces are loops: in 72 of the 100, one sentence comes back 5 or more times, up to 46. A random step or a donor patch at the phrase roughly doubles the rate; the bank-fit step barely changes it.</p>
+    <div class="loopstats">
+      <div><b>10%</b><span>noop (24 of 233)</span></div>
+      <div><b>12%</b><span>bank-fit step (11 of 94)</span></div>
+      <div><b>19%</b><span>random step (18 of 94)</span></div>
+      <div><b>20%</b><span>donor patch (47 of 233)</span></div>
+    </div>
+    <p>In two of the donor loops below, the model quotes the donor's horizon as if it were written in the prompt, then rereads the prompt to check, and keeps doing it. That fits the patch changing what the model reads at the phrase while the rest of the prompt still implies the original horizon. It is an interpretation from four traces, not a tested result.</p>
+    <div class="loops">
+      <article class="loop">
+        <header><span class="tag">donor patch</span><span class="mono">city_values_015</span></header>
+        <div class="loopmeta">Prompt says <b>20 years</b>. Donor phrase: <b>91 years</b>. Answer b, not the target a.</div>
+        <blockquote>The goal is to pick the option that provides the greatest benefit over a 91-year time horizon. Wait, the time horizon is 91 years? Wait, the original question says the time horizon is 91 years? Wait, the user wrote: "for this time horizon: 91 years." … Let me check again.</blockquote>
+        <div class="repeat">The "Let me check again" cycle repeats 44 times until the limit.</div>
+      </article>
+      <article class="loop">
+        <header><span class="tag">donor patch</span><span class="mono">system_prompt_clear_014</span></header>
+        <div class="loopmeta">Prompt says <b>5 years</b>. Donor phrase: <b>3 weeks</b>. Answer b, not the target a.</div>
+        <blockquote>The goal is to leave the household with the most money after three weeks. … So if they choose option a) they get the money in one week, and then have two weeks to use it. But if they choose option b) they have to wait two months, which is longer than the three weeks. Wait, maybe the time horizon is three weeks …</blockquote>
+        <div class="repeat">It reasons about the donor's 3 weeks throughout. The last sentence repeats 42 times.</div>
+      </article>
+      <article class="loop">
+        <header><span class="tag">bank-fit step</span><span class="mono">coding_agent_009</span></header>
+        <div class="loopmeta">Prompt says <b>2 weeks</b>. Step aimed at 5 years. Answer b, not the target a.</div>
+        <blockquote>The time horizon given is 52 weeks … So the benefit is the total savings over that time. Therefore, option b is better. But maybe the options are not about total savings but about the rate. Wait, the problem says "the greatest benefit for this time horizon: 52 weeks."</blockquote>
+        <div class="repeat">The step moved the stated horizon from 2 to 52 weeks, short of the target. The loop repeats 46 times.</div>
+      </article>
+      <article class="loop">
+        <header><span class="tag">no patch</span><span class="mono">public_health_002</span></header>
+        <div class="loopmeta">Unpatched rerun, horizon <b>20 years</b>. Loops are not only caused by patching.</div>
+        <blockquote>If the program is implemented now, then in 20 years, it would have prevented 160. But if the program in option b is a program that, when implemented, prevents 200 admissions in one month … So option b is better. But maybe the program in option a is a program that …</blockquote>
+        <div class="repeat">The same proportional argument repeats 18 times.</div>
+      </article>
+    </div>
   </section>
 
   <section>
@@ -341,5 +406,53 @@ function fillTable() {
   }
 }
 
-drawFlips(); drawDistance(); drawArms(); fillTable();
+// Interventions on one log-odds scale (thinking on). E8: exp8_Qwen3-8B_answer_slot on|pre-label|24, both ±2-decade
+// steps pooled, x contrast 12.9; E14: 22_results_phrase_steering.md (single values); E20: per-row pooled over types.
+const COMPARE = [
+  { group: "Original bank: answer slot, layer 24 (E8)", rows: [
+    { label: "CAA (mean difference)", kind: "effects", v: [-1.62, -1.83, -1.41] },
+    { label: "Fitted horizon curve", kind: "effects", v: [1.88, 1.59, 2.18] },
+    { label: "Probe line", kind: "random", v: [-0.06, -0.11, -0.01] },
+    { label: "Random direction", kind: "random", v: [0.18, 0.12, 0.25] } ] },
+  { group: "Original bank: horizon phrase, layer 16 (E14)", rows: [
+    { label: "Fitted manifold step", kind: "effects", v: [1.4] },
+    { label: "Donor patch", kind: "donor", v: [9.9] } ] },
+  { group: "Eval types: horizon phrase, layer 16 (E20)", rows: [
+    { label: "Bank-fit step (4 domains)", kind: "effects", v: [1.32, 0.08, 2.59] },
+    { label: "Random step (4 domains)", kind: "random", v: [0.91, -0.02, 1.93] },
+    { label: "Donor patch (14 types)", kind: "donor", v: [16.11, 14.50, 17.72] } ] }
+];
+
+function drawCompare() {
+  const svg = document.getElementById("svg-compare"), fig = document.getElementById("fig-compare");
+  const W = 760, left = 230, right = 60, top = 10, rowH = 26, groupGap = 30;
+  const nRows = COMPARE.reduce((s, g) => s + g.rows.length, 0);
+  const H = top + nRows * rowH + COMPARE.length * groupGap + 34;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const xmin = -4, xmax = 20;
+  const x = v => left + ((v - xmin) / (xmax - xmin)) * (W - left - right);
+  for (const t of [-4, 0, 4, 8, 12, 16, 20]) {
+    el("line", { x1: x(t), x2: x(t), y1: top, y2: H - 30, class: t === 0 ? "base" : "grid" }, svg);
+    text(svg, x(t), H - 12, t > 0 ? "+" + t : String(t), "tick num", "middle");
+  }
+  text(svg, x(-0.4), top + 12, "← wrong way", "annot", "end");
+  let y = top;
+  for (const g of COMPARE) {
+    y += groupGap - 8;
+    text(svg, 0, y, g.group, "axislabel");
+    y += 8;
+    for (const r of g.rows) {
+      const cy = y + rowH / 2;
+      text(svg, left - 12, cy + 4, r.label, "rowlabel", "end");
+      if (r.v.length === 3) el("line", { x1: x(r.v[1]), x2: x(r.v[2]), y1: cy, y2: cy, class: `whisker stroke-${r.kind}`, "stroke-opacity": 0.55 }, svg);
+      el("circle", { cx: x(r.v[0]), cy, r: 5.5, class: `dot fill-${r.kind}` }, svg);
+      text(svg, x(r.v.length === 3 ? Math.max(r.v[2], r.v[0]) : r.v[0]) + 10, cy + 4, signed(r.v[0]), "annot num");
+      const hit = el("rect", { x: 0, y, width: W, height: rowH, class: "hit" }, svg);
+      attachTooltip(fig, hit, g.group, [[`--${r.kind}`, r.label, r.v.length === 3 ? ci(r.v) : signed(r.v[0])]]);
+      y += rowH;
+    }
+  }
+}
+
+drawFlips(); drawDistance(); drawArms(); drawCompare(); fillTable();
 </script>
