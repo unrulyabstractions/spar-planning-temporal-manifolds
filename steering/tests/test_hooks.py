@@ -10,7 +10,7 @@ import torch
 
 from steer.directions import random_directions
 from steer.edits import ROLE_GENERATED, ROLE_PAD, ROLE_PROMPT, LinearEdit
-from steer.hooks import replay_logits, steering
+from steer.hooks import at_generated, replay_logits, steering
 from test_layers import tiny_qwen3
 
 LAYER = 2
@@ -103,6 +103,57 @@ def test_callable_positions_and_per_row_strengths(tiny):
     print(f"callable positions: edited at {record[0]['ctx'].mask.nonzero().tolist()}, sizes {sizes[:, 7].tolist()}")
     assert record[0]["ctx"].mask.sum() == 2 and all(not r["ctx"].mask.any() for r in record[1:])
     assert torch.allclose(sizes[:, 7], torch.tensor([1.5, 0.75]))
+
+
+def test_at_generated_edits_one_token_per_row(tiny):
+    # Row 0 (left-padded by 3): generated token 2, absolute position 8 + 2 = 10, fed in on decode pass 3.
+    # Row 1: index -1, the last prompt token (position 7, in the prefill), whose state predicts generated token 0.
+    model, ids, mask = tiny
+    seq, scores = generate(model, ids, mask)
+    record = []
+    with steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_generated([2, -1]), record=record):
+        seq_e, scores_e = generate(model, ids, mask)
+    edited = [(p, r, int(c.position[r, t])) for p, rec in enumerate(record)
+              for c in [rec["ctx"]] for r, t in c.mask.nonzero().tolist()]
+    diff = (scores_e - scores).abs().amax(-1)                         # [steps, batch]
+    print(f"at_generated([2, -1]): edited (pass, row, position) {edited}; per-step max |score diff| row 0 "
+          f"{[f'{v:.1e}' for v in diff[:, 0].tolist()]}, row 1 {[f'{v:.1e}' for v in diff[:, 1].tolist()]}")
+    assert edited == [(0, 1, 7), (3, 0, 10)]
+    assert torch.equal(scores_e[:3, 0], scores[:3, 0]) and diff[3, 0] > 1e-2   # row 0: unchanged until after token 2
+    assert diff[0, 1] > 1e-2                                                     # row 1: the first token's scores move
+    # The same callable reused for a second run re-reads the prompt length from that run's first pass.
+    cols, reused, rec_short = slice(1, None), at_generated([2, 0]), []
+    with steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, reused):
+        generate(model, ids, mask)                                              # prompt length 8
+    with steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, reused, record=rec_short):
+        generate(model, ids[:, cols], mask[:, cols])                            # prompt length 7
+    short = [(p, r, int(rec["ctx"].position[r, t])) for p, rec in enumerate(rec_short)
+             for r, t in rec["ctx"].mask.nonzero().tolist()]
+    print(f"reused on a 7-token prompt batch: edited (pass, row, position) {short}")
+    assert short == [(1, 1, 7), (3, 0, 9)]
+    # Replay: one pass over prompt (5) + answer (3); generated index 1 is position 6.
+    prompt, answer, rec_replay = [5, 9, 2, 7, 11], [4, 6, 10], []
+    with torch.no_grad(), steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_generated([1]),
+                                   prompt_len=len(prompt), record=rec_replay):
+        model(input_ids=torch.tensor([prompt + answer]))
+    print(f"replay: edited positions {rec_replay[0]['ctx'].mask.nonzero()[:, 1].tolist()}")
+    assert rec_replay[0]["ctx"].mask.nonzero()[:, 1].tolist() == [6]
+
+
+def test_roles_without_padding(tiny):
+    # transformers 5.22.2 passes no cache_position and drops an all-ones attention_mask at batch 1; the positions
+    # then come from position_ids. Before 2026-11-19 they fell back to arange(seq_len), so every decode pass looked
+    # like a new one-token prompt and "generated" edited nothing.
+    model, ids, mask = tiny
+    record = []
+    with steering(model, LinearEdit(unit(32), 1.0), 0.0, LAYER, "generated", record=record):
+        generate(model, ids[:1, 3:], mask[:1, 3:])                              # one row, no padding, prompt length 5
+    decode = [r["ctx"] for r in record[1:]]
+    print(f"batch 1, no padding: decode positions {[int(c.position[0, 0]) for c in decode]}, "
+          f"roles {[int(c.role[0, 0]) for c in decode]}, edited {[int(c.mask.sum()) for c in decode]}")
+    assert [int(c.position[0, 0]) for c in decode] == list(range(5, 5 + NEW - 1))
+    assert all(bool((c.role == ROLE_GENERATED).all()) and bool(c.mask.all()) for c in decode)
+    assert record[0]["ctx"].role.tolist() == [[ROLE_PROMPT] * 5] and not record[0]["ctx"].mask.any()
 
 
 def test_replay_logits(tiny):
