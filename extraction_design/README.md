@@ -571,8 +571,6 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 
 **Not yet checked on Gemma:**
 - the hook gate at any `--positions` other than `all`;
-- the steering test suite on a rented machine: it stalled there on 2026-11-22 in a test that loads Qwen3.5-0.8B, was
-  stopped, and is not diagnosed (it passes locally);
 - any full-size fit;
 - any steered generation beyond the gate's strong-edit check.
 
@@ -600,7 +598,7 @@ crlf  version  setup  weights  tests  hook  horizon  baseline  extract  audit  d
 - **Rehearsed locally on 2026-11-22** in a copy without `.git`, on Qwen3.5-0.8B: every stage but `setup`, `weights`
   and `tests` ran and passed, the hook gate on all nine bundles included [`steering/progress-20261122.md`].
 - **Run on a rented A100 the same day** on Gemma 4 31B: every stage passed except `tests`, whose steering half
-  stalled and was stopped (§10). The run cost about $2.15 for 50 minutes.
+  was very slow and was stopped (§11.2 item 9). The run cost about $2.15 for 50 minutes.
 - **The `audit` stage** prints every label site with its decoded neighbours and fails if any decoded token differs
   from the parsed choice.
 - **The HF token** reaches the box only through ssh's stdin, never on disk or on a command line:
@@ -637,6 +635,13 @@ crlf  version  setup  weights  tests  hook  horizon  baseline  extract  audit  d
 7. **Bandwidth is billed by some hosts.** The host billed $40/TB in both directions, so the 64 GB download (weights
    plus packages) cost $2.50, more than the GPU time. Filter offers on download cost.
 8. **Destroy, don't stop.** A stopped instance keeps billing its disk: $0.28/h for 200 GB.
+9. **A container has fewer cores than it shows.** The A100 host reported 128 cores, but the container's CPU quota was
+   15.36 (cgroup `cpu.max`). torch started 128 threads, and the steering tests that run a tiny model on the CPU
+   crawled: 43 of 99 tests in 600 s, against all of them in 106 s with `OMP_NUM_THREADS=15` (2026-11-22, same
+   machine). Nothing was hung and no result was wrong. **Fixed:** `pbank/cpu.py` reads the quota;
+   `LocalChatModel` and the steering tests lower torch's thread count to it, and `vast_smoke.sh` exports
+   `OMP_NUM_THREADS` from it. The environment-variable form is the one measured on the box; the in-process form is
+   tested locally only.
 
 ### 11.3 Throughput: the open problem
 
@@ -796,7 +801,6 @@ against the real interfaces: <https://huggingface.co/datasets/CodeReclaimers/spa
 - before it, `tools/vast_smoke.sh` must run all 700 prompts and extract both splits: today it takes the first `N`
   extraction prompts and extracts the extraction split only;
 - upload the Gemma horizon activations;
-- diagnose the steering test suite's stall on a rented machine (§10).
 
 **Not built:**
 - an answer-letter control direction;

@@ -189,6 +189,8 @@ class LocalChatModel:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
+        from pbank.cpu import limit_torch_threads
+        limit_torch_threads()       # a container can have far fewer usable cores than the machine reports
         self.model_id = model_id
         self.tok = AutoTokenizer.from_pretrained(model_id)
         self.tok.padding_side = "left"
