@@ -85,3 +85,17 @@ def test_real_qwen35_hybrid_blocks():
         pytest.skip("Qwen3.5-0.8B not cached")
     ids = torch.tensor([[151644, 872, 198, 9707, 11, 1879, 0]], device="cuda:0")
     assert_hooks_match_hidden_states(model, ids, [1, 3, 4, 12, 22])
+
+
+def test_capture_all_matches_hidden_states_and_defines_the_two_end_layers():
+    from steer.layers import capture_all
+    model, ids = tiny_qwen3(), torch.tensor([[1, 5, 9, 2, 7]])
+    with torch.no_grad():
+        ref = model(input_ids=ids, output_hidden_states=True).hidden_states
+        with capture_all(model) as acts:
+            model(input_ids=ids)
+    diffs = [(acts[layer] - ref[layer]).abs().max().item() for layer in range(5)]
+    print(f"capture_all layers {sorted(acts)}; max |hook - hidden_states[L]| for L = 0..4: {diffs}")
+    assert sorted(acts) == [0, 1, 2, 3, 4]
+    assert diffs[:4] == [0, 0, 0, 0]          # layer 0 is the embeddings; 1..3 as `capture`
+    assert diffs[4] > 1e-3                    # layer 4 is before the final norm; hidden_states[4] is after it

@@ -10,7 +10,7 @@ import torch
 
 from steer.directions import random_directions
 from steer.edits import ROLE_GENERATED, ROLE_PAD, ROLE_PROMPT, LinearEdit
-from steer.hooks import at_generated, replay_logits, steering
+from steer.hooks import at_generated, at_prompt, replay_logits, steering
 from test_layers import tiny_qwen3
 
 LAYER = 2
@@ -138,6 +138,29 @@ def test_at_generated_edits_one_token_per_row(tiny):
         model(input_ids=torch.tensor([prompt + answer]))
     print(f"replay: edited positions {rec_replay[0]['ctx'].mask.nonzero()[:, 1].tolist()}")
     assert rec_replay[0]["ctx"].mask.nonzero()[:, 1].tolist() == [6]
+
+
+def test_at_prompt_edits_chosen_prompt_tokens_per_row(tiny):
+    # Row 0 is left-padded by 3, so its tokens 1 and 2 sit at positions 4 and 5; row 1 has none; no decode pass is edited.
+    model, ids, mask = tiny
+    seq, scores = generate(model, ids, mask)
+    record = []
+    with steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_prompt([[1, 2], []]), record=record):
+        seq_e, scores_e = generate(model, ids, mask)
+    edited = [(p, r, t) for p, rec in enumerate(record) for r, t in rec["ctx"].mask.nonzero().tolist()]
+    diff = (scores_e - scores).abs().amax(-1)
+    print(f"at_prompt([[1, 2], []]): edited (pass, row, position) {edited}; step-0 max |score diff| per row {diff[0].tolist()}")
+    assert edited == [(0, 0, 4), (0, 0, 5)]
+    assert diff[0, 0] > 1e-2 and torch.equal(scores_e[:, 1], scores[:, 1])       # row 1 untouched, bit for bit
+    # Replay (one pass, no padding): the indices are the positions themselves.
+    rec_replay = []
+    with torch.no_grad(), steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_prompt([[0, 3]]), prompt_len=5,
+                                   record=rec_replay):
+        model(input_ids=torch.tensor([[5, 9, 2, 7, 11, 4, 6, 10]]))
+    assert rec_replay[0]["ctx"].mask.nonzero()[:, 1].tolist() == [0, 3]
+    # An index beyond the row's prompt is refused, not wrapped into another token.
+    with pytest.raises(ValueError), steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_prompt([[5], []])):
+        generate(model, ids, mask)                                              # row 0 has 5 prompt tokens: 0..4
 
 
 def test_roles_without_padding(tiny):

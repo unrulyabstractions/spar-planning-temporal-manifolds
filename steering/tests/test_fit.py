@@ -157,3 +157,59 @@ def test_search_log_records_every_run_and_only_grows(tmp_path):
     assert (fits / "acts" / "search.jsonl").read_text().startswith(first_two)    # earlier lines untouched
     assert log[0]["headline"]["curve_held_out_spearman"] > 0.99 and log[2]["settings"]["include_none"] is False
     assert all(len(r["code_commit"]) >= 40 or r["code_commit"] == "unknown" for r in log)
+
+
+# ---- shared random draws (evaluation/shared_draws.py) as the fit's random baseline ---------------------------------
+
+def make_draws(acts, out, layer=15, site="label"):
+    """Run the evaluation team's script on the synthetic activations; returns the draws directory."""
+    script = STEERING.parent / "evaluation" / "shared_draws.py"
+    subprocess.run([sys.executable, str(script), "make", "--activations", str(acts), "--bank",
+                    str(BANK / "prompts.jsonl"), "--model", "synthetic/tiny", "--layer", str(layer), "--site", site,
+                    "--out", str(out)], check=True, capture_output=True)
+    return out / "tiny" / f"L{layer}_{site}"
+
+
+def test_fit_with_shared_draws_changes_only_the_random_baseline(tmp_path):
+    acts = make_activations(tmp_path / "acts")
+    draws = make_draws(acts, tmp_path / "draws")
+    own = run_fit(acts, tmp_path / "fits")
+    shared = run_fit(acts, tmp_path / "fits", "--name", "shared", "--draws", str(draws))
+    a, b = np.load(own / "directions.npz"), np.load(shared / "directions.npz")
+    stored = np.load(draws / "draws.npz")
+    meta = json.loads((shared / "fit.json").read_text())
+    src, cos = meta["random_source"], meta["diagnostics"]["caa"]["abs_cos_random"]
+    print(f"random_source {src['kind']} {src['directory']}, K {src['k']}, families {src['families']}; "
+          f"|cos(CAA, random)| max/p95: " + ", ".join(f"{f} {v['max']:.3f}/{v['p95']:.3f}" for f, v in cos.items()))
+    print(f"own fit: {json.loads((own / 'fit.json').read_text())['random_source']}")
+    # The methods are untouched; only the random vectors differ, and they are the shared file's, bit for bit.
+    for key in ("caa", "reward", "choice", "typical_norm"):
+        assert np.array_equal(a[key], b[key]), key
+    assert (own / "manifold.npz").read_bytes() == (shared / "manifold.npz").read_bytes()
+    assert np.array_equal(b["random"], stored["isotropic"]) and b["random"].shape == (99, 24)
+    assert a["random"].shape == (100, 24)
+    assert src["families"] == ["isotropic", "covariance", "real_diff"] and src["k"] == 99
+    assert src["drawn_from_activations_sha256"] == meta["inputs"]["array_sha256"]
+    for f in src["families"]:
+        expect = np.abs(stored[f] @ b["caa"]).max()
+        assert cos[f]["n"] == 99 and abs(cos[f]["max"] - expect) < 1e-6
+    assert meta["diagnostics"]["caa"]["max_abs_cos_random"] == cos["isotropic"]["max"]
+    assert "draws" not in meta["settings"]
+
+
+def test_fit_refuses_draws_made_for_other_inputs(tmp_path):
+    acts = make_activations(tmp_path / "acts", layers=(12, 15))
+    other = make_activations(tmp_path / "other", seed=1)
+    cases = {"another site": make_draws(acts, tmp_path / "d1", site="prelabel"),
+             "another layer": make_draws(acts, tmp_path / "d2", layer=12),
+             "another extraction": make_draws(other, tmp_path / "d3")}
+    tampered = make_draws(acts, tmp_path / "d4")
+    (tampered / "uids.txt").write_text("x0001\n")
+    cases["a file changed after SHA256SUMS"] = tampered
+    for n, (what, draws) in enumerate(cases.items()):
+        with pytest.raises(SystemExit) as e:
+            run_fit(acts, tmp_path / "fits", "--name", f"r{n}", "--draws", str(draws))
+        print(f"{what}: refused: {str(e.value.code)[:110]}")
+        assert str(e.value.code).startswith("--draws:")
+    log = [json.loads(line) for line in (tmp_path / "fits" / "acts" / "search.jsonl").read_text().splitlines()]
+    assert [row["outcome"] for row in log] == ["refused"] * 4

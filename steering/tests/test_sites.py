@@ -71,3 +71,56 @@ def test_thinking_off():
     site = locate_label(tok, ids, ("1)", "2)"), thinking=False)
     print(f"thinking off: label token {tok.decode([ids[site.label_index]])!r} at {site.label_index}")
     assert site.answer_start == 0 and "1" in tok.decode([ids[site.label_index]])
+
+
+# ---- the horizon site ------------------------------------------------------------------------------------------------
+
+def bank_records():
+    from fixtures import BANK
+    from pbank.records import load_prompts
+    return load_prompts(BANK)
+
+
+def chat_text(tok, text, thinking):
+    return tok.apply_chat_template([{"role": "user", "content": text}], tokenize=False, add_generation_prompt=True,
+                                   enable_thinking=thinking)
+
+
+@pytest.mark.parametrize("model_id", list(FAMILIES))
+@pytest.mark.parametrize("thinking", [True, False])
+def test_horizon_tokens_decode_back_for_every_prompt(model_id, thinking):
+    from collections import Counter
+    from steer.sites import locate_horizon
+    tok = tokenizer(model_id)
+    sizes, shifted_ok, first = Counter(), 0, set()
+    recs = [r for r in bank_records() if r.horizon is not None]
+    for r in recs:
+        chat = chat_text(tok, r.text, thinking)
+        site = locate_horizon(tok, chat, r.text, r.horizon)
+        ids = tok(chat, add_special_tokens=False)["input_ids"]
+        assert site.decoded.strip() == r.horizon, (r.uid, r.horizon, site.tokens)
+        assert [ids[k] for k in site.token_indices] == site.token_ids and site.n_input_tokens == len(ids)
+        assert r.text[site.char_start:site.char_end] == r.horizon
+        assert r.text.rfind("CONSTRAINT: ", 0, site.char_start) > r.text.find("\n")     # in the CONSTRAINT line
+        # Negative control: the same number of tokens one position later does not spell the horizon.
+        shifted_ok += tok.decode([ids[k + 1] for k in site.token_indices]).strip() == r.horizon
+        sizes[len(site.tokens)] += 1
+        first.add(site.token_indices[0])
+    twice = [r for r in recs if r.text.count(r.horizon) > 1]
+    print(f"{model_id}, thinking {thinking}: {len(recs)} horizons decode back; tokens per horizon {dict(sorted(sizes.items()))}; "
+          f"first token index from {min(first)} to {max(first)}; shifted by one decodes back for {shifted_ok}; "
+          f"{len(twice)} prompts also write the horizon's words in an option ({[r.uid for r in twice]})")
+    assert len(recs) == 671 and shifted_ok == 0 and len(twice) == 4
+
+
+def test_horizon_span_refuses_ambiguous_text():
+    from steer.sites import horizon_char_span
+    text = "TASK: a) 1 dollar in 3 months.\nCONSTRAINT: Your planning horizon is 3 months. Choose.\nACTION: x"
+    start, end = horizon_char_span(text, "3 months")
+    assert text[start:end] == "3 months" and start > text.index("CONSTRAINT")
+    for bad, why in ((text.replace("CONSTRAINT: ", "LIMIT: "), "no CONSTRAINT line"),
+                     (text + "\nCONSTRAINT: again 3 months", "two CONSTRAINT lines"),
+                     (text.replace("Choose.", "Not 3 months more."), "stated twice in the line")):
+        with pytest.raises(ValueError) as e:
+            horizon_char_span(bad, "3 months")
+        print(f"{why}: {e.value}")

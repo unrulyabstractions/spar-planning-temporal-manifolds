@@ -104,7 +104,23 @@ something.
 3. **Reward-contrast control.** The report names this control but doesn't define it. Here it is the mean of
    prompts with reward multiplier >= 25 minus those with multiplier <= 5 (`--reward-high-min`,
    `--reward-low-max`).
-4. **Random controls.** 100 isotropic random unit vectors (`--n-random`, `--seed`).
+4. **Random controls.** 100 isotropic random unit vectors (`--n-random`, `--seed`), or, with `--draws DIR`, the
+   shared draws the evaluation team's `evaluation/shared_draws.py` writes for these activations:
+
+   ```
+   python ../evaluation/shared_draws.py make --activations activations/<run> --bank ../prompt_bank/data/t0_s0/prompts.jsonl \
+       --model <model id> --layer 38 --site label --out draws/
+   python fit.py --activations activations/<run> --bank ../prompt_bank/data/t0_s0 --layer 38 --draws draws/<model>/L38_label
+   ```
+
+   - The fit's random baseline is then the same vectors as the evaluation's nulls: 99 each of isotropic,
+     covariance-matched and real-difference directions. `fit.json` reports CAA's largest and 95th-percentile |cosine|
+     per family, and records the draws' hashes under `random_source`.
+   - `fit.py` refuses draws made for another model, layer, site or activations file, or changed since they were
+     written (`steer/draws.py`).
+   - The draws enter the diagnostics only. A fit with `--draws` has the same methods, bit for bit.
+   - They are drawn from all 471 fitted-split prompts, including any that a fit leaves out with
+     `--exclude-horizons`.
 5. **Curve.**
    - PCA keeps 4 components (`--components`; the report says 3-8).
    - The smoother is Gaussian-kernel local-linear with a 0.3-decade bandwidth (`--bandwidth`; grid points are
@@ -150,6 +166,8 @@ logits = replay_logits(model, prompt_ids, answer_ids, slide, x=0.5, layer=38)   
     the curve ignore it; it is in the signature for edits that need it.
 - **The hook** (`steer/hooks.py`) decides where the displacement is applied:
   - `positions="all"`, `"prompt"`, `"generated"`, or a callable on the context;
+  - `at_generated(index)` builds a callable for one generated token per row (the label or prelabel token);
+  - `at_prompt(indices)` builds one for chosen prompt tokens per row (the horizon's tokens, below);
   - padding is never edited.
 
   It reads each pass's token positions from the model's forward call (`cache_position`, else `attention_mask`,
@@ -170,6 +188,43 @@ logits = replay_logits(model, prompt_ids, answer_ids, slide, x=0.5, layer=38)   
 
     `progress-20261114.md` and `progress-20261115.md` have the outputs.
   - **Not yet run on Gemma:** `check_hook.py --method` with a real bundle.
+
+## The horizon site
+
+`extract_horizon.py` reads the residual stream at the prompt tokens that state the horizon ("7 years"), for methods
+that are fitted on those tokens or edit only them:
+
+```
+uv run python extract_horizon.py --bank ../prompt_bank/data/t0_s0 --model google/gemma-4-31B-it
+```
+
+- **No baseline run is needed.** The horizon is in the prompt, so this is one forward pass per prompt, with no
+  generation. On Qwen3.5-2B the 700 prompts at all 25 layers took 32 s (`progress-20261122.md`).
+- **Every token of the horizon is kept separately,** with its string. Gemma 4 and Qwen3.5 split numbers into digits:
+  "15 minutes" is `'1'`, `'5'`, `' minutes'`. On `t0_s0` a horizon has 2 to 7 tokens, 2,600 in all.
+- **All layers by default,** 0 to the number of blocks. Layer 0 is the embeddings. The last layer is the last block's
+  output before the final norm, which is not `hidden_states[n]` (`steer.layers.capture_all`).
+- **The audit is part of the run.** Every horizon's tokens must decode back to the stated horizon, unit rewrites
+  included, or nothing is written.
+- **Thinking is part of the model input.** Gemma 4's template puts a system turn before the prompt when thinking is
+  on, which shifts the token indices and changes the activations. Extract with the setting of the runs the result
+  will be used with (`--thinking`, the default, or `--no-thinking`).
+- **Output:** `activations/<model>[-nothink]__<bank>__horizon/`, one float32 file per layer, `index.jsonl` (one row
+  per token) and `horizon_sites.jsonl` (one row per prompt). `steer/activations.py` lists the fields.
+
+Editing only the horizon's tokens during generation:
+
+```python
+from steer.activations import horizon_sites
+from steer.hooks import at_prompt, steering
+
+sites = horizon_sites("activations/gemma-4-31B-it__t0_s0__horizon")
+rows = [sites[uid] for uid in uids]                      # per prompt: token_indices, log10_days, near_first, label_style, ...
+with steering(lcm.model, edit, x, layer, positions=at_prompt([r["token_indices"] for r in rows]), rows=rows):
+    replies = lcm.generate(texts, thinking=True, max_new_tokens=8192)
+```
+
+`rows` reaches the edit as `ctx.rows`. A prompt without a horizon has an empty `token_indices` and is not edited.
 
 ## Handing a method over: bundles
 
@@ -270,9 +325,11 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 |---|---|
 | `bundle.py` | stage 3: package a fit's methods as bundles for the evaluation team |
 | `extract.py` | stage 1: replay the baseline's replies, read activations at the label |
+| `extract_horizon.py` | read activations at the prompt tokens that state the horizon, all layers; needs no baseline run |
 | `fit.py` | stage 2: directions, curve, controls, diagnostics (command-line wrapper around `steer/fitting.py`) |
-| `steer/layers.py` | layer convention; `capture` and `edit` hooks |
-| `steer/sites.py` | locate the answer-label token |
+| `steer/layers.py` | layer convention; `capture`, `capture_all` and `edit` hooks |
+| `steer/sites.py` | locate the answer-label token, and the horizon's tokens in the prompt |
+| `steer/draws.py` | read and check the evaluation team's shared random draws |
 | `steer/activations.py` | on-disk format and loader (checks hashes) |
 | `steer/fitting.py` | the fit as a function, `fit(X, records, chosen, FitSettings)`, for refits on other prompts or labels |
 | `steer/directions.py` | difference of means, thresholds, random controls, linear edit |
@@ -304,6 +361,9 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 - the hook in real `generate()` calls: roles, position masks, padding, exact zero edit, generated-only leaving the
   first token alone, replay. On a tiny Qwen3, and on Qwen3.5-0.8B in bf16 on a GPU;
 - `fit.py` end to end on synthetic activations over the real bank (`tests/fixtures.py`), and `tools/compare_fits.py`
-  telling identical trees from ones that differ by one ulp.
+  telling identical trees from ones that differ by one ulp; with `--draws`, the methods unchanged and draws for other
+  inputs refused;
+- the horizon site: its tokens decode back for all 671 horizons on the Gemma 4 and Qwen3.5 tokenizers;
+  `extract_horizon.py` on Qwen3.5-0.8B against `hidden_states`; a horizon-only edit in a padded batch.
 
 Tests that need a cached model or a GPU skip without one.

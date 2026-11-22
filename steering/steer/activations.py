@@ -13,6 +13,28 @@ the label token in the generated ids), `seq_len` (tokens in the replayed sequenc
 `replay_label_margin` (at the prelabel site of the replayed pass: logit of the label token the model generated
 minus the largest other logit; >= 0 for a faithful replay of a greedy generation, except near-ties, which can come
 out one bf16 step, about 0.125, negative) and `replay_predicts_label` (margin >= 0).
+
+extract_horizon.py writes the same layout for the horizon site (the prompt tokens that state the horizon), in its
+own directory:
+
+    activations/<model>[-nothink]__<bank>__horizon/
+        extract.json          as above; settings.thinking is part of the model input and so of the token indices
+        index.jsonl           one row per array row, i.e. per horizon token of a prompt (fields below)
+        horizon_sites.jsonl   one row per prompt, including those without a horizon (fields below)
+        L00_horizon.npy ...   float32 [rows, d], one file per layer; a prompt has as many rows as its horizon has
+                              tokens ("15 minutes": "1", "5", " minutes")
+
+index.jsonl fields there: `row`, `uid`, `k` (which token of the horizon, from 0), `n_tokens` (tokens in this
+horizon), `token_index` (the token's index in the model input, chat template included, no padding), `token_id`,
+`token` (decoded on its own).
+
+horizon_sites.jsonl fields: `uid`, `split`, `regime`, `horizon` (as written), `horizon_grid_value`, `log10_days`
+(of the grid value), `near_first`, `label_style` ("a)/b)" or "1)/2)"), `far_label`, `char_start` / `char_end` (the
+horizon in the prompt text), `n_input_tokens`, `token_indices`, `token_ids`, `tokens`, `rows` (its array rows).
+Prompts without a horizon have empty lists and nulls. These rows can be passed as the hook's `rows`, and
+`token_indices` to `steer.hooks.at_prompt`, to edit only the horizon's tokens.
+
+`load(directory, layer, "horizon")` reads one layer of it; `horizon_sites(directory)` reads the per-prompt rows.
 """
 
 from __future__ import annotations
@@ -26,7 +48,8 @@ import numpy as np
 
 from pbank.records import read_jsonl
 
-POSITIONS = ("label", "prelabel")
+POSITIONS = ("label", "prelabel")   # the sites extract.py reads, and fit.py can fit on
+HORIZON = "horizon"                 # the site extract_horizon.py reads
 
 
 def array_name(layer: int, position: str) -> str:
@@ -69,3 +92,15 @@ def load(directory: Path, layer: int, position: str) -> ActivationSet:
     if len(index) != len(X) or any(row["row"] != i for i, row in enumerate(index)):
         raise ValueError(f"{directory}: index.jsonl does not match {name} row for row")
     return ActivationSet(X=X, index=index, layer=layer, position=position, meta=meta)
+
+
+def horizon_sites(directory: Path) -> dict[str, dict]:
+    """horizon_sites.jsonl of an extract_horizon.py output, by uid, checked against index.jsonl."""
+    directory = Path(directory)
+    sites = {row["uid"]: row for row in read_jsonl(directory / "horizon_sites.jsonl")}
+    index = read_jsonl(directory / "index.jsonl")
+    for uid, site in sites.items():
+        got = [(index[r]["uid"], index[r]["token_index"]) for r in site["rows"]]
+        if got != [(uid, k) for k in site["token_indices"]]:
+            raise ValueError(f"{directory}: horizon_sites.jsonl and index.jsonl disagree for {uid}")
+    return sites

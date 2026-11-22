@@ -23,7 +23,11 @@ Definitions (report, Appendix A.3; details in the steer modules):
   far option's delay (Appendix A.1), so H/D is the bank's `h_over_far_delay`.
 * Reward contrast (control): the same with the reward multiplier (far reward / near reward) in place of H/D:
   multiplier >= 25 against <= 5. The report does not define this direction further; this is our reading.
-* Random controls: isotropic random unit vectors, seeded.
+* Random controls: isotropic random unit vectors, seeded. With --draws, the shared draws written by
+  evaluation/shared_draws.py for these activations are used instead (isotropic, covariance-matched and real
+  differences), so the fit's random baseline is the same set of vectors as the evaluation's nulls. The draws are
+  made from every fitted-split prompt of the extraction, including any this fit leaves out (--exclude-horizons,
+  --no-include-none); they enter the diagnostics only, never a method's parameters.
 * Choice (diagnostic, not a control): mean of replies that chose the far option minus those that chose near. Its
   cosine with CAA measures how much of CAA is "which option was chosen" rather than "how long the horizon is".
 * Manifold: per-horizon means -> PCA (k components) -> local-linear curve in log10(days) (steer/manifold.py).
@@ -38,7 +42,8 @@ for each reason.
 Diagnostics, all in fit.json:
 
 * class sizes by regime, for CAA and reward (the CAA classes are not balanced by regime; see README);
-* cosines of CAA with the reward and choice directions, and the largest |cosine| with a random control;
+* cosines of CAA with the reward and choice directions, and the largest and 95th-percentile |cosine| with the
+  random controls, per family;
 * monotonicity: Spearman correlation between log-horizon and each horizon mean's projection on CAA;
 * curve: variance explained by the k components; in-sample error of t-hat for the horizon means; and held-out
   error, by grouped k-fold over prompts (curve fitted without the fold, t-hat read for the fold's prompts),
@@ -59,6 +64,7 @@ from pbank.local_model import log
 from pbank.provenance import utc_now
 from pbank.records import load_prompts, prompts_sha256, write_jsonl
 from steer import activations
+from steer.draws import load_shared
 from steer.provenance import code_commit
 from pbank.durations import Duration
 from steer.fitting import FitSettings, fit, select
@@ -80,7 +86,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--caa-short-max", type=float, default=0.25, help="H/D at or below which a prompt is 'short'")
     p.add_argument("--reward-high-min", type=float, default=25)
     p.add_argument("--reward-low-max", type=float, default=5)
-    p.add_argument("--n-random", type=int, default=100, help="random control directions")
+    p.add_argument("--n-random", type=int, default=100, help="random control directions (not used with --draws)")
+    p.add_argument("--draws", type=Path, metavar="DIR",
+                   help="shared random draws for this model, layer and site (evaluation/shared_draws.py output, "
+                        "draws/<model>/L<layer>_<site>); replaces the fit's own random directions")
     p.add_argument("--components", type=int, default=4, help="PCA components of the curve (report: 3-8)")
     p.add_argument("--bandwidth", type=float, default=0.3, help="curve smoother bandwidth, decades")
     p.add_argument("--folds", type=int, default=5, help="folds for the held-out curve check")
@@ -90,7 +99,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def recorded_settings(args: argparse.Namespace) -> dict:
-    return {k: v for k, v in vars(args).items() if k not in ("activations", "bank")}
+    return {k: v for k, v in vars(args).items() if k not in ("activations", "bank", "draws")}
 
 
 def append_search(path: Path, row: dict) -> None:
@@ -142,7 +151,17 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
                            bandwidth=args.bandwidth, folds=args.folds, seed=args.seed)
     log(f"layer {args.layer} {args.site}: {len(use)} of {len(acts.uids)} extracted prompts, "
         f"regimes {dict(Counter(r.regime for r in recs))}, d = {X.shape[1]}; left out {selection.excluded}")
-    result = fit(X, recs, chosen, settings)
+    array = activations.array_name(args.layer, args.site)
+    if args.draws:
+        try:
+            shared = load_shared(args.draws, acts.meta["model"]["model_id"], args.layer, args.site, X.shape[1],
+                                 acts.meta["arrays"][array]["sha256"])
+        except (FileNotFoundError, ValueError) as e:
+            sys.exit(f"--draws: {e}")
+        random_sets, random_source = shared.families, shared.source
+    else:
+        random_sets, random_source = None, {"kind": "own_isotropic", "n": args.n_random, "seed": args.seed}
+    result = fit(X, recs, chosen, settings, random_sets)
     diagnostics, norm = result.diagnostics, result.typical_norm
     caa, reward, choice = result.caa, result.reward, result.choice
 
@@ -158,13 +177,12 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
          "choice_label": acts.index[i]["choice_label"], "caa_class": str(cc) or None, "reward_class": str(rc) or None,
          "fold": int(f)}
         for i, r, cc, rc, f in zip(use, recs, result.caa_class, result.reward_class, result.fold)))
-    array = activations.array_name(args.layer, args.site)
     meta = {"created_utc": utc_now(), "code_commit": code_commit(),
             "inputs": {"activations": args.activations.name, "array": array,
                        "array_sha256": acts.meta["arrays"][array]["sha256"], "bank_name": args.bank.name,
                        "bank_prompts_sha256": acts.meta["settings"]["bank_prompts_sha256"],
                        "model": acts.meta["run_settings"]["model"], "thinking": acts.meta["run_settings"]["thinking"]},
-            "settings": recorded_settings(args),
+            "settings": recorded_settings(args), "random_source": random_source,
             "n_prompts": result.n_prompts, "regimes": result.regime_counts, "excluded": selection.excluded,
             "diagnostics": diagnostics}
     (out / "fit.json").write_text(json.dumps(meta, indent=2) + "\n")
@@ -173,7 +191,7 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
     log(f"CAA: long {c['n_long']} {c['long_by_regime']}, short {c['n_short']} {c['short_by_regime']}")
     log(f"     |mean difference| = {c['raw_norm']:.3g} ({c['raw_norm_over_typical_norm']:.3f} of typical norm "
         f"{norm:.3g}); cos with reward {c['cos_reward']:+.3f}, with choice {c['cos_choice']:+.3f}, "
-        f"max |cos| with {args.n_random} random {c['max_abs_cos_random']:.3f}")
+        f"max |cos| with random: " + ", ".join(f"{f} ({v['n']}) {v['max']:.3f}" for f, v in c["abs_cos_random"].items()))
     log(f"     Spearman(log H, horizon mean along CAA) = {c['spearman_logH_vs_mean_projection']:+.3f}")
     log(f"curve: k={args.components}, explained {m['explained_variance_of_means']}, in-sample median |t-hat - t| "
         f"{m['in_sample_median_abs_err_decades']:.3f} decades")
