@@ -493,3 +493,42 @@ ranking order, so stopping at $5.30 leaves complete results for the best types.
 
 **Pipeline.** The same five arms become a `prompting` arm family in the `evaluation/` stage (generation
 readout, stage 5), handed to the pipeline agent once its current work is in.
+
+## 11. E22: prompting baseline, results (2026-11-22, RTX 4090, $0.58)
+
+Run as §10's approved scope: `system_prompt`, `prose_natural`, `coding_agent`, original 32-row banks. Thinking off ran
+for all three; thinking on for `system_prompt` and `prose_natural`. `coding_agent` thinking on was not run: the budget
+stop came first, after a crash in the scoring pass (batch 8 of ~3k-token traces ran out of memory on the 24 GB card;
+rerun with `--score-batch-size 2`) and a stale `.lock` left by the crash had cost ~15 min. Tables:
+`results/horizon/exp22_Qwen3-8B_prompting/eval_prompting.{md,json}`.
+
+Toward = shift toward the answer the instruction (or steering step) makes rational on the rows it crosses, minus the
+`neutral` sentence, in units of the type's near/both contrast. Spillover = the same shift on rows it should not change
+(thinking off only). Steering = E21's saved rows (thinking on there: E0's reasoning held fixed, so not like for like).
+
+| type | mode | disposition: toward / spillover | 100x shift: toward / spillover | steering L24 | steering stacked | flips (disp / shift / L24 / stacked) |
+|---|---|---|---|---|---|---|
+| system_prompt | off | 0.45 / 0.17 | 0.52 / 0.03 | 0.32 / -0.04 | 0.48 / -0.20 | 8 / 9 / 4 / 11 of 21 |
+| prose_natural | off | 0.37 / 0.67 | 0.18 / 0.15 | 0.30 / 0.06 | 0.60 / -0.01 | 7 / 4 / 6 / 6 of ~20 |
+| coding_agent | off | 0.18 / 0.14 | 0.20 / 0.05 | 0.02 / 0.04 | 0.13 (CI spans 0) / -0.01 | 2 / 1 / 0 / 1 of ~18 |
+| system_prompt | on | 0.54 | 0.40 | 0.15 | 0.31 | 8 / 4 / 0 / 1 of 17 |
+| prose_natural | on | 0.38 | 0.43 | 0.10 | 0.28 | 8 / 7 / 1 / 3 of 20 |
+
+E20's phrase donor on `system_prompt` (thinking on, regenerated reasoning): toward 0.99, flip rate 0.90.
+
+**Findings**
+- **A sentence of instruction moves the choice as much as the best steering, or more.** Thinking off, the 100x-shift
+  sentence matches stacked steering on `system_prompt` (0.52 vs 0.48). Thinking on, both instructions beat steering by
+  2-4x (0.38-0.54 against 0.10-0.31) and flip 4-8 answers per type where steering flips 0-3.
+- **Prompting moves `coding_agent`; steering does not.** Thinking off, 0.18-0.20 toward, against 0.02 for the L24
+  curve. So `coding_agent`'s choice does respond to a horizon change; the bank's curve is just not how to cause one there.
+- **The disposition sentence is partly a lean, the shift sentence mostly a horizon change.** Spillover with thinking off:
+  disposition 0.14-0.67 (on `prose_natural` it moves rows that should not move more than the rows that should); shift
+  0.03-0.15; steering near zero (-0.20 to 0.06). Steering is the most horizon-specific of the three, prompting the
+  strongest.
+- **Caveat on the shift arm thinking on: it often derails the reasoning.** `shift_short` on `system_prompt` hit the
+  3,072-token cap on 9 of 12 traces (neutral 1 of 24), so its answers are read after cut-off, mostly looping, traces.
+- Small samples: 17-21 crossing rows per type, CIs of ±0.1-0.3.
+
+**Next** (each needs a spec): `coding_agent` thinking on (~$0.20); thinking-on spillover (the instruction on rows it
+should not change); the instructions on the 19 gated types, or as the `prompting` arm family in `evaluation/`.
