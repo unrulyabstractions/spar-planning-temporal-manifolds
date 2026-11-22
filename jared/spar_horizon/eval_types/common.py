@@ -34,6 +34,12 @@ NUMBER_WORDS = {2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven"
 PLAN = ("near", "both") * 4 + ("none",) + ("near", "both") * 4 + ("none",) * 3
 SWAP_PER_REGIME = 4
 TWIN_PER_REGIME = 2
+# The expanded banks (100 base items: CIs of about +-0.1 per regime instead of +-0.25) keep the
+# original's share of swaps and twins.
+EXPANDED_N_BASE = 100
+EXPANDED_SWAP_PER_REGIME = 20
+EXPANDED_TWIN_PER_REGIME = 10
+MAX_REDRAWS = 100
 
 # Durations a household prompt reads naturally with, shortest first.
 DURATIONS = tuple(Horizon(v, u) for v, u in [
@@ -211,12 +217,40 @@ def make_record(et, item, k, variant, order, prompt, truth, options):
     return rec
 
 
-def build_records(et, seed=0):
-    """The type's records: base items, their swaps and their explicit twins (module docstring)."""
+def expanded_plan(plan, n_base):
+    """The type's plan repeated to n_base slots. It starts with the plan itself, so the first
+    len(plan) items, drawn from the same random stream, are the original bank's items."""
+    return (plan * math.ceil(n_base / len(plan)))[:n_base]
+
+
+def build_records(et, seed=0, n_base=None):
+    """The type's records: base items, their swaps and their explicit twins (module docstring).
+    `n_base` (e.g. 100) builds the expanded bank: the plan repeated to n_base items, with
+    EXPANDED_SWAP_PER_REGIME swaps and EXPANDED_TWIN_PER_REGIME twins. Its first len(et.plan) items
+    and their swaps and twins equal the default build's, provided make_item draws items with
+    i < len(et.plan) from the original content only (content added for the expansion is used from
+    i = len(et.plan) on).
+    An expansion item that repeats an earlier item (the same prompt with its options in index
+    order) is drawn again, so the expansion keeps the original items' random draws and has no
+    duplicates. The original items are kept as they are."""
+    plan, swaps, twins = et.plan, SWAP_PER_REGIME, TWIN_PER_REGIME
+    if n_base is not None:
+        plan, swaps, twins = expanded_plan(et.plan, n_base), EXPANDED_SWAP_PER_REGIME, EXPANDED_TWIN_PER_REGIME
     rng = random.Random(f"{et.item_seed or et.type_id}-{seed}")
-    records, seen = [], {}
-    for k, regime in enumerate(et.plan):
+    records, seen, drawn = [], {}, set()
+
+    def identity(item):
+        return repr(et.render(item, labelled(item.options, list(range(len(item.options))))))
+
+    for k, regime in enumerate(plan):
         item = et.make_item(rng, k, regime)
+        for _ in range(MAX_REDRAWS):
+            if k < len(et.plan) or identity(item) not in drawn:
+                break
+            item = et.make_item(rng, k, regime)
+        else:
+            raise ValueError(f"{et.type_id}: item {k} repeats an earlier item after {MAX_REDRAWS} draws")
+        drawn.add(identity(item))
         n = len(item.options)
         base_order = list(range(n))
         if et.shuffle_base:
@@ -224,11 +258,11 @@ def build_records(et, seed=0):
         records.append(make_record(et, item, k, "base", base_order,
                                    et.render(item, labelled(item.options, base_order)), item.truth, item.options))
         seen[regime] = seen.get(regime, 0) + 1
-        if regime in ("near", "both") and seen[regime] <= SWAP_PER_REGIME and n > 1:
+        if regime in ("near", "both") and seen[regime] <= swaps and n > 1:
             order = base_order[::-1]
             records.append(make_record(et, item, k, "swap", order,
                                        et.render(item, labelled(item.options, order)), item.truth, item.options))
-        if et.twins and regime in ("near", "both") and seen[regime] <= TWIN_PER_REGIME and item.horizon_text:
+        if et.twins and regime in ("near", "both") and seen[regime] <= twins and item.horizon_text:
             ref = reference_options(item)
             records.append(make_record(et, item, k, "twin", base_order,
                                        render_reference(item, labelled(ref, base_order)),

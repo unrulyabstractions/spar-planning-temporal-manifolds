@@ -7,7 +7,7 @@ from .common import build_records
 TYPES = {et.type_id: et for module in (investment, framing, domains, robustness, wording) for et in module.TYPES}
 
 
-def build(type_id, seed=0):
+def build(type_id, seed=0, n_base=None):
     if type_id not in TYPES:
         raise KeyError(f"unknown eval type {type_id!r}; known: {', '.join(TYPES)}")
-    return build_records(TYPES[type_id], seed)
+    return build_records(TYPES[type_id], seed, n_base)

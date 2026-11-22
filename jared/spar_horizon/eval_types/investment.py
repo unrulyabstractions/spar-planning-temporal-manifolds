@@ -2,8 +2,9 @@
 
 from ..horizons import Horizon
 from .common import (
-    DURATIONS, MARGIN, EvalType, Item, Option, alan_prompt, draw_two_delays, log_years,
+    DURATIONS, MARGIN, PLAN, EvalType, Item, Option, alan_prompt, draw_two_delays, log_years,
     max_value_within, money, standard_item, two_option_truth, two_rewards)
+from .framing import expansion_index
 
 PRINCIPALS = (5_000, 10_000, 20_000)
 
@@ -132,14 +133,44 @@ def mismatched_horizon_menu():
 MISMATCHED_HORIZONS = mismatched_horizon_menu()
 
 
+def horizon_fits(regime, near, far):
+    """Whether a horizon of y years is in `regime` and at least RATIO away from both delays (years)."""
+    return {"near": lambda y: near * RATIO <= y <= far / RATIO,
+            "both": lambda y: y >= far * RATIO,
+            "none": lambda y: y <= near / RATIO}[regime]
+
+
+# The expanded banks use these from item len(PLAN) on, one per item in turn: (unit of the option
+# delays, their values, unit of the stated horizon, its values). The original bank only has delays in
+# years against a horizon in months or weeks.
+NEW_UNIT_PAIRS = (
+    ("weeks", (2, 4, 6, 8, 12, 26, 52, 104), "days", (4, 6, 9, 12, 15, 20, 25, 40, 50, 75, 100, 150, 200, 300, 500, 800)),
+    ("weeks", (2, 4, 6, 8, 12, 26, 52, 104), "months", (2, 3, 4, 5, 7, 9, 10, 14, 18, 30, 48)),
+    ("weeks", (4, 8, 12, 26, 52, 104, 260), "years", (1, 2, 3, 4, 5, 6, 8, 12)),
+    ("months", (1, 2, 3, 6, 9, 12, 24, 60), "days", (10, 20, 40, 50, 75, 100, 150, 200, 300, 500, 800, 1500, 2000)),
+    ("months", (1, 2, 3, 6, 9, 12, 24, 60), "weeks", (3, 5, 6, 10, 14, 20, 30, 40, 70, 90, 130, 200, 300)),
+    ("months", (3, 6, 9, 12, 24, 60, 120), "years", (1, 2, 3, 4, 5, 6, 8, 12, 14, 15, 25)),
+    ("years", (1, 2, 3, 4, 7, 15, 25, 40), "days", (60, 100, 200, 300, 400, 500, 730, 1000, 1500, 2000, 3000, 5000, 8000)),
+    ("years", (1, 2, 3, 4, 7, 15, 25, 40), "decades", (0.2, 0.3, 0.5, 0.6, 1.5, 2.5, 3.5, 4.5, 6, 7)),
+    ("decades", (1, 2, 3, 5), "years", (2, 4, 5, 6, 8, 14, 16, 25, 35, 40, 60, 80, 150)),
+    ("decades", (1, 2, 3, 5), "months", (24, 48, 60, 90, 150, 200, 300, 500, 700)),
+    ("decades", (1, 2, 3, 5), "weeks", (100, 200, 300, 500, 800, 1500, 2000, 3500)),
+    ("centuries", (1, 2, 3, 5), "years", (10, 25, 40, 60, 80, 150, 250, 350, 400, 700)),
+    ("centuries", (1, 2, 3, 5), "decades", (1, 2, 3, 5, 7, 15, 25, 35, 70)),
+    ("days", (7, 10, 14, 21, 30, 60, 90, 180, 365), "weeks", (1, 2, 3, 5, 6, 8, 12, 20, 40, 60)),
+    ("days", (7, 10, 14, 21, 30, 60, 90, 180, 365), "months", (1, 2, 3, 5, 7, 9, 14, 18, 30)),
+    ("days", (90, 180, 365, 730, 1095, 1825), "years", (1, 2, 3, 4, 5, 8)),
+)
+
+
 def unit_mismatch_item(rng, i, regime):
+    if i >= len(PLAN):
+        return new_unit_mismatch_item(rng, i, regime)
     for _ in range(10_000):
         near, far = sorted(rng.sample(DELAY_YEARS, 2))
         if far < 1.5 * near:
             continue
-        fits = {"near": lambda y: near * RATIO <= y <= far / RATIO,
-                "both": lambda y: y >= far * RATIO,
-                "none": lambda y: y <= near / RATIO}[regime]
+        fits = horizon_fits(regime, near, far)
         candidates = [(text, y) for text, y in MISMATCHED_HORIZONS if fits(y)]
         if candidates:
             break
@@ -152,6 +183,29 @@ def unit_mismatch_item(rng, i, regime):
                Option(f"{money(v_far)} dollars in {Horizon(far, 'years')}.", far, str(Horizon(far, "years")), v_far, "far")]
     return Item(options, regime, two_option_truth(regime), years, f"{years:g} years", "within_horizon",
                 {"rendered_horizon_text": rendered})
+
+
+def new_unit_mismatch_item(rng, i, regime):
+    delay_unit, delay_values, horizon_unit, horizon_values = NEW_UNIT_PAIRS[expansion_index(len(NEW_UNIT_PAIRS), i)]
+    delays = [Horizon(v, delay_unit) for v in delay_values]
+    horizons = [Horizon(v, horizon_unit) for v in horizon_values]
+    for _ in range(10_000):
+        near, far = sorted(rng.sample(delays, 2), key=lambda d: d.years)
+        if far.years < 1.5 * near.years:
+            continue
+        candidates = [h for h in horizons if horizon_fits(regime, near.years, far.years)(h.years)]
+        if candidates:
+            break
+    else:
+        raise ValueError(f"no unit-mismatch horizon for {regime} with {delay_unit} against {horizon_unit}")
+    horizon = rng.choice(candidates)
+    v_near, v_far = two_rewards(rng)
+    options = [Option(f"{money(v_near)} dollars in {near}.", near.years, str(near), v_near, "near"),
+               Option(f"{money(v_far)} dollars in {far}.", far.years, str(far), v_far, "far")]
+    # The twin states the horizon in the options' unit, as the original items' twins do (their options are in years).
+    in_delay_unit = Horizon(round(horizon.years / Horizon(1, delay_unit).years, 2), delay_unit)
+    return Item(options, regime, two_option_truth(regime), horizon.years, str(in_delay_unit), "within_horizon",
+                {"rendered_horizon_text": str(horizon), "unit_pair": f"{delay_unit}/{horizon_unit}"})
 
 
 def unit_mismatch_render(item, shown):
@@ -169,6 +223,29 @@ def stale_candidates(item, stale_regime):
     return [h for h in DURATIONS if fits(h.years) and all(abs(log_years(h) - log_years(d)) >= MARGIN for d in (near, far))]
 
 
+UPDATE_LINE = "UPDATE: The household's plans have changed. The time horizon is now {h}."
+NEW_UPDATE_LINES = (
+    "UPDATE: Plans have changed since the last note. The new time horizon is {h}.",
+    "UPDATE: The household has revised its plans. The time horizon is now {h}.",
+    "UPDATE: Circumstances have changed for the household. The horizon to use is now {h}.",
+    "UPDATE: The household's situation has shifted, and the time horizon is now {h}.",
+    "UPDATE: Please disregard the earlier horizon. The time horizon is now {h}.",
+    "UPDATE: The household has reconsidered its plans. The relevant time horizon is now {h}.",
+    "UPDATE: The earlier horizon no longer applies. The household now plans for {h}.",
+    "UPDATE: There has been a change of plans in the household. The time horizon is now {h}.",
+    "UPDATE: The household's timetable has changed. The time horizon is now {h}.",
+    "UPDATE: Following a family discussion, the time horizon is now {h}.",
+    "UPDATE: The household's priorities have changed. The time horizon is now {h}.",
+    "UPDATE: A change in circumstances means the household's time horizon is now {h}.",
+    "UPDATE: The household has updated its plans. The time horizon to use is now {h}.",
+    "UPDATE: The previous time horizon is out of date. The household's time horizon is now {h}.",
+    "UPDATE: The household's plans have been revised, and the time horizon is now {h}.",
+    "UPDATE: What the household needs has changed. The time horizon is now {h}.",
+    "UPDATE: Things have changed for the household. The time horizon has been reset to {h}.",
+)
+UPDATE_LINES = (UPDATE_LINE, *NEW_UPDATE_LINES)
+
+
 def horizon_revised_item(rng, i, regime):
     while True:
         item = standard_item(rng, regime)
@@ -178,12 +255,17 @@ def horizon_revised_item(rng, i, regime):
             break
     stale = rng.choice(candidates)
     item.extra = {"stale_horizon_text": str(stale), "stale_horizon_years": stale.years, "stale_regime": stale_regime}
+    if i >= len(PLAN):
+        item.extra["update_phrasing_id"] = 1 + expansion_index(len(NEW_UPDATE_LINES), i)
     return item
 
 
+def update_line(item):
+    return UPDATE_LINES[item.extra.get("update_phrasing_id", 0)].format(h=item.horizon_text)
+
+
 def horizon_revised_render(item, shown):
-    update = f"UPDATE: The household's plans have changed. The time horizon is now {item.horizon_text}."
-    return alan_prompt(shown, horizon_text=item.extra["stale_horizon_text"], extra_lines=[update])
+    return alan_prompt(shown, horizon_text=item.extra["stale_horizon_text"], extra_lines=[update_line(item)])
 
 
 # 6. loss_framing

@@ -9,7 +9,7 @@ from itertools import combinations
 
 from ..horizons import Horizon
 from .common import (DURATIONS, FAR_MULTIPLIERS, GAP, MARGIN, NEAR_REWARDS, PLAN, EvalType, Item, Option,
-                     alan_prompt, log_years, money, two_option_truth)
+                     alan_prompt, expanded_plan, log_years, money, two_option_truth)
 
 DAY_DELAYS = tuple(Horizon(v, "days") for v in (1, 2, 3))
 IMPLICIT_MENU = tuple(sorted(DAY_DELAYS + DURATIONS, key=lambda h: h.years))
@@ -41,6 +41,17 @@ def draw_delays_for_horizon(rng, regime, delay_menu, horizon_menu):
             near, far = rng.choice(pairs)
             return near, far, h
     raise ValueError(f"no {regime} delays in the menu")
+
+
+# Items from i = len(PLAN) on (the expansion) take their hand-written entry from the added lists in
+# turn: item i takes entry `turn % len(added)`, where `turn` counts the expansion items of its regime.
+# That caps the reuse of an entry (at most 2 + 2 + 1 uses across near, both and none for 16 or more
+# entries). Their numbers are drawn at random as for the original items; build_records redraws an
+# expansion item that repeats an earlier one.
+
+def added_turn(i, regime):
+    """Position of item i among the expansion items (i >= len(PLAN)) of its regime."""
+    return expanded_plan(PLAN, i).count(regime) - PLAN.count(regime)
 
 
 def valued_item(rng, regime, unit, near_values, multipliers, delays):
@@ -103,10 +114,83 @@ VAGUE_ANCHORS = (
 )
 
 
-def implicit_item(rng, i, regime, anchors, truth_rule):
+# Added for the expansion (i >= len(PLAN)); each has delays clearing its interval in all three regimes.
+CONCRETE_ANCHORS_ADDED = (
+    concrete("month_end_20th", "before the month ends. Today is the 20th and the month has 30 days.",
+             Horizon(10, "days")),
+    concrete("licence_10", "before your driving licence expires. It was issued 4 years ago and is valid for 10 years.",
+             Horizon(6, "years")),
+    concrete("car_lease", "before your car lease ends. You signed a 3-year lease 6 months ago.", Horizon(30, "months")),
+    concrete("school_term", "before the school term ends. The 12-week term started 5 weeks ago.", Horizon(7, "weeks")),
+    concrete("son_21", "before your son turns 21. He just turned 14.", Horizon(7, "years")),
+    concrete("car_loan", "before your car loan is paid off. You took out a 5-year loan 3 years ago.",
+             Horizon(2, "years")),
+    concrete("due_date_30wk", "before your baby is due. Your partner is 30 weeks pregnant.", Horizon(10, "weeks")),
+    concrete("apprenticeship", "before your apprenticeship ends. It lasts 9 months and you started 3 months ago.",
+             Horizon(6, "months")),
+    concrete("contract_2y", "before your fixed-term contract ends. You signed a 2-year contract 8 months ago.",
+             Horizon(16, "months")),
+    concrete("office_building", "before the new office building is finished. Construction takes 18 months and "
+             "started 6 months ago.", Horizon(1, "years")),
+    concrete("degree_year_2", "before your daughter graduates. She is starting the second year of a 4-year degree.",
+             Horizon(3, "years")),
+    concrete("roof_warranty", "before the warranty on your roof expires. It lasts 12 years and the roof was fitted "
+             "4 years ago.", Horizon(8, "years")),
+    concrete("election_cycle", "before the next general election. The last one was 3 years ago and they are held "
+             "every 4 years.", Horizon(1, "years")),
+    concrete("tenancy_5", "before your tenancy ends. You signed a 5-year tenancy 1 year ago.", Horizon(4, "years")),
+    concrete("semester_15wk", "before the semester ends. You are 4 weeks into a 15-week semester.",
+             Horizon(11, "weeks")),
+    concrete("grandfather_80", "before your grandfather's 80th birthday. He just turned 72.", Horizon(8, "years")),
+    concrete("year_end_sept", "before the year ends. It is 30 September today.", Horizon(3, "months")),
+)
+
+VAGUE_ANCHORS_ADDED = (
+    vague("school_year_end", "before the school year ends. It is the start of the spring term.",
+          Horizon(5, "months"), Horizon(4, "months"), Horizon(6, "months")),
+    vague("secondary_school", "before your daughter starts secondary school. She is in her second year of "
+          "primary school.", Horizon(5, "years"), Horizon(4, "years"), Horizon(6, "years")),
+    vague("baby_walks", "before your baby can walk. She was born last week.",
+          Horizon(1, "years"), Horizon(9, "months"), Horizon(18, "months")),
+    vague("driving_licence", "before your daughter can get a driving licence. She just turned 14.",
+          Horizon(3, "years"), Horizon(2, "years"), Horizon(4, "years")),
+    vague("mid_month", "before the end of the month. It is the middle of the month.",
+          Horizon(2, "weeks"), Horizon(10, "days"), Horizon(20, "days")),
+    vague("new_year", "before the new year. It is November now.",
+          Horizon(6, "weeks"), Horizon(1, "months"), Horizon(2, "months")),
+    vague("out_of_nappies", "before your daughter is out of nappies. She just turned one.",
+          Horizon(18, "months"), Horizon(1, "years"), Horizon(2, "years")),
+    vague("degree_first_year", "before your son finishes university. He is just starting his first year.",
+          Horizon(4, "years"), Horizon(3, "years"), Horizon(5, "years")),
+    vague("puppy_grown", "before your puppy is fully grown. He is 4 months old.",
+          Horizon(10, "months"), Horizon(8, "months"), Horizon(14, "months")),
+    vague("apple_tree", "before your apple tree bears fruit. You just planted it.",
+          Horizon(3, "years"), Horizon(2, "years"), Horizon(5, "years")),
+    vague("high_school_start", "before your daughter finishes high school. She just started her first year.",
+          Horizon(4, "years"), Horizon(3, "years"), Horizon(5, "years")),
+    vague("first_baby", "before your first baby arrives. Your partner has just found out she is pregnant.",
+          Horizon(8, "months"), Horizon(7, "months"), Horizon(9, "months")),
+    vague("next_winter", "before next winter. It is early summer now.",
+          Horizon(5, "months"), Horizon(4, "months"), Horizon(6, "months")),
+    vague("no_stabilisers", "before your son can ride a bike without stabilisers. He just turned three.",
+          Horizon(30, "months"), Horizon(2, "years"), Horizon(3, "years")),
+    vague("government_term", "before the new government's term ends. It was elected last week.",
+          Horizon(4, "years"), Horizon(4, "years"), Horizon(5, "years")),
+    vague("driving_test", "before your son takes his driving test. He just started lessons.",
+          Horizon(4, "months"), Horizon(3, "months"), Horizon(6, "months")),
+    vague("summer_holidays", "before the summer holidays begin. It is the start of April.",
+          Horizon(3, "months"), Horizon(2, "months"), Horizon(4, "months")),
+)
+
+
+def implicit_item(rng, i, regime, anchors, added_anchors, truth_rule):
     """Anchors take turns within each regime; an anchor with no delays that clear its whole
-    interval in this regime (e.g. a 30-year anchor in `near`: no delay beyond 59 years) is skipped."""
-    turn = PLAN[:i].count(regime)
+    interval in this regime (e.g. a 30-year anchor in `near`: no delay beyond 59 years) is skipped.
+    The expansion items take turns over `added_anchors`, all feasible in every regime."""
+    original = i < len(PLAN)
+    if not original:
+        anchors = added_anchors
+    turn = PLAN[:i].count(regime) if original else added_turn(i, regime)
     for step in range(len(anchors)):
         anchor = anchors[(turn + step) % len(anchors)]
         pairs = delay_pairs(regime, anchor.lo_years, anchor.hi_years, IMPLICIT_MENU)
@@ -130,11 +214,11 @@ def implicit_render(item, shown):
 
 
 def implicit_concrete_item(rng, i, regime):
-    return implicit_item(rng, i, regime, CONCRETE_ANCHORS, "within_horizon")
+    return implicit_item(rng, i, regime, CONCRETE_ANCHORS, CONCRETE_ANCHORS_ADDED, "within_horizon")
 
 
 def implicit_vague_item(rng, i, regime):
-    return implicit_item(rng, i, regime, VAGUE_ANCHORS, "within_horizon_interval")
+    return implicit_item(rng, i, regime, VAGUE_ANCHORS, VAGUE_ANCHORS_ADDED, "within_horizon_interval")
 
 
 # ---- city (sections 11 and 12) ----
@@ -152,9 +236,33 @@ CITY_PROJECT_PAIRS = (
 )
 
 
+CITY_PROJECT_PAIRS_ADDED = (
+    ("Repair the city's footpaths", "Replace the city's sewer system"),
+    ("Upgrade the city's bus stops", "Build a metro line"),
+    ("Repaint the city's road markings", "Build a ring road around the city"),
+    ("Replace the city's old traffic lights", "Build a bridge across the river"),
+    ("Refurbish the city's public swimming pool", "Build a sports arena"),
+    ("Fix the leaks in the city's public buildings", "Build a new municipal office building"),
+    ("Clear the litter from the city's river banks", "Build a wastewater treatment plant for the city"),
+    ("Repair the city's cycle lanes", "Build a cycle highway between the city and its suburbs"),
+    ("Install new bins across the city center", "Build a waste recycling plant for the city"),
+    ("Repair the city's fire hydrants", "Build a new fire station"),
+    ("Service the city's ambulances", "Build a new emergency medical center"),
+    ("Repair the city's playgrounds", "Build a large public park"),
+    ("Fix the heating in the city's public housing", "Build new public housing"),
+    ("Replace the city's old water meters", "Build a new reservoir for the city"),
+    ("Upgrade the Wi-Fi in the city's public buildings", "Lay a fiber-optic network across the city"),
+    ("Repair the roof of the city's rail station", "Build a new rail station"),
+    ("Refurbish the city's health clinics", "Build a new medical research center"),
+)
+
+
 def city_no_values_item(rng, i, regime):
     near, far, h = draw_delays_for_horizon(rng, regime, CITY_DELAYS, DURATIONS)
-    small, big = CITY_PROJECT_PAIRS[rng.randrange(len(CITY_PROJECT_PAIRS))]
+    if i < len(PLAN):
+        small, big = CITY_PROJECT_PAIRS[rng.randrange(len(CITY_PROJECT_PAIRS))]
+    else:
+        small, big = CITY_PROJECT_PAIRS_ADDED[added_turn(i, regime) % len(CITY_PROJECT_PAIRS_ADDED)]
     options = [Option(f"{small}, finished in {near}.", near.years, str(near), None, "near"),
                Option(f"{big}, finished in {far}.", far.years, str(far), None, "far")]
     truth = (0,) if regime == "near" else ()
@@ -175,6 +283,25 @@ CITY_VALUE_PAIRS = (
     ("recreation", "community swimming pool", "sports stadium", "visitors"),
     ("water", "public drinking fountain network", "water treatment plant", "residents"),
 )
+CITY_VALUE_PAIRS_ADDED = (
+    ("transport", "park-and-ride lot", "commuter rail line", "commuters"),
+    ("transport", "cycle lane network", "subway line", "commuters"),
+    ("transport", "ferry terminal", "river bridge", "commuters"),
+    ("transport", "bus terminal", "central rail station", "commuters"),
+    ("transport", "pedestrian underpass", "road tunnel", "commuters"),
+    ("transport", "shuttle bus route", "monorail line", "commuters"),
+    ("recreation", "neighborhood playground", "theme park", "visitors"),
+    ("recreation", "public tennis court complex", "concert hall", "visitors"),
+    ("recreation", "skate park", "covered arena", "visitors"),
+    ("recreation", "small public garden", "botanical garden", "visitors"),
+    ("recreation", "community theater", "national museum", "visitors"),
+    ("recreation", "public running track", "athletics stadium", "visitors"),
+    ("water", "rainwater collection system", "reservoir", "residents"),
+    ("water", "water filtration station", "desalination plant", "residents"),
+    ("water", "sewage pump station", "sewage treatment plant", "residents"),
+    ("water", "pumping station", "dam", "residents"),
+    ("energy", "neighborhood solar array", "wind farm", "residents"),
+)
 CITY_COSTS = (1_000_000, 2_000_000, 5_000_000)
 CITY_COST_MULTIPLIERS = (2, 3, 4)
 CITY_USERS = (1_000, 2_000, 3_000, 5_000)
@@ -184,7 +311,10 @@ CITY_USER_MULTIPLIERS = (8, 10, 12)
 
 def city_values_item(rng, i, regime):
     near, far, h = draw_delays_for_horizon(rng, regime, CITY_DELAYS, DURATIONS)
-    domain, small, big, people = rng.choice(CITY_VALUE_PAIRS)
+    if i < len(PLAN):
+        domain, small, big, people = rng.choice(CITY_VALUE_PAIRS)
+    else:
+        domain, small, big, people = CITY_VALUE_PAIRS_ADDED[added_turn(i, regime) % len(CITY_VALUE_PAIRS_ADDED)]
     cost_near = rng.choice(CITY_COSTS)
     cost_far = cost_near * rng.choice(CITY_COST_MULTIPLIERS)
     users_near = rng.choice(CITY_USERS)
