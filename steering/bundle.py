@@ -3,8 +3,9 @@
     python bundle.py --fit fits/gemma-4-31B-it__t0_s0/default/L38_label --activations activations/gemma-4-31B-it__t0_s0
     python bundle.py --fit ... --activations ... --methods caa curve-snap
 
-Writes methods/<model>/<method>__<activations>__<fit name>__L<layer>_<site>/ for each method, by default all of:
-caa, curve-snap, curve-displace (the methods) and reward, choice (concept controls fitted by the same recipe). Each
+Writes methods/<model>/<method>__<activations>__<fit name>__L<layer>_<site>/ for each method, by default all the
+fit has: caa, curve-snap, curve-displace (the methods); reward, choice (concept controls fitted by the same recipe);
+and the within-regime CAAs caa-none, caa-near_only, caa-both and their pool caa-within (comparison methods). Each
 bundle carries method.json (what it is, how to apply it, what it was fitted on, hashes), its arrays, and copies of the
 fit's fit.json, fit_uids.jsonl and the activations' search log. Refuses to overwrite a bundle, and refuses a fit whose
 recorded activation hash does not match the activations directory.
@@ -21,7 +22,7 @@ from pathlib import Path
 
 from pbank.local_model import log
 from pbank.provenance import utc_now
-from steer.methods import METHODS, write_bundle
+from steer.methods import METHODS, available_methods, write_bundle
 from steer.provenance import code_commit
 
 HERE = Path(__file__).resolve().parent
@@ -31,8 +32,15 @@ def main(argv: list[str] | None = None, methods_root: Path = HERE / "methods") -
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--fit", type=Path, required=True, help="a fit.py output directory (.../<name>/L<layer>_<site>)")
     p.add_argument("--activations", type=Path, required=True, help="the extract.py directory the fit was made from")
-    p.add_argument("--methods", nargs="+", default=list(METHODS), choices=METHODS)
+    p.add_argument("--methods", nargs="+", choices=METHODS, help="default: every method the fit has")
     args = p.parse_args(argv)
+    have = available_methods(args.fit)
+    if args.methods is None:
+        args.methods = have
+        if set(METHODS) - set(have):
+            log(f"not in this fit, so not bundled: {sorted(set(METHODS) - set(have))}")
+    elif set(args.methods) - set(have):
+        sys.exit(f"{args.fit} has no direction for {sorted(set(args.methods) - set(have))}")
 
     fit_meta = json.loads((args.fit / "fit.json").read_text())
     extract_meta = json.loads((args.activations / "extract.json").read_text())
