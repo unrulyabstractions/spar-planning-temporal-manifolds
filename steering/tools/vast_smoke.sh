@@ -60,6 +60,14 @@ FITS=$ROOT/steering/fits/$NAME
 HORIZON=$ROOT/steering/activations/${SHORT}${SUFFIX}__t0_s0__horizon
 DRAWS=$ROOT/steering/draws/$SHORT/L${LAYER}_label
 export PYTHONUNBUFFERED=1
+# A container's CPU quota can be far below the machine's core count (15.36 of 128 on the A100 host of 2026-11-22).
+# torch starts one thread per core it sees, and the tiny-model tests then take many minutes instead of seconds.
+if [ -z "${OMP_NUM_THREADS:-}" ] && [ -r /sys/fs/cgroup/cpu.max ]; then
+    read -r _quota _period < /sys/fs/cgroup/cpu.max
+    if [ "$_quota" != max ] && [ "$((_quota / _period))" -ge 1 ] && [ "$((_quota / _period))" -lt "$(nproc)" ]; then
+        export OMP_NUM_THREADS=$((_quota / _period)) MKL_NUM_THREADS=$((_quota / _period))
+    fi
+fi
 export PATH=$HOME/.local/bin:$PATH
 
 say() { printf '\n=== %s  [%s UTC]\n' "$*" "$(date -u +%H:%M:%S)"; }
@@ -111,7 +119,7 @@ stage_weights() {
 }
 
 stage_tests() {
-    say "tests"
+    say "tests (OMP_NUM_THREADS=${OMP_NUM_THREADS:-unset}, $(nproc) cores visible)"
     (cd "$ROOT/prompt_bank" && .venv/bin/python -m pytest -q 2>&1 | tail -3)
     (cd "$ROOT/steering" && .venv/bin/python -m pytest -q 2>&1 | tail -3)
 }
