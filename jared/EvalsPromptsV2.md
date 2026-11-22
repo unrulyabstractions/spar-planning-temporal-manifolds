@@ -398,26 +398,26 @@ and 5.8 logits).
 
 **Findings**
 - **Bigger steps along the curve do worse, not better.** At ±4 decades the effect falls to 0.5-0.7 of
-  the ±2 effect, in both modes and almost every type, while random ±4 stays at the noise floor (so it is
+  the ±2 effect, in both modes and every type but `coding_agent` thinking off, while random ±4 stays at the noise floor (so it is
   not damage). The steps that rows actually get at ±4 average 3.0-3.7 decades (the curve ends at the
   bank's shortest and longest horizons). A likely cause, untested: the curve's far ends are not just
   "more horizon". In the bank every very short horizon is a `both` prompt, so its average there also
   carries "neither option arrives", which the model answers like a long horizon (the same confound
   that turns CAA around, E20 page).
 - **The curve's shape matters; a straight line does not work.** CAA (long minus short average) pushes
-  the wrong way in 18 of 19 gated types thinking on, as on the bank. The probe line is inert, as on the
+  the wrong way in all 19 gated types thinking on, as on the bank. The probe line is inert, as on the
   bank. The curve beats CAA by +0.33 (off) and +0.17 (on), CIs well clear of 0.
 - **L24 is the layer, in both modes and every type.** Steering at L16 and L20 does nothing, L22 a third
   of L24, and the effect decays after L26. This matches where answer-slot patching starts to transfer
   (E19 onset L24-25).
 - **Stacking L22-L28 is the strongest variant, and the only one that flips reasoned answers.** It
-  roughly doubles the thinking-off effect and makes thinking on 2.5x stronger (+0.25), flipping 11% of
+  makes the thinking-off effect 1.7x and the thinking-on effect 2.5x stronger (+0.25), flipping 11% of
   rows (50/456) against 2% at L24 alone. Still small against the E20 phrase donor patch (27-100% of
   rows flipped).
 - **The answer token needs the horizon subspace.** Mean-ablating the top 8 horizon directions at L24
-  removes 0.34-0.50 of the near-minus-both contrast thinking on in every gated type, and 0.11-0.49
+  removes 0.25-0.50 of the near-minus-both contrast thinking on in every gated type, and 0.11-0.49
   thinking off; three random 8-dim subspaces remove at most 0.02. With k = 2 it is already 0.16-0.30
-  thinking on. Caveat: E8 found part of the decision direction inside this subspace, so this shows the
+  thinking on in 18 of 19 types (`unit_mismatch`: -0.01). Caveat: E8 found part of the decision direction inside this subspace, so this shows the
   subspace carries what the answer reads, not that the horizon alone does.
 - **`coding_agent` needs the subspace but does not follow the curve.** Removal takes 0.39 of its
   contrast thinking on (k = 8), like other types, yet the curve does nothing at any layer (stacked:
