@@ -7,6 +7,7 @@
 #
 # Settings (environment): MODEL, LAYER, THINK (0/1), CAP (max new tokens), BATCH, TAG (run name suffix), K (draws per
 # null family), PY (python), STAGES (which runner stages), GEN_PAIRS.
+# PROMPTING=1 also replays the prompting baseline on T0 (replay_eval.py --prompting; the transfer stage runs it always).
 # Opt-in transfer to the eval types (off by default): TRANSFER=1, with TRANSFER_BANKS (export_evaltype_banks.py's
 # output) and either TRANSFER_SET (a check set, evaluation/transfer_sets/<name>.json: which types, prompts and arms)
 # or TRANSFER_TYPES (space-separated; default: every bank there, every prompt, every arm).
@@ -88,7 +89,8 @@ stamp "shared draws"
 
 stamp "replay evaluation: $STAGES"
 (cd "$ROOT/evaluation" && $PY -u replay_eval.py $STAGES --bank "$BANK" --run "$RUN_DIR" --activations "$ACT" \
-    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH")
+    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH" \
+    $([ "${PROMPTING:-0}" = 1 ] && echo --prompting))
 
 stamp "report card"
 (cd "$ROOT/evaluation" && $PY analyze.py --out "$OUT")

@@ -171,6 +171,15 @@ TRANSFER=1 evaluation/run_local.sh                                    # everythi
   control the meaning (order-balanced, on the 40 base/swap pairs of a type), the odd part over all items, Δlog10 H*, the
   label mass at ±x, the unsteered label mass and accuracy, and each statistic ranked against each null family
   (analyze.py's `arm_results` and `compare_to_nulls`). Types without a bank or results are listed as not run.
+- **Prompting baseline** (`evaluation_design` §9 stage 5, "vs prompting baseline"): one sentence appended as the last
+  line of the last user turn, read like an edit (the generated reasoning kept, no hook; `Replayer.run_prompted`). Arms,
+  family `prompting`: `prompt:disposition` (+ "be more long-term-minded", − "short-term-minded"), `prompt:shift`
+  (+ "as if the horizon were 100 times longer", − "shorter"), `prompt:neutral` ("Think carefully about this decision.",
+  one side: the floor for adding any sentence). Wording from Jared's E22 (Qwen3-8B, regenerated reasoning): both pairs
+  moved the choice as far as the best steering, the disposition pair also moved rows it should not. Reported beside the
+  methods, not ranked against the random nulls (no matched null; compare with `prompt:neutral`). On by default in the
+  transfer stage (drop with a check set's `arms`), opt-in on T0 (`PROMPTING=1`, `replay_eval.py --prompting`). Not yet
+  in `gencheck`: with regenerated reasoning the sentence can act on the reasoning too, which this readout cannot see.
 - **The switch point only where it applies:** a group needs ≥ 5 readable items with each correct option. `city_no_values`
   gives no values, so its `both` prompts have no correct answer and no switch point is fitted. Eval-type horizons sit
   ≥ 0.25 decades from both delays, so even where it is fitted the location is less pinned down than on the T0 grid: read

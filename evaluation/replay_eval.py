@@ -36,6 +36,30 @@ import shared_draws as sd
 CHOICE_RE = re.compile(r"I\s+choose\s*:?[\s*_`]*\(?([ab12])(?![a-z0-9])", re.I)
 SCORED = ("near_only", "both")
 
+# The prompting baseline (evaluation_design §9 stage 5, "vs prompting baseline"): one sentence appended as the last line
+# of the last user message. Wording from Jared's E22 (jared/EvalsPromptsV2.md §10-11 on branch jared-eval-types), where
+# on Qwen3-8B the disposition pair moved the choice as far as the best steering but also moved rows it should not, and
+# the shift pair was mostly horizon-specific.
+PROMPTS = {
+    "neutral": "Think carefully about this decision.",
+    "long": "When you decide, be more long-term-minded than you otherwise would be.",
+    "short": "When you decide, be more short-term-minded than you otherwise would be.",
+    "shift_long": "Act as if the time horizon were 100 times longer than stated.",
+    "shift_short": "Act as if the time horizon were 100 times shorter than stated.",
+}
+# arm -> (sentence at +x, sentence at -x or None); + is the longer horizon, as for the steering methods
+PROMPT_ARMS = {"prompt:disposition": ("long", "short"), "prompt:shift": ("shift_long", "shift_short"),
+               "prompt:neutral": ("neutral", None)}
+
+
+def with_sentence(prompt, sentence: str):
+    """A user text, or a conversation whose last message is the user's, with `sentence` as its new last line."""
+    if isinstance(prompt, str):
+        return f"{prompt}\n{sentence}"
+    if prompt[-1]["role"] != "user":
+        raise ValueError("the last message must be the user's")
+    return [*prompt[:-1], {**prompt[-1], "content": f"{prompt[-1]['content']}\n{sentence}"}]
+
 
 # ------------------------------------------------------------------ io helpers
 
@@ -242,12 +266,31 @@ class Replayer:
         self.bank, self.thinking = bank, thinking
         self._cache = {}
 
+    def prompt_of(self, it):
+        """What the model was given for this item (a subclass may return a conversation)."""
+        return self.bank[it["uid"]]["text"]
+
     def seqs(self, it):
         if it["uid"] not in self._cache:
-            p = self.M.prompt_ids(self.bank[it["uid"]]["text"], self.thinking)
+            p = self.M.prompt_ids(self.prompt_of(it), self.thinking)
             a = self.resp[it["uid"]]["generated_ids"][: it["label_index"]]
             self._cache[it["uid"]] = (p, a)
         return self._cache[it["uid"]]
+
+    @torch.no_grad()
+    def run_prompted(self, items, sentence: str):
+        """y and label mass with `sentence` appended to the prompt and the generated reasoning kept as it was, so the
+        prompt is read like an edit is: with the reasoning held fixed (no hook)."""
+        y = np.empty(len(items), np.float32)
+        mass = np.empty(len(items), np.float32)
+        for n, it in enumerate(items):
+            p = self.M.prompt_ids(with_sentence(self.prompt_of(it), sentence), self.thinking)
+            a = self.seqs(it)[1]
+            lg = self.M.model(input_ids=torch.tensor([p + a], device=self.M.model.device)).logits[0, -1].float()
+            y[n] = float(lg[it["far_id"]] - lg[it["near_id"]])
+            pr = torch.softmax(lg, -1)
+            mass[n] = float(pr[it["far_id"]] + pr[it["near_id"]])
+        return y, mass
 
     @torch.no_grad()
     def run(self, items, edit, x, positions="all"):
@@ -322,6 +365,10 @@ def build_arms(args, cfg: dict) -> list[dict]:
                 arms.append({"arm": f"shuffled:{base}[{i}]", "family": f"shuffled:{base}",
                              "kind": "push" if base == "caa" else "target",
                              "x": cfg["x_push"] if base == "caa" else cfg["x_shift"], "src": str(md[base]), "seed": i})
+    if getattr(args, "prompting", False):
+        for name, (plus, minus) in PROMPT_ARMS.items():
+            arms.append({"arm": name, "family": "prompting", "kind": "prompt", "x": 1.0, "plus": plus, "minus": minus,
+                         **({"single": True} if minus is None else {})})
     return arms
 
 
@@ -449,11 +496,16 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "veri
         path = adir / (hashlib.sha1(arm["arm"].encode()).hexdigest()[:12] + ".npz")
         if path.exists():
             continue
-        edit, positions = fac.make(arm)
         rec = {}
-        rec["y_plus"], rec["mass_plus"] = rep.run(items, edit, arm["x"], positions)
-        if not arm.get("single"):
-            rec["y_minus"], rec["mass_minus"] = rep.run(items, edit, -arm["x"], positions)
+        if arm["family"] == "prompting":
+            rec["y_plus"], rec["mass_plus"] = rep.run_prompted(items, PROMPTS[arm["plus"]])
+            if not arm.get("single"):
+                rec["y_minus"], rec["mass_minus"] = rep.run_prompted(items, PROMPTS[arm["minus"]])
+        else:
+            edit, positions = fac.make(arm)
+            rec["y_plus"], rec["mass_plus"] = rep.run(items, edit, arm["x"], positions)
+            if not arm.get("single"):
+                rec["y_minus"], rec["mass_minus"] = rep.run(items, edit, -arm["x"], positions)
         savez_atomic(path, **rec)
         el = time.time() - t0
         print(f"[{n + 1}/{len(arms)}] {arm['arm']} x={arm['x']:g}  ({el / 60:.1f} min)", flush=True)
@@ -531,6 +583,8 @@ def main(argv=None):
     p.add_argument("--calib-fold", type=int, default=0)
     p.add_argument("--n0-check", type=int, default=8)
     p.add_argument("--gen-pairs", type=int, default=16), p.add_argument("--gen-batch", type=int, default=8)
+    p.add_argument("--prompting", action="store_true",
+                   help="also replay the prompting baseline (PROMPTS: disposition and shift pairs, neutral sentence)")
     args = p.parse_args(argv)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)

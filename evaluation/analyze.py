@@ -109,11 +109,16 @@ def arm_results(out: Path, items, y0, keep=None) -> dict:
     return res
 
 
+# Families reported as arms, never pooled as nulls. Prompting arms (replay_eval --prompting) have no matched null
+# family; their floor is the prompt:neutral sentence, so they are reported but not ranked.
+REPORTED = ("method", "control", "prompting")
+
+
 def compare_to_nulls(res: dict, stats=("meaning", "delta_log10_H")) -> dict:
     """Each method and control (not curve-snap@0) ranked against every null family of its kind, per statistic."""
     fams = {}
     for r in res.values():
-        if r["family"] not in ("method", "control"):
+        if r["family"] not in REPORTED:
             fams.setdefault(r["family"], []).append(r)
     comps = {}
     for name, r in res.items():
@@ -176,7 +181,7 @@ def main(argv=None):
          "| arm | x | meaning (logit) | letter | even | Δlog10 H* | slope ± | low/high plateau (+x) | label mass ± |",
          "|---|---|---|---|---|---|---|---|---|"]
     for name, r in res.items():
-        if r["family"] in ("method", "control"):
+        if r["family"] in REPORTED:
             L.append(f"| {name} | {r['x']:g} | {r.get('meaning', float('nan')):+.3f} | {r.get('letter', float('nan')):+.3f} | "
                      f"{r['even_mean']:+.3f} | {r['delta_log10_H']:+.3f} | {r.get('slope_plus', float('nan')):.2f} / "
                      f"{r.get('slope_minus', float('nan')):.2f} | {r.get('plateau_low_plus', float('nan')):.2f} / "

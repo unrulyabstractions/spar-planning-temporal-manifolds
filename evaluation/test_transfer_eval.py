@@ -376,3 +376,75 @@ def test_pilot_set_on_the_exported_banks():
         count = lambda regime, variant: sum(r["regime"] == regime and r["notes"]["variant"] == variant for r in rows)
         assert len(rows) == 100, t
         assert [count(g, v) for g in ("near_only", "both") for v in ("base", "swap", "twin")] == [20, 20, 10] * 2, t
+
+
+# ------------------------------------------------------------------ prompting baseline
+
+def test_with_sentence_appends_to_the_last_user_turn():
+    assert rv.with_sentence("FORMAT: I choose: <a) or b)>", "S.") == "FORMAT: I choose: <a) or b)>\nS."
+    out = rv.with_sentence(MESSAGES, "S.")
+    assert out[:-1] == MESSAGES[:-1] and out[-1]["content"] == MESSAGES[-1]["content"] + "\nS."
+    assert MESSAGES[-1]["content"].endswith("S.") is False            # the input is not modified
+    with pytest.raises(ValueError):
+        rv.with_sentence([*MESSAGES, {"role": "assistant", "content": "x"}], "S.")
+
+
+def test_run_prompted_reads_the_sentence_with_the_reasoning_held_fixed():
+    import torch
+    rep = object.__new__(te.TransferReplayer)
+    seen_prompts, seen_ids = [], []
+    rep.M = SimpleNamespace(prompt_ids=lambda p, thinking: seen_prompts.append(p) or [7, 8], model=None)
+
+    def model(input_ids):
+        seen_ids.append(input_ids[0].tolist())
+        lg = torch.zeros(1, 1, 10)
+        lg[0, 0, 1] = 3.0                                               # far
+        return SimpleNamespace(logits=lg)
+    rep.M.model = type("M", (), {"device": "cpu", "__call__": lambda self, input_ids: model(input_ids)})()
+    rep.bank = {"u2": row("u2", messages=MESSAGES)}
+    rep.resp = {"u2": {"generated_ids": [1, 2, 3, 4]}}
+    rep.thinking, rep._cache = True, {}
+    y, mass = rep.run_prompted([{"uid": "u2", "label_index": 3, "far_id": 1, "near_id": 2}], "S.")
+    assert seen_prompts == [rv.with_sentence(MESSAGES, "S."), MESSAGES]  # edited prompt, then the original for the reasoning
+    assert seen_ids == [[7, 8, 1, 2, 3]]                                # prompt + the original reasoning up to the label
+    assert y[0] == pytest.approx(3.0) and 0 < mass[0] < 1
+
+
+class PromptingReplayer(FakeReplayer):
+    SHIFT = {s: (1.0 if "long" in k else -1.0 if "short" in k else 0.25) for k, s in rv.PROMPTS.items()}
+
+    def run_prompted(self, items, sentence):
+        self.calls.append(("prompt", sentence, [it["uid"] for it in items]))
+        return (np.array([it["y0"] for it in items], np.float32) + self.SHIFT[sentence],
+                np.full(len(items), 0.8, np.float32))
+
+
+def test_replay_stage_runs_the_prompting_arms_only_when_asked(tmp_path, monkeypatch):
+    monkeypatch.setattr(rv, "EditFactory", FakeFactory)
+    methods = tmp_path / "methods"
+    (methods / "caa").mkdir(parents=True)
+    (methods / "caa" / "method.json").write_text(json.dumps({"method": "caa"}))
+    items = [{"uid": f"t{i}", "split": "transfer", "far_id": 1, "near_id": 2, "y0": float(i), "chosen": "far",
+              "pair_id": "p0" if i < 2 else "p1", "near_first": i == 1, "h_over_far_delay": 0.3 * 3 ** i}
+             for i in range(3)]
+    for prompting in (False, True):
+        out = tmp_path / f"out{prompting}"
+        out.mkdir()
+        rv.write_jsonl_atomic(out / "items.jsonl", items)
+        ns = SimpleNamespace(bank="t0", activations="a", methods=str(methods), draws="d", k=1, n0_check=1,
+                             out=str(out), prompting=prompting)
+        rep = PromptingReplayer()
+        rv.stage_replay(ns, None, SETTINGS, rep, {"x_push": 0.3, "x_shift": 1.0}, split="transfer")
+        prompt_arms = {a["arm"]: a for a in rv.read_jsonl(out / "arms.jsonl") if a["family"] == "prompting"}
+        if not prompting:
+            assert not prompt_arms and not any(c[0] == "prompt" for c in rep.calls)
+            continue
+        assert set(prompt_arms) == {"prompt:disposition", "prompt:shift", "prompt:neutral"}
+        disp = np.load(out / "arms" / (hashlib.sha1(b"prompt:disposition").hexdigest()[:12] + ".npz"))
+        assert np.allclose(disp["y_plus"] - disp["y_minus"], 2.0)       # long at +, short at -
+        neutral = np.load(out / "arms" / (hashlib.sha1(b"prompt:neutral").hexdigest()[:12] + ".npz"))
+        assert "y_minus" not in neutral and np.allclose(neutral["y_plus"] - [0, 1, 2], 0.25)
+        # reported as arms, never pooled into a null family, and not ranked against the nulls
+        res = analyze.arm_results(out, rv.load_items(out, "transfer"), np.array([0.0, 1.0, 2.0]))
+        comps = analyze.compare_to_nulls(res)
+        assert "prompt:shift" not in comps and all("prompting" not in by for by in comps.values())

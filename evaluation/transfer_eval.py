@@ -12,7 +12,9 @@ Stages, per type (each resumable; outputs in --out/<type_id>/):
             sends `text` as one user turn, and a conversation-rendered type (system message, earlier turns) must be
             rendered from notes["messages"].
   items     replay_eval's items stage on that run (skipped.jsonl lists the prompts that cannot be read out)
-  replay    replay_eval's replay stage on the type's items: every arm at +x and -x, the unsteered pass, the N0 check
+  replay    replay_eval's replay stage on the type's items: every arm at +x and -x, the unsteered pass, the N0 check,
+            and the prompting baseline (replay_eval.PROMPTS: the disposition and shift sentence pairs and the neutral
+            sentence, appended to the last user turn and read with the reasoning held fixed, like the edits)
 Once, over all types:
   report    analyze.py's per-arm statistics and null comparisons, per type and group (the type's own prompts; its
             explicit twins, the same options in the T0 template), beside the same numbers on T0's verification grid
@@ -26,7 +28,7 @@ few hundred prompts and the full run differ by one file. Its keys, all optional 
   rows_per_type   at most this many rows per type, taken as whole items (an item's base, swap and twin together, so order
                   pairs stay complete) in bank order, which alternates near and both items
   arms            arm names, families or methods to replay (e.g. "caa", "curve-displace", "isotropic",
-                  "shuffled:caa"); default every arm
+                  "shuffled:caa", "prompting"); default every arm, the prompting baseline included
   k               draws per null family (overrides --k)
 Outputs go to --out/<set name>/, so two sets never share a baseline run. Without --set, every near_only / both row of
 every bank (or of --types) runs, with every arm.
@@ -124,12 +126,8 @@ def load_model(model_id: str) -> rv.Model:
 class TransferReplayer(rv.Replayer):
     """replay_eval's Replayer, with the prompt rendered from model_input (conversations included)."""
 
-    def seqs(self, it):
-        if it["uid"] not in self._cache:
-            p = self.M.prompt_ids(model_input(self.bank[it["uid"]]), self.thinking)
-            a = self.resp[it["uid"]]["generated_ids"][: it["label_index"]]
-            self._cache[it["uid"]] = (p, a)
-        return self._cache[it["uid"]]
+    def prompt_of(self, it):
+        return model_input(self.bank[it["uid"]])
 
 
 # ------------------------------------------------------------------ baseline
@@ -211,7 +209,7 @@ def group_summary(out: Path, items: list[dict], keep, y0, mass0, n_unreadable: i
                       "switch_loc": analyze.fit_switch(logr, analyze.sigmoid(y0[keep]))[0] if switch else None},
         "arms": {name: {k: v for k, v in r.items() if k in ("x", "kind", "family", "meaning", "odd_mean", "even_mean",
                                                              "delta_log10_H", "label_mass_plus", "label_mass_minus")}
-                 for name, r in res.items() if r["family"] in ("method", "control")},
+                 for name, r in res.items() if r["family"] in analyze.REPORTED},
         "comparisons": analyze.compare_to_nulls(res, STATS),
     }
 
@@ -322,7 +320,8 @@ def type_args(args, t: str) -> tuple[argparse.Namespace, argparse.Namespace]:
     items_ns = argparse.Namespace(bank=str(Path(args.banks) / t), run=str(type_out / "run"), out=str(type_out),
                                   extraction_index=None)
     replay_ns = argparse.Namespace(bank=args.t0_bank, activations=args.activations, methods=args.methods,
-                                   draws=args.draws, k=args.k, n0_check=args.n0_check, out=str(type_out))
+                                   draws=args.draws, k=args.k, n0_check=args.n0_check, out=str(type_out),
+                                   prompting=True)          # the prompting baseline runs here by default
     return items_ns, replay_ns
 
 
