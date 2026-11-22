@@ -99,8 +99,19 @@ something.
 
    fit.py reports this composition. It also reports the cosine between CAA and a *choice* direction (replies
    that chose far, minus those that chose near). That measures how much of CAA is "which option was chosen"
-   rather than "how long the horizon is". A within-regime contrast is **not implemented**, pending a team
-   decision.
+   rather than "how long the horizon is".
+
+   **Within-regime CAA** removes that difference: inside one regime the correct answer is the same for every prompt.
+   - In each regime, long is the third of its prompts with the longest horizons and short the third with the
+     shortest, split on log-horizon (`--within-quantile`). H/D cannot do this: inside "none" and "near_only" it is
+     always below 1.
+   - `caa_none`, `caa_near_only`, `caa_both` are long minus short inside that regime. `caa_within` averages the
+     "near_only" and "both" differences, weighted by regime size (`--within-pool`); "none" is left out because the
+     horizon cannot change the answer there.
+   - They are bundled as the comparison methods `caa-none`, `caa-near_only`, `caa-both`, `caa-within`.
+   - fit.py prints, and `fit.json` records under `diagnostics.caa_within`, each one's class sizes and cosines, and
+     the cosines between the regimes' directions. A regime with fewer than two distinct horizons gets none, and
+     bundle.py bundles what the fit has.
 3. **Reward-contrast control.** The report names this control but doesn't define it. Here it is the mean of
    prompts with reward multiplier >= 25 minus those with multiplier <= 5 (`--reward-high-min`,
    `--reward-low-max`).

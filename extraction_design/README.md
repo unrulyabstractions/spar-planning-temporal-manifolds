@@ -1,8 +1,8 @@
 # Extraction pipeline for horizon steering: what it hands over, and how to use it
 
 **Status:** built, tested and on `main`, including the hook fix and single-token edits of 2026-11-19 (§6). Two
-additions are on branch `horizon-site-shared-draws`, not yet merged: the horizon site (§6) and `fit.py --draws`
-(§8.2 item 6). On Gemma 4 31B the
+later additions are also on `main`: the horizon site (§6) and `fit.py --draws` (§8.2 item 6). The within-regime CAA
+methods (§5, §9.2) are on branch `within-regime-caa`, not yet merged. On Gemma 4 31B the
 pipeline has run only at smoke scale (16 prompts). No full-run methods exist yet. A complete practice hand-over from a
 small model is published (§12). **Owner:** Extraction (prompt bank and steering methods: Alan). Drafted with Claude,
 2026-11-15; updated 2026-11-22.
@@ -58,8 +58,9 @@ What exists now:
 | Rented-GPU run script `tools/vast_smoke.sh` | on `main` | one A100 run (§11) |
 | Hook fix for generation without padding; single-token edits (`at_generated`); gate option `--positions` | on `main` | tests; Qwen3.5-2B (§6, §10) |
 | Practice hand-over: Qwen3.5-2B, thinking off, all 700 prompts | published on Hugging Face (§12) | `steering/progress-20261117.md` |
-| Shared random draws | built by the evaluation team, on `main`; `fit.py --draws` reads them (branch `horizon-site-shared-draws`) | `evaluation/shared_draws.py` (§8.2 item 6) |
-| Horizon site: activations at the tokens that state the horizon, all layers; `at_prompt` | branch `horizon-site-shared-draws` | tests; Qwen3.5-0.8B/2B (§6, §10) |
+| Shared random draws | built by the evaluation team, on `main`; `fit.py --draws` reads them | `evaluation/shared_draws.py` (§8.2 item 6) |
+| Horizon site: activations at the tokens that state the horizon, all layers; `at_prompt` | on `main` | tests; Qwen3.5-0.8B/2B (§6, §10) |
+| Within-regime CAA: `caa-none`, `caa-near_only`, `caa-both`, `caa-within` | branch `within-regime-caa` | tests; Qwen3.5-2B (§5, §9.2) |
 | Full Gemma 4 31B baseline, fit and bundles | **not run** | throughput and decoding, §11.3 |
 
 ## 2. Glossary
@@ -195,6 +196,8 @@ committed.
 | `curve-displace` | target | `CurveEdit(mode="displace")` | add c(t̂ + x) − c(t̂) | shift, decades |
 | `reward` | push | `LinearEdit` | concept control: reward multiplier ≥ 25 minus ≤ 5 | strength |
 | `choice` | push | `LinearEdit` | concept control: replies that chose far minus those that chose near | strength |
+| `caa-none`, `caa-near_only`, `caa-both` | push | `LinearEdit` | comparison method: CAA inside one regime (§9.2) | strength |
+| `caa-within` | push | `LinearEdit` | comparison method: the `near_only` and `both` within-regime differences, pooled (§9.2) | strength |
 
 - **Random directions:** the fit also stores 100 isotropic random unit vectors (seed 0) in `directions.npz`.
   These are not bundled.
@@ -291,8 +294,8 @@ methods and a 2-decade shift for the curve methods [`steering/progress-20261119.
 - **This is a plumbing check, not an effect size:** 8 prompts, one strength, a model that barely represents the
   horizon (§12).
 
-**The horizon site** (branch `horizon-site-shared-draws`; requested by the evaluation team, for comparison methods
-that are fitted on, or edit only, the tokens that state the horizon):
+**The horizon site** (requested by the evaluation team, for comparison methods that are
+fitted on, or edit only, the tokens that state the horizon):
 
 - **`extract_horizon.py`** reads the residual stream at each token of the stated horizon, separately, at every layer.
   - It needs no baseline run: one forward pass per prompt, no generation.
@@ -438,7 +441,7 @@ What it is for:
      `shared_draws.py verify` regenerates a file and compares.
    - **Plan:** whoever extracts the Gemma activations runs it right after `extract.py` and publishes the draws beside
      them.
-   - **`fit.py --draws DIR`** (branch `horizon-site-shared-draws`) uses these files as the fit's random baseline, as
+   - **`fit.py --draws DIR`** uses these files as the fit's random baseline, as
      the evaluation team proposed.
      - It refuses draws made for another model, layer, site or activations file.
      - The methods do not change, bit for bit; only the diagnostic does. `fit.json` records the draws' hashes.
@@ -475,9 +478,44 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
    On a Qwen3.5-2B smoke run that cosine was 0.862 with "none" kept and 0.904 without. This is the C2 confound in
    numbers.
 
-   The evaluation team has asked for a within-regime CAA as a comparison method (2026-11-18), to separate "longer
-   horizon" from "pick the far option". It is not implemented, and it needs new class definitions first: within `none`
-   or `near_only` the far option does not pay off, so H/D < 1 for every prompt and the long class (H/D ≥ 4) is empty.
+   **Within-regime CAA** (branch `within-regime-caa`; asked for by the evaluation team on 2026-11-18, to separate
+   "longer horizon" from "pick the far option"). Inside one regime the correct answer is the same for every prompt.
+   - **Classes.** H/D cannot define them: within `none` or `near_only` the far option does not pay off, so H/D < 1
+     for every prompt. Instead, inside a regime, long is the third of its prompts with the longest horizons and short
+     the third with the shortest, split on log-horizon (`--within-quantile`, default 1/3). Whole grid horizons fall on
+     one side, so a class is about, not exactly, a third.
+   - **Four methods,** bundled like `caa`:
+     - `caa-none`, `caa-near_only`, `caa-both`: long minus short inside that regime;
+     - `caa-within`: the `near_only` and `both` differences averaged, weighted by regime size (`--within-pool`).
+       `none` is left out of the pool by decision (Alan, 2026-11-22): there the horizon cannot change the answer, and
+       the pool then covers 10 days to 500 years, the range the choice can test.
+   - **`fit.json` → `diagnostics.caa_within`** has, per regime, the class sizes, the horizon cut-offs, each class's
+     share of far choices, and cosines with `caa`, `choice` and `reward`; and the cosines between the regimes'
+     directions.
+   - **`fit_uids.jsonl`** has a `caa_within_class` column.
+   - **On Qwen3.5-2B** (practice activations, layer 15, label site) [`steering/progress-20261122.md`]:
+
+   | Direction | Long / short prompts | Horizons: long from, short up to | Cosine with `choice` | Cosine with `caa` |
+   |---|---|---|---|---|
+   | `caa` (for comparison) | 57 / 350 | set by H/D | +0.862 | 1 |
+   | `caa-none` | 94 / 97 | 1.2 days / 23 minutes | +0.369 | +0.440 |
+   | `caa-near_only` | 43 / 36 | 3 years / 6 months | +0.427 | +0.212 |
+   | `caa-both` | 30 / 36 | 210 years / 59 years | −0.333 | −0.362 |
+   | `caa-within` (pool of `near_only` and `both`) | 73 / 72 | | +0.011 | −0.140 |
+
+     - The choice contamination drops from 0.86 to at most 0.43 in size, and to 0.01 for the pooled direction.
+     - **The regimes' directions do not agree with each other:** their cosines are +0.112 (`both`, `near_only`),
+       +0.008 (`both`, `none`) and −0.176 (`near_only`, `none`). One shared "horizon length" direction would make them
+       point the same way. On this small model, which barely represents the horizon, that may only mean there is
+       little to find; the same numbers on Gemma are the ones that matter.
+   - **What a within-regime contrast does not remove:**
+     - inside `near_only` and `both`, longer horizons come with longer far delays (rank correlation 0.40 and 0.35 on
+       `t0_s0`, computed once and not by committed code), because of how the bank is built;
+     - the model's own choice still varies inside a regime (far choices: 0.63 of the long class and 0.81 of the short
+       class in `both`).
+   - **For a label-shuffled null (N4):** `refit(horizons=...)` does not recompute regimes, so shuffle horizons within
+     a regime for these methods. A shuffle across regimes would put a prompt's new horizon in its old regime's
+     ranking.
 3. **Concept controls.** `reward` (multiplier ≥ 25 minus ≤ 5) and `choice` (chose far minus chose near), built by the
    same recipe. The report names a reward-contrast control but doesn't define it; this definition is ours.
 4. **The prelabel token depends on label style** (§4). This matters for any C1 analysis at that site.
@@ -494,7 +532,7 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 
 | Check | Model / data | Result | Source |
 |---|---|---|---|
-| Test suites | CPU + local GPU | steering 95 passed (2026-11-22, branch); prompt_bank 64 passed (2026-11-14) | `progress-20261122.md`; `progress-20261114.md` |
+| Test suites | CPU + local GPU | steering 98 passed (2026-11-22, branch); prompt_bank 64 passed (2026-11-14) | `progress-20261122.md`; `progress-20261114.md` |
 | Layer convention | tiny Qwen3; Gemma 4 module tree; Qwen3.5-0.8B weights | exact | `tests/test_layers.py` |
 | Torch edits vs numpy references | synthetic | max diff 4.44e-16 (float64) | `progress-20261114.md` |
 | Hook in real `generate()` | Qwen3.5-0.8B bf16, 6 prompts | zero edit identical 6/6; strength 4 changed 6/6 | `progress-20261114.md` |
@@ -516,6 +554,7 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 | Horizon extraction | Qwen3.5-0.8B, 21 prompts | stored rows equal `hidden_states` at those tokens exactly (layers 0 and 12) | `tests/test_extract_horizon.py` |
 | Horizon-only edit in a padded batch | Qwen3.5-0.8B, 21 prompts | the edited tokens are each prompt's horizon; the 2 prompts without one are unchanged | `tests/test_extract_horizon.py` |
 | Horizon extraction, full bank | Qwen3.5-2B, thinking off, 700 prompts, 25 layers | 671 horizons, 2,600 tokens, 0 decode mismatches; 32 s | `progress-20261122.md` |
+| Within-regime CAA | synthetic activations over the real bank; Qwen3.5-2B practice activations | class sizes 94/97, 43/36, 30/36; directions equal the stated differences of means; existing directions and curve unchanged; the 4 new bundles pass the hook gate | `tests/test_fit.py`; `progress-20261122.md` |
 | `fit.py --draws` | Qwen3.5-2B practice activations | methods identical to the fit without draws; draws for other inputs refused | `tests/test_fit.py`; `progress-20261122.md` |
 
 **Not yet checked on Gemma:**
@@ -675,24 +714,21 @@ against the real interfaces: <https://huggingface.co/datasets/CodeReclaimers/spa
 - **`EditContext`:** it covers their comparison methods. What is missing is upstream: the `horizon` site below.
 - **Host:** Hugging Face (§12).
 
-**Requested by the evaluation team, built on branch `horizon-site-shared-draws`:**
+**Requested by the evaluation team, built:**
 - **The horizon site** (§6): activations at the tokens that state the horizon, every token separately, all layers,
   with the audit and the per-prompt rows for the hook. Still to do: run it on Gemma 4 31B.
 - **`fit.py`'s random baseline from the shared draw files** (§8.2 item 6).
-
-**Requested by the evaluation team, not built:**
-- **A within-regime CAA** as a comparison method (§9.2).
+- **A within-regime CAA** as comparison methods (§9.2), on branch `within-regime-caa`.
 
 **Decisions on the extraction side:**
 - greedy decoding or seeded sampling for thinking-on runs, and the token cap (§11.3);
 - the throughput problem (§11.3);
 - the bundles' default positions, and whether to fit the Gemma methods at the prelabel site (§4, §6, §9.6);
-- new class definitions for a within-regime CAA (§9.2);
 - a minimum class size in `fit.py` (§9.5);
 - recording the code commit when shipping without `.git` (§11.2.6).
 
 **To do:**
-- merge branch `horizon-site-shared-draws`;
+- merge branch `within-regime-caa`;
 - run `extract_horizon.py` on Gemma 4 31B, and `shared_draws.py` after the Gemma extraction;
 - re-run the hook gate on Gemma 4 31B with the fixed hook (§10).
 

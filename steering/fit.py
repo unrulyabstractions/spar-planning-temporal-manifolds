@@ -6,7 +6,8 @@
 For one layer and site it writes fits/<activations name>/<name>/L<layer>_<site>/:
 
     directions.npz   unit vectors: caa, reward (control), choice (diagnostic only), random [n, d] (controls);
-                     typical_norm (the strength unit); raw norms
+                     the within-regime CAAs caa_none, caa_near_only, caa_both and their pool caa_within (those that
+                     could be formed); typical_norm (the strength unit); raw norms
     manifold.npz     the curve (steer/manifold.py, Manifold.load)
     per_horizon.jsonl  one row per stated horizon: count, regimes, its mean's position along CAA and on the curve
     fit_uids.jsonl   one row per fitted prompt: its activation row, uid, regime, horizon, H/D, reward multiplier,
@@ -21,6 +22,13 @@ Definitions (report, Appendix A.3; details in the steer modules):
 
 * CAA: mean activation of prompts with H/D >= 4 minus that of prompts with H/D <= 1/4, unit-normalized; D is the
   far option's delay (Appendix A.1), so H/D is the bank's `h_over_far_delay`.
+* Within-regime CAA (comparison methods): CAA's classes differ in regime, and so in which answer is correct (its
+  long class is all "both"). Inside one regime the correct answer is the same for every prompt, so there the
+  contrast is: mean of the regime's prompts with the longest horizons minus mean of those with the shortest, each
+  class about --within-quantile (default one third) of the regime, split on log-horizon. One direction per regime
+  (caa_none, caa_near_only, caa_both), and caa_within: the average of the raw differences of the --within-pool
+  regimes (default near_only and both: in "none" the horizon cannot change the answer), weighted by regime size,
+  then unit-normalized. H/D cannot define these classes: inside "none" and "near_only" it is always below 1.
 * Reward contrast (control): the same with the reward multiplier (far reward / near reward) in place of H/D:
   multiplier >= 25 against <= 5. The report does not define this direction further; this is our reading.
 * Random controls: isotropic random unit vectors, seeded. With --draws, the shared draws written by
@@ -42,6 +50,8 @@ for each reason.
 Diagnostics, all in fit.json:
 
 * class sizes by regime, for CAA and reward (the CAA classes are not balanced by regime; see README);
+* the within-regime CAAs: class sizes and horizon cut-offs per regime, each class's share of far choices, cosines
+  with CAA, choice and reward, and the cosines between the regimes' directions (do they agree on one direction?);
 * cosines of CAA with the reward and choice directions, and the largest and 95th-percentile |cosine| with the
   random controls, per family;
 * monotonicity: Spearman correlation between log-horizon and each horizon mean's projection on CAA;
@@ -67,7 +77,7 @@ from steer import activations
 from steer.draws import load_shared
 from steer.provenance import code_commit
 from pbank.durations import Duration
-from steer.fitting import FitSettings, fit, select
+from steer.fitting import FIT_REGIMES, FitSettings, direction_keys, fit, select
 
 HERE = Path(__file__).resolve().parent
 
@@ -84,6 +94,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                    help='stated horizons (grid values, e.g. "3 years") whose prompts are left out of the fit')
     p.add_argument("--caa-long-min", type=float, default=4.0, help="H/D at or above which a prompt is 'long'")
     p.add_argument("--caa-short-max", type=float, default=0.25, help="H/D at or below which a prompt is 'short'")
+    p.add_argument("--within-quantile", type=float, default=1 / 3,
+                   help="within-regime CAA: share of a regime's prompts in each of its long and short classes")
+    p.add_argument("--within-pool", nargs="+", default=["near_only", "both"], choices=FIT_REGIMES,
+                   help="regimes whose within-regime differences are pooled into caa_within")
     p.add_argument("--reward-high-min", type=float, default=25)
     p.add_argument("--reward-low-max", type=float, default=5)
     p.add_argument("--n-random", type=int, default=100, help="random control directions (not used with --draws)")
@@ -148,7 +162,8 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
     settings = FitSettings(caa_long_min=args.caa_long_min,
                            caa_short_max=args.caa_short_max, reward_high_min=args.reward_high_min,
                            reward_low_max=args.reward_low_max, n_random=args.n_random, components=args.components,
-                           bandwidth=args.bandwidth, folds=args.folds, seed=args.seed)
+                           bandwidth=args.bandwidth, folds=args.folds, seed=args.seed,
+                           within_quantile=args.within_quantile, within_pool=tuple(args.within_pool))
     log(f"layer {args.layer} {args.site}: {len(use)} of {len(acts.uids)} extracted prompts, "
         f"regimes {dict(Counter(r.regime for r in recs))}, d = {X.shape[1]}; left out {selection.excluded}")
     array = activations.array_name(args.layer, args.site)
@@ -166,8 +181,11 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
     caa, reward, choice = result.caa, result.reward, result.choice
 
     out.mkdir(parents=True)
+    within = {key: result.direction(key) for key in direction_keys(result) if key.startswith("caa_")}
     np.savez(out / "directions.npz", caa=caa.vector, reward=reward.vector, choice=choice.vector, random=result.random,
-             typical_norm=norm, caa_raw_norm=caa.raw_norm, reward_raw_norm=reward.raw_norm)
+             typical_norm=norm, caa_raw_norm=caa.raw_norm, reward_raw_norm=reward.raw_norm,
+             **{key: d.vector for key, d in within.items()},
+             **{f"{key}_raw_norm": d.raw_norm for key, d in within.items()})
     result.manifold.save(out / "manifold.npz")
     write_jsonl(out / "per_horizon.jsonl", result.per_horizon)
     write_jsonl(out / "fit_uids.jsonl", (
@@ -175,8 +193,9 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
          "h_over_far_delay": r.h_over_far_delay, "reward_multiplier": r.reward_multiplier, "near_first": r.near_first,
          "label_style": "/".join(r.labels), "far_label": r.far_label, "chosen_option": acts.index[i]["chosen_option"],
          "choice_label": acts.index[i]["choice_label"], "caa_class": str(cc) or None, "reward_class": str(rc) or None,
-         "fold": int(f)}
-        for i, r, cc, rc, f in zip(use, recs, result.caa_class, result.reward_class, result.fold)))
+         "caa_within_class": str(wc) or None, "fold": int(f)}
+        for i, r, cc, rc, wc, f in zip(use, recs, result.caa_class, result.reward_class, result.within_class,
+                                       result.fold)))
     meta = {"created_utc": utc_now(), "code_commit": code_commit(),
             "inputs": {"activations": args.activations.name, "array": array,
                        "array_sha256": acts.meta["arrays"][array]["sha256"], "bank_name": args.bank.name,
@@ -193,6 +212,16 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
         f"{norm:.3g}); cos with reward {c['cos_reward']:+.3f}, with choice {c['cos_choice']:+.3f}, "
         f"max |cos| with random: " + ", ".join(f"{f} ({v['n']}) {v['max']:.3f}" for f, v in c["abs_cos_random"].items()))
     log(f"     Spearman(log H, horizon mean along CAA) = {c['spearman_logH_vs_mean_projection']:+.3f}")
+    w = diagnostics["caa_within"]
+    for g, v in w["by_regime"].items():
+        log(f"within {g}: long {v['n_long']} (t >= {v['long_min_log10_days']:.2f}), short {v['n_short']} "
+            f"(t <= {v['short_max_log10_days']:.2f}); chose far {v['chose_far_share_long']:.2f} / "
+            f"{v['chose_far_share_short']:.2f}; cos with CAA {v['cos_caa']:+.3f}, with choice {v['cos_choice']:+.3f}")
+    if w["pooled"]:
+        log(f"within, pooled over {w['pool']}: cos with CAA {w['pooled']['cos_caa']:+.3f}, with choice "
+            f"{w['pooled']['cos_choice']:+.3f}; agreement between regimes {w['agreement']}")
+    if w["not_formed"]:
+        log(f"within: no classes could be formed in {w['not_formed']}")
     log(f"curve: k={args.components}, explained {m['explained_variance_of_means']}, in-sample median |t-hat - t| "
         f"{m['in_sample_median_abs_err_decades']:.3f} decades")
     h = m["held_out"]
