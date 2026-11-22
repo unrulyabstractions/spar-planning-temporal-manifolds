@@ -23,7 +23,7 @@ uv run --extra local python baseline.py --bank data/t0_s0              # 1. gene
 cd ../steering
 uv sync --extra dev
 uv run python extract.py --bank ../prompt_bank/data/t0_s0 \
-    --run ../prompt_bank/runs/gemma-4-31B-it__t0_s0 --layers 38       # 2. activations at the answer label
+    --run ../prompt_bank/runs/gemma-4-31B-it__t0_s0 --layers all      # 2. activations, every layer and site
 uv run python fit.py --activations activations/gemma-4-31B-it__t0_s0 \
     --bank ../prompt_bank/data/t0_s0 --layer 38                        # 3. directions, curve, diagnostics
 uv run python bundle.py --fit fits/gemma-4-31B-it__t0_s0/default/L38_label \
@@ -56,8 +56,14 @@ an earlier output, and refuses inputs that don't match: a different bank, differ
   - `label` is the token carrying the label character of the model's own "I choose: b)". It is the report's
     "answer-label token" and fit.py's default.
   - `prelabel` is the token before it, whose state predicts the label.
+  - `prompt_end` is the last token of the model input, whose state predicts the first generated token.
+  - `think_end` is the end-of-thinking token, whose state predicts the first token of the answer. Thinking-on runs
+    only.
 
-  Both are extracted.
+  All are extracted, as rows of the same prompts, and `fit.py --site` takes any of them. `extract.py --layers all`
+  keeps every layer a hook can steer (1 .. n_layers − 1), so a fit at another layer or site needs no GPU. At the
+  prelabel site, extract.py also keeps the 64 largest next-token logits with their token ids
+  (`prelabel_top_logits.npz`, read by `steer.activations.top_logits`): the unsteered scores of the answer letters.
 - **H/D** is the stated horizon over the **far** option's delay (report A.1), i.e. the bank's `h_over_far_delay`.
 - **Log-time t** is log10 of the horizon in days, taken at its grid value. A rewritten "100 weeks" sits with
   "23 months".
@@ -322,7 +328,8 @@ The scripts never read or print a key.
 activations/<run>/extract.json         settings, model, software, bank and run identity, counts, array SHA-256s
 activations/<run>/index.jsonl          one row per extracted prompt (steer/activations.py lists the fields)
 activations/<run>/skipped.jsonl        prompts not extracted, with the reason (no answer, format failure, ...)
-activations/<run>/L38_label.npy        float32 [n, d]; also L38_prelabel.npy
+activations/<run>/L38_label.npy        float32 [n, d]; also L38_prelabel.npy, L38_prompt_end.npy, L38_think_end.npy
+activations/<run>/prelabel_top_logits.npz   token_ids int32 [n, k], logits float32 [n, k], largest first
 fits/<run>/search.jsonl               append-only: one line per fit.py run on these activations (written, refused,
                                       error), with settings, code commit and headline diagnostics
 fits/<run>/<name>/L38_label/fit.json   settings, inputs, class sizes, prompts left out per reason, diagnostics
@@ -358,7 +365,7 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 | `tools/check_hook.py` | gate before steering a model: zero edit exact, roles right, strong edit has an effect |
 | `tools/upload_hf.py`, `tools/upload_gcs.py` | publish outputs (dry run by default; checksummed, verified, never overwrite) |
 | `tools/compare_fits.py` | compare two fit output trees exactly (arrays bit for bit), e.g. before and after a refactor |
-| `tools/vast_smoke.sh` | the pipeline on a rented GPU box, one gated stage at a time (code version, setup, weights, tests, hook, horizon site, baseline, extract, label audit, shared draws, fit, bundle, method gate, checksums) |
+| `tools/vast_smoke.sh` | the pipeline on a rented GPU box, one gated stage at a time (code version, setup, weights, tests, hook, horizon site, baseline, extract at all layers and sites, label audit, then shared draws, fit, bundle and method gate at the label and prelabel sites, checksums) |
 
 ## Tests
 

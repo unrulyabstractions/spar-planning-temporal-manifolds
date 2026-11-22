@@ -59,6 +59,26 @@ def locate_label(tok, generated_ids: list[int], labels: tuple[str, str], thinkin
     raise AssertionError("decoded prefixes never covered the label character")   # decode(all) == answer
 
 
+def replay_sites(prompt_len: int, site: LabelSite, thinking: bool) -> dict[str, int]:
+    """Each extraction site's index in the replayed sequence, which is the model input (`prompt_len` tokens)
+    followed by the generated ids up to and including the label token.
+
+    prompt_end is the last token of the model input: its state predicts the first generated token. think_end is the
+    end-of-thinking token, the one before the answer begins: its state predicts the first token of the answer. It
+    exists only for a thinking run. With thinking off, a label that is the first generated token makes prelabel and
+    prompt_end the same token.
+    """
+    label = prompt_len + site.label_index
+    where = {"label": label, "prelabel": label - 1, "prompt_end": prompt_len - 1}
+    if thinking:
+        if site.answer_start < 1:
+            raise ValueError("a thinking reply's answer starts after its end-of-thinking token")
+        where["think_end"] = prompt_len + site.answer_start - 1
+    if not 0 <= where["prompt_end"] <= where.get("think_end", where["prompt_end"]) <= where["prelabel"]:
+        raise ValueError(f"extraction sites out of order: {where}")
+    return where
+
+
 # ---- the horizon site: the prompt tokens that state the horizon ----------------------------------------------------
 
 CONSTRAINT_PREFIX = "CONSTRAINT: "
