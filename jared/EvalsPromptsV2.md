@@ -439,3 +439,57 @@ loop did not catch. Session total with E19: $0.81 of $1.50.
    they sit where the bank curve predicts for their horizon.
 3. Separate horizon from decision in the removal: ablate the horizon subspace without E8's decision
    direction, as E8's T2 did on the bank.
+
+## 10. E22 spec: prompting baseline (approved 2026-11-22 for three types)
+
+**Approved scope (2026-11-22).** Three types, the evaluation pilot's (`evaluation/transfer_sets/pilot_3types.json`):
+`system_prompt` (expected to work), `prose_natural` (might work), `coding_agent` (not expected to work), on their
+original 32-row banks, so every row compares with E19-E21. Thinking off: all rows x 5 arms. Thinking on: near/both base
+and swap rows x (`neutral` + their two crossing arms), ~72 rows, ~216 generations. Budget: what is left of the session's
+$1.50 ($0.69); stop and `just down` at $1.45 spent. The 19-type plan below is kept for a later run.
+
+**Question.** Can a plain instruction do what steering does? And does it change the horizon, or only add a
+general lean toward later or sooner options? `evaluation_design/README.md` calls for a prompting baseline in
+stages 5 (verify) and the report card, without defining it; this defines it.
+
+**Arms.** One sentence appended as the last line of the last user message, identical across types:
+
+| Arm | Instruction |
+|---|---|
+| `neutral` | "Think carefully about this decision." (an added sentence with no direction; the noise floor) |
+| `long` | "When you decide, be more long-term-minded than you otherwise would be." |
+| `short` | "When you decide, be more short-term-minded than you otherwise would be." |
+| `shift_long` | "Act as if the time horizon were 100 times longer than stated." |
+| `shift_short` | "Act as if the time horizon were 100 times shorter than stated." |
+
+The shift arms match steering's ±2 decades. `long`/`short` are the disposition arms.
+
+**Rows and scoring.** E19's rows (21 two-option label types, the original 32-row banks, so every number is
+comparable with E19-E21 row by row). Outcome: near log-odds at the answer label, as in E19.
+- *Toward* (crossing rows, as `crossing`): `long`/`shift_long` on near rows, `short`/`shift_short` on both
+  rows, minus `neutral`, in units of the type's contrast; flips among rows answered correctly by `neutral`.
+- *Spillover* (rows the instruction should not change): `long`/`shift_long` on both and none rows,
+  `short`/`shift_short` on near and none rows. A horizon change moves crossing rows only; a lean moves all.
+  The same spillover is computed for E21's steering from rows already saved (all rows have ±2), so
+  steering and prompting are compared on both measures.
+
+**Modes.**
+- Thinking off: "I choose:" prefilled, one forward pass per row and arm, all rows x 5 arms (~3.4k passes,
+  minutes).
+- Thinking on: generation (the instruction changes the reasoning), E0's settings, answer read after the
+  trace as in E20. To fit the budget, only crossing arms: each near/both base and swap row of the 19 gated
+  types gets `neutral` + its two crossing arms (~480 rows x 3 = ~1.4k generations). Spillover thinking on is
+  left for a later run. Compare with E20's donor patch (also regenerates), not with E21 (reasoning held
+  fixed).
+
+**Code.** `pipeline/s2_steering/experiments/prompting/exp22_prompting_baseline.py`, reusing E20's generation
+and readout (resumable per type and arm, `.lock` queue so several GPUs share the work);
+`pipeline/s3_analysis/eval_types_prompting.py` for toward/spillover; tests on synthetic rows and a tokenizer
+check that the sentence lands in the last user turn for single-message and conversation types.
+
+**Cost and stop rule.** E20 ran ~650 generations for $1.72, so ~1.4k is ~8 GPU-hours, ~$3.6 (~4 h wall on a
+2-GPU box), plus thinking off and boot, ~$4 in all. Proposed session cap: $5.50 ($1.50 + $4). Units run in
+ranking order, so stopping at $5.30 leaves complete results for the best types.
+
+**Pipeline.** The same five arms become a `prompting` arm family in the `evaluation/` stage (generation
+readout, stage 5), handed to the pipeline agent once its current work is in.
