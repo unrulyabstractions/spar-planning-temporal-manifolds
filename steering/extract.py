@@ -11,10 +11,16 @@ generated token ids; for each prompt this script rebuilds the sequence the model
 
 runs it through the model once (teacher forcing, batch 1, so no padding), and keeps the residual stream at the
 requested layers at two sites: the label token and the token before it (see steer/sites.py and steer/layers.py
-for the exact definitions). The replayed pass is checked against the generation: at the token before the label,
-the label the model actually wrote should be the top prediction (`replay_label_margin` >= 0 in index.jsonl).
-Near-ties can come out a bf16 step negative; a clearly negative margin means the replay is not reproducing the
-generation, and extract.json reports the smallest margin so that case cannot hide in a count.
+for the exact definitions). The replayed pass is checked against the generation, at the token before the label
+(`replay_consistent` in index.jsonl). What "consistent" means depends on how the baseline run decoded:
+
+* greedy: the label the model wrote should be the top prediction (`replay_label_margin` >= 0). Near-ties can come
+  out a bf16 step negative; a clearly negative margin means the replay is not reproducing the generation, and
+  extract.json reports the smallest margin so that case cannot hide in a count.
+* sampled: the label need not be the top prediction, so the margin can be honestly negative. What must hold is
+  that the label was a token sampling could draw: among the run's top-k tokens (`replay_label_rank` < top_k; rank 0
+  is the top prediction). This is a necessary condition, weaker than the greedy check: it does not test top-p, and
+  it cannot tell which of the allowed tokens the generation drew. extract.json reports the largest rank.
 
 Which prompts: those of --split (default "extraction") whose reply was parsed to a choice. Replies with no
 answer (thinking never closed), a format failure or conflicting choices have no label token and are listed in
@@ -50,12 +56,13 @@ def latest_rows(path: Path) -> dict[str, dict]:
     return {row["uid"]: row for row in read_jsonl(path)}
 
 
-def forward_at(model, ids: list[int], layers: list[int]) -> tuple[dict, float]:
+def forward_at(model, ids: list[int], layers: list[int]) -> tuple[dict, float, int]:
     """Run `ids` through the model. Returns ({layer: [2, d] float32 array of the last two positions}, label
-    margin): the logit of the last token (the label the model generated) minus the largest logit of any other
-    token, both read at the position before it. A greedy generation implies margin >= 0; the replay can come out
-    slightly negative on a near-tie, because the logits are bf16 (steps of 0.125 at their usual size) and a
-    batch-1 pass does not round exactly like the batched generation did."""
+    margin, label rank). Margin: the logit of the last token (the label the model generated) minus the largest
+    logit of any other token, both read at the position before it. Rank: how many tokens have a larger logit there
+    (0 = the top prediction). A greedy generation implies margin >= 0; the replay can come out slightly negative on
+    a near-tie, because the logits are bf16 (steps of 0.125 at their usual size) and a batch-1 pass does not round
+    exactly like the batched generation did."""
     import torch
 
     x = torch.tensor([ids], device=model.input_device)
@@ -68,7 +75,8 @@ def forward_at(model, ids: list[int], layers: list[int]) -> tuple[dict, float]:
     label = ids[-1]
     others = torch.cat([logits[:label], logits[label + 1:]])
     margin = float(logits[label] - others.max())
-    return {layer: acts[layer][0, -2:].float().cpu().numpy() for layer in layers}, margin
+    rank = int((logits > logits[label]).sum())
+    return {layer: acts[layer][0, -2:].float().cpu().numpy() for layer in layers}, margin, rank
 
 
 def main() -> None:
@@ -101,6 +109,8 @@ def main() -> None:
         sys.exit(f"{out} exists; extractions are records, so write a new one with --out")
 
     model_id, thinking = settings["model"], settings["thinking"]
+    decoding = settings.get("decoding", "greedy")                  # "greedy", or the sampling values (a dict)
+    top_k = None if decoding == "greedy" else decoding["top_k"]
     then, now = run_meta["model"].get("model_revision"), model_revision(model_id)
     if then != now:
         sys.exit(f"the cached weights of {model_id} ({now}) are not those the run used ({then})")
@@ -112,7 +122,7 @@ def main() -> None:
         check_layer(model.model, layer)
     started = utc_now()
     log(f"{model_id}, thinking {'on' if thinking else 'off'}: {len(selected)} prompts of {args.bank.name}, "
-        f"layers {layers}")
+        f"layers {layers}; baseline decoding {decoding}")
 
     kept, skipped = [], []
     arrays = {(layer, pos): [] for layer in layers for pos in POSITIONS}
@@ -131,7 +141,7 @@ def main() -> None:
 
         prompt_ids = model.tok(model.chat_text(rec.text, thinking), add_special_tokens=False)["input_ids"]
         ids = prompt_ids + row["generated_ids"][:site.label_index + 1]
-        acts, margin = forward_at(model, ids, layers)
+        acts, margin, rank = forward_at(model, ids, layers)
         for layer in layers:
             arrays[(layer, "prelabel")].append(acts[layer][0])
             arrays[(layer, "label")].append(acts[layer][1])
@@ -139,10 +149,12 @@ def main() -> None:
                      "chosen_option": row["chosen_option"],
                      "label_token": model.tok.decode([ids[-1]]), "prelabel_token": model.tok.decode([ids[-2]]),
                      "label_index": site.label_index, "seq_len": len(ids),
-                     "replay_label_margin": round(margin, 4), "replay_predicts_label": margin >= 0})
+                     "replay_label_margin": round(margin, 4), "replay_predicts_label": margin >= 0,
+                     "replay_label_rank": rank,
+                     "replay_consistent": margin >= 0 if top_k is None else rank < top_k})
         if n % 25 == 0 or n == len(selected):
             log(f"  [{n}/{len(selected)}] kept {len(kept)}, skipped {len(skipped)}, "
-                f"replay mismatches {sum(not k['replay_predicts_label'] for k in kept)}")
+                f"replay mismatches {sum(not k['replay_consistent'] for k in kept)}")
 
     if not kept:
         sys.exit(f"no reply could be extracted; skipped: {skipped[:5]}")
@@ -162,8 +174,12 @@ def main() -> None:
         "model": model.describe(),
         "counts": {"selected": len(selected), "kept": len(kept), "skipped": len(skipped),
                    "skipped_by_reason": {r: sum(s["reason"] == r for s in skipped) for r in {s["reason"] for s in skipped}},
-                   "replay_mismatches": sum(not k["replay_predicts_label"] for k in kept),
-                   "replay_min_label_margin": min(k["replay_label_margin"] for k in kept)},
+                   "replay_check": "greedy: label is the top prediction" if top_k is None else
+                                   f"sampled: label is among the top {top_k} predictions",
+                   "replay_mismatches": sum(not k["replay_consistent"] for k in kept),
+                   "replay_label_not_top": sum(not k["replay_predicts_label"] for k in kept),
+                   "replay_min_label_margin": min(k["replay_label_margin"] for k in kept),
+                   "replay_max_label_rank": max(k["replay_label_rank"] for k in kept)},
         "arrays": hashes,
     }
     (out / "extract.json").write_text(json.dumps(meta, indent=2) + "\n")

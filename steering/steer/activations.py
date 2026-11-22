@@ -12,7 +12,10 @@ index.jsonl fields: `row` (array row), `uid`, `choice_label` and `chosen_option`
 the label token in the generated ids), `seq_len` (tokens in the replayed sequence, prompt included),
 `replay_label_margin` (at the prelabel site of the replayed pass: logit of the label token the model generated
 minus the largest other logit; >= 0 for a faithful replay of a greedy generation, except near-ties, which can come
-out one bf16 step, about 0.125, negative) and `replay_predicts_label` (margin >= 0).
+out one bf16 step, about 0.125, negative), `replay_predicts_label` (margin >= 0), `replay_label_rank` (how many
+tokens had a larger logit; 0 = the top prediction) and `replay_consistent` (the replay check for the way the
+baseline run decoded: margin >= 0 for a greedy run; rank < top_k for a sampled run, where the label need not be the
+top prediction). Extractions made before 2026-11-22 have neither of the last two; all were of greedy runs.
 
 extract_horizon.py writes the same layout for the horizon site (the prompt tokens that state the horizon), in its
 own directory:

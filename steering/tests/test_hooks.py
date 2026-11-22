@@ -229,3 +229,28 @@ def test_real_model_zero_edit_is_exact_and_a_strong_edit_is_not(qwen35):
           f"strength 4.0 changed {changed}/6. First reply: {base[0].answer!r} -> {strong[0].answer!r}")
     assert all(same) and changed >= 1 and record[0]["ctx"].role.eq(ROLE_PROMPT).any()
     assert len(record) > 1 and record[1]["ctx"].role.eq(ROLE_GENERATED).all()
+
+
+def test_seeded_sampling_repeats_and_a_zero_edit_leaves_it_identical(qwen35):
+    # A sampled batch is seeded from the run's seed and its own prompts (pbank.local_model.Decoding.batch_seed), so
+    # the same batch repeats exactly, also after other generations and under a hook that changes nothing.
+    from pbank.local_model import Decoding
+    lcm, texts = qwen35, bank_texts(6)
+    d = lcm.model.config.get_text_config().hidden_size
+    seed0, seed1 = Decoding("sample", 0.6, 0.95, 20, 0), Decoding("sample", 0.6, 0.95, 20, 1)
+    ids = lambda replies: [r.generated_ids for r in replies]
+    greedy = ids(lcm.generate(texts, thinking=False, max_new_tokens=40))
+    first = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed0))
+    other = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed1))
+    lcm.generate(texts[:2], thinking=False, max_new_tokens=10, decoding=seed1)        # disturb the generator
+    again = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed0))
+    with steering(lcm.model, LinearEdit(unit(d), 50.0), 0.0, 12, "all"):
+        hooked = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed0))
+    with steering(lcm.model, LinearEdit(unit(d), 50.0), 4.0, 12, "all"):
+        steered = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed0))
+    same = lambda a, b: sum(x == y for x, y in zip(a, b))
+    print(f"sampled (0.6 / 0.95 / 20), 6 prompts: same seed again {same(first, again)}/6 identical; zero-edit hook "
+          f"{same(first, hooked)}/6; seed 1 vs seed 0 {same(first, other)}/6; greedy vs sampled {same(first, greedy)}/6; "
+          f"strength-4 edit {same(first, steered)}/6; greedy repeated {same(greedy, ids(lcm.generate(texts, thinking=False, max_new_tokens=40)))}/6")
+    assert first == again == hooked
+    assert same(first, other) < 6 and same(first, steered) == 0

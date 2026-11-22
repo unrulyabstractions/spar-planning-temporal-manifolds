@@ -212,6 +212,7 @@ def write_bundle(out: Path, method: str, fit_dir: Path, fit_meta: dict, extract_
         "training": {"procedure": training, "objective": None, "selected_by_search": False,
                      "search_log": "search.jsonl lists every fit.py run on these activations up to bundling"},
         "fitted_on": {"model": extract_meta["model"], "thinking": extract_meta["run_settings"]["thinking"],
+                      "decoding": extract_meta["run_settings"].get("decoding", "greedy"),
                       "baseline_run": extract_meta["run_name"], "bank": extract_meta["bank_name"],
                       "bank_prompts_sha256": extract_meta["settings"]["bank_prompts_sha256"],
                       "activations": fit_meta["inputs"]["activations"], "activations_array": array,

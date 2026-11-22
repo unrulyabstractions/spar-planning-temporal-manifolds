@@ -119,7 +119,7 @@ for r in rows:
     at = tok.decode(g[off:off + 1])
     ctx = tok.decode(g[max(0, off - 8):off]) + ">>" + at + "<<" + tok.decode(g[off + 1:off + 3])
     # Checked against the DECODED token, not only extract's own label_token field.
-    ok = (r["replay_predicts_label"] and at == r["label_token"]
+    ok = (r.get("replay_consistent", r["replay_predicts_label"]) and at == r["label_token"]
           and at.strip() == r["choice_label"].rstrip(")").strip())
     bad += not ok
     print(f"{r['uid']} {r['choice_label']:4s} {r['chosen_option']:5s} margin {r['replay_label_margin']:+7.3f} "
