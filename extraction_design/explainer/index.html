@@ -329,7 +329,8 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
       <tr><td>Hook gate <code>tools/check_hook.py</code></td><td>on <code>main</code></td><td>passed on Qwen3.5-0.8B, Qwen3.5-2B, Gemma 4 31B</td></tr>
       <tr><td>Upload scripts (Hugging Face, GCS)</td><td>on <code>main</code></td><td>tests; two real Hugging Face uploads, verified</td></tr>
       <tr><td>Rented-GPU run script <code>tools/vast_smoke.sh</code></td><td>on <code>main</code></td><td>one A100 run (§11)</td></tr>
-      <tr><td>Hook fix for generation without padding; single-token edits; gate option <code>--positions</code></td><td>branch <code>steering-label-positions</code></td><td>tests; Qwen3.5-2B (README §6, §10)</td></tr>
+      <tr><td>Hook fix for generation without padding; single-token edits; gate option <code>--positions</code></td><td>on <code>main</code></td><td>tests; Qwen3.5-2B (README §6, §10)</td></tr>
+      <tr><td>Horizon site (activations at the tokens that state the horizon); <code>fit.py --draws</code></td><td>branch <code>horizon-site-shared-draws</code></td><td>tests; Qwen3.5-0.8B/2B (README §6, §8.2)</td></tr>
       <tr><td>Practice hand-over: Qwen3.5-2B, thinking off, all 700 prompts</td><td>published on Hugging Face</td><td>README §12</td></tr>
       <tr><td>Shared random draws</td><td>built by the evaluation team, on <code>main</code></td><td><code>evaluation/shared_draws.py</code></td></tr>
       <tr class="em"><td>Full Gemma 4 31B baseline, fit and bundles</td><td>not run</td><td>throughput and decoding, §11</td></tr>
@@ -494,7 +495,7 @@ with steering(lcm.model, m.edit, x=0.1, layer=m.layer, positions=m.positions):
 
 logits = replay_logits(lcm.model, prompt_ids, answer_ids, m.edit, x=0.1, layer=m.layer)   # one teacher-forced pass</pre>
   <div class="checks">
-    <div class="check"><b>Knows each token's role</b><p>A pre-hook works out each token's position in every pass, from the first of <code>cache_position</code>, <code>attention_mask</code> and <code>position_ids</code> that <code>generate()</code> passes. The pass starting at position 0 is the prompt, later passes are generated tokens, and mask zeros are padding. This works inside batched, left-padded <code>generate()</code> with the key-value cache. At batch 1 it works only with the 2026-11-19 fix, which is on branch <code>steering-label-positions</code>: before it, <code>prompt</code> and <code>generated</code> edits hit the wrong tokens there (README §6).</p></div>
+    <div class="check"><b>Knows each token's role</b><p>A pre-hook works out each token's position in every pass, from the first of <code>cache_position</code>, <code>attention_mask</code> and <code>position_ids</code> that <code>generate()</code> passes. The pass starting at position 0 is the prompt, later passes are generated tokens, and mask zeros are padding. This works inside batched, left-padded <code>generate()</code> with the key-value cache. At batch 1 it works since the 2026-11-19 fix: before it, <code>prompt</code> and <code>generated</code> edits hit the wrong tokens there (README §6).</p></div>
     <div class="check"><b>Edits only where asked</b><p>The displacement is computed everywhere and applied through a mask (<code>torch.where</code>), so unedited positions keep their exact bits.</p></div>
     <div class="check"><b>Per-row requests and facts</b><p><code>x</code> may be one value per row. <code>rows=[…]</code> passes facts such as uid or stated horizon into <code>ctx.rows</code>. CAA and the curve ignore them, but edits that need them (centroid substitution, horizon-token-only edits) keep the same signature.</p></div>
     <div class="check"><b>Size record for matched nulls</b><p><code>record=[]</code> collects the context and the L2 norm of the applied displacement per token, so random controls can match a method's size token by token (N1, N6).</p></div>
@@ -614,7 +615,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
   <div class="tbl-wrap"><table>
     <thead><tr><th>Check</th><th>Model / data</th><th>Result</th><th>Source</th></tr></thead>
     <tbody>
-      <tr><td>Test suites</td><td>CPU and local GPU</td><td>steering 83 passed (2026-11-19, branch); prompt_bank 64 passed (2026-11-14)</td><td><code>progress-20261119.md</code>; <code>progress-20261114.md</code></td></tr>
+      <tr><td>Test suites</td><td>CPU and local GPU</td><td>steering 95 passed (2026-11-22, branch); prompt_bank 64 passed (2026-11-14)</td><td><code>progress-20261122.md</code>; <code>progress-20261114.md</code></td></tr>
       <tr><td>Layer convention</td><td>tiny Qwen3; Gemma 4 module tree; Qwen3.5-0.8B</td><td>exact</td><td><code>tests/test_layers.py</code></td></tr>
       <tr><td>Torch edits vs numpy</td><td>synthetic</td><td>max diff 4.44e-16 (float64)</td><td><code>progress-20261114.md</code></td></tr>
       <tr><td>Hook in real <code>generate()</code></td><td>Qwen3.5-0.8B bf16, 6 prompts</td><td>zero edit identical 6/6; strong edit changed 6/6</td><td><code>progress-20261114.md</code></td></tr>
@@ -706,7 +707,8 @@ cd &lt;download&gt;/&lt;prefix&gt; &amp;&amp; sha256sum -c SHA256SUMS           
       <h3>From the evaluation team</h3>
       <ul>
         <li>Answered: a first held-out horizon list for C8 (5 weeks, 15 months, 16 years, 210 years; not final); shared draws built on their side; <code>EditContext</code> is enough; host is Hugging Face.</li>
-        <li>Requested, not built: a <code>horizon</code> site in <code>extract.py</code> (activations at the tokens that state the horizon); a within-regime CAA; <code>fit.py</code>'s random baseline from the shared draws.</li>
+        <li>Requested and built (branch <code>horizon-site-shared-draws</code>): the horizon site, <code>extract_horizon.py</code>; <code>fit.py</code>'s random baseline from the shared draws.</li>
+        <li>Requested, not built: a within-regime CAA.</li>
       </ul>
     </div>
     <div class="stack">
@@ -715,7 +717,7 @@ cd &lt;download&gt;/&lt;prefix&gt; &amp;&amp; sha256sum -c SHA256SUMS           
         <li>Decide: greedy decoding or seeded sampling for thinking-on runs, and the token cap; the bundles' default positions and the fitting site; class definitions for a within-regime CAA; a minimum class size in <code>fit.py</code>.</li>
         <li>Fix: recording the commit when code ships without <code>.git</code>.</li>
         <li>Diagnose: generation throughput.</li>
-        <li>To do: merge branch <code>steering-label-positions</code>; re-run the hook gate on Gemma.</li>
+        <li>To do: merge branch <code>horizon-site-shared-draws</code>; run the horizon extraction and the hook gate on Gemma.</li>
         <li>Not built: an answer-letter control direction, switch-point and gate code.</li>
       </ul>
     </div>

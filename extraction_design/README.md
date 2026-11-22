@@ -1,7 +1,8 @@
 # Extraction pipeline for horizon steering: what it hands over, and how to use it
 
-**Status:** built, tested and on `main` (merged 2026-11-15). Two later changes are on branch
-`steering-label-positions`, not yet merged: a fix to the hook, and edits at a single token (§6). On Gemma 4 31B the
+**Status:** built, tested and on `main`, including the hook fix and single-token edits of 2026-11-19 (§6). Two
+additions are on branch `horizon-site-shared-draws`, not yet merged: the horizon site (§6) and `fit.py --draws`
+(§8.2 item 6). On Gemma 4 31B the
 pipeline has run only at smoke scale (16 prompts). No full-run methods exist yet. A complete practice hand-over from a
 small model is published (§12). **Owner:** Extraction (prompt bank and steering methods: Alan). Drafted with Claude,
 2026-11-15; updated 2026-11-22.
@@ -55,9 +56,10 @@ What exists now:
 | Hook gate `tools/check_hook.py` | on `main` | passed on Qwen3.5-0.8B, Qwen3.5-2B, Gemma 4 31B |
 | Upload scripts (Hugging Face, GCS) | on `main` | tests; two real Hugging Face uploads verified (§10); the one real GCS upload was refused by the account (§12) |
 | Rented-GPU run script `tools/vast_smoke.sh` | on `main` | one A100 run (§11) |
-| Hook fix for generation without padding; single-token edits (`at_generated`); gate option `--positions` | branch `steering-label-positions` | tests; Qwen3.5-2B (§6, §10) |
+| Hook fix for generation without padding; single-token edits (`at_generated`); gate option `--positions` | on `main` | tests; Qwen3.5-2B (§6, §10) |
 | Practice hand-over: Qwen3.5-2B, thinking off, all 700 prompts | published on Hugging Face (§12) | `steering/progress-20261117.md` |
-| Shared random draws | built by the evaluation team, on `main` | `evaluation/shared_draws.py` (§8.2 item 6) |
+| Shared random draws | built by the evaluation team, on `main`; `fit.py --draws` reads them (branch `horizon-site-shared-draws`) | `evaluation/shared_draws.py` (§8.2 item 6) |
+| Horizon site: activations at the tokens that state the horizon, all layers; `at_prompt` | branch `horizon-site-shared-draws` | tests; Qwen3.5-0.8B/2B (§6, §10) |
 | Full Gemma 4 31B baseline, fit and bundles | **not run** | throughput and decoding, §11.3 |
 
 ## 2. Glossary
@@ -236,13 +238,13 @@ logits = replay_logits(lcm.model, prompt_ids, answer_ids, m.edit, x=0.1, layer=m
   - attention-mask zeros are padding.
 
   This is what makes it work inside batched, left-padded `generate()` with the key-value cache, and at batch 1.
-- **Bug fixed on 2026-11-19 (on the branch; `main` still has it until the merge).**
+- **Bug fixed on 2026-11-19.**
   - transformers 5.22.2 passes no `cache_position`, and at batch 1 no attention mask either. The hook then took every
     generated token for a prompt token. On Qwen3.5-2B at batch 1, `positions="generated"` edited nothing.
   - Only generation without padding (batch 1, or a batch of equal-length prompts) with `prompt`, `generated` or a
     callable was affected. `positions="all"` and replay were not, so no result reported so far changes.
   - The fix reads `position_ids` when there is no attention mask [`steering/progress-20261119.md`].
-- **Single-token edits (branch).** `at_generated(index)` returns a `positions` callable that edits one token per row:
+- **Single-token edits.** `at_generated(index)` returns a `positions` callable that edits one token per row:
   generated token `index[i]` of row i, with −1 meaning the last prompt token. With the label's index from
   `steer.sites.locate_label` it edits the label token; one less gives the prelabel token. It works in generation and in
   replay.
@@ -268,7 +270,7 @@ logits = replay_logits(lcm.model, prompt_ids, answer_ids, m.edit, x=0.1, layer=m
 3. a strong edit has an effect;
 4. with `--method`, the bundled method at x = 0 reproduces the unhooked ids. curve-snap is exempt and only reported.
 
-On the branch, `--positions {all,prompt,generated,label,prelabel}` chooses where checks 3 and 4 apply the edit. For
+`--positions {all,prompt,generated,label,prelabel}` chooses where checks 3 and 4 apply the edit. For
 `label` and `prelabel` the gate also checks that exactly one token per row was edited and that each reply matches the
 unhooked one up to that token. Check 3 then reports changed choices beside changed replies.
 
@@ -288,6 +290,29 @@ methods and a 2-decade shift for the curve methods [`steering/progress-20261119.
 - **An edit at the prelabel token can.** That is the candidate for a single-token default, with a prelabel fit.
 - **This is a plumbing check, not an effect size:** 8 prompts, one strength, a model that barely represents the
   horizon (§12).
+
+**The horizon site** (branch `horizon-site-shared-draws`; requested by the evaluation team, for comparison methods
+that are fitted on, or edit only, the tokens that state the horizon):
+
+- **`extract_horizon.py`** reads the residual stream at each token of the stated horizon, separately, at every layer.
+  - It needs no baseline run: one forward pass per prompt, no generation.
+  - Numbers are split into digits, so "15 minutes" is `'1'`, `'5'`, `' minutes'`. On `t0_s0` a horizon has 2 to 7
+    tokens on both Gemma 4 and Qwen3.5, 2,600 tokens over the 671 prompts that state one.
+  - The run audits itself: every horizon's tokens must decode back to the stated horizon, or nothing is written.
+- **Output** (`steering/steer/activations.py` has the fields):
+  - `L<layer>_horizon.npy`, one float32 file per layer, one row per horizon token;
+  - `index.jsonl`: per row, the uid, which token of the horizon, its index in the model input, its string;
+  - `horizon_sites.jsonl`: per prompt, the horizon's character span, token indices and strings, plus option order,
+    label style and log-time. All 700 prompts have a row; the 29 without a horizon have empty lists.
+- **Layers** 0 to the number of blocks. Layer 0 is the embeddings. The last layer is the last block's output before
+  the final norm, which is not `hidden_states[n]`.
+- **Thinking changes the model input on Gemma 4** (a system turn is added before the prompt), so the token indices
+  and activations depend on it. The setting is recorded; extract with the one the runs will use.
+- **Editing only those tokens:** pass a prompt's rows of `horizon_sites.jsonl` as the hook's `rows`, and their
+  `token_indices` to `steer.hooks.at_prompt`, which accounts for left padding in a batch
+  [`steering/README.md`, "The horizon site"].
+- **Not run on Gemma yet.** Its tokenizer has been checked on all 671 horizons; the model has not been run. Expected
+  size: about 3.4 GB (2,600 tokens × 61 layers × a hidden size of 5,376 × 4 bytes).
 
 ## 7. The bundle
 
@@ -413,8 +438,18 @@ What it is for:
      `shared_draws.py verify` regenerates a file and compares.
    - **Plan:** whoever extracts the Gemma activations runs it right after `extract.py` and publishes the draws beside
      them.
-   - **Proposed by the evaluation team, not done:** `fit.py`'s random-baseline diagnostic uses these files. Today each
-     fit still stores its own 100 isotropic unit vectors (seed 0).
+   - **`fit.py --draws DIR`** (branch `horizon-site-shared-draws`) uses these files as the fit's random baseline, as
+     the evaluation team proposed.
+     - It refuses draws made for another model, layer, site or activations file.
+     - The methods do not change, bit for bit; only the diagnostic does. `fit.json` records the draws' hashes.
+     - Without `--draws`, a fit still stores its own 100 isotropic unit vectors (seed 0).
+   - **What the families show.** On the Qwen3.5-2B practice activations (layer 15, label site), CAA's largest
+     |cosine| with 99 random directions is 0.044 for isotropic, 0.879 for covariance-matched and 0.716 for real
+     differences [`steering/progress-20261122.md`]. Against isotropic directions CAA's cosine of 0.862 with the
+     `choice` direction looks far from chance; against directions with the activations' own covariance it does not.
+     The isotropic baseline alone overstates how special a direction is.
+   - **File names:** `shared_draws.py` reads `L<layer>_<site>.npy`, and `extract.py` writes the layer with two
+     digits. The names agree for layers 10 and above.
 7. **Versioning.**
    - Every output records the SHA-256 of its inputs and the code commit; bundles record a hash for every file.
    - A gap was found on the rented GPU: with the code shipped without `.git`, the commit is recorded as `"unknown"`
@@ -459,7 +494,7 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 
 | Check | Model / data | Result | Source |
 |---|---|---|---|
-| Test suites | CPU + local GPU | steering 83 passed (2026-11-19, branch); prompt_bank 64 passed (2026-11-14) | `progress-20261119.md`; `progress-20261114.md` |
+| Test suites | CPU + local GPU | steering 95 passed (2026-11-22, branch); prompt_bank 64 passed (2026-11-14) | `progress-20261122.md`; `progress-20261114.md` |
 | Layer convention | tiny Qwen3; Gemma 4 module tree; Qwen3.5-0.8B weights | exact | `tests/test_layers.py` |
 | Torch edits vs numpy references | synthetic | max diff 4.44e-16 (float64) | `progress-20261114.md` |
 | Hook in real `generate()` | Qwen3.5-0.8B bf16, 6 prompts | zero edit identical 6/6; strength 4 changed 6/6 | `progress-20261114.md` |
@@ -477,6 +512,11 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 | Hugging Face upload | the practice hand-over, 42 files | 42/42 remote hashes verified; later made public | `progress-20261117.md` |
 | Hook at batch 1 (no padding) | tiny Qwen3; Qwen3.5-2B | before the fix no generated token was edited; after it, one per decoding step | `tests/test_hooks.py`; `progress-20261119.md` |
 | Hook gate at a single token | Qwen3.5-2B, 8 prompts: 5 label-site and 5 prelabel-site bundles | all 10 pass; exactly one token edited per row; results in §6 | `progress-20261119.md` |
+| Horizon tokens found | Gemma 4 and Qwen3.5 tokenizers, thinking on and off, 671 horizons | all decode back to the stated horizon; shifted by one token, none does | `tests/test_sites.py` |
+| Horizon extraction | Qwen3.5-0.8B, 21 prompts | stored rows equal `hidden_states` at those tokens exactly (layers 0 and 12) | `tests/test_extract_horizon.py` |
+| Horizon-only edit in a padded batch | Qwen3.5-0.8B, 21 prompts | the edited tokens are each prompt's horizon; the 2 prompts without one are unchanged | `tests/test_extract_horizon.py` |
+| Horizon extraction, full bank | Qwen3.5-2B, thinking off, 700 prompts, 25 layers | 671 horizons, 2,600 tokens, 0 decode mismatches; 32 s | `progress-20261122.md` |
+| `fit.py --draws` | Qwen3.5-2B practice activations | methods identical to the fit without draws; draws for other inputs refused | `tests/test_fit.py`; `progress-20261122.md` |
 
 **Not yet checked on Gemma:**
 - the hook gate after the 2026-11-19 fix, and at any `--positions` other than `all`;
@@ -635,16 +675,13 @@ against the real interfaces: <https://huggingface.co/datasets/CodeReclaimers/spa
 - **`EditContext`:** it covers their comparison methods. What is missing is upstream: the `horizon` site below.
 - **Host:** Hugging Face (§12).
 
-**Requested by the evaluation team, not built:**
-- **A `horizon` site in `extract.py`:** the activations at the tokens that state the horizon ("7 years"), because some
-  comparison methods edit only those tokens. Asked for:
-  - all layers, and every token of the horizon separately;
-  - each prompt's horizon token positions, with an audit that they decode back to the stated horizon;
-  - those positions, the option order and the label style passed in the hook's `rows`.
-
-  It needs one forward pass per prompt and no baseline run, so nothing blocks it.
-- **A within-regime CAA** as a comparison method (§9.2).
+**Requested by the evaluation team, built on branch `horizon-site-shared-draws`:**
+- **The horizon site** (§6): activations at the tokens that state the horizon, every token separately, all layers,
+  with the audit and the per-prompt rows for the hook. Still to do: run it on Gemma 4 31B.
 - **`fit.py`'s random baseline from the shared draw files** (§8.2 item 6).
+
+**Requested by the evaluation team, not built:**
+- **A within-regime CAA** as a comparison method (§9.2).
 
 **Decisions on the extraction side:**
 - greedy decoding or seeded sampling for thinking-on runs, and the token cap (§11.3);
@@ -655,7 +692,8 @@ against the real interfaces: <https://huggingface.co/datasets/CodeReclaimers/spa
 - recording the code commit when shipping without `.git` (§11.2.6).
 
 **To do:**
-- merge branch `steering-label-positions`;
+- merge branch `horizon-site-shared-draws`;
+- run `extract_horizon.py` on Gemma 4 31B, and `shared_draws.py` after the Gemma extraction;
 - re-run the hook gate on Gemma 4 31B with the fixed hook (§10).
 
 **Not built:**

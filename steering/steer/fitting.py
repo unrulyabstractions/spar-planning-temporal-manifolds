@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 
@@ -38,7 +39,7 @@ class FitResult:
     caa: Direction
     reward: Direction
     choice: Direction
-    random: np.ndarray          # [n_random, d] unit vectors
+    random: np.ndarray          # [n, d] isotropic unit vectors: the fit's own, or the shared draws' if given
     typical_norm: float
     manifold: Manifold
     per_horizon: list[dict]     # per_horizon.jsonl rows
@@ -98,8 +99,13 @@ def cross_validated_t(X, t, groups, folds_of, k, bandwidth) -> np.ndarray:
     return t_hat
 
 
-def fit(X: np.ndarray, recs: list, chosen: np.ndarray, s: FitSettings) -> FitResult:
-    """Fit on the rows of X; recs[i] is row i's prompt record and chosen[i] its baseline choice ("near"/"far")."""
+def fit(X: np.ndarray, recs: list, chosen: np.ndarray, s: FitSettings,
+        random_sets: Optional[dict] = None) -> FitResult:
+    """Fit on the rows of X; recs[i] is row i's prompt record and chosen[i] its baseline choice ("near"/"far").
+
+    random_sets: the random unit vectors of the random-baseline diagnostic, {family: [n, d]}, with at least
+    "isotropic" (e.g. steer.draws.load_shared(...).families). Default: s.n_random isotropic vectors from s.seed. They
+    enter only the diagnostics and FitResult.random, never the methods' parameters."""
     regime = np.array([r.regime for r in recs], dtype=object)   # object: elements stay plain str (clean JSON keys)
     t = np.array([log10_days(r.horizon_grid_value) for r in recs])
     groups = [r.horizon_grid_value for r in recs]
@@ -112,7 +118,9 @@ def fit(X: np.ndarray, recs: list, chosen: np.ndarray, s: FitSettings) -> FitRes
     high, low = threshold_masks(mult, s.reward_high_min, s.reward_low_max)
     reward = mean_difference(X, high, low)
     choice = mean_difference(X, chosen == "far", chosen == "near")
-    random = random_directions(X.shape[1], s.n_random, s.seed)
+    if random_sets is None:
+        random_sets = {"isotropic": random_directions(X.shape[1], s.n_random, s.seed)}
+    random = random_sets["isotropic"]
     norm = typical_norm(X)
 
     # Manifold curve, and its check on held-out prompts.
@@ -140,6 +148,9 @@ def fit(X: np.ndarray, recs: list, chosen: np.ndarray, s: FitSettings) -> FitRes
                 "raw_norm_over_typical_norm": caa.raw_norm / norm,
                 "cos_reward": float(caa.vector @ reward.vector), "cos_choice": float(caa.vector @ choice.vector),
                 "max_abs_cos_random": float(np.abs(random @ caa.vector).max()),
+                "abs_cos_random": {f: {"n": int(len(v)), "max": float(np.abs(v @ caa.vector).max()),
+                                       "p95": float(np.percentile(np.abs(v @ caa.vector), 95))}
+                                   for f, v in random_sets.items()},
                 "spearman_logH_vs_mean_projection": spearman([h["log10_days"] for h in per_horizon],
                                                              [h["caa_projection"] for h in per_horizon])},
         "reward": {"n_high": reward.n_plus, "n_low": reward.n_minus, "raw_norm": reward.raw_norm},

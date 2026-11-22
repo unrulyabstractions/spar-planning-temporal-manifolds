@@ -11,7 +11,8 @@ Which positions are edited (`positions`):
   "generated"  generated tokens only: each decode step's token (the prompt's states, and so the first generated
                token, are unedited)
   a callable   ctx -> [batch, tokens] bool, given the EditContext with roles already filled in;
-               at_generated(index) builds one that edits a single token per row (e.g. the answer-label token)
+               at_generated(index) builds one that edits a single token per row (e.g. the answer-label token);
+               at_prompt(indices) builds one that edits chosen prompt tokens per row (e.g. the horizon's tokens)
 Padding is never edited.
 
 How roles are known. A forward pre-hook on the model reads, for each pass, the absolute index of each of its tokens
@@ -82,6 +83,35 @@ def at_generated(index) -> Callable[[EditContext], torch.Tensor]:
         if index.shape != (pos.shape[0],):
             raise ValueError(f"at_generated: {index.shape[0]} indices for a batch of {pos.shape[0]}")
         return pos == (state["prompt_len"] + index.to(pos.device))[:, None]
+
+    return mask
+
+
+def at_prompt(indices) -> Callable[[EditContext], torch.Tensor]:
+    """A `positions` callable that edits chosen prompt tokens: indices[i] lists row i's token indices in its own
+    model input, counted without padding (e.g. the horizon's tokens, `token_indices` in horizon_sites.jsonl; an empty
+    list edits nothing in that row).
+
+    In a batch the prompts are left-padded, so row i's token k sits at absolute position pads_i + k; pads_i is read
+    from the roles of the pass that starts at position 0 (the prefill, or a replay pass). Later passes hold generated
+    tokens only and are not edited. The indices must come from the same model input (same chat template and thinking
+    setting) that is being run.
+    """
+    indices = [sorted(int(k) for k in row) for row in indices]
+
+    def mask(ctx: EditContext) -> torch.Tensor:
+        out = torch.zeros_like(ctx.role, dtype=torch.bool)
+        if int(ctx.position[0, 0]) != 0:
+            return out
+        if len(indices) != out.shape[0]:
+            raise ValueError(f"at_prompt: {len(indices)} index lists for a batch of {out.shape[0]}")
+        pads = (ctx.role == ROLE_PAD).sum(1).tolist()
+        n_prompt = (ctx.role == ROLE_PROMPT).sum(1).tolist()
+        for i, row in enumerate(indices):
+            if row and not 0 <= row[0] <= row[-1] < n_prompt[i]:
+                raise ValueError(f"at_prompt: row {i} has indices {row[0]}..{row[-1]} but only {n_prompt[i]} prompt tokens")
+            out[i, [pads[i] + k for k in row]] = True
+        return out
 
     return mask
 
