@@ -143,7 +143,7 @@ prompt_bank/                                   steering/
 | Stage | Command (from the package directory) | Writes | Needs | Refuses |
 |---|---|---|---|---|
 | Baseline | `baseline.py --bank data/t0_s0` | `runs/<model>__<bank>/` run.json, responses.jsonl, summary.json | GPU holding the model in bf16 | resuming with different settings, or a different bank |
-| Extract | `extract.py --bank … --run … --layers 38` | `activations/<run>/` extract.json, index.jsonl, skipped.jsonl, `L38_label.npy`, `L38_prelabel.npy` | same GPU, minutes | a run on another bank; replies without `generated_ids`; overwriting |
+| Extract | `extract.py --bank … --run … --layers all` (or layer numbers) | `activations/<run>/` extract.json, index.jsonl, skipped.jsonl, `L<layer>_{label,prelabel,prompt_end,think_end}.npy`, `prelabel_top_logits.npz` | same GPU, minutes | a run on another bank; replies without `generated_ids`; overwriting |
 | Fit | `fit.py --activations … --bank … --layer 38` | `fits/<run>/<name>/L38_label/`; appends `fits/<run>/search.jsonl` | CPU, seconds | overwriting; activations whose hashes don't match |
 | Bundle | `bundle.py --fit … --activations …` | `methods/<model>/<method>__<run>__<name>__L38_label/` | CPU | overwriting; activations other than the fit's |
 | Gate | `tools/check_hook.py --method <bundle> --bank …` | nothing (exit code 0/1) | GPU | — |
@@ -169,6 +169,16 @@ committed.
     (x0001 and x0002 in the A100 run, §10).
 
   So the prelabel site sits on a different token for each label style, which matters for C1.
+  - `prompt_end` is the last token of the model input: its state predicts the first generated token, before any
+    thinking. `think_end` is the end-of-thinking token: its state predicts the first token of the answer (thinking-on
+    runs only). Both are extracted since 2026-11-22, because with thinking on the prelabel token comes after
+    hundreds of tokens of reasoning that may already have settled the choice. No method has been fitted or gated
+    at either yet; `tools/check_hook.py --positions` does not know them.
+- **What an extraction keeps.** `--layers all` keeps every layer a hook can steer (1 .. n_layers − 1) at all the
+  sites above, so fits at other layers and sites are CPU work on saved arrays. It also keeps the 64 largest
+  next-token logits at the prelabel site, with token ids (`prelabel_top_logits.npz`): the unsteered scores of the
+  two answer letters, a finer baseline than the parsed choice. For Gemma 4 31B and 700 prompts this is about
+  3.5 GB (59 layers × 4 sites × 15 MB).
 - **Thinking.** Gemma 4 ends its thinking with `<channel|>`, Qwen3/3.5 with `</think>`. pbank finds the marker in the
   tokenizer and refuses a model family with neither [`prompt_bank/README.md`, "How a model's answer is read"].
   The label site is in the answer, after the marker.
@@ -589,19 +599,30 @@ crlf  version  setup  weights  tests  hook  horizon  baseline  extract  audit  d
   `cd prompt_bank && python -m pbank.provenance stamp`. The `version` stage fails if the outputs would record
   `"unknown"`.
 - **`horizon`** runs `extract_horizon.py` on all 700 prompts; it needs no baseline run.
-- **`draws`** runs the evaluation team's `shared_draws.py` and verifies its output; `fit` then uses the draws.
-- **`method`** runs the hook gate on every bundle of the run.
+- **`extract`** keeps every layer (`LAYERS=all`) and every site (§4), so later fits need no GPU.
+- **`draws`, `fit` and `bundle`** run at `LAYER`, once per site of `SITES` (default `label prelabel`). `draws` runs the
+  evaluation team's `shared_draws.py` and verifies its output; `fit` then uses the draws.
+- **`method`** runs the hook gate on the run's bundles: every label-site bundle on 64-token replies, as it declares
+  itself (every token); and the prelabel-site bundles named in `PRELABEL_CHECK` (default `caa curve-snap`, one
+  linear method and one curve method) with the edit at the prelabel token only, on whole replies. With thinking on,
+  whole replies take minutes per bundle, which is why not all nine are checked there. Every bundle is run even
+  after a failure, and the stage fails at the end if any did. It writes nothing, so `sums` can come before it.
 
 - **A smoke run is the default:** the first 64 extraction prompts. **The full run is `N=all SPLIT=all`:** all 700
   prompts, with both splits extracted, which the evaluation runner needs (it reads the verification prompts' label
   positions). Rehearsed locally on Qwen3.5-0.8B, thinking off: 700 prompts, 699 extracted (499 extraction, 200
   verification; one reply had conflicting choices), 0 label sites not matching.
-- **Settings** come from the environment: `MODEL` (default Gemma 4 31B-it), `LAYER` (38), `N` (64 prompts, or `all`),
+- **Settings** come from the environment: `MODEL` (default Gemma 4 31B-it), `LAYER` (38), `LAYERS` (all), `SITES` (label prelabel), `PRELABEL_CHECK`
+  (caa curve-snap), `N` (64 prompts, or `all`),
   `SPLIT` (extraction), `BATCH`
   (8), `MAX_NEW` (4096), `RUN` (smoke), `THINKING` (on), `DECODING` (auto, as `baseline.py`), `SAMPLING` (extra
   sampling options for a model without a generation config) and `DRAWS_MIN_ROWS` (100).
 - **Rehearsed locally on 2026-11-22** in a copy without `.git`, on Qwen3.5-0.8B: every stage but `setup`, `weights`
   and `tests` ran and passed, the hook gate on all nine bundles included [`steering/progress-20261122.md`].
+- **Rehearsed again that day with all layers and both sites,** on Qwen3.5-2B, thinking off, 700 prompts: 69
+  activation arrays (23 layers × 3 sites), draws verified and fits written at both sites, 18 bundles, and the gate
+  passed on the 9 label-site bundles and the 2 checked prelabel-site ones. The prelabel-token gate on whole
+  thinking-on, sampled replies has not run anywhere yet; the full Gemma run is its first use.
 - **Run on a rented A100 the same day** on Gemma 4 31B: every stage passed except `tests`, whose steering half
   was very slow and was stopped (§11.2 item 9). The run cost about $2.15 for 50 minutes.
 - **The `audit` stage** prints every label site with its decoded neighbours and fails if any decoded token differs

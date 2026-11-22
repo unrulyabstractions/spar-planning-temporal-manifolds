@@ -15,19 +15,25 @@
 #   hook      tools/check_hook.py on the model at $LAYER (zero edit, roles, effect), with the run's decoding
 #   horizon   extract_horizon.py: activations at the horizon's tokens, all layers, ALL 700 prompts (needs no baseline)
 #   baseline  baseline.py on the first $N prompts of $SPLIT (all of them with N=all); resumable
-#   extract   extract.py at $LAYER, for the same split
+#   extract   extract.py for the same split: layers $LAYERS (default all), every site (label, prelabel, prompt_end,
+#             think_end), and the top next-token logits at the prelabel site
 #   audit     prints every label site with the decoded tokens around it, for a hand audit
-#   draws     ../evaluation/shared_draws.py: the shared random directions for $LAYER, label site
-#   fit       fit.py at $LAYER, with the shared draws if the `draws` stage wrote them (refuses, and logs the refusal,
-#             if the slice is too small)
-#   bundle    bundle.py: every method the fit has
-#   method    tools/check_hook.py --method on every bundle of this run
+#   draws     ../evaluation/shared_draws.py: the shared random directions for $LAYER, at each site of $SITES
+#   fit       fit.py at $LAYER, at each site of $SITES, with the shared draws if the `draws` stage wrote them
+#             (refuses, and logs the refusal, if the slice is too small)
+#   bundle    bundle.py: every method each fit has
+#   method    tools/check_hook.py --method on this run's bundles: every label-site bundle on short replies, and the
+#             $PRELABEL_CHECK prelabel-site bundles with the edit at the prelabel token, on whole replies. It writes
+#             nothing, so `sums` can come before it.
 #   sums      SHA256SUMS of the outputs, for the copy-back
 #
 # A smoke run is the default (the first 64 extraction prompts). The full run is N=all SPLIT=all: all 700 prompts,
 # and both splits extracted, which the evaluation runner needs (it reads the verification prompts' label positions).
 #
-# Settings (environment): MODEL (google/gemma-4-31B-it), LAYER (38), N (64, or all), SPLIT (extraction |
+# Fits at other layers or sites need no GPU: extraction keeps every layer, and fit.py / bundle.py run anywhere.
+#
+# Settings (environment): MODEL (google/gemma-4-31B-it), LAYER (38), LAYERS (all, or layer numbers including
+# LAYER), SITES ("label prelabel"), PRELABEL_CHECK ("caa curve-snap", or all), N (64, or all), SPLIT (extraction |
 # verification | all; default extraction), BATCH (8), MAX_NEW (4096),
 # RUN (smoke), THINKING (on | off; default on), DECODING (auto | greedy | sample; default auto, as baseline.py),
 # SAMPLING (extra sampling options for a model without a generation config, e.g.
@@ -40,6 +46,11 @@ set -euo pipefail
 
 MODEL=${MODEL:-google/gemma-4-31B-it}
 LAYER=${LAYER:-38}
+LAYERS=${LAYERS:-all}                 # what extract.py keeps: `all`, or layer numbers that include $LAYER
+SITES=${SITES:-label prelabel}        # the sites the draws, fits, bundles and method checks are made at
+PRELABEL_CHECK=${PRELABEL_CHECK:-caa curve-snap}   # prelabel-site bundles checked on the model (or: all)
+case " $LAYERS " in *" all "*|*" $LAYER "*) ;; *) echo "LAYERS must be all or include LAYER=$LAYER"; exit 2;; esac
+for _s in $SITES; do case $_s in label|prelabel) ;; *) echo "SITES: label and/or prelabel"; exit 2;; esac; done
 N=${N:-64}
 SPLIT=${SPLIT:-extraction}
 case $SPLIT in extraction|verification|all) ;; *) echo "SPLIT must be extraction, verification or all"; exit 2;; esac
@@ -65,7 +76,7 @@ RUNDIR=$ROOT/prompt_bank/runs/$NAME
 ACTS=$ROOT/steering/activations/$NAME
 FITS=$ROOT/steering/fits/$NAME
 HORIZON=$ROOT/steering/activations/${SHORT}${SUFFIX}__t0_s0__horizon
-DRAWS=$ROOT/steering/draws/$SHORT/L${LAYER}_label
+DRAWS=$ROOT/steering/draws/$SHORT       # one subdirectory per layer and site: L<layer>_<site>
 export PYTHONUNBUFFERED=1
 # A container's CPU quota can be far below the machine's core count (15.36 of 128 on the A100 host of 2026-11-22).
 # torch starts one thread per core it sees, and the tiny-model tests then take many minutes instead of seconds.
@@ -149,8 +160,9 @@ stage_baseline() {
 }
 
 stage_extract() {
-    say "extract: layer $LAYER"
-    st extract.py --bank "$BANK" --run "$RUNDIR" --layers "$LAYER" --split "$SPLIT" --out "$ACTS"
+    say "extract: layers $LAYERS, every site, top prelabel logits"
+    # shellcheck disable=SC2086
+    st extract.py --bank "$BANK" --run "$RUNDIR" --layers $LAYERS --split "$SPLIT" --out "$ACTS"
 }
 
 stage_audit() {
@@ -186,33 +198,59 @@ EOF
 }
 
 stage_draws() {
-    say "draws: shared random directions, layer $LAYER, label site (at least $DRAWS_MIN_ROWS fitted prompts)"
-    st ../evaluation/shared_draws.py make --activations "$ACTS" --bank "$BANK/prompts.jsonl" --model "$MODEL" \
-        --layer "$LAYER" --site label --min-rows "$DRAWS_MIN_ROWS" --out "$ROOT/steering/draws"
-    st ../evaluation/shared_draws.py verify --draws "$DRAWS" --activations "$ACTS" --bank "$BANK/prompts.jsonl"
+    local site
+    for site in $SITES; do
+        say "draws: shared random directions, layer $LAYER, $site site (at least $DRAWS_MIN_ROWS fitted prompts)"
+        st ../evaluation/shared_draws.py make --activations "$ACTS" --bank "$BANK/prompts.jsonl" --model "$MODEL" \
+            --layer "$LAYER" --site "$site" --min-rows "$DRAWS_MIN_ROWS" --out "$ROOT/steering/draws"
+        st ../evaluation/shared_draws.py verify --draws "$DRAWS/L${LAYER}_$site" --activations "$ACTS" \
+            --bank "$BANK/prompts.jsonl"
+    done
 }
 
 stage_fit() {
-    local draws=()
-    [ -d "$DRAWS" ] && draws=(--draws "$DRAWS")
-    say "fit: layer $LAYER ${draws[*]:+with the shared draws}"
-    st fit.py --activations "$ACTS" --bank "$BANK" --layer "$LAYER" "${draws[@]}"
+    local site draws
+    for site in $SITES; do
+        draws=()
+        [ -d "$DRAWS/L${LAYER}_$site" ] && draws=(--draws "$DRAWS/L${LAYER}_$site")
+        say "fit: layer $LAYER, $site site ${draws[*]:+with the shared draws}"
+        st fit.py --activations "$ACTS" --bank "$BANK" --layer "$LAYER" --site "$site" "${draws[@]}"
+    done
 }
 
 stage_bundle() {
-    say "bundle"
-    st bundle.py --fit "$FITS/default/L${LAYER}_label" --activations "$ACTS"
+    local site
+    for site in $SITES; do
+        say "bundle: $site site"
+        st bundle.py --fit "$FITS/default/L${LAYER}_$site" --activations "$ACTS"
+    done
 }
 
 stage_method() {
-    local d found=0
-    for d in "$ROOT/steering/methods/$SHORT"/*__"${NAME}"__default__L"${LAYER}"_label; do
-        [ -d "$d" ] || continue
-        found=$((found + 1))
-        say "method: check_hook --method $(basename "$d" | sed 's/__.*//')"
-        st tools/check_hook.py --method "$d" --bank "$BANK" --n 4 --max-new-tokens 64 "${HOW[@]}"
+    # A label-site bundle is checked as it declares itself (every token), on short replies. A prelabel-site bundle is
+    # checked with the edit at the prelabel token only, the one token whose edit can change the choice. That needs
+    # whole replies (the label must be reached), which with thinking on is minutes per bundle, so only the methods in
+    # $PRELABEL_CHECK are checked there: one linear method and one curve method cover both kinds of edit.
+    # Every bundle is run even after a failure; the stage fails at the end if any did.
+    local site d m found failed=() args
+    for site in $SITES; do
+        found=0
+        for d in "$ROOT/steering/methods/$SHORT"/*__"${NAME}"__default__L"${LAYER}"_"$site"; do
+            [ -d "$d" ] || continue
+            found=$((found + 1))
+            m=$(basename "$d" | sed 's/__.*//')
+            args=(--max-new-tokens 64)
+            if [ "$site" = prelabel ]; then
+                case " $PRELABEL_CHECK " in *" all "*|*" $m "*) ;; *) echo "not checked on the model: $m ($site site)"; continue;; esac
+                args=(--max-new-tokens "$MAX_NEW" --positions prelabel)
+            fi
+            say "method: check_hook --method $m ($site site) ${args[*]}"
+            st tools/check_hook.py --method "$d" --bank "$BANK" --n 4 "${HOW[@]}" "${args[@]}" || failed+=("$m@$site")
+        done
+        [ "$found" -ge 3 ] || failed+=("only $found $site-site bundles of this run found")
     done
-    [ "$found" -ge 3 ] || { echo "only $found bundles of this run found (expected caa and the curve methods at least)"; exit 1; }
+    [ ${#failed[@]} -eq 0 ] || { echo "method checks FAILED: ${failed[*]}"; exit 1; }
+    echo "method checks: all passed"
 }
 
 stage_sums() {

@@ -5,7 +5,7 @@ Replies are built the way a model's generated ids look: thinking, the end-of-thi
 
 import pytest
 
-from steer.sites import locate_label
+from steer.sites import LabelSite, locate_label, replay_sites
 
 
 def tokenizer(model_id):
@@ -124,3 +124,32 @@ def test_horizon_span_refuses_ambiguous_text():
         with pytest.raises(ValueError) as e:
             horizon_char_span(bad, "3 months")
         print(f"{why}: {e.value}")
+
+
+@pytest.mark.parametrize("model_id", list(FAMILIES))
+def test_replay_sites_on_a_thinking_reply(model_id):
+    """The four extraction sites of a replayed sequence = prompt ids + generated ids up to the label."""
+    tok = tokenizer(model_id)
+    prompt_ids = tok.encode("PROMPT: pick one.\n", add_special_tokens=False)
+    gen = reply_ids(tok, model_id, "Compare the two. I choose: a) maybe.", "\n\nI choose: b). My reasoning: x.")
+    site = locate_label(tok, gen, ("a)", "b)"), thinking=True)
+    ids = prompt_ids + gen[:site.label_index + 1]
+    where = replay_sites(len(prompt_ids), site, thinking=True)
+    shown = {name: tok.decode([ids[k]]) for name, k in where.items()}
+    print(f"{model_id}: {len(prompt_ids)} prompt + {site.label_index + 1} generated tokens; sites {where}, tokens {shown}")
+    assert where["label"] == len(ids) - 1 and where["prelabel"] == len(ids) - 2
+    assert ids[where["prompt_end"]] == prompt_ids[-1] and where["prompt_end"] + 1 == len(prompt_ids)
+    assert shown["think_end"] == FAMILIES[model_id][1]                  # the end-of-thinking token itself
+    assert "b" in shown["label"] and "choose" in tok.decode(ids[where["think_end"] + 1:where["prelabel"] + 1])
+
+
+def test_replay_sites_thinking_off_and_refusals():
+    first = replay_sites(10, LabelSite(label_index=0, answer_start=0, label_char="a"), thinking=False)
+    later = replay_sites(10, LabelSite(label_index=3, answer_start=0, label_char="a"), thinking=False)
+    print(f"label as the first generated token: {first}; as the fourth: {later}")
+    assert first == {"label": 10, "prelabel": 9, "prompt_end": 9}      # prelabel is then the prompt's last token
+    assert later == {"label": 13, "prelabel": 12, "prompt_end": 9} and "think_end" not in later
+    with pytest.raises(ValueError, match="end-of-thinking"):
+        replay_sites(10, LabelSite(label_index=3, answer_start=0, label_char="a"), thinking=True)
+    with pytest.raises(ValueError, match="out of order"):                # the label inside the thinking
+        replay_sites(10, LabelSite(label_index=2, answer_start=5, label_char="a"), thinking=True)
