@@ -369,3 +369,73 @@ step crosses; specific = curve minus random, in units of the type's own contrast
 3. Distance as a predictor is not supported at the answer slot. If it matters, it should show where
    format changes the input: steering before the reasoning (E13-style, at the suffix), where §7's
    distances are measured. That costs about 10x more (generation).
+
+## 9. E21: cheap variants of the answer-slot edit (2026-11-22, RTX 4090 in Quebec, $0.63)
+
+**Why.** E19's L24 curve step transfers to the eval types but barely moves a reasoned answer. Five
+cheap variants at the same site (the pre-label token, same rows and saved reasoning as E19, one-token
+passes on a cached prefix, no generation) ask how to make it stronger and whether the answer needs the
+horizon there at all. Code: `exp21_evaltypes_variants.py`, analysis `pipeline/s3_analysis/eval_types_variants.py`,
+results `~/SPAR/results/horizon/exp21_Qwen3-8B_evaltypes/eval_variants.{md,json}`. Unsteered scores
+match E19 exactly; steered ones differ by 0.01 logits on average (bf16 rounding of a refitted basis).
+
+**Readouts, fixed before the run** (gated types, effect toward the newly rational answer in units of
+each type's contrast, mean over types with 95% CI over types):
+
+| test | thinking off (13 gated types) | thinking on (19 gated) |
+|---|---|---|
+| dose: L24 curve 2 decades / 4 decades | +0.28 / +0.19 (ratio 0.68) | +0.10 / +0.05 (ratio 0.47) |
+| random 0 at 4 decades, largest type | 0.05 (clean) | 0.03 (clean) |
+| curve / mean difference (CAA) / probe line, 2 decades | +0.28 / −0.04 / +0.01 | +0.10 / −0.07 / −0.00 |
+| curve minus CAA | +0.33 [+0.23, +0.43] | +0.17 [+0.12, +0.23] |
+| curve by layer, L16 / 20 / 22 / 24 / 26 / 28 / 32 | .00 / .01 / .09 / **.28** / .14 / .06 / .06 | .00 / .01 / .04 / **.10** / .07 / .05 / .04 |
+| stacked L22+24+26+28, 2 decades each | **+0.47** [+0.36, +0.59] | **+0.25** [+0.21, +0.30] |
+| removal (k = 8): types where the horizon subspace removes more than 3 random ones | 13/13 | 19/19 |
+
+Flips on gated rows that chose the old rational answer: thinking off 71/308 at L24 ±2, 37/308 at ±4,
+133/308 stacked; thinking on **8/456 at L24 ±2, 2/456 at ±4, 50/456 stacked** (median shift 2.0, 1.0
+and 5.8 logits).
+
+**Findings**
+- **Bigger steps along the curve do worse, not better.** At ±4 decades the effect falls to 0.5-0.7 of
+  the ±2 effect, in both modes and almost every type, while random ±4 stays at the noise floor (so it is
+  not damage). The steps that rows actually get at ±4 average 3.0-3.7 decades (the curve ends at the
+  bank's shortest and longest horizons). A likely cause, untested: the curve's far ends are not just
+  "more horizon". In the bank every very short horizon is a `both` prompt, so its average there also
+  carries "neither option arrives", which the model answers like a long horizon (the same confound
+  that turns CAA around, E20 page).
+- **The curve's shape matters; a straight line does not work.** CAA (long minus short average) pushes
+  the wrong way in 18 of 19 gated types thinking on, as on the bank. The probe line is inert, as on the
+  bank. The curve beats CAA by +0.33 (off) and +0.17 (on), CIs well clear of 0.
+- **L24 is the layer, in both modes and every type.** Steering at L16 and L20 does nothing, L22 a third
+  of L24, and the effect decays after L26. This matches where answer-slot patching starts to transfer
+  (E19 onset L24-25).
+- **Stacking L22-L28 is the strongest variant, and the only one that flips reasoned answers.** It
+  roughly doubles the thinking-off effect and makes thinking on 2.5x stronger (+0.25), flipping 11% of
+  rows (50/456) against 2% at L24 alone. Still small against the E20 phrase donor patch (27-100% of
+  rows flipped).
+- **The answer token needs the horizon subspace.** Mean-ablating the top 8 horizon directions at L24
+  removes 0.34-0.50 of the near-minus-both contrast thinking on in every gated type, and 0.11-0.49
+  thinking off; three random 8-dim subspaces remove at most 0.02. With k = 2 it is already 0.16-0.30
+  thinking on. Caveat: E8 found part of the decision direction inside this subspace, so this shows the
+  subspace carries what the answer reads, not that the horizon alone does.
+- **`coding_agent` needs the subspace but does not follow the curve.** Removal takes 0.39 of its
+  contrast thinking on (k = 8), like other types, yet the curve does nothing at any layer (stacked:
+  +0.09). So its answer reads these directions, but moving along the bank's curve from the row's stated
+  horizon does not move it toward the rational answer. A guess, untested: its states sit elsewhere in
+  the subspace than the bank curve predicts for its horizon.
+- **Gate failures behave as expected.** Thinking-off sycophancy moves the wrong way (the answer follows
+  the user's lean); `unit_mismatch` thinking off shows huge contrast-scaled effects only because its
+  contrast is tiny (it fails the gate).
+
+**Cost.** $0.63 for 1.55 h at $0.401/hr, of which the run used about 20 min. About an hour was lost to
+a failed launch (`python` is not on the box's login PATH; use `/venv/main/bin/python`) that my wait
+loop did not catch. Session total with E19: $0.81 of $1.50.
+
+**What to do next** (each needs a spec)
+1. A stacked dose at ±1 and over more layers (L22-L30) thinking on, since stacking is the one lever that
+   grows, and ±1 per layer may avoid the curve's far end.
+2. `coding_agent`: read its L24 states in curve coordinates (saved activations, CPU) to check whether
+   they sit where the bank curve predicts for their horizon.
+3. Separate horizon from decision in the removal: ablate the horizon subspace without E8's decision
+   direction, as E8's T2 did on the bank.
