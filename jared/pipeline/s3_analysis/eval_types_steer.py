@@ -71,16 +71,16 @@ def baseline(rows):
     return out
 
 
-def crossing(rows, direction):
+def crossing(rows, direction, step=2):
     """Per row, (toward, flipped) under `direction`, on the rows the step crosses: near rows at
-    +2 decades, both rows at -2. `toward` is in log-odds, positive toward the newly rational option;
-    `flipped` is None when the row already chose that option unsteered."""
+    +step decades, both rows at -step. `toward` is in log-odds, positive toward the newly rational
+    option; `flipped` is None when the row already chose that option unsteered."""
     out = []
     for r in rows:
         if r["regime"] == "near":
-            edited, sign = r[f"{direction} +2"], -1.0    # longer horizon: toward far, near log-odds down
+            edited, sign = r[f"{direction} {step:+d}"], -1.0    # longer horizon: toward far, near log-odds down
         else:
-            edited, sign = r[f"{direction} -2"], 1.0     # shorter horizon: toward near, near log-odds up
+            edited, sign = r[f"{direction} {-step:+d}"], 1.0    # shorter horizon: toward near, near log-odds up
         toward = sign * (edited - r["base"])
         chose_old_rational = (r["base"] > 0) == (r["regime"] == "near")
         flipped = (edited > 0) != (r["base"] > 0) if chose_old_rational else None

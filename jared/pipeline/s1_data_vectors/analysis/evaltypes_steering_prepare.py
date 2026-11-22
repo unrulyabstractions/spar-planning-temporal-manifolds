@@ -4,8 +4,9 @@ eval-type prompts to steer with them, in both modes.
     python -m pipeline.s1_data_vectors.analysis.evaltypes_steering_prepare ~/SPAR/results/horizon
     -> jared/steering/inputs_Qwen3-8B_evaltypes.npz and .json   (shipped to the box by `just push`)
 
-Cells: `fit_cell` on the full bank's saved activations at the pre-label token, L24, thinking off and
-on: the vectors E8 steered with (`steering_prepare` defaults, without the decision split).
+Cells: `fit_cell` on the full bank's saved activations at the pre-label token, thinking off and on,
+at L24 (the vectors E8 steered with, `steering_prepare` defaults without the decision split) and the
+other LAYERS of E21's sweep.
 
 Rows: the near- and both-regime rows (base, swap and twin) of every eval type whose answer is a or
 b after "I choose:" and whose rational answer follows the horizon rule (so not `loss_framing`).
@@ -33,7 +34,9 @@ from spar_horizon.model_io import cache_load, label_ids, think_end_id
 from spar_horizon.steering import encode, fit_cell
 
 MODEL = "Qwen/Qwen3-8B"
-CELLS = (("off", "pre-label", 24), ("on", "pre-label", 24))
+# L24 is the cell E19 steers at; the others are E21's layer sweep
+LAYERS = (16, 20, 22, 24, 26, 28, 32)
+CELLS = tuple((mode, "pre-label", layer) for mode in ("off", "on") for layer in LAYERS)
 PREFIX = "I choose:"
 EXCLUDED = {"loss_framing": "costs: a longer horizon makes the near option rational, the reverse of the rule"}
 REGIMES = ("near", "both")

@@ -10,7 +10,7 @@ Outcome: the near-option log-odds, logit(near label) - logit(far label), read
 at the last position of each sequence in one forward pass.
 """
 
-from contextlib import contextmanager, nullcontext
+from contextlib import ExitStack, contextmanager, nullcontext
 
 import numpy as np
 import torch
@@ -176,7 +176,9 @@ def score(model, device, id_lists, near_first, labels, pad_id, batch_size,
 @torch.no_grad()
 def score_last_edits(model, device, id_lists, near_first, labels, pad_id, batch_size, edits):
     """Near log-odds [len(edits), n] for edits at the last position only. `edits`
-    holds (layer, make_edit) pairs, or None for the unedited sequences. A causal
+    holds (layer, make_edit) pairs, or None for the unedited sequences. `layer` may
+    also be a tuple of layers, edited in one pass: make_edit(rows) then returns one
+    edit per layer, in the same order. A causal
     model's states before the last position do not depend on an edit there, so
     each batch's prefix (all but the last token) runs once and its key/value cache
     serves every edit, which then costs a one-token pass. Equals score() per edit;
@@ -185,6 +187,8 @@ def score_last_edits(model, device, id_lists, near_first, labels, pad_id, batch_
     cache holds a running state that cannot be cropped back to the prefix."""
     layer_types = getattr(model.config.get_text_config(), "layer_types", None) or ["full_attention"]
     if any(t != "full_attention" for t in layer_types):
+        if any(spec is not None and isinstance(spec[0], tuple) for spec in edits):
+            raise NotImplementedError("several layers per edit need the prefix-cache path (full-attention models)")
         last = [[len(seq) - 1] for seq in id_lists]
         return np.stack([score(model, device, id_lists, near_first, labels, pad_id, batch_size)
                          if spec is None else
@@ -204,8 +208,12 @@ def score_last_edits(model, device, id_lists, near_first, labels, pad_id, batch_
         # left padding puts every row's last token in the last column: slot 0 of the one-token pass
         index, mask = torch.zeros((len(rows), 1), dtype=torch.long, device=device), one.expand(len(rows), 1)
         for e, spec in enumerate(edits):
-            context = nullcontext() if spec is None else edit_residual(model, spec[0], index, mask, spec[1](rows))
-            with context:
+            with ExitStack() as hooks:
+                if spec is not None and isinstance(spec[0], tuple):
+                    for layer, edit in zip(spec[0], spec[1](rows), strict=True):
+                        hooks.enter_context(edit_residual(model, layer, index, mask, edit))
+                elif spec is not None:
+                    hooks.enter_context(edit_residual(model, spec[0], index, mask, spec[1](rows)))
                 logits = model(input_ids=ids[:, -1:], attention_mask=attention, position_ids=position_ids[:, -1:],
                                past_key_values=cache, use_cache=True, logits_to_keep=1).logits[:, -1].float()
             # drop the edited last token, so the next edit sees only the prefix; a negative count,

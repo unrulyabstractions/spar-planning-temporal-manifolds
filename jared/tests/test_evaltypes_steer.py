@@ -51,7 +51,7 @@ def write_inputs(tmp_path):
 
 def test_load_and_limit(tmp_path):
     meta, cells, seq = load(write_inputs(tmp_path))
-    assert cells["off"]["basis"].shape == (2, 8) and cells["on"]["b"] == 0.0
+    assert cells["off", 24]["basis"].shape == (2, 8) and cells["on", 24]["b"] == 0.0
     ids, labels, rows = seq["on"]
     assert ids == [[10, 20], [12, 22]] and rows == [0, 2] and labels == [(64, 65)] * 2
     small = limited(meta, seq, 1)

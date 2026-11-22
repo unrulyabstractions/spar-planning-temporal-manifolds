@@ -36,15 +36,15 @@ LAYER = 24
 
 
 def load(path):
-    """meta, cells {mode: arrays}, sequences {mode: (ids lists, labels, row index)}."""
+    """meta, cells {(mode, layer): arrays}, sequences {mode: (ids lists, labels, row index)}."""
     path = Path(path)
     meta = json.loads(path.with_suffix(".json").read_text())
     z = np.load(path)
     cells = {}
     for c in meta["cells"]:
         key = f"{c['mode']}|{c['label']}|{c['layer']}"
-        cells[c["mode"]] = {name: z[f"{key}|{name}"] for name in ("mean", "w", "basis", "curve_logh", "curve_coords", "caa")}
-        cells[c["mode"]]["b"] = float(z[f"{key}|b"])
+        cell = {name: z[f"{key}|{name}"] for name in ("mean", "w", "basis", "curve_logh", "curve_coords", "caa")}
+        cells[c["mode"], c["layer"]] = {**cell, "b": float(z[f"{key}|b"])}
     sequences = {}
     for mode in ("off", "on"):
         offsets = z[f"{mode}|offsets"]
@@ -114,7 +114,7 @@ def main(args):
         t0 = time.time()
         stamp(f"thinking {mode}: {len(ids)} rows ...")
         batch = args.batch_size if mode == "off" else args.long_batch_size
-        results["modes"][mode] = run_mode(runner, mode, cells[mode], meta, ids, labels, rows, batch,
+        results["modes"][mode] = run_mode(runner, mode, cells[mode, LAYER], meta, ids, labels, rows, batch,
                                           patch=not args.no_patch)
         results["phases"][mode] = round(time.time() - t0, 1)
         stamp(f"thinking {mode} done, {results['phases'][mode]} s")

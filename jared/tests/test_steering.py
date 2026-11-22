@@ -376,6 +376,28 @@ def test_last_position_edits_through_the_prefix_cache_equal_full_passes(tiny):
     np.testing.assert_allclose(reversed_order[::-1], cached, atol=1e-5)
 
 
+def test_last_position_edits_at_several_layers_at_once(tiny):
+    """A tuple of layers edits all of them in one pass: equal to the single-layer edit for a
+    one-layer tuple, and to a full pass with both hooks nested for two layers."""
+    near_first = [True, False, True]
+    gen = torch.Generator().manual_seed(2)
+    d1, d2 = torch.randn(3, 32, generator=gen), torch.randn(3, 32, generator=gen)
+    edits = [(1, lambda rows: S.Add(d1[rows])), ((1,), lambda rows: (S.Add(d1[rows]),)),
+             ((1, 2), lambda rows: (S.Add(d1[rows]), S.Add(d2[rows]))),
+             (2, lambda rows: S.Add(d2[rows]))]
+    cached = S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=edits)
+    np.testing.assert_allclose(cached[1], cached[0], atol=1e-6)
+    one = torch.ones((1, 1), dtype=torch.bool)
+    for r, seq in enumerate(SEQS):
+        last = torch.tensor([[len(seq) - 1]])
+        with S.edit_residual(tiny, 1, last, one, S.Add(d1[[r]])):
+            both = S.score(tiny, "cpu", [seq], [near_first[r]], [LABELS], PAD, batch_size=1, layer=2,
+                           positions=[[len(seq) - 1]], make_edit=lambda rows: S.Add(d2[[r]]))
+        np.testing.assert_allclose(cached[2, r], both[0], atol=1e-5)
+    # both layers act: the stacked result differs from either layer alone
+    assert np.abs(cached[2] - cached[0]).max() > 1e-4 and np.abs(cached[2] - cached[3]).max() > 1e-4
+
+
 def test_models_with_linear_attention_fall_back_to_full_passes(tiny, monkeypatch):
     """A recurrent layer's cache cannot be cropped, so score_last_edits must not use it."""
     monkeypatch.setattr(tiny.config, "layer_types", ["full_attention", "linear_attention", "full_attention"])
