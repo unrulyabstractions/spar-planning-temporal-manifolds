@@ -141,8 +141,17 @@ other domains, implied horizons, distractors; `jared/EvalsPromptTypes.md` on bra
 # in jared/ on jared-eval-types: one bank per eval type
 python -m pipeline.s1_data_vectors.analysis.export_evaltype_banks     # -> ~/SPAR/results/horizon/evaltype_banks/
 # then, with the T0 run
-TRANSFER=1 evaluation/run_local.sh                                    # TRANSFER_TYPES="t0_w0 coding_agent": a subset
+TRANSFER=1 TRANSFER_SET=transfer_sets/pilot_3types.json evaluation/run_local.sh   # the 300-prompt pilot
+TRANSFER=1 evaluation/run_local.sh                                    # everything: 19 types, 2,630 prompts, every arm
 ```
+
+- **Check sets: what to run, in one file.** `transfer_sets/<name>.json` picks the types (each with the result you
+  expect, printed beside its numbers), the regimes and variants, a cap on rows per type, the arms (names, families or
+  methods, e.g. `["caa", "curve-displace", "isotropic", "shuffled:caa"]`) and K. Rows are taken as whole items (base,
+  swap and twin together) in bank order, which alternates near and both items. Outputs go to `transfer/<name>/`, so a
+  pilot and the full run never share a baseline. Unknown keys are refused. `pilot_3types.json`: `system_prompt`
+  (expected to work), `prose_natural` (might work), `coding_agent` (not expected to work), 100 rows each: 20 near and
+  20 both items with their swaps, and twins for the first 10 per regime.
 
 - **Banks.** pbank's schema, tier `evaltype`, split `transfer`. Fitting, calibration and the shared draws take only split
   `extraction`, and the T0 replay only `verification`, so these prompts never reach them. The eval-type record (type,
@@ -168,11 +177,12 @@ TRANSFER=1 evaluation/run_local.sh                                    # TRANSFER
   meaning and odd first.
 - **Cost.** The 19 exported types hold 2,630 `near_only`/`both` prompts, about 13 × T0's grid, and every arm is replayed
   on each; the shuffled refits are redone per type. With thinking on, the baseline dominates (at the 75 s per prompt
-  measured for Gemma 4 31B in `prompt_bank/README.md`, about 55 GPU-hours). `TRANSFER_TYPES` runs a subset.
+  measured for Gemma 4 31B in `prompt_bank/README.md`, about 55 GPU-hours); the pilot set is about a ninth of that.
 
 Tests: `python -m pytest -q test_transfer_eval.py` (conversation rendering on the real Qwen3 tokenizer, the baseline
 with a fake model, the replay stage on the transfer split with fake edits, the report on hand-made arm results, and
-analyze.py's report card after its refactor into `arm_results` / `compare_to_nulls`).
+analyze.py's report card after its refactor into `arm_results` / `compare_to_nulls`, check-set loading, row and arm
+selection, and the pilot set's row counts on the exported banks when they are present).
 
 ## Loop check: `check_loops.py`
 

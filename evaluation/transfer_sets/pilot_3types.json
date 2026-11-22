@@ -1,0 +1,11 @@
+{
+  "description": "Pilot, 300 prompts: one eval type per expectation, chosen from Qwen3-8B's steering and patching results (jared/EvalsPromptsV2.md sections 8-9, EvalsSteeringResults.md). 20 near and 20 both items per type with their swaps, and the first 10 per regime with their T0-template twins (each type's own positive control).",
+  "types": {
+    "system_prompt": "expected to work (ranked 1st: phrase donor flips 0.90, answer-slot patch 0.48, stacked steer 0.38)",
+    "prose_natural": "might work (ranked 12th of 19: patch 0.53, stacked steer 0.24, curve steer 0.07 thinking on)",
+    "coding_agent": "not expected to work (ranked last: patching moves it, the bank's curve does not, stacked steer 0.09)"
+  },
+  "regimes": ["near_only", "both"],
+  "variants": ["base", "swap", "twin"],
+  "rows_per_type": 100
+}

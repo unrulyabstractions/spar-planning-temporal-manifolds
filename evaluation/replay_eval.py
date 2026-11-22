@@ -421,7 +421,8 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     return cal
 
 
-def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "verification") -> None:
+def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "verification", keep_arm=None) -> None:
+    """keep_arm(arm) -> bool picks the arms to run (default: every arm of build_arms)."""
     out = Path(args.out)
     adir = out / "arms"
     adir.mkdir(exist_ok=True)
@@ -439,7 +440,7 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "veri
                                           "replay_matches_generated_choice": agrees})
         print(f"N0: zero edit vs hook-free max |diff| {max(map(abs, diffs)) if diffs else float('nan'):.3g}; "
               f"unsteered replay picks the generated label on {agrees:.1%} of items")
-    arms = build_arms(args, cal)
+    arms = [a for a in build_arms(args, cal) if keep_arm is None or keep_arm(a)]
     with open(out / "arms.jsonl", "w") as f:
         for a in arms:
             f.write(json.dumps(a) + "\n")

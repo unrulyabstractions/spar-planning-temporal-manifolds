@@ -18,6 +18,19 @@ Once, over all types:
             explicit twins, the same options in the T0 template), beside the same numbers on T0's verification grid
             -> transfer_report.json, transfer_report.md
 
+What to run is chosen by a check set (`--set transfer_sets/<name>.json`, run_local.sh: TRANSFER_SET), so a pilot on a
+few hundred prompts and the full run differ by one file. Its keys, all optional except `types`:
+  types           {type_id: expectation}, e.g. "expected to work"; the expectation is printed beside the type's results
+  regimes         prompt regimes to run (default near_only and both, the only ones with a readout)
+  variants        eval-type variants: base, swap (the reversed option order), twin (the T0 template); default all
+  rows_per_type   at most this many rows per type, taken as whole items (an item's base, swap and twin together, so order
+                  pairs stay complete) in bank order, which alternates near and both items
+  arms            arm names, families or methods to replay (e.g. "caa", "curve-displace", "isotropic",
+                  "shuffled:caa"); default every arm
+  k               draws per null family (overrides --k)
+Outputs go to --out/<set name>/, so two sets never share a baseline run. Without --set, every near_only / both row of
+every bank (or of --types) runs, with every arm.
+
 Usage: see run_local.sh (TRANSFER=1).
 """
 
@@ -40,6 +53,51 @@ STATS = ("meaning", "odd_mean", "delta_log10_H")
 SWITCH_KEYS = ("delta_log10_H", "switch_loc_plus", "switch_loc_minus", "slope_plus", "slope_minus",
                "plateau_low_plus", "plateau_high_plus", "plateau_low_minus", "plateau_high_minus")
 GROUPS = {"prompts": ("base", "swap"), "twins": ("twin",)}
+SET_KEYS = {"description", "types", "regimes", "variants", "rows_per_type", "arms", "k"}
+
+
+# ------------------------------------------------------------------ check sets
+
+def load_set(path: Path) -> dict:
+    """A check set (module docstring); refuses unknown keys, so a typo cannot silently run everything."""
+    sel = json.loads(Path(path).read_text())
+    unknown = set(sel) - SET_KEYS
+    if unknown:
+        sys.exit(f"{path}: unknown keys {sorted(unknown)}; allowed: {sorted(SET_KEYS)}")
+    if not isinstance(sel.get("types"), dict) or not sel["types"]:
+        sys.exit(f"{path}: `types` must map each type_id to its expectation")
+    bad = set(sel.get("regimes", ())) - set(rv.SCORED)
+    if bad:
+        sys.exit(f"{path}: regimes {sorted(bad)} have no readout; choose from {list(rv.SCORED)}")
+    return sel
+
+
+def select_rows(rows: list[dict], sel: dict) -> list[dict]:
+    """The bank rows a check set runs: its regimes and variants, then whole items in bank order up to rows_per_type."""
+    regimes = sel.get("regimes", rv.SCORED)
+    variants = sel.get("variants", ("base", "swap", "twin"))
+    rows = [r for r in rows if r["regime"] in regimes and r["notes"]["variant"] in variants]
+    limit = sel.get("rows_per_type")
+    if limit is None:
+        return rows
+    items = {}
+    for r in rows:
+        items.setdefault(r["notes"]["twin_id"], []).append(r)
+    chosen = []
+    for item_rows in items.values():
+        if len(chosen) + len(item_rows) > limit:
+            break
+        chosen += item_rows
+    return chosen
+
+
+def arm_selected(arm: dict, wanted) -> bool:
+    """Whether a check set's `arms` list names this arm, its family or its method (the name before "[" or "@");
+    None selects every arm."""
+    if wanted is None:
+        return True
+    names = {arm["arm"], arm["family"], arm["arm"].split("[")[0].split("@")[0]}
+    return bool(names & set(wanted))
 
 
 # ------------------------------------------------------------------ model input
@@ -84,15 +142,17 @@ def inputs_sha256(rows: list[dict]) -> str:
     return h.hexdigest()
 
 
-def stage_baseline(bank_dir: Path, run_dir: Path, lcm, settings: dict) -> None:
-    """Unsteered replies to the bank's near_only / both prompts; resumes, refuses a run with other settings."""
+def stage_baseline(bank_dir: Path, run_dir: Path, lcm, settings: dict, sel: dict | None = None) -> None:
+    """Unsteered replies to the bank rows the check set selects (default: every near_only / both prompt); resumes,
+    refuses a run with other settings."""
     from pbank.answers import parse_choice, score
     from pbank.records import append_jsonl, record_from_dict
-    rows = [r for r in rv.read_jsonl(bank_dir / "prompts.jsonl") if r["regime"] in rv.SCORED]
+    rows = select_rows(rv.read_jsonl(bank_dir / "prompts.jsonl"), sel or {})
     run_settings = {"model": settings["model_id"], "bank_inputs_sha256": inputs_sha256(rows),
                     "thinking": settings["thinking"], "max_new_tokens": settings["max_new_tokens"],
                     "batch_size": settings["batch_size"], "decoding": "greedy",
-                    "prompt": "notes.messages when present, else text", "regimes": list(rv.SCORED)}
+                    "prompt": "notes.messages when present, else text", "n_rows": len(rows),
+                    "selection": {k: v for k, v in (sel or {}).items() if k in ("regimes", "variants", "rows_per_type")}}
     run_json = run_dir / "run.json"
     if run_json.exists():
         previous = json.loads(run_json.read_text())["settings"]
@@ -192,10 +252,14 @@ def report_md(rep: dict) -> str:
          "- meaning: order-balanced effect on the base/swap pairs (40 per type); odd: mean odd part over all items; "
          f"Δlog10 H*: switch-point shift, only where ≥ {SWITCH_MIN} readable items have each correct option.",
          "- unsteered acc: share of items whose unsteered replay prefers the correct option."]
+    if rep["set"]:
+        L.append(f"- Check set `{rep['set']['name']}`: {rep['set'].get('description', '')}")
+        L += [f"  - {t}: {why}" for t, why in rep["set"]["types"].items()]
     if rep["skipped_types"]:
         L.append("- Not run: " + "; ".join(f"{t} ({why})" for t, why in rep["skipped_types"].items()))
+    expect = rep["set"]["types"] if rep["set"] else {}
     rows = [("T0 verification grid", "grid", rep["t0"])] + [
-        (t, g, s) for t, groups in rep["types"].items() for g, s in groups.items()]
+        (f"{t} ({expect[t]})" if t in expect else t, g, s) for t, groups in rep["types"].items() for g, s in groups.items()]
     L += ["", "## Summary", "",
           "| bank | group | n (unreadable) | unsteered mass / acc | method | meaning | odd | Δlog10 H* | "
           "label mass ± | max p over nulls (meaning / odd) |", "|---|---|---|---|---|---|---|---|---|---|"]
@@ -226,11 +290,12 @@ def report_md(rep: dict) -> str:
     return "\n".join(L) + "\n"
 
 
-def stage_report(args, types: list[str], skipped_types: dict) -> dict:
+def stage_report(args, types: list[str], skipped_types: dict, sel: dict | None = None) -> dict:
     out = Path(args.out)
     t0_out = Path(args.t0_out)
     cal = json.loads((t0_out / "calibration.json").read_text())
     rep = {"frozen": {"from": str(t0_out / "calibration.json"), "x_push": cal["x_push"], "x_shift": cal["x_shift"]},
+           "set": {"name": out.name, **sel} if sel else None,
            "t0": t0_summary(t0_out), "types": {}, "skipped_types": dict(skipped_types)}
     for t in types:
         if t in skipped_types:
@@ -265,7 +330,8 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("stages", nargs="+", choices=["baseline", "items", "replay", "report"])
     p.add_argument("--banks", required=True, help="export_evaltype_banks.py's output: one <type_id>/ bank per type")
-    p.add_argument("--types", nargs="+", help="default: every bank under --banks")
+    p.add_argument("--types", nargs="+", help="default: every bank under --banks (not with --set)")
+    p.add_argument("--set", help="a check set, transfer_sets/<name>.json (module docstring); outputs go to --out/<name>/")
     p.add_argument("--t0-bank", required=True), p.add_argument("--t0-run", required=True)
     p.add_argument("--t0-out", required=True, help="replay_eval.py's output on T0 (calibration.json, items, arms)")
     p.add_argument("--activations", required=True), p.add_argument("--methods", required=True)
@@ -273,10 +339,18 @@ def main(argv=None):
     p.add_argument("--k", type=int, default=rv.sd.K_GEN, help="draws per null family (rows [:k] of the shared draws)")
     p.add_argument("--n0-check", type=int, default=8)
     args = p.parse_args(argv)
+    sel = {}
+    if args.set:
+        if args.types:
+            sys.exit("--types and --set: list the types in the set instead")
+        sel = load_set(Path(args.set))
+        args.out = str(Path(args.out) / Path(args.set).stem)
+        args.k = sel.get("k", args.k)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     banks = Path(args.banks)
-    types = args.types or sorted(d.name for d in banks.iterdir() if (d / "prompts.jsonl").exists())
+    types = list(sel["types"]) if sel else (
+        args.types or sorted(d.name for d in banks.iterdir() if (d / "prompts.jsonl").exists()))
     skipped_types = {t: "no bank" for t in types if not (banks / t / "prompts.jsonl").exists()}
     cal_path = Path(args.t0_out) / "calibration.json"
     if not cal_path.exists():
@@ -295,7 +369,7 @@ def main(argv=None):
             items_ns, replay_ns = type_args(args, t)
             Path(items_ns.out).mkdir(parents=True, exist_ok=True)
             if "baseline" in args.stages:
-                stage_baseline(Path(items_ns.bank), Path(items_ns.run), M.lcm, settings)
+                stage_baseline(Path(items_ns.bank), Path(items_ns.run), M.lcm, settings, sel)
             if not (Path(items_ns.run) / "responses.jsonl").exists():
                 skipped_types[t] = "no baseline run"
                 continue
@@ -303,9 +377,10 @@ def main(argv=None):
                 rv.build_items(items_ns, M, settings)
             if "replay" in args.stages:
                 rep = TransferReplayer(M, Path(items_ns.run), Path(items_ns.bank), settings["thinking"], layer)
-                rv.stage_replay(replay_ns, M, settings, rep, cal, split="transfer")
+                rv.stage_replay(replay_ns, M, settings, rep, cal, split="transfer",
+                                keep_arm=partial(arm_selected, wanted=sel.get("arms")))
     if "report" in args.stages:
-        stage_report(args, types, skipped_types)
+        stage_report(args, types, skipped_types, sel)
 
 
 if __name__ == "__main__":

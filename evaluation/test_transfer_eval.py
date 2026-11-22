@@ -292,3 +292,87 @@ def test_analyze_main_unchanged_on_t0(tmp_path):
     rep = json.loads((t0 / "report.json").read_text())
     assert rep["comparisons"]["caa"]["isotropic"]["meaning"]["p"] == pytest.approx(1 / (K + 1))
     assert set(rep["comparisons"]["caa"]["isotropic"]) == {"meaning", "delta_log10_H"}
+
+
+# ------------------------------------------------------------------ check sets
+
+def item_rows(k, regime, variants=("base", "swap", "twin")):
+    """One eval-type item's rows in the exporter's order."""
+    return [row(f"t_{k:03d}_{v}", regime=regime, variant=v, pair=f"t_{k:03d}") for v in variants]
+
+
+def test_select_rows_takes_whole_items_in_bank_order():
+    rows = (item_rows(0, "near_only") + item_rows(1, "both") + item_rows(2, "none")
+            + item_rows(3, "near_only", ("base", "swap")) + item_rows(4, "both", ("base",)))
+    assert [r["uid"] for r in te.select_rows(rows, {})] == [r["uid"] for r in rows if r["regime"] != "none"]
+    # 7 rows allowed: items 0, 1 (3 rows each) fit, item 3 (2 rows) would make 8, so the cut is before it
+    assert [r["uid"] for r in te.select_rows(rows, {"rows_per_type": 7})] == [
+        "t_000_base", "t_000_swap", "t_000_twin", "t_001_base", "t_001_swap", "t_001_twin"]
+    picked = te.select_rows(rows, {"variants": ["base", "swap"], "regimes": ["both"]})
+    assert [r["uid"] for r in picked] == ["t_001_base", "t_001_swap", "t_004_base"]
+
+
+def test_arm_selected_by_name_family_or_method():
+    arms = [{"arm": "caa", "family": "method"}, {"arm": "curve-snap", "family": "method"},
+            {"arm": "curve-snap@0", "family": "control"}, {"arm": "isotropic[3]", "family": "isotropic"},
+            {"arm": "shuffled:caa[1]", "family": "shuffled:caa"}, {"arm": "reward", "family": "control"}]
+    pick = lambda wanted: [a["arm"] for a in arms if te.arm_selected(a, wanted)]
+    assert pick(None) == [a["arm"] for a in arms]
+    assert pick(["caa", "isotropic"]) == ["caa", "isotropic[3]"]
+    assert pick(["curve-snap", "shuffled:caa"]) == ["curve-snap", "curve-snap@0", "shuffled:caa[1]"]
+    assert pick(["control"]) == ["curve-snap@0", "reward"]
+
+
+def test_load_set_refuses_what_it_cannot_run(tmp_path):
+    def write(sel):
+        (tmp_path / "s.json").write_text(json.dumps(sel))
+        return tmp_path / "s.json"
+    assert te.load_set(write({"types": {"toy": "expected to work"}, "rows_per_type": 4}))["rows_per_type"] == 4
+    for bad, why in (({"types": {"toy": "x"}, "row_per_type": 4}, "unknown keys"), ({"rows_per_type": 4}, "types"),
+                     ({"types": {"toy": "x"}, "regimes": ["none"]}, "no readout")):
+        with pytest.raises(SystemExit, match=why):
+            te.load_set(write(bad))
+
+
+def test_baseline_runs_only_the_selected_rows(tmp_path):
+    bank = tmp_path / "bank"
+    write_bank(bank, item_rows(0, "near_only") + item_rows(1, "both") + item_rows(2, "near_only"))
+    chat = FakeChat()
+    te.stage_baseline(bank, tmp_path / "run", chat, SETTINGS, {"variants": ["base", "swap"], "rows_per_type": 4})
+    assert chat.seen == ["prompt t_000_base", "prompt t_000_swap", "prompt t_001_base", "prompt t_001_swap"]
+    with pytest.raises(SystemExit):                      # another selection is another run: refused in this run dir
+        te.stage_baseline(bank, tmp_path / "run", chat, SETTINGS, {"rows_per_type": 4})
+
+
+def test_main_with_a_check_set(tmp_path):
+    """--set: its types only, outputs under --out/<set name>/, each type's expectation in the report."""
+    t0, banks, out = make_runs(tmp_path)               # results under tmp_path/transfer/<type>
+    (tmp_path / "t0run").mkdir()
+    (tmp_path / "t0run" / "run.json").write_text(json.dumps({"settings": {**SETTINGS, "model": "toy/model"}}))
+    sel = tmp_path / "transfer.json"
+    sel.write_text(json.dumps({"description": "toy pilot", "types": {"toy": "expected to work"}}))
+    common = ["--banks", str(banks), "--t0-bank", "b", "--t0-run", str(tmp_path / "t0run"), "--t0-out", str(t0),
+              "--activations", "a", "--methods", "m", "--draws", "d", "--out", str(tmp_path)]
+    te.main(["report", "--set", str(sel), *common])
+    rep = json.loads((out / "transfer_report.json").read_text())
+    assert set(rep["types"]) == {"toy"} and rep["set"]["name"] == "transfer"
+    md = (out / "transfer_report.md").read_text()
+    assert "| toy (expected to work) | prompts |" in md and "toy pilot" in md
+    with pytest.raises(SystemExit, match="--types and --set"):
+        te.main(["report", "--set", str(sel), "--types", "toy", *common])
+
+
+PILOT = Path(__file__).parent / "transfer_sets" / "pilot_3types.json"
+EXPORTED = Path.home() / "SPAR" / "results" / "horizon" / "evaltype_banks"
+
+
+@pytest.mark.skipif(not all((EXPORTED / t / "prompts.jsonl").exists()
+                            for t in json.loads(PILOT.read_text())["types"]), reason="eval-type banks not exported here")
+def test_pilot_set_on_the_exported_banks():
+    """The pilot is 300 prompts: per type 100 rows, 20 near and 20 both items, swaps for all and twins for 10 each."""
+    sel = te.load_set(PILOT)
+    for t in sel["types"]:
+        rows = te.select_rows(rv.read_jsonl(EXPORTED / t / "prompts.jsonl"), sel)
+        count = lambda regime, variant: sum(r["regime"] == regime and r["notes"]["variant"] == variant for r in rows)
+        assert len(rows) == 100, t
+        assert [count(g, v) for g in ("near_only", "both") for v in ("base", "swap", "twin")] == [20, 20, 10] * 2, t
