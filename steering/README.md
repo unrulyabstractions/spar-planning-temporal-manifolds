@@ -211,7 +211,8 @@ hook gate with the bundled method itself.
 
 ## Publishing outputs
 
-Where outputs are hosted is not decided yet, so there is one script per destination. They take the same paths:
+Outputs are hosted on Hugging Face (agreed with the evaluation team, 2026-11-19). There is one script per
+destination, and the GCS one remains available. They take the same paths:
 
 ```
 python tools/upload_hf.py  ../prompt_bank/runs/<run> activations/<run> fits/<run> methods/<model>     # dry run
