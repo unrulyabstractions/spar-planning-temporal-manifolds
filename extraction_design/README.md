@@ -592,7 +592,12 @@ crlf  version  setup  weights  tests  hook  horizon  baseline  extract  audit  d
 - **`draws`** runs the evaluation team's `shared_draws.py` and verifies its output; `fit` then uses the draws.
 - **`method`** runs the hook gate on every bundle of the run.
 
-- **Settings** come from the environment: `MODEL` (default Gemma 4 31B-it), `LAYER` (38), `N` (64 prompts), `BATCH`
+- **A smoke run is the default:** the first 64 extraction prompts. **The full run is `N=all SPLIT=all`:** all 700
+  prompts, with both splits extracted, which the evaluation runner needs (it reads the verification prompts' label
+  positions). Rehearsed locally on Qwen3.5-0.8B, thinking off: 700 prompts, 699 extracted (499 extraction, 200
+  verification; one reply had conflicting choices), 0 label sites not matching.
+- **Settings** come from the environment: `MODEL` (default Gemma 4 31B-it), `LAYER` (38), `N` (64 prompts, or `all`),
+  `SPLIT` (extraction), `BATCH`
   (8), `MAX_NEW` (4096), `RUN` (smoke), `THINKING` (on), `DECODING` (auto, as `baseline.py`), `SAMPLING` (extra
   sampling options for a model without a generation config) and `DRAWS_MIN_ROWS` (100).
 - **Rehearsed locally on 2026-11-22** in a copy without `.git`, on Qwen3.5-0.8B: every stage but `setup`, `weights`
@@ -798,8 +803,6 @@ against the real interfaces: <https://huggingface.co/datasets/CodeReclaimers/spa
 
 **To do:**
 - the full 700-prompt Gemma baseline, then `extract.py`, `shared_draws.py`, fit and bundles;
-- before it, `tools/vast_smoke.sh` must run all 700 prompts and extract both splits: today it takes the first `N`
-  extraction prompts and extracts the extraction split only;
 - upload the Gemma horizon activations;
 
 **Not built:**
