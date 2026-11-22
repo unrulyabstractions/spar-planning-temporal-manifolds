@@ -92,22 +92,25 @@ def arm_stats(items, y0, rec, x):
     return out
 
 
-def main(argv=None):
-    p = argparse.ArgumentParser()
-    p.add_argument("--out", required=True)
-    a = p.parse_args(argv)
-    out = Path(a.out)
-    items = [it for it in read_jsonl(out / "items.jsonl") if it["split"] == "verification"]
-    arms = read_jsonl(out / "arms.jsonl")
-    base = np.load(out / "arms" / "_none.npz")
-    y0 = base["y"]
-    logr = np.log10([it["h_over_far_delay"] for it in items])
-    loc0, s0 = fit_switch(logr, sigmoid(y0))
+def arm_results(out: Path, items, y0, keep=None) -> dict:
+    """arm_stats of every arm in arms.jsonl with saved results, on the items where the boolean mask `keep` is True
+    (all items when None)."""
+    if keep is not None:
+        items = [it for it, k in zip(items, keep) if k]
+        y0 = y0[keep]
     res = {}
-    for arm in arms:
+    for arm in read_jsonl(out / "arms.jsonl"):
         path = out / "arms" / (hashlib.sha1(arm["arm"].encode()).hexdigest()[:12] + ".npz")
         if path.exists():
-            res[arm["arm"]] = {**arm, **arm_stats(items, y0, dict(np.load(path)), arm["x"])}
+            rec = dict(np.load(path))
+            if keep is not None:
+                rec = {k: v[keep] for k, v in rec.items()}
+            res[arm["arm"]] = {**arm, **arm_stats(items, y0, rec, arm["x"])}
+    return res
+
+
+def compare_to_nulls(res: dict, stats=("meaning", "delta_log10_H")) -> dict:
+    """Each method and control (not curve-snap@0) ranked against every null family of its kind, per statistic."""
     fams = {}
     for r in res.values():
         if r["family"] not in ("method", "control"):
@@ -122,13 +125,28 @@ def main(argv=None):
                 continue
             if (r["kind"] == "target") != (rows[0]["kind"] == "target"):
                 continue                           # push methods vs push nulls; curves vs shuffled curves
-            for stat in ("meaning", "delta_log10_H"):
+            for stat in stats:
                 null = np.array([q.get(stat, np.nan) for q in rows], float)
                 null = null[np.isfinite(null)]
                 if len(null) and np.isfinite(r.get(stat, np.nan)):
                     comps[name].setdefault(fam, {})[stat] = {
                         "stat": r[stat], "p": nulls.rank_p(r[stat], null), "K": len(null),
                         "null_p95_abs": float(np.percentile(np.abs(null), 95))}
+    return comps
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser()
+    p.add_argument("--out", required=True)
+    a = p.parse_args(argv)
+    out = Path(a.out)
+    items = [it for it in read_jsonl(out / "items.jsonl") if it["split"] == "verification"]
+    base = np.load(out / "arms" / "_none.npz")
+    y0 = base["y"]
+    logr = np.log10([it["h_over_far_delay"] for it in items])
+    loc0, s0 = fit_switch(logr, sigmoid(y0))
+    res = arm_results(out, items, y0)
+    comps = compare_to_nulls(res)
     cal = json.loads((out / "calibration.json").read_text())
     n0 = json.loads((out / "n0_check.json").read_text()) if (out / "n0_check.json").exists() else {}
     skipped = read_jsonl(out / "skipped.jsonl")

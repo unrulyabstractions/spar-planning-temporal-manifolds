@@ -421,11 +421,11 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     return cal
 
 
-def stage_replay(args, M, settings, rep: Replayer, cal: dict) -> None:
+def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "verification") -> None:
     out = Path(args.out)
     adir = out / "arms"
     adir.mkdir(exist_ok=True)
-    items = load_items(out, "verification")
+    items = load_items(out, split)
     fac = EditFactory(args)
     # unsteered pass and the zero-edit check against a hook-free forward pass (N0)
     if not (adir / "_none.npz").exists():
