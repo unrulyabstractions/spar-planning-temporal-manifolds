@@ -14,8 +14,8 @@
 #   tests     both pytest suites
 #   hook      tools/check_hook.py on the model at $LAYER (zero edit, roles, effect), with the run's decoding
 #   horizon   extract_horizon.py: activations at the horizon's tokens, all layers, ALL 700 prompts (needs no baseline)
-#   baseline  baseline.py on the first $N extraction prompts
-#   extract   extract.py at $LAYER
+#   baseline  baseline.py on the first $N prompts of $SPLIT (all of them with N=all); resumable
+#   extract   extract.py at $LAYER, for the same split
 #   audit     prints every label site with the decoded tokens around it, for a hand audit
 #   draws     ../evaluation/shared_draws.py: the shared random directions for $LAYER, label site
 #   fit       fit.py at $LAYER, with the shared draws if the `draws` stage wrote them (refuses, and logs the refusal,
@@ -24,7 +24,11 @@
 #   method    tools/check_hook.py --method on every bundle of this run
 #   sums      SHA256SUMS of the outputs, for the copy-back
 #
-# Settings (environment): MODEL (google/gemma-4-31B-it), LAYER (38), N (64), BATCH (8), MAX_NEW (4096),
+# A smoke run is the default (the first 64 extraction prompts). The full run is N=all SPLIT=all: all 700 prompts,
+# and both splits extracted, which the evaluation runner needs (it reads the verification prompts' label positions).
+#
+# Settings (environment): MODEL (google/gemma-4-31B-it), LAYER (38), N (64, or all), SPLIT (extraction |
+# verification | all; default extraction), BATCH (8), MAX_NEW (4096),
 # RUN (smoke), THINKING (on | off; default on), DECODING (auto | greedy | sample; default auto, as baseline.py),
 # SAMPLING (extra sampling options for a model without a generation config, e.g.
 # "--temperature 0.6 --top-p 0.95 --top-k 20"; default none), DRAWS_MIN_ROWS (100; the covariance draws refuse fewer
@@ -37,6 +41,9 @@ set -euo pipefail
 MODEL=${MODEL:-google/gemma-4-31B-it}
 LAYER=${LAYER:-38}
 N=${N:-64}
+SPLIT=${SPLIT:-extraction}
+case $SPLIT in extraction|verification|all) ;; *) echo "SPLIT must be extraction, verification or all"; exit 2;; esac
+case $N in all) LIMIT=();; ''|*[!0-9]*) echo "N must be a number or all"; exit 2;; *) LIMIT=(--limit "$N");; esac
 BATCH=${BATCH:-8}     # 16 runs out of memory on an 80 GB GPU with Gemma 4 31B at 4096 new tokens
 MAX_NEW=${MAX_NEW:-4096}
 RUN=${RUN:-smoke}
@@ -136,14 +143,14 @@ stage_horizon() {
 }
 
 stage_baseline() {
-    say "baseline: first $N extraction prompts, batch $BATCH, max_new_tokens $MAX_NEW, thinking $THINKING, ${HOW[*]}"
-    pb baseline.py --bank data/t0_s0 --model "$MODEL" --split extraction --limit "$N" --batch-size "$BATCH" \
+    say "baseline: N=$N of split $SPLIT, batch $BATCH, max_new_tokens $MAX_NEW, thinking $THINKING, ${HOW[*]}"
+    pb baseline.py --bank data/t0_s0 --model "$MODEL" --split "$SPLIT" "${LIMIT[@]}" --batch-size "$BATCH" \
         --max-new-tokens "$MAX_NEW" --out "$RUNDIR" "${NOTHINK[@]}" "${HOW[@]}"
 }
 
 stage_extract() {
     say "extract: layer $LAYER"
-    st extract.py --bank "$BANK" --run "$RUNDIR" --layers "$LAYER" --out "$ACTS"
+    st extract.py --bank "$BANK" --run "$RUNDIR" --layers "$LAYER" --split "$SPLIT" --out "$ACTS"
 }
 
 stage_audit() {
@@ -210,13 +217,18 @@ stage_method() {
 
 stage_sums() {
     say "sums"
-    (cd "$ROOT" && find "prompt_bank/runs/$NAME" "steering/activations/$NAME" "steering/fits/$NAME" \
-        "steering/methods/$SHORT" "steering/activations/$(basename "$HORIZON")" "steering/draws/$SHORT" \
-        -type f 2>/dev/null | sort | xargs sha256sum > "$ROOT/vast_smoke.SHA256SUMS")
+    # Only the output directories that exist: a run need not include every stage (e.g. no `horizon`).
+    local d dirs=()
+    for d in "prompt_bank/runs/$NAME" "steering/activations/$NAME" "steering/fits/$NAME" "steering/methods/$SHORT" \
+             "steering/activations/$(basename "$HORIZON")" "steering/draws/$SHORT"; do
+        if [ -d "$ROOT/$d" ]; then dirs+=("$d"); else echo "not present, so not listed: $d"; fi
+    done
+    [ ${#dirs[@]} -gt 0 ] || { echo "no outputs to list"; exit 1; }
+    (cd "$ROOT" && find "${dirs[@]}" -type f | sort | xargs sha256sum > "$ROOT/vast_smoke.SHA256SUMS")
     wc -l < "$ROOT/vast_smoke.SHA256SUMS"
 }
 
-[ $# -gt 0 ] || { sed -n 2,36p "$0"; exit 2; }
+[ $# -gt 0 ] || { sed -n 2,40p "$0"; exit 2; }
 for s in "$@"; do
     declare -F "stage_$s" >/dev/null || { echo "unknown stage: $s"; exit 2; }
     "stage_$s"
