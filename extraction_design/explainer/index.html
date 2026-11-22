@@ -355,7 +355,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
         <dt>Regime</dt><dd>Which options pay off within the stated horizon: <code>none</code>, <code>near_only</code>, <code>both</code>; <code>no_horizon</code> when there is no CONSTRAINT line. A payout exactly at the horizon counts.</dd>
         <dt>H/D</dt><dd>Stated horizon over the <b>far</b> option's delay.</dd>
         <dt>Grid value · log-time t</dt><dd>The horizon on the 48-point grid (30 s to 500 y), before any unit rewrite. t is log10 of it in days.</dd>
-        <dt>Baseline run</dt><dd>One unsteered, greedy, thinking-on pass of a model over the bank. Every reply's exact token ids are stored (<code>generated_ids</code>).</dd>
+        <dt>Baseline run</dt><dd>One unsteered pass of a model over the bank (thinking on; greedy until 2026-11-22, seeded sampling by default since). Every reply's exact token ids are stored (<code>generated_ids</code>).</dd>
       </dl>
     </div>
     <div class="stack">
@@ -713,7 +713,7 @@ cd &lt;download&gt;/&lt;prefix&gt; &amp;&amp; sha256sum -c SHA256SUMS           
     <div class="stack">
       <h3>Extraction's side</h3>
       <ul>
-        <li>Decide: greedy decoding or seeded sampling for thinking-on runs, and the token cap; the bundles' default positions and the fitting site; a minimum class size in <code>fit.py</code>.</li>
+        <li>Decided 2026-11-22: seeded sampling for thinking-on runs, default cap 4,096 tokens (README §11.3; branch <code>seeded-sampling</code>). Decide: the bundles' default positions and the fitting site; a minimum class size in <code>fit.py</code>.</li>
         <li>Fix: recording the commit when code ships without <code>.git</code>.</li>
         <li>Diagnose: generation throughput.</li>
         <li>To do: merge branch <code>within-regime-caa</code>; run the horizon extraction and the hook gate on Gemma.</li>

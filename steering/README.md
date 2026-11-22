@@ -155,6 +155,11 @@ something.
    gives a margin >= 0, except on near-ties, which can land one bf16 step (0.125) below zero. extract.json reports
    the smallest margin. A clearly negative one would mean the replay does not reproduce the generation.
 
+   A sampled baseline run (baseline.py's default with thinking on) need not write its most likely label, so its
+   margins can be honestly negative. For such a run the check is that the label is among the run's top-k tokens
+   (`replay_label_rank` < top_k), which is necessary but weaker. `replay_consistent` in index.jsonl is the check that
+   applies to the run, and extract.json says which one it was.
+
 ## Applying an edit inside the model
 
 ```python

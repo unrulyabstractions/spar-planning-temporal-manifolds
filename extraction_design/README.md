@@ -88,7 +88,8 @@ method, replay readout, and so on) mean the same here. Additions and precise mea
 - **Log-time t:** log10 of the grid value in days.
 - **Baseline run:** one unsteered pass of a model over the bank, in `prompt_bank/runs/<model>__<bank>/`:
   - thinking on unless `--no-thinking` is given;
-  - greedy decoding: the model always takes its most likely next token (whether to keep this is open, §11.3);
+  - decoding: seeded sampling when thinking is on, greedy (always the most likely next token) when it is off;
+    `--decoding` overrides (§11.3). Every run before 2026-11-22 was greedy;
   - every reply's exact generated token ids are stored (`generated_ids`).
 
 **Extraction**
@@ -100,7 +101,9 @@ method, replay readout, and so on) mean the same here. Additions and precise mea
 - **Replay margin:** at the token before the label, the logit of the label the model generated minus the best other
   logit.
   - A faithful replay of greedy generation gives ≥ 0, except on near-ties of one bf16 step (0.125).
-  - `extract.json` records the smallest margin.
+  - A sampled run can write a label that is not the most likely token, so its margins can be negative. Its check is
+    the label's rank instead: it must be among the run's top-k tokens.
+  - `extract.json` records the smallest margin, the largest rank, and which check applied.
 - **bf16:** the 16-bit floating-point format the model runs in.
 
 **Methods and hand-over**
@@ -228,7 +231,7 @@ lcm = LocalChatModel("google/gemma-4-31B-it")
 m = load("methods/gemma-4-31B-it/caa__gemma-4-31B-it__t0_s0__default__L38_label")    # checks every file's SHA-256
 
 with steering(lcm.model, m.edit, x=0.1, layer=m.layer, positions=m.positions):
-    replies = lcm.generate(texts, thinking=True, max_new_tokens=8192)
+    replies = lcm.generate(texts, thinking=True, max_new_tokens=4096)   # greedy; pass decoding= to sample (§11.3)
 
 logits = replay_logits(lcm.model, prompt_ids, answer_ids, m.edit, x=0.1, layer=m.layer)  # one teacher-forced pass
 ```
@@ -597,8 +600,8 @@ crlf  setup  weights  tests  hook  baseline  extract  audit  fit  bundle  method
    - The key-value cache needs about 1.1 GB per sequence at about 3k tokens.
    - On top of that, SDPA's `repeat_kv` makes temporary copies.
 4. **Settings are locked once a run starts.** A run directory remembers its settings. After a failed first batch,
-   retrying with a different batch size is refused until the empty directory is removed. That is deliberate: greedy
-   outputs depend on padding, so batch size is part of a run's identity.
+   retrying with a different batch size is refused until the empty directory is removed. That is deliberate: a reply
+   depends on the batch it is generated in, so batch size is part of a run's identity.
 5. **No `/workspace`.** The image `vastai/pytorch:cuda-12.8.1-auto` has no `/workspace`, which the team justfile
    assumes.
 6. **Shipping without `.git` loses provenance.** `just push`-style rsync leaves out dotfiles, including `.git`, so
@@ -648,7 +651,7 @@ reply) / (batch size). `prompt_bank/tools/step_times.py` computes both quantitie
   per step at about 2 TB/s, about 31 ms). That needs a profile of `generate()` on Gemma 4's layer layout, which can be
   done locally on a model with the real layer layout but fewer layers.
 
-**Decoding: replies that loop under greedy decoding (open).** Small Qwen models with thinking on often repeat the
+**Decoding: replies that loop under greedy decoding.** Small Qwen models with thinking on often repeat the
 same block of reasoning until the token cap, so the reply never reaches an answer:
 
 - **Our probes, cap 4,096:** Qwen3.5-2B parsed 0 of 16 replies and Qwen3.5-4B 3 of 16
@@ -662,13 +665,33 @@ same block of reasoning until the token cap, so the reply never reaches an answe
   - the other 33 are long, not looping, and still hit the cap;
   - on prompts that greedy had answered, sampling changed 5 of 26 choices, so a readout from generated answers would
     need several samples per prompt.
-- **Gemma 4 31B:** 3 of the first 16 replies hit the cap (table above). Whether they loop has not been checked.
-- **What sampling would change in extraction code:**
-  - the replay margin check assumes greedy decoding (a sampled label need not be the most likely token);
-  - the hook gate's zero-edit check needs a seeded batch to reproduce exactly, which is not verified;
-  - new runs would not be comparable with the existing greedy runs.
-- **Not decided:** greedy or seeded sampling for thinking-on baseline runs, and the token cap (4,096 now; the spec says
-  8,192).
+- **Gemma 4 31B:** 3 of the first 16 replies hit the cap (table above). They are not loops (below).
+- **Decided (Alan, 2026-11-22): seeded sampling for thinking-on runs, and a default cap of 4,096 tokens.** Built on
+  branch `seeded-sampling`:
+  - `baseline.py --decoding {auto,greedy,sample}`. `auto`, the default, samples when thinking is on and is greedy
+    when it is off. The cap is `--max-new-tokens`, default 4,096 (it was 8,192).
+  - Sampling values come from the model's own generation config (Gemma 4: temperature 1.0, top-p 0.95, top-k 64)
+    unless `--temperature`, `--top-p` or `--top-k` are given. A model without such a file (Qwen3.5) must be given all
+    three. The values and where each came from are recorded in `run.json`.
+  - `--seed` (default 0). Each batch is seeded from it and from the batch's own prompts, so the same batch repeats
+    exactly whatever ran before it. On Qwen3.5-2B, two runs gave identical token ids for 16 of 16 prompts.
+  - **The replay check** for a sampled run is that the label is among the top-k tokens, since it need not be the most
+    likely one (§2, "Replay margin"). On a sampled Qwen3.5-2B run the label was the second most likely token for 35
+    of 96 prompts; the greedy check would have flagged all 35.
+  - **The hook gate** takes the same options. A zero edit still reproduces a sampled batch exactly (6 of 6 prompts
+    on Qwen3.5-0.8B), because the unhooked and hooked runs are seeded alike.
+  - Bundles record the baseline's decoding (`method.json` → `fitted_on.decoding`).
+  - New runs are not comparable with the earlier greedy ones. `--decoding greedy` reproduces their setting.
+- **What sampling does not fix** [`steering/progress-20261122.md`]:
+  - **Qwen3.5-2B with thinking on still answers nothing.** With the sampling values above for Qwen, all 16 of 16
+    replies ran to the 4,096 cap, as under greedy. None is a loop by the evaluation team's definition: the model
+    deliberates in circles ("Wait, …") without repeating itself exactly.
+  - **Gemma's capped replies were not loops either.** The 3 of 16 replies at the cap in the 2026-11-15 greedy run
+    are long deliberations (all three on horizons under a week, where neither option pays off), not repeated
+    blocks. So the evidence that sampling helps comes from Qwen3-1.7B only, and whether it helps Gemma is untested.
+  - **One reply is one draw.** Readouts that count generated answers need several seeds per prompt.
+  - **The evaluation runner** calls `generate` without a decoding argument, so its generation check is greedy until
+    it passes the run's decoding (`evaluation/replay_eval.py`; theirs to change).
 
 Throughput and decoding together are the main thing standing between the current state and a full Gemma run. They
 also set the cost of every generation readout the evaluation pipeline plans `[eval §9]`. Note that the evaluation
@@ -721,7 +744,7 @@ against the real interfaces: <https://huggingface.co/datasets/CodeReclaimers/spa
 - **A within-regime CAA** as comparison methods (§9.2), on branch `within-regime-caa`.
 
 **Decisions on the extraction side:**
-- greedy decoding or seeded sampling for thinking-on runs, and the token cap (§11.3);
+- whether sampling should stay the default for Gemma once a sampled Gemma smoke run exists (§11.3);
 - the throughput problem (§11.3);
 - the bundles' default positions, and whether to fit the Gemma methods at the prelabel site (§4, §6, §9.6);
 - a minimum class size in `fit.py` (§9.5);

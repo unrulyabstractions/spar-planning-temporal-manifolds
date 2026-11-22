@@ -17,6 +17,11 @@ through pbank's LocalChatModel with batched greedy generation:
                   curve-snap, whose x = 0 is not the identity by design (it removes the off-curve offset): for it the
                   number of changed replies is reported, not checked.
 
+--decoding (default greedy) sets how replies are generated; `sample` and `auto` are as in baseline.py, with
+--temperature / --top-p / --top-k / --seed. A sampled batch is seeded from --seed and its own prompts, so the unhooked
+and hooked runs draw the same random numbers and check 1 still demands identical token ids. Use the decoding of the
+runs you are about to make.
+
 --positions label / prelabel edit one token per row: the answer-label token of the row's unhooked reply (the site
 extract.py reads as "label"), or the token before it ("prelabel", whose state predicts the label). The index comes
 from the unhooked reply (steer.sites.locate_label), and two more checks apply to checks 3 and 4: exactly one token
@@ -43,7 +48,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pbank.answers import parse_choice  # noqa: E402
-from pbank.local_model import LocalChatModel  # noqa: E402
+from pbank.local_model import LocalChatModel, add_decoding_args, decoding_from_args  # noqa: E402
 from pbank.records import load_prompts  # noqa: E402
 from steer.directions import random_directions  # noqa: E402
 from steer.edits import ROLE_GENERATED, ROLE_PAD, ROLE_PROMPT, LinearEdit  # noqa: E402
@@ -64,6 +69,7 @@ def main() -> None:
     p.add_argument("--thinking", action=argparse.BooleanOptionalAction, default=None,
                    help="default: as the method was fitted with --method, else on")
     p.add_argument("--strong", type=float, default=4.0, help="strength of the effect check, in typical norms")
+    add_decoding_args(p, default="greedy")
     p.add_argument("--positions", default="all", choices=["all", "prompt", "generated", *SITE_OFFSET],
                    help="where checks 3 and 4 apply the edit (default all, as the bundles do)")
     p.add_argument("--allow-offload", action="store_true",
@@ -93,7 +99,9 @@ def main() -> None:
     print(f"{args.model}: d = {d}, layer {args.layer}, {len(texts)} prompts, thinking {args.thinking}, "
           f"loaded in {time.time() - t0:.0f} s", flush=True)
 
-    gen = lambda: lcm.generate(texts, thinking=args.thinking, max_new_tokens=args.max_new_tokens)
+    decoding = decoding_from_args(args, args.thinking, args.model)
+    print(f"decoding {decoding.settings()}", flush=True)
+    gen = lambda: lcm.generate(texts, thinking=args.thinking, max_new_tokens=args.max_new_tokens, decoding=decoding)
     base = gen()
     sites = None
     if args.positions in SITE_OFFSET:

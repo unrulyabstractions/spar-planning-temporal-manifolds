@@ -4,9 +4,21 @@
     python baseline.py --bank data/t0_s0 --model Qwen/Qwen3-32B --batch-size 8
     python baseline.py --bank data/t0_s0 --model Qwen/Qwen3.5-2B --limit 8   # local smoke test
 
-Settings follow the report (Appendix A.6, "Models"): thinking on, greedy decoding, a token cap (8,192 by
-default). The defaults reproduce the 2026-10-17 Gemma pilot's setup: batch 4 on one A100 80 GB, which keeps a
-runaway trace from running out of memory (batch 16 does run out at 4,096 new tokens).
+Settings: thinking on, and a token cap of 4,096 new tokens (--max-new-tokens; the report's Appendix A.6 says
+8,192). Batch 4 on one A100 80 GB keeps a runaway trace from running out of memory (batch 16 does run out at 4,096
+new tokens).
+
+Decoding (--decoding, default auto): seeded sampling when thinking is on, greedy when it is off.
+- Why not greedy throughout, as the report says: with thinking on, greedy decoding makes small models loop until the
+  token cap (Qwen3-1.7B answered 370 of 700 prompts; 323 of the 337 replies at the cap were loops), and sampling
+  removes most loops (team decision, 2026-11-22).
+- Sampling uses the model's own recommended temperature, top-p and top-k, read from its generation config (Gemma 4:
+  1.0, 0.95, 64), unless --temperature / --top-p / --top-k are given. A model without such a file (Qwen3.5) needs
+  all three on the command line. --seed (default 0) makes a run repeatable: each batch is seeded from it and from
+  the batch's own prompts (pbank/local_model.py).
+- One reply is sampled per prompt. A sampled choice is one draw, so readouts that count generated answers need
+  several runs with different seeds.
+- The runs before this change were all greedy. `--decoding greedy` reproduces their setting.
 
 Speed per A100 (tools/step_times.py):
 - the pilot (other prompts, batch 4): 25.4 s per prompt, about 92 ms per decoding step. Its often-quoted "13 s" was
@@ -36,7 +48,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from pbank.answers import parse_choice, score
-from pbank.local_model import LocalChatModel, log
+from pbank.local_model import LocalChatModel, add_decoding_args, decoding_from_args, log
 from pbank.provenance import PACKAGE_DIR, git_commit, utc_now
 from pbank.records import append_jsonl, load_prompts, prompts_sha256, read_jsonl
 
@@ -70,8 +82,9 @@ def main() -> None:
     p.add_argument("--out", type=Path, help="run directory (default: runs/<model>__<bank>)")
     p.add_argument("--split", default="all", choices=["all", "extraction", "verification"])
     p.add_argument("--batch-size", type=int, default=4)
-    p.add_argument("--max-new-tokens", type=int, default=8192)
+    p.add_argument("--max-new-tokens", type=int, default=4096, help="token cap per reply (default: %(default)s)")
     p.add_argument("--no-thinking", action="store_true", help="turn thinking mode off (default: on)")
+    add_decoding_args(p)
     p.add_argument("--limit", type=int, help="only the first N prompts (smoke tests)")
     p.add_argument("--allow-offload", action="store_true",
                    help="smoke tests only: let weights that don't fit on the GPUs stay in CPU RAM (recorded in run.json)")
@@ -86,8 +99,9 @@ def main() -> None:
     out = args.out or PACKAGE_DIR / "runs" / f"{args.model.split('/')[-1]}__{args.bank.name}"
     # Everything that changes what the model generates. A resumed run must match these exactly. (The bank is
     # identified by its hash, not its path, so a run can be resumed from another directory or machine.)
+    decoding = decoding_from_args(args, thinking=not args.no_thinking, model_id=args.model)
     settings = {"model": args.model, "bank_prompts_sha256": bank_sha, "thinking": not args.no_thinking,
-                "max_new_tokens": args.max_new_tokens, "batch_size": args.batch_size, "decoding": "greedy"}
+                "max_new_tokens": args.max_new_tokens, "batch_size": args.batch_size, "decoding": decoding.settings()}
     run_json = out / "run.json"
     if run_json.exists():
         previous = json.loads(run_json.read_text())["settings"]
@@ -98,7 +112,8 @@ def main() -> None:
     responses = out / "responses.jsonl"
     done = {row["uid"] for row in read_jsonl(responses)}
     todo = [r for r in selected if r.uid not in done]
-    log(f"{args.model} on {args.bank}: {len(selected)} selected, {len(done)} already answered, {len(todo)} to run")
+    log(f"{args.model} on {args.bank}: {len(selected)} selected, {len(done)} already answered, {len(todo)} to run; "
+        f"decoding {decoding.settings()}, cap {args.max_new_tokens} tokens")
     if todo:
         model = LocalChatModel(args.model, allow_offload=args.allow_offload)
         out.mkdir(parents=True, exist_ok=True)
@@ -109,7 +124,7 @@ def main() -> None:
         for i in range(0, len(todo), args.batch_size):
             batch = todo[i:i + args.batch_size]
             replies = model.generate([r.text for r in batch], thinking=not args.no_thinking,
-                                     max_new_tokens=args.max_new_tokens)
+                                     max_new_tokens=args.max_new_tokens, decoding=decoding)
             rows = []
             for rec, reply in zip(batch, replies):
                 parsed = parse_choice(reply.answer, rec.labels)

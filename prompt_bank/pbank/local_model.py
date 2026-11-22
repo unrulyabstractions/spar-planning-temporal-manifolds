@@ -1,4 +1,5 @@
-"""Running a local Hugging Face chat model: batched greedy generation, with the thinking split off the answer.
+"""Running a local Hugging Face chat model: batched generation (greedy or seeded sampling), with the thinking split
+off the answer.
 
 Used by both the baseline run (baseline.py) and the local prompt checker (pbank/checker.py), so the two see
 models through exactly the same code.
@@ -11,8 +12,17 @@ not read a choice out of unfinished deliberation. The end-of-thinking token is l
 a model family with none of the known tokens is refused rather than guessed (tests/test_local_model.py checks
 the templates of the families in use).
 
-Settings fixed here on purpose: greedy decoding (do_sample=False), so a run is repeatable on the same
-hardware and batch composition; bf16 weights; left padding so every sequence in a batch ends at the same index.
+Settings fixed here on purpose: bf16 weights; left padding so every sequence in a batch ends at the same index.
+
+Decoding (`Decoding`, passed to `generate`; greedy if not given):
+  greedy   the most likely token at every step (do_sample=False). Repeatable on the same hardware and batch
+           composition. With thinking on, small models often loop under it until the token cap.
+  sample   sampling with a temperature, top-p and top-k, seeded. The random generator is re-seeded before every batch
+           from the run's seed and the batch's own prompts, so the same batch with the same seed gives the same
+           replies (on the same hardware and software), whatever was generated before it. A reply therefore depends on
+           the seed and on which prompts share its batch, as a greedy reply already depends on its batch through
+           padding. Nothing is taken from the model's generation config implicitly: the three values are always
+           passed, and `resolve_decoding` is where a model's own recommended values are read and recorded.
 """
 
 from __future__ import annotations
@@ -22,6 +32,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+import hashlib
 
 END_OF_THINKING_TOKENS = ("</think>", "<channel|>")   # Qwen3 / Qwen3.5, Gemma 4
 END_OF_TURN_TOKENS = ("<|im_end|>", "<turn|>")         # Qwen3 / Qwen3.5, Gemma 4
@@ -70,8 +81,98 @@ def split_reply(tok, generated_ids: list[int], thinking: bool) -> tuple[Optional
     return thought, tok.decode(generated_ids[k + 1:], skip_special_tokens=True).strip()
 
 
+@dataclass(frozen=True)
+class Decoding:
+    """How tokens are chosen. Greedy needs nothing else; sampling needs all four values."""
+    mode: str = "greedy"                    # "greedy" | "sample"
+    temperature: Optional[float] = None
+    top_p: Optional[float] = None
+    top_k: Optional[int] = None
+    seed: Optional[int] = None
+    source: Optional[dict] = None           # sampling: where each value came from ("option" | "model generation_config")
+
+    def __post_init__(self):
+        if self.mode not in ("greedy", "sample"):
+            raise ValueError(f"decoding mode must be greedy or sample, not {self.mode!r}")
+        if self.mode == "sample" and None in (self.temperature, self.top_p, self.top_k, self.seed):
+            raise ValueError(f"sampling needs temperature, top_p, top_k and seed: {self}")
+
+    def settings(self):
+        """What a run records, and what a resumed run must match: "greedy" (as runs before sampling existed
+        recorded it), or the sampling values."""
+        if self.mode == "greedy":
+            return "greedy"
+        return {"mode": "sample", "temperature": self.temperature, "top_p": self.top_p, "top_k": self.top_k,
+                "seed": self.seed, "source": self.source}
+
+    def batch_seed(self, texts: list[str]) -> int:
+        """The seed for one batch: from the run's seed and the batch's prompts, in order."""
+        h = hashlib.sha256(f"{self.seed}".encode())
+        for text in texts:
+            h.update(b"\x00" + text.encode())
+        return int.from_bytes(h.digest()[:8], "big") >> 1      # 63 bits: accepted by torch.manual_seed
+
+
+GREEDY = Decoding()
+
+
+def model_sampling_defaults(model_id: str) -> dict:
+    """temperature / top_p / top_k from the model's own generation_config.json: what its authors recommend. Empty
+    if the model ships none (Qwen3.5), and a value the file does not set is left out."""
+    from transformers import GenerationConfig
+    try:
+        config = GenerationConfig.from_pretrained(model_id)
+    except OSError:
+        return {}
+    found = {k: getattr(config, k, None) for k in ("temperature", "top_p", "top_k")}
+    return {k: v for k, v in found.items() if v is not None}
+
+
+def add_decoding_args(parser, default: str = "auto") -> None:
+    parser.add_argument("--decoding", default=default, choices=["auto", "greedy", "sample"],
+                        help="greedy, or seeded sampling; auto (default: %(default)s) samples when thinking is on, "
+                             "where greedy decoding tends to loop, and is greedy when it is off")
+    parser.add_argument("--temperature", type=float, help="sampling: default from the model's generation config")
+    parser.add_argument("--top-p", type=float, help="sampling: default from the model's generation config")
+    parser.add_argument("--top-k", type=int, help="sampling: default from the model's generation config")
+    parser.add_argument("--seed", type=int, default=0, help="sampling: the run's seed (default 0)")
+
+
+def resolve_decoding(mode: str, thinking: bool, model_id: str, temperature: Optional[float] = None,
+                     top_p: Optional[float] = None, top_k: Optional[int] = None, seed: int = 0,
+                     model_defaults: Optional[dict] = None) -> Decoding:
+    """The Decoding for a run: `mode` "auto" samples when thinking is on; sampling values come from the options given,
+    else from the model's own generation config (`model_defaults`, read from the model if None). A value found in
+    neither is an error, not a guess."""
+    if mode == "greedy" or (mode == "auto" and not thinking):
+        given = {k: v for k, v in (("--temperature", temperature), ("--top-p", top_p), ("--top-k", top_k)) if v is not None}
+        if given:
+            raise ValueError(f"{sorted(given)} only apply to sampling, and this run decodes greedily "
+                             f"({'--decoding greedy' if mode == 'greedy' else 'thinking is off'}); add --decoding sample")
+        return GREEDY
+    defaults = model_sampling_defaults(model_id) if model_defaults is None else model_defaults
+    values, source = {}, {}
+    for name, option in (("temperature", temperature), ("top_p", top_p), ("top_k", top_k)):
+        if option is not None:
+            values[name], source[name] = option, "option"
+        elif name in defaults:
+            values[name], source[name] = defaults[name], "model generation_config"
+    missing = [n for n in ("temperature", "top_p", "top_k") if n not in values]
+    if missing:
+        raise ValueError(f"sampling needs {missing}: {model_id} has no generation config that sets them, so give "
+                         f"--{' --'.join(m.replace('_', '-') for m in missing)} (its model card's recommended values)")
+    return Decoding("sample", float(values["temperature"]), float(values["top_p"]), int(values["top_k"]), seed, source)
+
+
+def decoding_from_args(args, thinking: bool, model_id: str) -> Decoding:
+    try:
+        return resolve_decoding(args.decoding, thinking, model_id, args.temperature, args.top_p, args.top_k, args.seed)
+    except ValueError as e:
+        sys.exit(str(e))
+
+
 class LocalChatModel:
-    """A Hugging Face causal LM behind its own chat template, generating greedily in batches.
+    """A Hugging Face causal LM behind its own chat template, generating in batches (greedily unless told to sample).
 
         model = LocalChatModel("google/gemma-4-31B-it")
         replies = model.generate(["prompt 1", "prompt 2"], thinking=True, max_new_tokens=8192)
@@ -116,16 +217,23 @@ class LocalChatModel:
         return self.tok.apply_chat_template([{"role": "user", "content": user_text}], tokenize=False,
                                             add_generation_prompt=True, enable_thinking=thinking)
 
-    def generate(self, user_texts: list[str], thinking: bool, max_new_tokens: int) -> list[Reply]:
-        """One reply per user text, generated together as one batch."""
+    def generate(self, user_texts: list[str], thinking: bool, max_new_tokens: int,
+                 decoding: Decoding = GREEDY) -> list[Reply]:
+        """One reply per user text, generated together as one batch. `decoding`: see the module docstring."""
         import torch
 
         t0 = time.time()
         chats = [self.chat_text(t, thinking) for t in user_texts]
         # The chat template already contains the special tokens (e.g. <bos>); don't add them twice.
         batch = self.tok(chats, return_tensors="pt", padding=True, add_special_tokens=False).to(self.input_device)
+        if decoding.mode == "sample":
+            torch.manual_seed(decoding.batch_seed(user_texts))      # seeds the CPU and every GPU generator
+            how = {"do_sample": True, "temperature": decoding.temperature, "top_p": decoding.top_p,
+                   "top_k": decoding.top_k}
+        else:
+            how = {"do_sample": False}
         with torch.no_grad():
-            out = self.model.generate(**batch, max_new_tokens=max_new_tokens, do_sample=False,
+            out = self.model.generate(**batch, max_new_tokens=max_new_tokens, **how,
                                       eos_token_id=self.end_ids, pad_token_id=self.tok.pad_token_id)
         seconds = (time.time() - t0) / len(user_texts)
 
