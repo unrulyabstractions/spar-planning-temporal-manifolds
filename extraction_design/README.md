@@ -3,7 +3,8 @@
 **Status:** built, tested and on `main`, including the hook fix and single-token edits of 2026-11-19 (§6). Two
 later additions are also on `main`: the horizon site (§6) and `fit.py --draws` (§8.2 item 6), the within-regime CAA
 methods (§5, §9.2) and seeded sampling (§11.3). On Gemma 4 31B the
-pipeline has run only at smoke scale (16 prompts). No full-run methods exist yet. A complete practice hand-over from a
+pipeline has run only at smoke scale (16 prompts, most recently on 2026-11-22 with sampling), plus the horizon
+extraction for all 700 prompts. No full-run methods exist yet. A complete practice hand-over from a
 small model is published (§12). **Owner:** Extraction (prompt bank and steering methods: Alan). Drafted with Claude,
 2026-11-15; updated 2026-11-22.
 **Human-readable version:** [`explainer/index.html`](explainer/index.html), with figures. It was written on
@@ -317,8 +318,9 @@ fitted on, or edit only, the tokens that state the horizon):
 - **Editing only those tokens:** pass a prompt's rows of `horizon_sites.jsonl` as the hook's `rows`, and their
   `token_indices` to `steer.hooks.at_prompt`, which accounts for left padding in a batch
   [`steering/README.md`, "The horizon site"].
-- **Not run on Gemma yet.** Its tokenizer has been checked on all 671 horizons; the model has not been run. Expected
-  size: about 3.4 GB (2,600 tokens × 61 layers × a hidden size of 5,376 × 4 bytes).
+- **Run on Gemma 4 31B on 2026-11-22** (thinking on): 700 prompts, 671 with a horizon, 2,600 horizon tokens, 61
+  layers, no decode mismatch, under two minutes on an A100 with the model load. The output is 3.2 GB (2,600 tokens × 61
+  layers × a hidden size of 5,376 × 4 bytes). It is not uploaded yet.
 
 ## 7. The bundle
 
@@ -556,13 +558,21 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 | Horizon tokens found | Gemma 4 and Qwen3.5 tokenizers, thinking on and off, 671 horizons | all decode back to the stated horizon; shifted by one token, none does | `tests/test_sites.py` |
 | Horizon extraction | Qwen3.5-0.8B, 21 prompts | stored rows equal `hidden_states` at those tokens exactly (layers 0 and 12) | `tests/test_extract_horizon.py` |
 | Horizon-only edit in a padded batch | Qwen3.5-0.8B, 21 prompts | the edited tokens are each prompt's horizon; the 2 prompts without one are unchanged | `tests/test_extract_horizon.py` |
+| Hook gate, fixed hook, sampled | Gemma 4 31B, A100 80 GB, 8 prompts, thinking on | zero edit 8/8 identical; roles ok (left padding [2, 4, 0, 3, 4, 8, 4, 6]); strong edit changed 8/8 | `progress-20261122.md` |
+| Horizon extraction, full bank | Gemma 4 31B, thinking on, 700 prompts, 61 layers | 671 horizons, 2,600 tokens, 0 decode mismatches | `progress-20261122.md` |
+| Sampled baseline | Gemma 4 31B, A100, first 16 extraction prompts, cap 4,096 | 16/16 parsed, 0 at the cap; the greedy run of 2026-11-15 had 13/16 and 3 (§11.3) | `progress-20261122.md` |
+| Extraction replay and label audit, sampled run | same 16 | label is the top prediction for 16/16, margins +11.56 to +19.44; 16 label sites, 0 not matching | `progress-20261122.md` |
+| Shared draws, fit with draws, bundles, hook gate per bundle | same 16 (plumbing: too few prompts for a meaningful fit) | draws verified; 8 bundles, all pass the gate; no `caa-near_only` (one prompt in that regime) | `progress-20261122.md` |
+| Code commit without `.git` | the same rented run | every output records the stamped commit `cabc33d…` | `progress-20261122.md` |
+| Copy-back | the same run, 122 files | 122/122 SHA-256 verified | `progress-20261122.md` |
 | Horizon extraction, full bank | Qwen3.5-2B, thinking off, 700 prompts, 25 layers | 671 horizons, 2,600 tokens, 0 decode mismatches; 32 s | `progress-20261122.md` |
 | Within-regime CAA | synthetic activations over the real bank; Qwen3.5-2B practice activations | class sizes 94/97, 43/36, 30/36; directions equal the stated differences of means; existing directions and curve unchanged; the 4 new bundles pass the hook gate | `tests/test_fit.py`; `progress-20261122.md` |
 | `fit.py --draws` | Qwen3.5-2B practice activations | methods identical to the fit without draws; draws for other inputs refused | `tests/test_fit.py`; `progress-20261122.md` |
 
 **Not yet checked on Gemma:**
-- the hook gate after the 2026-11-19 fix, and at any `--positions` other than `all`;
-- `check_hook.py --method` with a real bundle;
+- the hook gate at any `--positions` other than `all`;
+- the steering test suite on a rented machine: it stalled there on 2026-11-22 in a test that loads Qwen3.5-0.8B, was
+  stopped, and is not diagnosed (it passes locally);
 - any full-size fit;
 - any steered generation beyond the gate's strong-edit check.
 
@@ -589,6 +599,8 @@ crlf  version  setup  weights  tests  hook  horizon  baseline  extract  audit  d
   sampling options for a model without a generation config) and `DRAWS_MIN_ROWS` (100).
 - **Rehearsed locally on 2026-11-22** in a copy without `.git`, on Qwen3.5-0.8B: every stage but `setup`, `weights`
   and `tests` ran and passed, the hook gate on all nine bundles included [`steering/progress-20261122.md`].
+- **Run on a rented A100 the same day** on Gemma 4 31B: every stage passed except `tests`, whose steering half
+  stalled and was stopped (§10). The run cost about $2.15 for 50 minutes.
 - **The `audit` stage** prints every label site with its decoded neighbours and fails if any decoded token differs
   from the parsed choice.
 - **The HF token** reaches the box only through ssh's stdin, never on disk or on a command line:
@@ -658,7 +670,8 @@ reply) / (batch size). `prompt_bank/tools/step_times.py` computes both quantitie
 
   The runs also differ in transformers version (5.17 vs 5.22.2) and generation code, so the 1.6 is not attributed
   further. The 2026-11-15 figures rest on 16 prompts.
-- **Planning figure:** about 15 GPU-hours for this bank at cap 4,096, and more at the spec's 8,192.
+- **Planning figure:** about 15 GPU-hours for this bank at cap 4,096 under greedy decoding, and more at the spec's
+  8,192. With sampling the 2026-11-22 run suggests about 10 (below).
 - **The largest lever is the runaway reply,** not the GPU: one long reply makes the other seven slots in its batch wait.
   Options include a lower cap, smaller batches, or generation that refills finished slots. None is decided, and each
   has trade-offs: a lower cap changes which replies get parsed.
@@ -702,7 +715,21 @@ same block of reasoning until the token cap, so the reply never reaches an answe
     deliberates in circles ("Wait, …") without repeating itself exactly.
   - **Gemma's capped replies were not loops either.** The 3 of 16 replies at the cap in the 2026-11-15 greedy run
     are long deliberations (all three on horizons under a week, where neither option pays off), not repeated
-    blocks. So the evidence that sampling helps comes from Qwen3-1.7B only, and whether it helps Gemma is untested.
+    blocks. Sampling helped them all the same (next item).
+- **Sampling on Gemma 4 31B: the same 16 prompts, greedy (2026-11-15) against sampled (2026-11-22)**, both at batch
+  8 and cap 4,096 on an A100; sampled with Gemma's own settings and seed 0 [`steering/progress-20261122.md`]:
+
+  | | greedy | sampled |
+  |---|---|---|
+  | answered | 13 of 16 | 16 of 16 |
+  | at the cap | 3 | 0 |
+  | tokens per reply: median / mean / max | 1,306 / 1,661 / 4,096 | 1,062 / 1,383 / 3,091 |
+  | seconds per prompt | 75.1 | 50.6 and 53.5 (two batches) |
+
+  - The 13 prompts both runs answered have the same choice in both.
+  - The three that hit the cap under greedy now answer, at 2,337 to 3,091 tokens: 57 to 75% of the cap.
+  - **Limits:** 16 prompts and one seed. Other prompts or seeds may still hit the cap.
+  - **Planning figure with sampling:** about 10 GPU-hours for the 700 prompts at 52 s per prompt.
   - **One reply is one draw.** Readouts that count generated answers need several seeds per prompt.
   - **The evaluation runner** calls `generate` without a decoding argument, so its generation check is greedy until
     it passes the run's decoding (`evaluation/replay_eval.py`; theirs to change).
@@ -758,15 +785,18 @@ against the real interfaces: <https://huggingface.co/datasets/CodeReclaimers/spa
 - **A within-regime CAA** as comparison methods (§9.2).
 
 **Decisions on the extraction side:**
-- whether sampling should stay the default for Gemma once a sampled Gemma smoke run exists (§11.3);
+- what to do with a prompt whose reply hits the cap under sampling: another seed, a higher cap, or accept the loss
+  (§11.3);
 - the throughput problem (§11.3);
 - the bundles' default positions, and whether to fit the Gemma methods at the prelabel site (§4, §6, §9.6);
 - a minimum class size in `fit.py` (§9.5).
 
 **To do:**
-- a 16-prompt sampled smoke run on Gemma 4 31B, with the horizon extraction for all 700 prompts (§11.1);
-- run `extract_horizon.py` on Gemma 4 31B, and `shared_draws.py` after the Gemma extraction;
-- re-run the hook gate on Gemma 4 31B with the fixed hook (§10).
+- the full 700-prompt Gemma baseline, then `extract.py`, `shared_draws.py`, fit and bundles;
+- before it, `tools/vast_smoke.sh` must run all 700 prompts and extract both splits: today it takes the first `N`
+  extraction prompts and extracts the extraction split only;
+- upload the Gemma horizon activations;
+- diagnose the steering test suite's stall on a rented machine (§10).
 
 **Not built:**
 - an answer-letter control direction;
