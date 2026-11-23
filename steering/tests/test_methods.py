@@ -13,7 +13,7 @@ from fixtures import BANK, make_activations
 from pbank.records import load_prompts
 from steer.edits import CurveEdit
 from steer.manifold import Manifold
-from steer.methods import METHODS, load, relabel
+from steer.methods import LINEAR, METHODS, load, relabel
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ def test_every_method_is_bundled_and_loads_with_its_parameters(bundles):
         assert sorted(meta["files"]) == ["arrays.npz", "fit.json", "fit_uids.jsonl", "search.jsonl"]
         assert len(m.fit_uids()) == 471
         if m.kind == "push":
-            key = meta["method"]
+            key = LINEAR[meta["method"]][0]             # e.g. caa-near_only is stored as caa_near_only
             assert np.array_equal(m.structure["direction"], directions[key])
             assert m.structure["typical_norm"] == float(directions["typical_norm"])
         else:
@@ -73,7 +73,7 @@ def test_a_tampered_bundle_is_refused(bundles):
 
 def test_refit_on_the_same_prompts_reproduces_the_method_exactly(bundles):
     acts, _, outs, _ = bundles
-    for out in (outs[0], outs[3]):                    # caa, curve-snap
+    for out in outs:                                  # every method, the within-regime CAAs included
         m = load(out)
         again = m.refit(acts, BANK)
         if m.kind == "push":
@@ -127,3 +127,25 @@ def test_bundle_refuses_overwrite_and_foreign_activations(bundles):
     other = make_activations(tmp_path / "other", seed=1)
     with pytest.raises(SystemExit, match="was not fitted from"):
         bundle.main(["--fit", str(fit_dir), "--activations", str(other)], methods_root=tmp_path / "m2")
+
+
+def test_a_fit_without_a_regime_bundles_what_it_has(tmp_path):
+    # Without the "none" regime there is no caa-none: the default bundles the rest, and asking for it is refused.
+    acts = make_activations(tmp_path / "acts")
+    fit.main(["--activations", str(acts), "--bank", str(BANK), "--layer", "15", "--no-include-none", "--name", "nn"],
+             fits_root=tmp_path / "fits")
+    fit_dir = tmp_path / "fits" / "acts" / "nn" / "L15_label"
+    with pytest.raises(SystemExit, match="caa-none"):
+        bundle.main(["--fit", str(fit_dir), "--activations", str(acts), "--methods", "caa-none"],
+                    methods_root=tmp_path / "m1")
+    outs = bundle.main(["--fit", str(fit_dir), "--activations", str(acts)], methods_root=tmp_path / "methods")
+    names = [o.name.split("__")[0] for o in outs]
+    print(f"bundled from a fit without 'none': {names}")
+    assert names == [m for m in METHODS if m != "caa-none"]
+    # A fit.json written before the within-regime settings existed bundles with their defaults.
+    old = json.loads((fit_dir / "fit.json").read_text())
+    assert load(outs[0]).meta["fit_settings"]["within_pool"] == ["near_only", "both"]
+    del old["settings"]["within_quantile"], old["settings"]["within_pool"]
+    (fit_dir / "fit.json").write_text(json.dumps(old))
+    out = bundle.main(["--fit", str(fit_dir), "--activations", str(acts), "--methods", "caa"], methods_root=tmp_path / "m2")
+    assert load(out[0]).meta["fit_settings"]["within_quantile"] == 1 / 3

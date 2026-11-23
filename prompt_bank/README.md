@@ -19,7 +19,7 @@ uv sync --all-extras                                   # once: creates .venv (to
 .venv/bin/python generate.py --out data/t0_s0 --checker openrouter:anthropic/claude-haiku-5.5  # OpenRouter
 .venv/bin/python generate.py --out data/t0_s0 --checker none                    # build only: no GPU, no API
 
-# 2. Run a model, unsteered, on every prompt (thinking on, greedy, 8,192-token cap)
+# 2. Run a model, unsteered, on every prompt (thinking on, seeded sampling, 4,096-token cap; see baseline.py)
 .venv/bin/python -u baseline.py --bank data/t0_s0                               # Gemma 4 31B-it
 .venv/bin/python -u baseline.py --bank data/t0_s0 --model Qwen/Qwen3-32B --batch-size 8
 
@@ -58,8 +58,8 @@ A100/H100 80 GB (on Vast.ai).
 
   The 2026-11-15 run is only 16 prompts, and it differs from the pilot in other ways too: transformers 5.22.2 vs
   5.17, and pbank's `LocalChatModel` vs the pilot's own capture code. So the 1.6 is not attributed further.
-- **Planning figure.** Budget on the measured 2026-11-15 rate for this bank: about 15 GPU-hours at cap 4,096, and more
-  at the default 8,192. Even the pilot's 92 ms per step is about 3 × the memory-bandwidth floor (62 GB of weights at
+- **Planning figure.** Budget on the measured 2026-11-15 rate for this bank: about 15 GPU-hours at the default cap of 4,096, and
+  more at the report's 8,192. Even the pilot's 92 ms per step is about 3 × the memory-bandwidth floor (62 GB of weights at
   about 2 TB/s is about 31 ms). Where that overhead goes has not been profiled.
 - **Batch size.** Batch 16 runs out of memory on 80 GB at 4,096 new tokens; batch 8 fits.
 
@@ -239,7 +239,7 @@ model before relying on its counts.** The review page shows the raw answer next 
 | `pbank/records.py` | the prompt record, the decision rule, JSONL files, the prompts hash |
 | `pbank/t0.py` | the T0 template and the two prompt sets |
 | `pbank/checker.py` | the checker's instructions, schema, reading its reply, running it |
-| `pbank/local_model.py` | a local Hugging Face model: batched greedy generation, thinking split |
+| `pbank/local_model.py` | a local Hugging Face model: batched generation (greedy or seeded sampling), thinking split |
 | `pbank/hosted_model.py` | a hosted model through the Anthropic API or OpenRouter, same interface |
 | `pbank/env.py` | API keys from a git-ignored `.env` file |
 | `pbank/answers.py` | reading and scoring the model's choice |

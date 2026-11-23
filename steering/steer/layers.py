@@ -81,6 +81,40 @@ def capture(model, layers: list[int]) -> Iterator[dict]:
 
 
 @contextmanager
+def capture_all(model) -> Iterator[dict]:
+    """Record the residual stream at every layer, 0 .. n_layers, during the forward passes run inside the block.
+
+        with capture_all(model) as acts:
+            model(input_ids)
+        acts[L]   # [batch, seq, d_model], detached, in the model's dtype
+
+    Layer L >= 1 is the output of block L, as in `capture`. The two layers `capture` refuses are defined here by the
+    same rule, for analysis rather than steering:
+      layer 0          the input of block 1 (the embeddings as the first block receives them) = hidden_states[0];
+      layer n_layers   the output of the last block, BEFORE the final norm. This is the residual stream, and in most
+                       Hugging Face models it is not hidden_states[n_layers], which is taken after the norm.
+    """
+    blocks = decoder_layers(model)
+    store: dict = {}
+
+    def first_input(module, args, kwargs):
+        store[0] = (args[0] if args else kwargs["hidden_states"]).detach()
+
+    def recorder(layer: int):
+        def hook(module, args, output):
+            store[layer] = _hidden(output).detach()
+        return hook
+
+    handles = [blocks[0].register_forward_pre_hook(first_input, with_kwargs=True)]
+    handles += [block.register_forward_hook(recorder(layer)) for layer, block in enumerate(blocks, 1)]
+    try:
+        yield store
+    finally:
+        for h in handles:
+            h.remove()
+
+
+@contextmanager
 def edit(model, layer: int, fn: Callable) -> Iterator[None]:
     """Replace the residual stream at `layer` by `fn(hidden)` during the forward passes run inside the block.
 

@@ -6,13 +6,50 @@
         skipped.jsonl         one row per prompt not extracted, with the reason
         L38_label.npy         float32 [n, d]: residual stream at layer 38, at the answer-label token
         L38_prelabel.npy      float32 [n, d]: the same at the token before it
+        L38_prompt_end.npy    float32 [n, d]: the same at the last token of the model input (its state predicts the
+                              first generated token)
+        L38_think_end.npy     float32 [n, d]: the same at the end-of-thinking token (its state predicts the first
+                              token of the answer); thinking-on runs only
+        prelabel_top_logits.npz   `token_ids` int32 [n, k] and `logits` float32 [n, k]: the k largest next-token
+                              logits at the prelabel site, largest first (extract.json, prelabel_top_logits)
+
+All four sites are rows of the same prompts, in index.jsonl order. Extractions made before 2026-11-22 have only the
+label and prelabel arrays and no logits file.
 
 index.jsonl fields: `row` (array row), `uid`, `choice_label` and `chosen_option` (from the baseline run),
 `label_token` and `prelabel_token` (the decoded tokens at the two sites, for auditing), `label_index` (position of
 the label token in the generated ids), `seq_len` (tokens in the replayed sequence, prompt included),
+`prompt_len` (tokens of the model input, so prompt_end is index prompt_len - 1 of the replayed sequence),
+`answer_start` (index in the generated ids where the answer begins; think_end is generated index answer_start - 1),
+`prompt_end_token` and `think_end_token` (decoded, for auditing),
 `replay_label_margin` (at the prelabel site of the replayed pass: logit of the label token the model generated
 minus the largest other logit; >= 0 for a faithful replay of a greedy generation, except near-ties, which can come
-out one bf16 step, about 0.125, negative) and `replay_predicts_label` (margin >= 0).
+out one bf16 step, about 0.125, negative), `replay_predicts_label` (margin >= 0), `replay_label_rank` (how many
+tokens had a larger logit; 0 = the top prediction) and `replay_consistent` (the replay check for the way the
+baseline run decoded: margin >= 0 for a greedy run; rank < top_k for a sampled run, where the label need not be the
+top prediction). Extractions made before 2026-11-22 have neither of the last two; all were of greedy runs.
+
+extract_horizon.py writes the same layout for the horizon site (the prompt tokens that state the horizon), in its
+own directory:
+
+    activations/<model>[-nothink]__<bank>__horizon/
+        extract.json          as above; settings.thinking is part of the model input and so of the token indices
+        index.jsonl           one row per array row, i.e. per horizon token of a prompt (fields below)
+        horizon_sites.jsonl   one row per prompt, including those without a horizon (fields below)
+        L00_horizon.npy ...   float32 [rows, d], one file per layer; a prompt has as many rows as its horizon has
+                              tokens ("15 minutes": "1", "5", " minutes")
+
+index.jsonl fields there: `row`, `uid`, `k` (which token of the horizon, from 0), `n_tokens` (tokens in this
+horizon), `token_index` (the token's index in the model input, chat template included, no padding), `token_id`,
+`token` (decoded on its own).
+
+horizon_sites.jsonl fields: `uid`, `split`, `regime`, `horizon` (as written), `horizon_grid_value`, `log10_days`
+(of the grid value), `near_first`, `label_style` ("a)/b)" or "1)/2)"), `far_label`, `char_start` / `char_end` (the
+horizon in the prompt text), `n_input_tokens`, `token_indices`, `token_ids`, `tokens`, `rows` (its array rows).
+Prompts without a horizon have empty lists and nulls. These rows can be passed as the hook's `rows`, and
+`token_indices` to `steer.hooks.at_prompt`, to edit only the horizon's tokens.
+
+`load(directory, layer, "horizon")` reads one layer of it; `horizon_sites(directory)` reads the per-prompt rows.
 """
 
 from __future__ import annotations
@@ -26,7 +63,11 @@ import numpy as np
 
 from pbank.records import read_jsonl
 
-POSITIONS = ("label", "prelabel")
+# The sites extract.py reads, and fit.py can fit on. An extraction of a thinking-off run has no think_end, and
+# extractions made before 2026-11-22 have only the first two.
+POSITIONS = ("label", "prelabel", "prompt_end", "think_end")
+TOP_LOGITS_FILE = "prelabel_top_logits.npz"
+HORIZON = "horizon"                 # the site extract_horizon.py reads
 
 
 def array_name(layer: int, position: str) -> str:
@@ -69,3 +110,27 @@ def load(directory: Path, layer: int, position: str) -> ActivationSet:
     if len(index) != len(X) or any(row["row"] != i for i, row in enumerate(index)):
         raise ValueError(f"{directory}: index.jsonl does not match {name} row for row")
     return ActivationSet(X=X, index=index, layer=layer, position=position, meta=meta)
+
+
+def horizon_sites(directory: Path) -> dict[str, dict]:
+    """horizon_sites.jsonl of an extract_horizon.py output, by uid, checked against index.jsonl."""
+    directory = Path(directory)
+    sites = {row["uid"]: row for row in read_jsonl(directory / "horizon_sites.jsonl")}
+    index = read_jsonl(directory / "index.jsonl")
+    for uid, site in sites.items():
+        got = [(index[r]["uid"], index[r]["token_index"]) for r in site["rows"]]
+        if got != [(uid, k) for k in site["token_indices"]]:
+            raise ValueError(f"{directory}: horizon_sites.jsonl and index.jsonl disagree for {uid}")
+    return sites
+
+
+def top_logits(directory: Path) -> tuple[np.ndarray, np.ndarray]:
+    """(token_ids int32 [n, k], logits float32 [n, k]) of prelabel_top_logits.npz, checked against extract.json."""
+    directory = Path(directory)
+    meta = json.loads((directory / "extract.json").read_text()).get("prelabel_top_logits")
+    if not meta:
+        raise FileNotFoundError(f"{directory} has no {TOP_LOGITS_FILE} (extracted with --top-logits 0, or before it)")
+    if file_sha256(directory / meta["file"]) != meta["sha256"]:
+        raise ValueError(f"{directory / meta['file']} does not match the SHA-256 recorded in extract.json")
+    with np.load(directory / meta["file"]) as z:
+        return z["token_ids"], z["logits"]

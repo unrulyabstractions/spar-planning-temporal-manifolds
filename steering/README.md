@@ -23,7 +23,7 @@ uv run --extra local python baseline.py --bank data/t0_s0              # 1. gene
 cd ../steering
 uv sync --extra dev
 uv run python extract.py --bank ../prompt_bank/data/t0_s0 \
-    --run ../prompt_bank/runs/gemma-4-31B-it__t0_s0 --layers 38       # 2. activations at the answer label
+    --run ../prompt_bank/runs/gemma-4-31B-it__t0_s0 --layers all      # 2. activations, every layer and site
 uv run python fit.py --activations activations/gemma-4-31B-it__t0_s0 \
     --bank ../prompt_bank/data/t0_s0 --layer 38                        # 3. directions, curve, diagnostics
 uv run python bundle.py --fit fits/gemma-4-31B-it__t0_s0/default/L38_label \
@@ -56,8 +56,14 @@ an earlier output, and refuses inputs that don't match: a different bank, differ
   - `label` is the token carrying the label character of the model's own "I choose: b)". It is the report's
     "answer-label token" and fit.py's default.
   - `prelabel` is the token before it, whose state predicts the label.
+  - `prompt_end` is the last token of the model input, whose state predicts the first generated token.
+  - `think_end` is the end-of-thinking token, whose state predicts the first token of the answer. Thinking-on runs
+    only.
 
-  Both are extracted.
+  All are extracted, as rows of the same prompts, and `fit.py --site` takes any of them. `extract.py --layers all`
+  keeps every layer a hook can steer (1 .. n_layers − 1), so a fit at another layer or site needs no GPU. At the
+  prelabel site, extract.py also keeps the 64 largest next-token logits with their token ids
+  (`prelabel_top_logits.npz`, read by `steer.activations.top_logits`): the unsteered scores of the answer letters.
 - **H/D** is the stated horizon over the **far** option's delay (report A.1), i.e. the bank's `h_over_far_delay`.
 - **Log-time t** is log10 of the horizon in days, taken at its grid value. A rewritten "100 weeks" sits with
   "23 months".
@@ -99,12 +105,39 @@ something.
 
    fit.py reports this composition. It also reports the cosine between CAA and a *choice* direction (replies
    that chose far, minus those that chose near). That measures how much of CAA is "which option was chosen"
-   rather than "how long the horizon is". A within-regime contrast is **not implemented**, pending a team
-   decision.
+   rather than "how long the horizon is".
+
+   **Within-regime CAA** removes that difference: inside one regime the correct answer is the same for every prompt.
+   - In each regime, long is the third of its prompts with the longest horizons and short the third with the
+     shortest, split on log-horizon (`--within-quantile`). H/D cannot do this: inside "none" and "near_only" it is
+     always below 1.
+   - `caa_none`, `caa_near_only`, `caa_both` are long minus short inside that regime. `caa_within` averages the
+     "near_only" and "both" differences, weighted by regime size (`--within-pool`); "none" is left out because the
+     horizon cannot change the answer there.
+   - They are bundled as the comparison methods `caa-none`, `caa-near_only`, `caa-both`, `caa-within`.
+   - fit.py prints, and `fit.json` records under `diagnostics.caa_within`, each one's class sizes and cosines, and
+     the cosines between the regimes' directions. A regime with fewer than two distinct horizons gets none, and
+     bundle.py bundles what the fit has.
 3. **Reward-contrast control.** The report names this control but doesn't define it. Here it is the mean of
    prompts with reward multiplier >= 25 minus those with multiplier <= 5 (`--reward-high-min`,
    `--reward-low-max`).
-4. **Random controls.** 100 isotropic random unit vectors (`--n-random`, `--seed`).
+4. **Random controls.** 100 isotropic random unit vectors (`--n-random`, `--seed`), or, with `--draws DIR`, the
+   shared draws the evaluation team's `evaluation/shared_draws.py` writes for these activations:
+
+   ```
+   python ../evaluation/shared_draws.py make --activations activations/<run> --bank ../prompt_bank/data/t0_s0/prompts.jsonl \
+       --model <model id> --layer 38 --site label --out draws/
+   python fit.py --activations activations/<run> --bank ../prompt_bank/data/t0_s0 --layer 38 --draws draws/<model>/L38_label
+   ```
+
+   - The fit's random baseline is then the same vectors as the evaluation's nulls: 99 each of isotropic,
+     covariance-matched and real-difference directions. `fit.json` reports CAA's largest and 95th-percentile |cosine|
+     per family, and records the draws' hashes under `random_source`.
+   - `fit.py` refuses draws made for another model, layer, site or activations file, or changed since they were
+     written (`steer/draws.py`).
+   - The draws enter the diagnostics only. A fit with `--draws` has the same methods, bit for bit.
+   - They are drawn from all 471 fitted-split prompts, including any that a fit leaves out with
+     `--exclude-horizons`.
 5. **Curve.**
    - PCA keeps 4 components (`--components`; the report says 3-8).
    - The smoother is Gaussian-kernel local-linear with a 0.3-decade bandwidth (`--bandwidth`; grid points are
@@ -128,6 +161,11 @@ something.
    gives a margin >= 0, except on near-ties, which can land one bf16 step (0.125) below zero. extract.json reports
    the smallest margin. A clearly negative one would mean the replay does not reproduce the generation.
 
+   A sampled baseline run (baseline.py's default with thinking on) need not write its most likely label, so its
+   margins can be honestly negative. For such a run the check is that the label is among the run's top-k tokens
+   (`replay_label_rank` < top_k), which is necessary but weaker. `replay_consistent` in index.jsonl is the check that
+   applies to the run, and extract.json says which one it was.
+
 ## Applying an edit inside the model
 
 ```python
@@ -150,15 +188,21 @@ logits = replay_logits(model, prompt_ids, answer_ids, slide, x=0.5, layer=38)   
     the curve ignore it; it is in the signature for edits that need it.
 - **The hook** (`steer/hooks.py`) decides where the displacement is applied:
   - `positions="all"`, `"prompt"`, `"generated"`, or a callable on the context;
+  - `at_generated(index)` builds a callable for one generated token per row (the label or prelabel token);
+  - `at_prompt(indices)` builds one for chosen prompt tokens per row (the horizon's tokens, below);
   - padding is never edited.
 
-  It reads each pass's `cache_position` and `attention_mask` from the model's forward call, so it works inside
-  batched, left-padded `generate()` with the key-value cache. Unedited positions keep their bits, and a zero edit
+  It reads each pass's token positions from the model's forward call (`cache_position`, else `attention_mask`,
+  else `position_ids`), so it works inside batched, left-padded `generate()` with the key-value cache, and at
+  batch 1, where transformers 5.22.2 passes neither a cache position nor a mask. Unedited positions keep their bits, and a zero edit
   reproduces the unhooked model exactly.
 - **`record=[]`** collects each pass's context and the per-token norm of the applied displacement, for audits and for
   matching random controls' sizes token by token.
 - **Before steering a new model**, or after a transformers upgrade, run `tools/check_hook.py`. It checks the zero edit,
-  the roles and the effect in that model's real generation setup, and exits 1 on failure.
+  the roles and the effect in that model's real generation setup, and exits 1 on failure. `--positions` applies the
+  edit at `all` (the bundles' default), `prompt`, `generated`, or one token per row: `label` (the answer-label token,
+  which can no longer change the choice) or `prelabel` (the token whose state predicts the label); for the last two
+  it also checks that exactly that token was edited (`steer.hooks.at_generated`).
   - **The tests** cover a tiny Qwen3 and Qwen3.5-0.8B.
   - **On Gemma 4 31B, layer 38, thinking on,** the gate has passed twice:
     - locally, with CPU offload, on 2 prompts;
@@ -166,6 +210,43 @@ logits = replay_logits(model, prompt_ids, answer_ids, slide, x=0.5, layer=38)   
 
     `progress-20261114.md` and `progress-20261115.md` have the outputs.
   - **Not yet run on Gemma:** `check_hook.py --method` with a real bundle.
+
+## The horizon site
+
+`extract_horizon.py` reads the residual stream at the prompt tokens that state the horizon ("7 years"), for methods
+that are fitted on those tokens or edit only them:
+
+```
+uv run python extract_horizon.py --bank ../prompt_bank/data/t0_s0 --model google/gemma-4-31B-it
+```
+
+- **No baseline run is needed.** The horizon is in the prompt, so this is one forward pass per prompt, with no
+  generation. On Qwen3.5-2B the 700 prompts at all 25 layers took 32 s (`progress-20261122.md`).
+- **Every token of the horizon is kept separately,** with its string. Gemma 4 and Qwen3.5 split numbers into digits:
+  "15 minutes" is `'1'`, `'5'`, `' minutes'`. On `t0_s0` a horizon has 2 to 7 tokens, 2,600 in all.
+- **All layers by default,** 0 to the number of blocks. Layer 0 is the embeddings. The last layer is the last block's
+  output before the final norm, which is not `hidden_states[n]` (`steer.layers.capture_all`).
+- **The audit is part of the run.** Every horizon's tokens must decode back to the stated horizon, unit rewrites
+  included, or nothing is written.
+- **Thinking is part of the model input.** Gemma 4's template puts a system turn before the prompt when thinking is
+  on, which shifts the token indices and changes the activations. Extract with the setting of the runs the result
+  will be used with (`--thinking`, the default, or `--no-thinking`).
+- **Output:** `activations/<model>[-nothink]__<bank>__horizon/`, one float32 file per layer, `index.jsonl` (one row
+  per token) and `horizon_sites.jsonl` (one row per prompt). `steer/activations.py` lists the fields.
+
+Editing only the horizon's tokens during generation:
+
+```python
+from steer.activations import horizon_sites
+from steer.hooks import at_prompt, steering
+
+sites = horizon_sites("activations/gemma-4-31B-it__t0_s0__horizon")
+rows = [sites[uid] for uid in uids]                      # per prompt: token_indices, log10_days, near_first, label_style, ...
+with steering(lcm.model, edit, x, layer, positions=at_prompt([r["token_indices"] for r in rows]), rows=rows):
+    replies = lcm.generate(texts, thinking=True, max_new_tokens=8192)
+```
+
+`rows` reaches the edit as `ctx.rows`. A prompt without a horizon has an empty `token_indices` and is not edited.
 
 ## Handing a method over: bundles
 
@@ -207,7 +288,8 @@ hook gate with the bundled method itself.
 
 ## Publishing outputs
 
-Where outputs are hosted is not decided yet, so there is one script per destination. They take the same paths:
+Outputs are hosted on Hugging Face (agreed with the evaluation team, 2026-11-19). There is one script per
+destination, and the GCS one remains available. They take the same paths:
 
 ```
 python tools/upload_hf.py  ../prompt_bank/runs/<run> activations/<run> fits/<run> methods/<model>     # dry run
@@ -246,7 +328,8 @@ The scripts never read or print a key.
 activations/<run>/extract.json         settings, model, software, bank and run identity, counts, array SHA-256s
 activations/<run>/index.jsonl          one row per extracted prompt (steer/activations.py lists the fields)
 activations/<run>/skipped.jsonl        prompts not extracted, with the reason (no answer, format failure, ...)
-activations/<run>/L38_label.npy        float32 [n, d]; also L38_prelabel.npy
+activations/<run>/L38_label.npy        float32 [n, d]; also L38_prelabel.npy, L38_prompt_end.npy, L38_think_end.npy
+activations/<run>/prelabel_top_logits.npz   token_ids int32 [n, k], logits float32 [n, k], largest first
 fits/<run>/search.jsonl               append-only: one line per fit.py run on these activations (written, refused,
                                       error), with settings, code commit and headline diagnostics
 fits/<run>/<name>/L38_label/fit.json   settings, inputs, class sizes, prompts left out per reason, diagnostics
@@ -265,9 +348,11 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 |---|---|
 | `bundle.py` | stage 3: package a fit's methods as bundles for the evaluation team |
 | `extract.py` | stage 1: replay the baseline's replies, read activations at the label |
+| `extract_horizon.py` | read activations at the prompt tokens that state the horizon, all layers; needs no baseline run |
 | `fit.py` | stage 2: directions, curve, controls, diagnostics (command-line wrapper around `steer/fitting.py`) |
-| `steer/layers.py` | layer convention; `capture` and `edit` hooks |
-| `steer/sites.py` | locate the answer-label token |
+| `steer/layers.py` | layer convention; `capture`, `capture_all` and `edit` hooks |
+| `steer/sites.py` | locate the answer-label token, and the horizon's tokens in the prompt |
+| `steer/draws.py` | read and check the evaluation team's shared random draws |
 | `steer/activations.py` | on-disk format and loader (checks hashes) |
 | `steer/fitting.py` | the fit as a function, `fit(X, records, chosen, FitSettings)`, for refits on other prompts or labels |
 | `steer/directions.py` | difference of means, thresholds, random controls, linear edit |
@@ -280,7 +365,7 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 | `tools/check_hook.py` | gate before steering a model: zero edit exact, roles right, strong edit has an effect |
 | `tools/upload_hf.py`, `tools/upload_gcs.py` | publish outputs (dry run by default; checksummed, verified, never overwrite) |
 | `tools/compare_fits.py` | compare two fit output trees exactly (arrays bit for bit), e.g. before and after a refactor |
-| `tools/vast_smoke.sh` | the pipeline on a rented GPU box, one gated stage at a time (setup, weights, tests, hook, baseline, extract, label audit, fit, bundle, method gate, checksums) |
+| `tools/vast_smoke.sh` | the pipeline on a rented GPU box, one gated stage at a time (code version, setup, weights, tests, hook, horizon site, baseline, extract at all layers and sites, label audit, then shared draws, fit, bundle and method gate at the label and prelabel sites, checksums) |
 
 ## Tests
 
@@ -299,6 +384,9 @@ fits/<run>/<name>/L38_label/fit_uids.jsonl     per fitted prompt: uid, regime, h
 - the hook in real `generate()` calls: roles, position masks, padding, exact zero edit, generated-only leaving the
   first token alone, replay. On a tiny Qwen3, and on Qwen3.5-0.8B in bf16 on a GPU;
 - `fit.py` end to end on synthetic activations over the real bank (`tests/fixtures.py`), and `tools/compare_fits.py`
-  telling identical trees from ones that differ by one ulp.
+  telling identical trees from ones that differ by one ulp; with `--draws`, the methods unchanged and draws for other
+  inputs refused;
+- the horizon site: its tokens decode back for all 671 horizons on the Gemma 4 and Qwen3.5 tokenizers;
+  `extract_horizon.py` on Qwen3.5-0.8B against `hidden_states`; a horizon-only edit in a padded batch.
 
 Tests that need a cached model or a GPU skip without one.

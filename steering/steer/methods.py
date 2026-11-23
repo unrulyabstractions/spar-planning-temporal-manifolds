@@ -35,7 +35,7 @@ from pbank.records import load_prompts, prompts_sha256, read_jsonl
 from steer import activations
 from steer.activations import file_sha256
 from steer.edits import CurveEdit, LinearEdit
-from steer.fitting import FitResult, FitSettings, fit
+from steer.fitting import FIT_REGIMES, WITHIN_KEY, FitResult, FitSettings, fit, within_key
 from steer.manifold import Manifold
 
 FORMAT = "steer-method/1"
@@ -47,8 +47,25 @@ LINEAR = {   # method -> (direction key in directions.npz, what +x moves toward,
     "choice": ("choice", "the far option as the baseline's choice (mean of chose far minus chose near)",
                "difference of class means, unit-normalized (concept control)"),
 }
+for _regime in FIT_REGIMES:   # the within-regime CAAs (comparison methods; fit.py's docstring defines them)
+    LINEAR[f"caa-{_regime}"] = (
+        within_key(_regime), f"longer horizons within the `{_regime}` regime (mean of the regime's prompts with the "
+        "longest horizons minus mean of those with the shortest; each class is the within_quantile share of the regime)",
+        "difference of class means within one regime, unit-normalized")
+LINEAR["caa-within"] = (
+    WITHIN_KEY, "longer horizons within a regime (the within-regime mean differences of the within_pool regimes, "
+    "averaged with regime-size weights)", "regime-size-weighted average of within-regime differences of class means, "
+    "unit-normalized")
 CURVE = {"curve-snap": "snap", "curve-displace": "displace"}
 METHODS = tuple(LINEAR) + tuple(CURVE)
+
+
+def available_methods(fit_dir: Path) -> list[str]:
+    """The methods a fit.py output can be bundled into: every curve method, and each linear one whose direction the
+    fit has (a within-regime CAA is absent when its regime was left out or had too few distinct horizons)."""
+    with np.load(Path(fit_dir) / "directions.npz") as z:
+        have = set(z.files)
+    return [m for m in METHODS if m in CURVE or LINEAR[m][0] in have]
 LAYER_CONVENTION = ("residual stream after decoder block `layer`, counting blocks from 1 (= hidden_states[layer]); "
                     "see steering/steer/layers.py")
 
@@ -130,7 +147,7 @@ def from_fit_result(meta: dict, result: FitResult) -> Method:
     """The in-memory method of `meta["method"]` from a FitResult (used by refit)."""
     name = meta["method"]
     if name in LINEAR:
-        direction = getattr(result, LINEAR[name][0]).vector
+        direction = result.direction(LINEAR[name][0]).vector
         structure = {"direction": direction, "typical_norm": result.typical_norm}
         return Method(meta=meta, edit=LinearEdit(direction, result.typical_norm), structure=structure)
     return Method(meta=meta, edit=CurveEdit(result.manifold, CURVE[name]), structure={"manifold": result.manifold})
@@ -167,6 +184,8 @@ def write_bundle(out: Path, method: str, fit_dir: Path, fit_meta: dict, extract_
     if method in LINEAR:
         key, toward, training = LINEAR[method]
         with np.load(fit_dir / "directions.npz") as z:
+            if key not in z.files:
+                raise ValueError(f"{fit_dir} has no {key} direction, so {method} cannot be bundled")
             direction, norm = z[key], float(z["typical_norm"])
         np.savez(out / "arrays.npz", direction=direction, typical_norm=norm)
         kind, edit = "push", {"class": "LinearEdit"}
@@ -193,13 +212,15 @@ def write_bundle(out: Path, method: str, fit_dir: Path, fit_meta: dict, extract_
         "training": {"procedure": training, "objective": None, "selected_by_search": False,
                      "search_log": "search.jsonl lists every fit.py run on these activations up to bundling"},
         "fitted_on": {"model": extract_meta["model"], "thinking": extract_meta["run_settings"]["thinking"],
+                      "decoding": extract_meta["run_settings"].get("decoding", "greedy"),
                       "baseline_run": extract_meta["run_name"], "bank": extract_meta["bank_name"],
                       "bank_prompts_sha256": extract_meta["settings"]["bank_prompts_sha256"],
                       "activations": fit_meta["inputs"]["activations"], "activations_array": array,
                       "activations_array_sha256": fit_meta["inputs"]["array_sha256"],
                       "fit_name": s["name"], "n_prompts": fit_meta["n_prompts"], "regimes": fit_meta["regimes"],
                       "excluded": fit_meta["excluded"], "include_none": s["include_none"]},
-        "fit_settings": {f.name: s[f.name] for f in dataclasses.fields(FitSettings)},
+        # A fit written before a setting existed lacks it; the setting's default is then what that fit used.
+        "fit_settings": {f.name: s.get(f.name, f.default) for f in dataclasses.fields(FitSettings)},
         "code_commit": {"extract": extract_meta["code_commit"], "fit": fit_meta["code_commit"], "bundle": code_commit},
         "created_utc": created_utc,
     }

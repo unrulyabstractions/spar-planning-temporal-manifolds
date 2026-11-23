@@ -10,7 +10,7 @@ import torch
 
 from steer.directions import random_directions
 from steer.edits import ROLE_GENERATED, ROLE_PAD, ROLE_PROMPT, LinearEdit
-from steer.hooks import replay_logits, steering
+from steer.hooks import at_generated, at_prompt, replay_logits, steering
 from test_layers import tiny_qwen3
 
 LAYER = 2
@@ -105,6 +105,80 @@ def test_callable_positions_and_per_row_strengths(tiny):
     assert torch.allclose(sizes[:, 7], torch.tensor([1.5, 0.75]))
 
 
+def test_at_generated_edits_one_token_per_row(tiny):
+    # Row 0 (left-padded by 3): generated token 2, absolute position 8 + 2 = 10, fed in on decode pass 3.
+    # Row 1: index -1, the last prompt token (position 7, in the prefill), whose state predicts generated token 0.
+    model, ids, mask = tiny
+    seq, scores = generate(model, ids, mask)
+    record = []
+    with steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_generated([2, -1]), record=record):
+        seq_e, scores_e = generate(model, ids, mask)
+    edited = [(p, r, int(c.position[r, t])) for p, rec in enumerate(record)
+              for c in [rec["ctx"]] for r, t in c.mask.nonzero().tolist()]
+    diff = (scores_e - scores).abs().amax(-1)                         # [steps, batch]
+    print(f"at_generated([2, -1]): edited (pass, row, position) {edited}; per-step max |score diff| row 0 "
+          f"{[f'{v:.1e}' for v in diff[:, 0].tolist()]}, row 1 {[f'{v:.1e}' for v in diff[:, 1].tolist()]}")
+    assert edited == [(0, 1, 7), (3, 0, 10)]
+    assert torch.equal(scores_e[:3, 0], scores[:3, 0]) and diff[3, 0] > 1e-2   # row 0: unchanged until after token 2
+    assert diff[0, 1] > 1e-2                                                     # row 1: the first token's scores move
+    # The same callable reused for a second run re-reads the prompt length from that run's first pass.
+    cols, reused, rec_short = slice(1, None), at_generated([2, 0]), []
+    with steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, reused):
+        generate(model, ids, mask)                                              # prompt length 8
+    with steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, reused, record=rec_short):
+        generate(model, ids[:, cols], mask[:, cols])                            # prompt length 7
+    short = [(p, r, int(rec["ctx"].position[r, t])) for p, rec in enumerate(rec_short)
+             for r, t in rec["ctx"].mask.nonzero().tolist()]
+    print(f"reused on a 7-token prompt batch: edited (pass, row, position) {short}")
+    assert short == [(1, 1, 7), (3, 0, 9)]
+    # Replay: one pass over prompt (5) + answer (3); generated index 1 is position 6.
+    prompt, answer, rec_replay = [5, 9, 2, 7, 11], [4, 6, 10], []
+    with torch.no_grad(), steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_generated([1]),
+                                   prompt_len=len(prompt), record=rec_replay):
+        model(input_ids=torch.tensor([prompt + answer]))
+    print(f"replay: edited positions {rec_replay[0]['ctx'].mask.nonzero()[:, 1].tolist()}")
+    assert rec_replay[0]["ctx"].mask.nonzero()[:, 1].tolist() == [6]
+
+
+def test_at_prompt_edits_chosen_prompt_tokens_per_row(tiny):
+    # Row 0 is left-padded by 3, so its tokens 1 and 2 sit at positions 4 and 5; row 1 has none; no decode pass is edited.
+    model, ids, mask = tiny
+    seq, scores = generate(model, ids, mask)
+    record = []
+    with steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_prompt([[1, 2], []]), record=record):
+        seq_e, scores_e = generate(model, ids, mask)
+    edited = [(p, r, t) for p, rec in enumerate(record) for r, t in rec["ctx"].mask.nonzero().tolist()]
+    diff = (scores_e - scores).abs().amax(-1)
+    print(f"at_prompt([[1, 2], []]): edited (pass, row, position) {edited}; step-0 max |score diff| per row {diff[0].tolist()}")
+    assert edited == [(0, 0, 4), (0, 0, 5)]
+    assert diff[0, 0] > 1e-2 and torch.equal(scores_e[:, 1], scores[:, 1])       # row 1 untouched, bit for bit
+    # Replay (one pass, no padding): the indices are the positions themselves.
+    rec_replay = []
+    with torch.no_grad(), steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_prompt([[0, 3]]), prompt_len=5,
+                                   record=rec_replay):
+        model(input_ids=torch.tensor([[5, 9, 2, 7, 11, 4, 6, 10]]))
+    assert rec_replay[0]["ctx"].mask.nonzero()[:, 1].tolist() == [0, 3]
+    # An index beyond the row's prompt is refused, not wrapped into another token.
+    with pytest.raises(ValueError), steering(model, LinearEdit(unit(32), 3.0), 2.0, LAYER, at_prompt([[5], []])):
+        generate(model, ids, mask)                                              # row 0 has 5 prompt tokens: 0..4
+
+
+def test_roles_without_padding(tiny):
+    # transformers 5.22.2 passes no cache_position and drops an all-ones attention_mask at batch 1; the positions
+    # then come from position_ids. Before 2026-11-19 they fell back to arange(seq_len), so every decode pass looked
+    # like a new one-token prompt and "generated" edited nothing.
+    model, ids, mask = tiny
+    record = []
+    with steering(model, LinearEdit(unit(32), 1.0), 0.0, LAYER, "generated", record=record):
+        generate(model, ids[:1, 3:], mask[:1, 3:])                              # one row, no padding, prompt length 5
+    decode = [r["ctx"] for r in record[1:]]
+    print(f"batch 1, no padding: decode positions {[int(c.position[0, 0]) for c in decode]}, "
+          f"roles {[int(c.role[0, 0]) for c in decode]}, edited {[int(c.mask.sum()) for c in decode]}")
+    assert [int(c.position[0, 0]) for c in decode] == list(range(5, 5 + NEW - 1))
+    assert all(bool((c.role == ROLE_GENERATED).all()) and bool(c.mask.all()) for c in decode)
+    assert record[0]["ctx"].role.tolist() == [[ROLE_PROMPT] * 5] and not record[0]["ctx"].mask.any()
+
+
 def test_replay_logits(tiny):
     model, _, _ = tiny
     prompt, answer = [5, 9, 2, 7, 11], [4, 6, 10]
@@ -155,3 +229,28 @@ def test_real_model_zero_edit_is_exact_and_a_strong_edit_is_not(qwen35):
           f"strength 4.0 changed {changed}/6. First reply: {base[0].answer!r} -> {strong[0].answer!r}")
     assert all(same) and changed >= 1 and record[0]["ctx"].role.eq(ROLE_PROMPT).any()
     assert len(record) > 1 and record[1]["ctx"].role.eq(ROLE_GENERATED).all()
+
+
+def test_seeded_sampling_repeats_and_a_zero_edit_leaves_it_identical(qwen35):
+    # A sampled batch is seeded from the run's seed and its own prompts (pbank.local_model.Decoding.batch_seed), so
+    # the same batch repeats exactly, also after other generations and under a hook that changes nothing.
+    from pbank.local_model import Decoding
+    lcm, texts = qwen35, bank_texts(6)
+    d = lcm.model.config.get_text_config().hidden_size
+    seed0, seed1 = Decoding("sample", 0.6, 0.95, 20, 0), Decoding("sample", 0.6, 0.95, 20, 1)
+    ids = lambda replies: [r.generated_ids for r in replies]
+    greedy = ids(lcm.generate(texts, thinking=False, max_new_tokens=40))
+    first = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed0))
+    other = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed1))
+    lcm.generate(texts[:2], thinking=False, max_new_tokens=10, decoding=seed1)        # disturb the generator
+    again = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed0))
+    with steering(lcm.model, LinearEdit(unit(d), 50.0), 0.0, 12, "all"):
+        hooked = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed0))
+    with steering(lcm.model, LinearEdit(unit(d), 50.0), 4.0, 12, "all"):
+        steered = ids(lcm.generate(texts, thinking=False, max_new_tokens=40, decoding=seed0))
+    same = lambda a, b: sum(x == y for x, y in zip(a, b))
+    print(f"sampled (0.6 / 0.95 / 20), 6 prompts: same seed again {same(first, again)}/6 identical; zero-edit hook "
+          f"{same(first, hooked)}/6; seed 1 vs seed 0 {same(first, other)}/6; greedy vs sampled {same(first, greedy)}/6; "
+          f"strength-4 edit {same(first, steered)}/6; greedy repeated {same(greedy, ids(lcm.generate(texts, thinking=False, max_new_tokens=40)))}/6")
+    assert first == again == hooked
+    assert same(first, other) < 6 and same(first, steered) == 0
