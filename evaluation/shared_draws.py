@@ -135,7 +135,10 @@ def eligible_uids(bank_prompts: Path) -> set[str]:
 def load_activations(act_dir: Path, layer: int, site: str, bank_prompts: Path, uid_key: str = "uid",
                      min_rows: int = MIN_ROWS) -> tuple[np.ndarray, list[str], dict]:
     """The [m, d] float64 activations of the eligible prompts, rows sorted by uid, plus the input provenance."""
-    npy = act_dir / f"L{layer}_{site}.npy"
+    # extract.py names arrays L<layer, two digits>_<site>.npy (steer.activations.array_name); same name from L10 up.
+    npy = act_dir / f"L{layer:02d}_{site}.npy"
+    if not npy.exists() and (act_dir / f"L{layer}_{site}.npy").exists():
+        npy = act_dir / f"L{layer}_{site}.npy"
     index = act_dir / "index.jsonl"
     A = np.load(npy)
     rows = read_jsonl(index)
