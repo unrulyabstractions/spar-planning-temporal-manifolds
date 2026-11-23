@@ -80,3 +80,26 @@ def test_check_loops_detects_repeats_only():
     assert check_loops.is_looping(list(range(5000, 5500)) + block * 4)       # stuck: one block over and over
     assert not check_loops.is_looping(list(range(2000)))                     # progressing: nothing repeats
     assert not check_loops.is_looping(block * 2)                             # too short to call
+
+
+def test_gen_decodings_follow_the_baseline_run():
+    pytest.importorskip("pbank.local_model")
+    one = re_.gen_decodings("greedy", 5)                                   # greedy: one pass whatever is asked
+    assert len(one) == 1 and one[0].mode == "greedy"
+    assert re_.gen_decodings(None, 3)[0].mode == "greedy"                  # runs from before PR 19 record nothing
+    run = {"mode": "sample", "temperature": 1.0, "top_p": 0.95, "top_k": 64, "seed": 7, "source": {}}
+    ds = re_.gen_decodings(run, 3)
+    assert [d.mode for d in ds] == ["sample"] * 3 and [d.seed for d in ds] == [7, 8, 9]
+    assert all((d.temperature, d.top_p, d.top_k) == (1.0, 0.95, 64) for d in ds)
+    with pytest.raises(ValueError):
+        re_.gen_decodings({"mode": "beam"}, 1)
+
+
+def test_run_settings_reads_decoding(tmp_path):
+    import json
+    base = {"model": "m", "thinking": True, "max_new_tokens": 4096, "batch_size": 8}
+    (tmp_path / "run.json").write_text(json.dumps({"settings": base}))
+    assert re_.run_settings(tmp_path)["decoding"] == "greedy"
+    dec = {"mode": "sample", "temperature": 1.0, "top_p": 0.95, "top_k": 64, "seed": 0}
+    (tmp_path / "run.json").write_text(json.dumps({"settings": base | {"decoding": dec}}))
+    assert re_.run_settings(tmp_path)["decoding"] == dec

@@ -6,7 +6,9 @@
 #   THINK=1 CAP=4096 BATCH=4 TAG=think evaluation/run_local.sh
 #
 # Settings (environment): MODEL, LAYER, THINK (0/1), CAP (max new tokens), BATCH, TAG (run name suffix), K (draws per
-# null family), PY (python), STAGES (which runner stages), GEN_PAIRS.
+# null family), PY (python), STAGES (which runner stages), GEN_PAIRS, GEN_SAMPLES (generation-check passes on a
+# sampled baseline), DECODING (baseline: auto | greedy | sample; auto samples when thinking is on; an older greedy run
+# resumes only with DECODING=greedy).
 set -euo pipefail
 
 MODEL=${MODEL:-Qwen/Qwen3-1.7B}
@@ -17,6 +19,8 @@ BATCH=${BATCH:-16}
 TAG=${TAG:-nothink}
 K=${K:-19}
 GEN_PAIRS=${GEN_PAIRS:-16}
+GEN_SAMPLES=${GEN_SAMPLES:-1}
+DECODING=${DECODING:-auto}
 STAGES=${STAGES:-"items calibrate replay gencheck"}
 PY=${PY:-$(cd "$(dirname "$0")/.." && pwd)/../PTM_workspace/ptm_env/bin/python}
 
@@ -48,7 +52,7 @@ sys.exit(0 if bank<=got else 1)"
 
 stamp "baseline $RUN (thinking=$THINK, cap=$CAP, batch=$BATCH)"
 baseline_done || (cd "$ROOT/prompt_bank" && $PY -u baseline.py --bank "$BANK" --model "$MODEL" --out "$RUN_DIR" \
-    --batch-size "$BATCH" --max-new-tokens "$CAP" $THINKFLAG)
+    --batch-size "$BATCH" --max-new-tokens "$CAP" --decoding "$DECODING" $THINKFLAG)
 baseline_done || { echo "baseline incomplete"; exit 1; }
 
 stamp "extract (all splits: the runner reads the verification grid's label positions from the baseline)"
@@ -85,7 +89,7 @@ stamp "shared draws"
 
 stamp "replay evaluation: $STAGES"
 (cd "$ROOT/evaluation" && $PY -u replay_eval.py $STAGES --bank "$BANK" --run "$RUN_DIR" --activations "$ACT" \
-    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH")
+    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH" --gen-samples "$GEN_SAMPLES")
 
 stamp "report card"
 (cd "$ROOT/evaluation" && $PY analyze.py --out "$OUT")

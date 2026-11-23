@@ -139,7 +139,7 @@ def main(argv=None):
         for f in sorted(gdir.glob("*.jsonl")):
             rows = read_jsonl(f)
             ok = [r for r in rows if r["parsed"]]
-            gen[f.stem] = {"n": len(rows), "parsed": len(ok), "p_far": float(np.mean([r["chose_far"] for r in ok])) if ok else None,
+            gen[f.stem] = {"n": len(rows), "samples": len({r.get("sample", 0) for r in rows}), "parsed": len(ok), "p_far": float(np.mean([r["chose_far"] for r in ok])) if ok else None,
                            "hit_cap": sum(r["hit_cap"] for r in rows),
                            "mean_tokens": float(np.mean([r["n_generated"] for r in rows]))}
     report = {"n_items": len(items), "n_verification_unreadable": n_ver_skipped, "calibration": cal, "n0": n0,
@@ -173,9 +173,10 @@ def main(argv=None):
                      f"{m.get('stat', float('nan')):+.3f} / {m.get('null_p95_abs', float('nan')):.3f} / {m.get('p', float('nan')):.2f} | "
                      f"{d.get('stat', float('nan')):+.3f} / {d.get('null_p95_abs', float('nan')):.3f} / {d.get('p', float('nan')):.2f} |")
     if gen:
-        L += ["", "## Generation check (subset)", "", "| arm | parsed | P(far) | hit cap | mean tokens |", "|---|---|---|---|---|"]
+        L += ["", "## Generation check (subset)", "", "| arm | samples | parsed | P(far) | hit cap | mean tokens |",
+              "|---|---|---|---|---|---|"]
         for k, g in gen.items():
-            L.append(f"| {k} | {g['parsed']}/{g['n']} | {g['p_far'] if g['p_far'] is None else round(g['p_far'], 2)} | "
+            L.append(f"| {k} | {g['samples']} | {g['parsed']}/{g['n']} | {g['p_far'] if g['p_far'] is None else round(g['p_far'], 2)} | "
                      f"{g['hit_cap']} | {g['mean_tokens']:.0f} |")
     L += ["", "Plumbing run: the model is small and the numbers are not evidence about steering."]
     (out / "report.md").write_text("\n".join(L) + "\n")
