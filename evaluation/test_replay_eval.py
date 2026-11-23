@@ -80,3 +80,39 @@ def test_check_loops_detects_repeats_only():
     assert check_loops.is_looping(list(range(5000, 5500)) + block * 4)       # stuck: one block over and over
     assert not check_loops.is_looping(list(range(2000)))                     # progressing: nothing repeats
     assert not check_loops.is_looping(block * 2)                             # too short to call
+
+
+def test_batched_replay_matches_each_row_alone():
+    """Right-padded batches read every row as a batch-1 pass would, with and without a steering edit (tiny random
+    Qwen3 on CPU in float32, so any gap is padding leaking in, not bf16 arithmetic)."""
+    import sys
+    from pathlib import Path
+    from types import SimpleNamespace
+    torch = pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "steering"))
+    from steer.edits import LinearEdit
+
+    torch.manual_seed(0)
+    cfg = transformers.Qwen3Config(vocab_size=64, hidden_size=32, intermediate_size=64, num_hidden_layers=2,
+                                   num_attention_heads=4, num_key_value_heads=2, head_dim=8)
+    model = transformers.Qwen3ForCausalLM(cfg).eval()
+    rep = object.__new__(re_.Replayer)
+    from steer.hooks import steering
+    rep.M, rep.layer, rep.batch_size, rep.steering = SimpleNamespace(model=model), 1, 3, steering
+    lengths = [5, 9, 7, 12, 6]                                       # unequal, and 5 rows over batches of 3
+    rep._cache = {f"u{i}": (list(range(1, n)), [n % 60 + 2]) for i, n in enumerate(lengths)}
+    items = [{"uid": f"u{i}", "far_id": 3, "near_id": 4} for i in range(len(lengths))]
+    edit = LinearEdit(np.eye(32)[0], typical_norm=5.0)
+    for x in (0.0, 0.7):
+        y, mass = rep.run(items, edit, x)
+        for n, it in enumerate(items):
+            y1, m1 = rep.run([it], edit, x)
+            assert y[n] == pytest.approx(y1[0], abs=1e-5) and mass[n] == pytest.approx(m1[0], abs=1e-6)
+    assert not np.allclose(rep.run(items, edit, 0.7)[0], rep.run(items, edit, 0.0)[0])   # the edit does act
+
+
+def test_batched_replay_refuses_split_positions():
+    rep = object.__new__(re_.Replayer)
+    with pytest.raises(ValueError, match="positions='all' only"):
+        rep.run([], None, 0.1, positions="generated")

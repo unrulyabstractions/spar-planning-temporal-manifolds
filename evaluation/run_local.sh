@@ -89,7 +89,7 @@ stamp "shared draws"
 
 stamp "replay evaluation: $STAGES"
 (cd "$ROOT/evaluation" && $PY -u replay_eval.py $STAGES --bank "$BANK" --run "$RUN_DIR" --activations "$ACT" \
-    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH" \
+    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH" --replay-batch "$BATCH" \
     $([ "${PROMPTING:-0}" = 1 ] && echo --prompting))
 
 stamp "report card"
@@ -101,6 +101,6 @@ if [ "${TRANSFER:-0}" = 1 ]; then
     stamp "transfer to the eval types: $TRANSFER_BANKS"
     (cd "$ROOT/evaluation" && $PY -u transfer_eval.py baseline items replay report --banks "$TRANSFER_BANKS" \
         ${TRANSFER_SET:+--set $TRANSFER_SET} ${TRANSFER_TYPES:+--types $TRANSFER_TYPES} --t0-bank "$BANK" --t0-run "$RUN_DIR" --t0-out "$OUT" \
-        --activations "$ACT" --methods "$METHODS_RUN" --draws "$DRAWS" --k "$K" --out "$OUT/transfer")
+        --activations "$ACT" --methods "$METHODS_RUN" --draws "$DRAWS" --k "$K" --replay-batch "$BATCH" --out "$OUT/transfer")
     stamp "done: transfer_report.md under $OUT/transfer"
 fi

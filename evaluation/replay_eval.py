@@ -257,10 +257,10 @@ def load_items(out: Path, split: str) -> list[dict]:
 class Replayer:
     """y = logit(far) - logit(near) and label mass at the answer slot, per item, under one edit and request."""
 
-    def __init__(self, M: Model, run_dir: Path, bank_dir: Path, thinking: bool, layer: int):
-        from steer.hooks import replay_logits
-        self.replay_logits = replay_logits
-        self.M, self.layer = M, layer
+    def __init__(self, M: Model, run_dir: Path, bank_dir: Path, thinking: bool, layer: int, batch_size: int = 16):
+        from steer.hooks import steering
+        self.steering = steering
+        self.M, self.layer, self.batch_size = M, layer, batch_size
         bank = {r["uid"]: r for r in read_jsonl(bank_dir / "prompts.jsonl")}
         self.resp = last_per_uid(read_jsonl(run_dir / "responses.jsonl"))
         self.bank, self.thinking = bank, thinking
@@ -277,33 +277,57 @@ class Replayer:
             self._cache[it["uid"]] = (p, a)
         return self._cache[it["uid"]]
 
+    def _last_logits(self, seqs: list[list[int]]) -> torch.Tensor:
+        """Next-token logits (float32 [n, vocab]) after each token sequence, batch_size sequences per forward pass.
+
+        Right padding: under the causal mask a row's tokens never attend to the padding after them, and positions stay
+        0..len-1, so each row reads as it would alone, up to batched bf16 arithmetic (stage_replay measures that gap).
+        The steering hook leaves padding unedited (attention mask 0)."""
+        device = self.M.model.device
+        out = []
+        for s in range(0, len(seqs), self.batch_size):
+            chunk = seqs[s: s + self.batch_size]
+            ids = torch.zeros(len(chunk), max(map(len, chunk)), dtype=torch.long)
+            mask = torch.zeros_like(ids)
+            for i, q in enumerate(chunk):
+                ids[i, :len(q)] = torch.tensor(q)
+                mask[i, :len(q)] = 1
+            last = (mask.sum(1) - 1).to(device)
+            # logits only at the rows' last positions: [rows, rows, vocab], row i's own readout on the diagonal
+            lg = self.M.model(input_ids=ids.to(device), attention_mask=mask.to(device), use_cache=False,
+                              logits_to_keep=last).logits
+            rows = torch.arange(len(chunk), device=lg.device)
+            out.append(lg[rows, rows].float())
+        return torch.cat(out)
+
+    @staticmethod
+    def _readout(items, lg: torch.Tensor):
+        """y = logit(far) - logit(near) and label mass p(far) + p(near), per item, from [n, vocab] logits."""
+        rows = torch.arange(len(items), device=lg.device)
+        far = torch.tensor([it["far_id"] for it in items], device=lg.device)
+        near = torch.tensor([it["near_id"] for it in items], device=lg.device)
+        pr = torch.softmax(lg, -1)
+        y = (lg[rows, far] - lg[rows, near]).cpu().numpy().astype(np.float32)
+        mass = (pr[rows, far] + pr[rows, near]).cpu().numpy().astype(np.float32)
+        return y, mass
+
     @torch.no_grad()
     def run_prompted(self, items, sentence: str):
         """y and label mass with `sentence` appended to the prompt and the generated reasoning kept as it was, so the
         prompt is read like an edit is: with the reasoning held fixed (no hook)."""
-        y = np.empty(len(items), np.float32)
-        mass = np.empty(len(items), np.float32)
-        for n, it in enumerate(items):
-            p = self.M.prompt_ids(with_sentence(self.prompt_of(it), sentence), self.thinking)
-            a = self.seqs(it)[1]
-            lg = self.M.model(input_ids=torch.tensor([p + a], device=self.M.model.device)).logits[0, -1].float()
-            y[n] = float(lg[it["far_id"]] - lg[it["near_id"]])
-            pr = torch.softmax(lg, -1)
-            mass[n] = float(pr[it["far_id"]] + pr[it["near_id"]])
-        return y, mass
+        seqs = [self.M.prompt_ids(with_sentence(self.prompt_of(it), sentence), self.thinking) + self.seqs(it)[1]
+                for it in items]
+        return self._readout(items, self._last_logits(seqs))
 
     @torch.no_grad()
     def run(self, items, edit, x, positions="all"):
-        y = np.empty(len(items), np.float32)
-        mass = np.empty(len(items), np.float32)
-        for n, it in enumerate(items):
-            p, a = self.seqs(it)
-            lg = self.replay_logits(self.M.model, p, a, edit, x, self.layer, positions=positions)
-            lg = lg.float()
-            y[n] = float(lg[it["far_id"]] - lg[it["near_id"]])
-            pr = torch.softmax(lg, -1)
-            mass[n] = float(pr[it["far_id"]] + pr[it["near_id"]])
-        return y, mass
+        if positions != "all":
+            # a batch has one pass but many prompt lengths, so the hook could not tell each row's prompt from its reply
+            raise ValueError(f"batched replay supports positions='all' only, not {positions!r}")
+        seqs = [p + a for p, a in map(self.seqs, items)]
+        with self.steering(self.M.model, edit, x, self.layer, positions):
+            lg = self._last_logits(seqs)
+        return self._readout(items, lg)
 
     @torch.no_grad()
     def plain(self, it):
@@ -448,7 +472,10 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
         odd = float((o[nf].mean() + o[~nf].mean()) / 2) if nf.any() and (~nf).any() else float(o.mean())
         mass = float(min(mp.mean(), mm.mean()))
         ok = mass >= args.min_mass_ratio * mass0
-        sweep.append({"x": x, "mean_odd_logit": odd, "min_label_mass": mass, "healthy": ok})
+        # both signs kept: the health rule uses the smaller, but a sign-dependent (odd) mass change is steering, not
+        # damage, and the mean of the two is the even part, so the record shows where either rule would stop
+        sweep.append({"x": x, "mean_odd_logit": odd, "min_label_mass": mass, "healthy": ok,
+                      "label_mass_plus": float(mp.mean()), "label_mass_minus": float(mm.mean())})
         print(f"calibrate: x={x:g} mean odd {odd:+.3f} logits, label mass {mass:.3f} (unsteered {mass0:.3f})"
               f"{'' if ok else ' UNHEALTHY'} on {len(items)} held-out prompts")
         if ok:
@@ -479,14 +506,19 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "veri
     if not (adir / "_none.npz").exists():
         y0, m0 = rep.run(items, fac.caa.edit, 0.0, fac.positions)
         n0 = min(args.n0_check, len(items))
-        diffs = [float((rep.run([it], fac.caa.edit, 0.0, fac.positions)[0][0])
-                       - float(rep.plain(it)[it["far_id"]] - rep.plain(it)[it["near_id"]])) for it in items[:n0]]
+        alone = [float(rep.run([it], fac.caa.edit, 0.0, fac.positions)[0][0]) for it in items[:n0]]
+        diffs = [a - float(rep.plain(it)[it["far_id"]] - rep.plain(it)[it["near_id"]]) for a, it in zip(alone, items)]
+        # the same items inside a padded batch vs alone: the cost of batching, kept apart from the hook check above
+        batch_diffs = [float(y0[i]) - a for i, a in enumerate(alone)]
         agrees = float(np.mean([(y > 0) == (it["chosen"] == "far") for y, it in zip(y0, items)]))
         savez_atomic(adir / "_none.npz", y=y0, mass=m0)
         write_json(out / "n0_check.json", {"n_checked": n0, "max_abs_diff_vs_hook_free": max(map(abs, diffs)) if diffs else None,
+                                          "max_abs_diff_batched_vs_alone": max(map(abs, batch_diffs)) if batch_diffs else None,
+                                          "replay_batch_size": rep.batch_size,
                                           "replay_matches_generated_choice": agrees})
         print(f"N0: zero edit vs hook-free max |diff| {max(map(abs, diffs)) if diffs else float('nan'):.3g}; "
-              f"unsteered replay picks the generated label on {agrees:.1%} of items")
+              f"batched vs alone max |diff| {max(map(abs, batch_diffs)) if batch_diffs else float('nan'):.3g} "
+              f"(batch {rep.batch_size}); unsteered replay picks the generated label on {agrees:.1%} of items")
     arms = [a for a in build_arms(args, cal) if keep_arm is None or keep_arm(a)]
     with open(out / "arms.jsonl", "w") as f:
         for a in arms:
@@ -583,6 +615,7 @@ def main(argv=None):
     p.add_argument("--calib-fold", type=int, default=0)
     p.add_argument("--n0-check", type=int, default=8)
     p.add_argument("--gen-pairs", type=int, default=16), p.add_argument("--gen-batch", type=int, default=8)
+    p.add_argument("--replay-batch", type=int, default=16, help="prompts per teacher-forced replay pass")
     p.add_argument("--prompting", action="store_true",
                    help="also replay the prompting baseline (PROMPTS: disposition and shift pairs, neutral sentence)")
     args = p.parse_args(argv)
@@ -593,7 +626,7 @@ def main(argv=None):
     M = Model(settings["model_id"])
     from steer.methods import load
     layer = load(method_dirs(Path(args.methods))["caa"]).layer
-    rep = Replayer(M, Path(args.run), Path(args.bank), settings["thinking"], layer)
+    rep = Replayer(M, Path(args.run), Path(args.bank), settings["thinking"], layer, args.replay_batch)
     if "items" in args.stages:
         build_items(args, M, settings)
     cal = None

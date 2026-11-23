@@ -132,6 +132,7 @@ class FakeFactory:
 
 class FakeReplayer:
     EFFECT = {"caa": 2.0}
+    batch_size = 16
 
     def __init__(self):
         self.calls = []
@@ -395,12 +396,13 @@ def test_run_prompted_reads_the_sentence_with_the_reasoning_held_fixed():
     seen_prompts, seen_ids = [], []
     rep.M = SimpleNamespace(prompt_ids=lambda p, thinking: seen_prompts.append(p) or [7, 8], model=None)
 
-    def model(input_ids):
+    def model(input_ids, **kwargs):
         seen_ids.append(input_ids[0].tolist())
         lg = torch.zeros(1, 1, 10)
         lg[0, 0, 1] = 3.0                                               # far
         return SimpleNamespace(logits=lg)
-    rep.M.model = type("M", (), {"device": "cpu", "__call__": lambda self, input_ids: model(input_ids)})()
+    rep.M.model = type("M", (), {"device": "cpu", "__call__": lambda self, input_ids, **kw: model(input_ids, **kw)})()
+    rep.batch_size = 16
     rep.bank = {"u2": row("u2", messages=MESSAGES)}
     rep.resp = {"u2": {"generated_ids": [1, 2, 3, 4]}}
     rep.thinking, rep._cache = True, {}
