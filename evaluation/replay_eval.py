@@ -81,12 +81,33 @@ def run_settings(run_dir: Path) -> dict:
     meta = json.loads((run_dir / "run.json").read_text())
     s = {"model_id": find_key(meta, ["model_id", "model"]), "thinking": find_key(meta, ["thinking"]),
          "max_new_tokens": find_key(meta, ["max_new_tokens"]), "batch_size": find_key(meta, ["batch_size"])}
+    # Runs from before pbank's seeded sampling (PR 19) record no decoding: they were greedy.
+    s["decoding"] = find_key(meta, ["decoding"]) or "greedy"
     if isinstance(s["model_id"], dict):
         s["model_id"] = find_key(s["model_id"], ["model_id", "id", "name"])
     missing = [k for k, v in s.items() if v is None]
     if missing:
         sys.exit(f"run.json: could not find {missing}")
     return s
+
+
+def gen_decodings(decoding, n_samples: int) -> list:
+    """The pbank Decoding of each generation-check sample, from the baseline run's recorded setting.
+
+    Greedy (or a run that records none): one deterministic pass, whatever n_samples says. Sampling: n_samples
+    passes with the run's temperature / top-p / top-k and seeds seed, seed+1, ... pbank re-seeds every batch from
+    the seed and the batch's prompts, so every arm sees the same random numbers for the same sample and batch
+    (paired comparisons across arms)."""
+    from pbank.local_model import GREEDY, Decoding
+    if decoding in (None, "greedy") or (isinstance(decoding, dict) and decoding.get("mode") == "greedy"):
+        return [GREEDY]
+    if not isinstance(decoding, dict) or decoding.get("mode") != "sample":
+        raise ValueError(f"run.json: unknown decoding setting {decoding!r}")
+    if n_samples < 1:
+        raise ValueError("--gen-samples must be >= 1")
+    return [Decoding(mode="sample", temperature=decoding["temperature"], top_p=decoding["top_p"],
+                     top_k=decoding["top_k"], seed=decoding["seed"] + k, source=decoding.get("source"))
+            for k in range(n_samples)]
 
 
 def last_per_uid(rows: list[dict]) -> dict:
@@ -482,32 +503,38 @@ def stage_gencheck(args, M, settings, cal: dict) -> None:
         x = cal["x_shift"] if nm.startswith("curve") else cal["x_push"]
         arms += [(f"{nm}+", spec, x), (f"{nm}-", spec, -x)]
     end_think = M.end_think_id()
+    decodings = gen_decodings(settings["decoding"], args.gen_samples)
+    if len(decodings) < args.gen_samples:
+        print(f"gencheck: the baseline run is greedy, so one pass (not {args.gen_samples}): extra samples would be identical")
     for name, spec, x in arms:
         path = out / f"{name}.jsonl"
         if path.exists():
             continue
         rows = []
         t0 = time.time()
-        for s in range(0, len(sub), args.gen_batch):
-            batch = sub[s: s + args.gen_batch]
-            texts = [bank[it["uid"]]["text"] for it in batch]
-            if spec is None:
-                reps = M.lcm.generate(texts, thinking=settings["thinking"], max_new_tokens=settings["max_new_tokens"])
-            else:
-                edit, positions = fac.make(spec)
-                with steering(M.model, edit, x, fac.caa.layer, positions=positions):
-                    reps = M.lcm.generate(texts, thinking=settings["thinking"],
-                                          max_new_tokens=settings["max_new_tokens"])
-            for it, r in zip(batch, reps):
-                ids = list(getattr(r, "generated_ids", []) or [])
-                idx, what = locate_label(M.tok, ids, end_think, settings["thinking"]) if ids else (None, "no ids")
-                b = bank[it["uid"]]
-                chars = [lab[0].lower() for lab in b["labels"]]
-                far_char = chars[1] if b["near_first"] else chars[0]
-                rows.append({"uid": it["uid"], "arm": name, "x": x, "parsed": idx is not None,
-                             "chose_far": (what == far_char) if idx is not None else None,
-                             "reason": None if idx is not None else what,
-                             "n_generated": len(ids), "hit_cap": len(ids) >= settings["max_new_tokens"]})
+        for k, dec in enumerate(decodings):
+            for s in range(0, len(sub), args.gen_batch):
+                batch = sub[s: s + args.gen_batch]
+                texts = [bank[it["uid"]]["text"] for it in batch]
+                if spec is None:
+                    reps = M.lcm.generate(texts, thinking=settings["thinking"], max_new_tokens=settings["max_new_tokens"],
+                                          decoding=dec)
+                else:
+                    edit, positions = fac.make(spec)
+                    with steering(M.model, edit, x, fac.caa.layer, positions=positions):
+                        reps = M.lcm.generate(texts, thinking=settings["thinking"],
+                                              max_new_tokens=settings["max_new_tokens"], decoding=dec)
+                for it, r in zip(batch, reps):
+                    ids = list(getattr(r, "generated_ids", []) or [])
+                    idx, what = locate_label(M.tok, ids, end_think, settings["thinking"]) if ids else (None, "no ids")
+                    b = bank[it["uid"]]
+                    chars = [lab[0].lower() for lab in b["labels"]]
+                    far_char = chars[1] if b["near_first"] else chars[0]
+                    rows.append({"uid": it["uid"], "arm": name, "x": x, "sample": k, "seed": dec.seed,
+                                 "parsed": idx is not None,
+                                 "chose_far": (what == far_char) if idx is not None else None,
+                                 "reason": None if idx is not None else what,
+                                 "n_generated": len(ids), "hit_cap": len(ids) >= settings["max_new_tokens"]})
         write_jsonl_atomic(path, rows)
         ok = [r for r in rows if r["parsed"]]
         print(f"gencheck {name}: {len(ok)}/{len(rows)} parsed, P(far) "
@@ -530,6 +557,8 @@ def main(argv=None):
     p.add_argument("--calib-fold", type=int, default=0)
     p.add_argument("--n0-check", type=int, default=8)
     p.add_argument("--gen-pairs", type=int, default=16), p.add_argument("--gen-batch", type=int, default=8)
+    p.add_argument("--gen-samples", type=int, default=1,
+                   help="generation check on a sampled baseline: passes per arm, seeds seed..seed+n-1 (greedy: 1)")
     args = p.parse_args(argv)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)

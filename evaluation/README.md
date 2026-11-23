@@ -128,8 +128,10 @@ bootstrap CIs, the replay-vs-generation agreement statistic (the raw generation 
 Tests: `python -m pytest -q test_replay_eval.py` (label location on the real Qwen3 tokenizer, strata shuffle, the
 meaning/letter and switch-point arithmetic, the loop detector).
 
-The calibration health bound (the worst held-out item keeps ≥ 95% of its unsteered label mass, `--min_mass_ratio`) is an
-untested default and probably too strict: on Qwen3-1.7B with thinking on, it stopped calibration at x = 0.02.
+The calibration health bound (the mean label mass over the held-out items, at the worse of ±x, stays ≥ 95% of unsteered;
+`--min_mass_ratio`) is an untested default. On Qwen3-1.7B with thinking on, it stopped calibration at x = 0.02, but
+loosening it would not have helped: the sweep in `calibration.json` gets CAA no further than +0.27 logits (target 1)
+even at 75% of the unsteered mass. Worth revisiting on a larger model.
 
 ## Loop check: `check_loops.py`
 
@@ -144,6 +146,20 @@ On Qwen3-1.7B with thinking on (greedy, cap 4096), 323 of 337 cap hits are loops
 decoding problem. The Qwen3 model cards advise against greedy decoding in thinking mode (recommended: temperature 0.6,
 top-p 0.95, top-k 20).
 
+## Sampling test: `sampling_test.py`
+
+Re-generates a subset of a greedy pbank run with Qwen's recommended sampling (seeded per batch; same cap and batch
+size): looping cap hits, stratified by regime, plus answered controls. Uses pbank's own model and parser; only
+`generate` is wrapped to sample.
+
+```
+python sampling_test.py --bank ../prompt_bank/data/t0_s0 --greedy ../prompt_bank/runs/<run> --out results/<run>__sampling
+```
+
+On Qwen3-1.7B with thinking on (cap 4096): of 100 prompts that looped under greedy, 62 answer and only 5 still loop. The
+other 33 are long reasoning cut at the cap (median reply 3,504 tokens). On 31 controls, sampling keeps the greedy choice
+on 21 of 26 and loses 5 answers. Speed is unchanged (~36 s/prompt): one long reply still holds its whole batch.
+
 ## Example reports: `reports/`
 
 Saved outputs of plumbing runs, as examples of what the runner produces (`results/` itself is gitignored). These are
@@ -151,3 +167,4 @@ small models, so the numbers are not evidence about steering.
 
 - `Qwen3-1.7B__t0_s0__think_report.md`: report card of the full thinking-on run (2026-11-19, ~9–10 h on an 8 GB GPU).
 - `Qwen3-1.7B__t0_s0__think_loops.txt`: `check_loops.py` on the same run.
+- `Qwen3-1.7B__t0_s0__think_sampling.json`: `sampling_test.py` summary on the same run (100 looping + 31 controls).
