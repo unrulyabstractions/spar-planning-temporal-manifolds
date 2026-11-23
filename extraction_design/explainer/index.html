@@ -251,7 +251,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
   <div class="eyebrow">Planning Temporal Manifolds · Extraction · hand-over to Evaluations</div>
   <h1>What extraction hands over, and how to use it</h1>
   <p class="lede">Extraction turns the T0 prompt bank and one model's activations into steering methods: a linear direction, a manifold curve, two concept controls and random directions. This page describes each method, how to apply it inside the model during generation, how it is packaged, what has been checked, and what is still open. It answers the evaluation design item by item.</p>
-  <p class="meta">Built, tested and on <code>main</code> (merged 2026-11-15) · Gemma 4 31B run only at smoke scale (16 prompts, plus the horizon extraction for all 700); no full-run methods yet · Extraction (Alan), drafted with Claude, 2026-11-15 · statements that had become false were corrected on 2026-11-22; everything added since is only in the reference version, <code>extraction_design/README.md</code> · answers <code>evaluation_design/README.md</code></p>
+  <p class="meta">Built, tested and on <code>main</code> (merged 2026-11-15) · full Gemma 4 31B run done on 2026-11-23 (700 prompts; results in the reference version, §10.1), not uploaded yet · Extraction (Alan), drafted with Claude, 2026-11-15 · statements that had become false were corrected on 2026-11-22 and 2026-11-23; everything added since is only in the reference version, <code>extraction_design/README.md</code> · answers <code>evaluation_design/README.md</code></p>
   <nav class="toc" aria-label="Contents">
     <a href="#summary"><span class="toc-n">00</span><span><span class="toc-q">Summary</span> <span class="toc-a">the hand-over on one screen</span></span></a>
     <a href="#status"><span class="toc-n">01</span><span><span class="toc-q">Purpose and status</span> <span class="toc-a">what exists, what doesn't yet</span></span></a>
@@ -317,7 +317,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
   <div class="readings">
     <div class="reading"><h3>Two packages</h3><p><code>prompt_bank/</code> builds the bank, has a second model check every prompt, and runs the model unsteered once over the bank. It is the official generator for the experiments. <code>steering/</code> reads activations from that run, fits the methods, packages them, and applies them inside the model.</p></div>
     <div class="reading"><h3>For whom</h3><p>The evaluation pipeline should run a method without knowing how it was built <code>[eval §3]</code>. Every bundle carries what it is, how to apply it, and what it was fitted on, with hashes.</p></div>
-    <div class="reading"><h3>What is missing</h3><p>No full Gemma 4 31B run yet. The pipeline has run end to end on Gemma only for 16 prompts on a rented A100. Generation speed is the blocker (§11).</p></div>
+    <div class="reading"><h3>What is missing</h3><p>The full Gemma 4 31B run finished on 2026-11-23 (700 prompts, 659 answered); its results are in the reference version, §10.1. Its outputs are not uploaded yet, and the earlier edit sites (end of prompt, end of thinking) are extracted but not fitted.</p></div>
   </div>
   <div class="tbl-wrap"><table>
     <thead><tr><th>Part</th><th>State</th><th>Evidence</th></tr></thead>
