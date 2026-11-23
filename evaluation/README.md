@@ -103,7 +103,9 @@ THINK=1 CAP=4096 BATCH=4 TAG=think GEN_PAIRS=8 evaluation/run_local.sh   # think
 ```
 
 `run_local.sh` chains baseline → extract (all splits) → fit → bundle → hook gate (`check_hook.py --method` on CAA) →
-shared draws → `replay_eval.py items calibrate replay gencheck` → `analyze.py`. Every stage skips what exists.
+shared draws → `replay_eval.py items calibrate n6 replay gencheck` → `analyze.py`. Every stage skips what exists.
+With a methods directory that holds each method at several sites (the Gemma run: label and prelabel), pass
+`--site`; two bundles of one method are refused, not silently merged.
 
 - **items:** the prompts that can be read out. The answer label is located here independently (regex after the
   end-of-thinking token), then compared with extract.py's `label_index` (`label_crosscheck.json`). Prompts that pbank
@@ -112,19 +114,32 @@ shared draws → `replay_eval.py items calibrate replay gencheck` → `analyze.p
   smallest x whose order-balanced |mean odd effect| reaches 1 logit while the label mass stays ≥ 95% of unsteered.
   The sign is a result, not a criterion. If no healthy x reaches the target, the largest healthy x is used and
   `calibration.json` says so.
-- **replay:** every arm at +x and −x on the verification grid: the 5 bundles (`curve-snap` also at x = 0), and K
+- **n6 (damage-matched null):** for each of `--n6-methods` (default CAA and curve-displace), the method's damage at
+  its replay request: mean next-token KL(unedited ‖ edited) over every token of 8 fixed neutral texts (`NEUTRAL_TEXTS`:
+  plain prose, no amounts, options or durations), averaged over ±x. Then each of the first `--n6-k` isotropic draws is
+  rescaled (bracket, then bisection on log strength) until its damage is within ±10% of the method's. `n6.json`
+  records every draw's strength and KL; matched draws become the replay family `n6:<method>`, and a method is ranked
+  only against its own. Cheap: forward passes on ~40-token texts.
+- **replay:** every arm at +x and −x on the verification grid: the bundles (`curve-snap` also at x = 0; the
+  within-regime CAAs `caa-none`, `caa-near_only`, `caa-both`, `caa-within` as comparison arms when present), and K
   draws of each null family: isotropic, covariance, real differences (the shared draws), in-span (random directions in
   the curve's subspace) and label-shuffled refits (`Method.refit`, horizons permuted within option order × regime) of
   CAA and both curves. Readout: y = logit(far) − logit(near) at the answer slot, and the label mass. Also the N0 check:
-  zero edit vs a hook-free forward pass.
+  zero edit vs a hook-free forward pass; its "replay matches the generated choice" rate is exact only for a greedy
+  baseline (a sampled letter need not be the top prediction).
 - **gencheck:** steered generation on a subset of verification pairs (none, CAA ±x, isotropic[0] ±x, curve-displace
-  ±shift), in the baseline's thinking mode and cap: choice, parse failures, cap hits, reply length.
+  ±shift), in the baseline's thinking mode, cap and decoding (`--gen-samples N` passes on a sampled baseline):
+  choice, parse failures, cap hits, reply length.
 - **analyze.py → `report.md`:** per arm, the odd (steering) and even (disruption) parts; meaning vs letter by
   verification pair (C1); the switch point of P(far) vs log10(H/D) and its shift Δlog10 H* (P1); plateaus and slope
-  (C2); label mass. Each method is ranked against each null family of its kind (push vs curve).
+  (C2); label mass. Each method is ranked against each null family of its kind (push vs curve), and against its own
+  N6 family. 95% intervals for methods, controls and comparisons: paired bootstrap over verification pairs (both
+  option orders resampled together; `--boot`, default 1000; the same resamples for every arm). Readout agreement on
+  the generation-check items: per arm, the share of generated choices equal to the replay prediction (y > 0 = far)
+  and both readouts' P(far); per ± pair, the odd effect on P(far) in generation (bootstrap CI over items) vs replay.
 
-Not yet: damage-matched null (N6), concept-control comparisons beyond reporting, C3–C8 except the C2 signatures,
-bootstrap CIs, the replay-vs-generation agreement statistic (the raw generation table is there).
+Not yet: concept-control comparisons beyond reporting, C3–C8 except the C2 signatures, readout sites other than the
+answer label (prompt_end, think_end).
 Tests: `python -m pytest -q test_replay_eval.py` (label location on the real Qwen3 tokenizer, strata shuffle, the
 meaning/letter and switch-point arithmetic, the loop detector).
 

@@ -8,7 +8,7 @@
 # Settings (environment): MODEL, LAYER, THINK (0/1), CAP (max new tokens), BATCH, TAG (run name suffix), K (draws per
 # null family), PY (python), STAGES (which runner stages), GEN_PAIRS, GEN_SAMPLES (generation-check passes on a
 # sampled baseline), DECODING (baseline: auto | greedy | sample; auto samples when thinking is on; an older greedy run
-# resumes only with DECODING=greedy).
+# resumes only with DECODING=greedy), SITE (which bundles the runner reads; default label).
 set -euo pipefail
 
 MODEL=${MODEL:-Qwen/Qwen3-1.7B}
@@ -21,7 +21,8 @@ K=${K:-19}
 GEN_PAIRS=${GEN_PAIRS:-16}
 GEN_SAMPLES=${GEN_SAMPLES:-1}
 DECODING=${DECODING:-auto}
-STAGES=${STAGES:-"items calibrate replay gencheck"}
+SITE=${SITE:-label}
+STAGES=${STAGES:-"items calibrate n6 replay gencheck"}
 PY=${PY:-$(cd "$(dirname "$0")/.." && pwd)/../PTM_workspace/ptm_env/bin/python}
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -89,7 +90,7 @@ stamp "shared draws"
 
 stamp "replay evaluation: $STAGES"
 (cd "$ROOT/evaluation" && $PY -u replay_eval.py $STAGES --bank "$BANK" --run "$RUN_DIR" --activations "$ACT" \
-    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH" --gen-samples "$GEN_SAMPLES")
+    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH" --gen-samples "$GEN_SAMPLES" --site "$SITE")
 
 stamp "report card"
 (cd "$ROOT/evaluation" && $PY analyze.py --out "$OUT")
