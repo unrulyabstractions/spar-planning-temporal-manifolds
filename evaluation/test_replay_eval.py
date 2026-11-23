@@ -116,3 +116,16 @@ def test_batched_replay_refuses_split_positions():
     rep = object.__new__(re_.Replayer)
     with pytest.raises(ValueError, match="positions='all' only"):
         rep.run([], None, 0.1, positions="generated")
+
+
+def test_weights_in_float32_restores_the_exact_bf16_weights():
+    torch = pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+    cfg = transformers.Qwen3Config(vocab_size=64, hidden_size=32, intermediate_size=64, num_hidden_layers=1,
+                                   num_attention_heads=4, num_key_value_heads=2, head_dim=8)
+    model = transformers.Qwen3ForCausalLM(cfg).to(torch.bfloat16)
+    before = {k: v.clone() for k, v in model.state_dict().items()}
+    with re_.weights_in(model, "float32"):
+        assert model.dtype == torch.float32
+    assert model.dtype == torch.bfloat16
+    assert all(torch.equal(before[k], v) for k, v in model.state_dict().items())

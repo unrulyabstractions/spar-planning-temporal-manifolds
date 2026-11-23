@@ -25,6 +25,7 @@ import json
 import re
 import sys
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -142,6 +143,20 @@ class Model:
             if isinstance(i, int) and i != self.tok.unk_token_id and i is not None:
                 return i
         return None
+
+
+@contextmanager
+def weights_in(model, dtype: str):
+    """Run the block with the model's weights in `dtype`, then put them back. The replay readout differences are
+    small (CAA at the calibrated x moves y by ~0.02 logit per item), and bf16 rounding alone moves y by ~0.3 logit per
+    item vs float32 (Qwen3-1.7B, 2026-11-23), so the readout runs in float32. bf16 -> float32 -> bf16 is exact, so
+    generation afterwards uses the very same weights."""
+    before = model.dtype
+    model.to(getattr(torch, dtype))
+    try:
+        yield
+    finally:
+        model.to(before)
 
 
 # ------------------------------------------------------------------ items: where to read the answer
@@ -616,6 +631,9 @@ def main(argv=None):
     p.add_argument("--n0-check", type=int, default=8)
     p.add_argument("--gen-pairs", type=int, default=16), p.add_argument("--gen-batch", type=int, default=8)
     p.add_argument("--replay-batch", type=int, default=16, help="prompts per teacher-forced replay pass")
+    p.add_argument("--replay-dtype", default="float32", choices=["float32", "bfloat16"],
+                   help="weights during calibrate and replay (weights_in); float32 takes 4 bytes per parameter "
+                        "(an 8B model: 32 GB), so bfloat16 on a smaller GPU, at ~0.3 logit of rounding per item")
     p.add_argument("--prompting", action="store_true",
                    help="also replay the prompting baseline (PROMPTS: disposition and shift pairs, neutral sentence)")
     args = p.parse_args(argv)
@@ -630,10 +648,11 @@ def main(argv=None):
     if "items" in args.stages:
         build_items(args, M, settings)
     cal = None
-    if "calibrate" in args.stages or "replay" in args.stages or "gencheck" in args.stages:
-        cal = stage_calibrate(args, M, settings, rep)
-    if "replay" in args.stages:
-        stage_replay(args, M, settings, rep, cal)
+    with weights_in(M.model, args.replay_dtype):
+        if "calibrate" in args.stages or "replay" in args.stages or "gencheck" in args.stages:
+            cal = stage_calibrate(args, M, settings, rep)
+        if "replay" in args.stages:
+            stage_replay(args, M, settings, rep, cal)
     if "gencheck" in args.stages:
         stage_gencheck(args, M, settings, cal)
 

@@ -338,6 +338,8 @@ def main(argv=None):
     p.add_argument("--k", type=int, default=rv.sd.K_GEN, help="draws per null family (rows [:k] of the shared draws)")
     p.add_argument("--n0-check", type=int, default=8)
     p.add_argument("--replay-batch", type=int, default=16, help="prompts per teacher-forced replay pass")
+    p.add_argument("--replay-dtype", default="float32", choices=["float32", "bfloat16"],
+                   help="weights during replay (replay_eval.weights_in)")
     args = p.parse_args(argv)
     sel = {}
     if args.set:
@@ -378,8 +380,9 @@ def main(argv=None):
             if "replay" in args.stages:
                 rep = TransferReplayer(M, Path(items_ns.run), Path(items_ns.bank), settings["thinking"], layer,
                                        args.replay_batch)
-                rv.stage_replay(replay_ns, M, settings, rep, cal, split="transfer",
-                                keep_arm=partial(arm_selected, wanted=sel.get("arms")))
+                with rv.weights_in(M.model, args.replay_dtype):
+                    rv.stage_replay(replay_ns, M, settings, rep, cal, split="transfer",
+                                    keep_arm=partial(arm_selected, wanted=sel.get("arms")))
     if "report" in args.stages:
         stage_report(args, types, skipped_types, sel)
 
