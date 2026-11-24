@@ -138,3 +138,26 @@ def test_health_uses_the_even_part_of_the_label_mass():
     # both signs lose mass (disruption) -> unhealthy
     even, ok = re_.label_mass_health(0.85, 0.85, 0.923, 0.95)
     assert abs(even - 0.85) < 1e-12 and not ok
+
+
+def test_gen_decodings_follow_the_baseline_run():
+    pytest.importorskip("pbank.local_model")
+    one = re_.gen_decodings("greedy", 5)                                   # greedy: one pass whatever is asked
+    assert len(one) == 1 and one[0].mode == "greedy"
+    assert re_.gen_decodings(None, 3)[0].mode == "greedy"                  # runs from before PR 19 record nothing
+    run = {"mode": "sample", "temperature": 1.0, "top_p": 0.95, "top_k": 64, "seed": 7, "source": {}}
+    ds = re_.gen_decodings(run, 3)
+    assert [d.mode for d in ds] == ["sample"] * 3 and [d.seed for d in ds] == [7, 8, 9]
+    assert all((d.temperature, d.top_p, d.top_k) == (1.0, 0.95, 64) for d in ds)
+    with pytest.raises(ValueError):
+        re_.gen_decodings({"mode": "beam"}, 1)
+
+
+def test_run_settings_reads_decoding(tmp_path):
+    import json
+    base = {"model": "m", "thinking": True, "max_new_tokens": 4096, "batch_size": 8}
+    (tmp_path / "run.json").write_text(json.dumps({"settings": base}))
+    assert re_.run_settings(tmp_path)["decoding"] == "greedy"
+    dec = {"mode": "sample", "temperature": 1.0, "top_p": 0.95, "top_k": 64, "seed": 0}
+    (tmp_path / "run.json").write_text(json.dumps({"settings": base | {"decoding": dec}}))
+    assert re_.run_settings(tmp_path)["decoding"] == dec

@@ -93,15 +93,6 @@ def select_rows(rows: list[dict], sel: dict) -> list[dict]:
     return chosen
 
 
-def arm_selected(arm: dict, wanted) -> bool:
-    """Whether a check set's `arms` list names this arm, its family or its method (the name before "[" or "@");
-    None selects every arm."""
-    if wanted is None:
-        return True
-    names = {arm["arm"], arm["family"], arm["arm"].split("[")[0].split("@")[0]}
-    return bool(names & set(wanted))
-
-
 # ------------------------------------------------------------------ model input
 
 def model_input(row: dict):
@@ -140,6 +131,22 @@ def inputs_sha256(rows: list[dict]) -> str:
     return h.hexdigest()
 
 
+class ConversationSeeds:
+    """A pbank Decoding whose per-batch seed also takes conversations (lists of messages), which pbank's
+    batch_seed cannot hash; a user text gets the same seed as in pbank. The T0 run's decoding is followed, so a
+    sampled T0 baseline (thinking on) gets a sampled baseline here: greedy decoding can loop in thinking mode."""
+
+    def __init__(self, decoding):
+        self._decoding = decoding
+
+    def __getattr__(self, name):
+        return getattr(self._decoding, name)
+
+    def batch_seed(self, prompts) -> int:
+        return self._decoding.batch_seed([p if isinstance(p, str) else json.dumps(p, ensure_ascii=False)
+                                          for p in prompts])
+
+
 def stage_baseline(bank_dir: Path, run_dir: Path, lcm, settings: dict, sel: dict | None = None) -> None:
     """Unsteered replies to the bank rows the check set selects (default: every near_only / both prompt); resumes,
     refuses a run with other settings."""
@@ -148,7 +155,7 @@ def stage_baseline(bank_dir: Path, run_dir: Path, lcm, settings: dict, sel: dict
     rows = select_rows(rv.read_jsonl(bank_dir / "prompts.jsonl"), sel or {})
     run_settings = {"model": settings["model_id"], "bank_inputs_sha256": inputs_sha256(rows),
                     "thinking": settings["thinking"], "max_new_tokens": settings["max_new_tokens"],
-                    "batch_size": settings["batch_size"], "decoding": "greedy",
+                    "batch_size": settings["batch_size"], "decoding": settings.get("decoding", "greedy"),
                     "prompt": "notes.messages when present, else text", "n_rows": len(rows),
                     "selection": {k: v for k, v in (sel or {}).items() if k in ("regimes", "variants", "rows_per_type")}}
     run_json = run_dir / "run.json"
@@ -164,11 +171,12 @@ def stage_baseline(bank_dir: Path, run_dir: Path, lcm, settings: dict, sel: dict
         return
     run_dir.mkdir(parents=True, exist_ok=True)
     rv.write_json(run_json, {"settings": run_settings, "bank": str(bank_dir)})
+    decoding = ConversationSeeds(rv.gen_decodings(run_settings["decoding"], 1)[0])
     bs = settings["batch_size"]
     for i in range(0, len(todo), bs):
         batch = todo[i:i + bs]
         replies = lcm.generate([model_input(r) for r in batch], thinking=settings["thinking"],
-                               max_new_tokens=settings["max_new_tokens"])
+                               max_new_tokens=settings["max_new_tokens"], decoding=decoding)
         out = []
         for row, reply in zip(batch, replies):
             rec = record_from_dict(row)
@@ -382,7 +390,7 @@ def main(argv=None):
                                        args.replay_batch)
                 with rv.weights_in(M.model, args.replay_dtype):
                     rv.stage_replay(replay_ns, M, settings, rep, cal, split="transfer",
-                                    keep_arm=partial(arm_selected, wanted=sel.get("arms")))
+                                    keep_arm=partial(rv.arm_selected, wanted=sel.get("arms")))
     if "report" in args.stages:
         stage_report(args, types, skipped_types, sel)
 

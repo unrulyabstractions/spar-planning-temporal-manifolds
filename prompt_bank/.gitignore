@@ -4,3 +4,5 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .env
+# Outputs: baseline runs (baseline.py), published with steering/tools/upload_*.py. Commit a particular one deliberately if needed.
+runs/

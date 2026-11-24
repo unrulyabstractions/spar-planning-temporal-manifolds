@@ -1,9 +1,16 @@
 # Extraction pipeline for horizon steering: what it hands over, and how to use it
 
-**Status:** built and tested, but not merged: branch `steering-handover`, not yet on `main`. On Gemma 4 31B it has run
-only at smoke scale (16 prompts). No full-run methods exist yet. **Owner:** Extraction (prompt bank and steering
-methods: Alan). Drafted with Claude, 2026-11-15.
-**Human-readable version:** [`explainer/index.html`](explainer/index.html), with the same content plus figures.
+**Status:** built, tested and on `main`, including the hook fix and single-token edits of 2026-11-19 (§6). Two
+later additions are also on `main`: the horizon site (§6) and `fit.py --draws` (§8.2 item 6), the within-regime CAA
+methods (§5, §9.2) and seeded sampling (§11.3). **The full Gemma 4 31B run is done (2026-11-23, §10.1):** all 700
+prompts, thinking on, sampled. 659 prompts were answered; activations are kept at 59 layers and 4 sites; fits and 18
+bundles exist at layer 38, at the label and the prelabel site. One gate check failed, for `curve-displace`, and is
+diagnosed in §10.1. The run's outputs are on one machine and **not uploaded yet** (§12). A complete practice
+hand-over from a small model is published (§12). **Owner:** Extraction (prompt bank and steering methods: Alan).
+Drafted with Claude, 2026-11-15; updated 2026-11-23.
+**Human-readable version:** [`explainer/index.html`](explainer/index.html), with figures. It was written on
+2026-11-15. Statements in it that had become false were corrected on 2026-11-22, but what was added here after
+2026-11-15 is only in this file.
 **This file** is the reference version: plain structure, every term defined, every claim sourced. It can be read by
 people and by LLM assistants working on the evaluation pipeline.
 
@@ -19,7 +26,9 @@ people and by LLM assistants working on the evaluation pipeline.
 - **Evidence and practicalities.** Section 10 lists what has been checked, and on what. Section 11 is about running on a
   rented GPU, section 12 about getting the outputs, and section 13 lists open items.
 - **Claim sources** are file paths in this repository, or the progress logs that record each command and its output:
-  `steering/progress-20261114.md` and `steering/progress-20261115.md`.
+  `steering/progress-20261114.md`, `-20261115.md`, `-20261117.md`, `-20261119.md`, `-20261122.md` and
+  `-20261123.md`.
+- **Evaluation-side code** is cited as `evaluation/…`. It is on `main`.
 
 ---
 
@@ -39,18 +48,24 @@ one to the evaluation team in a form the evaluation pipeline can run without kno
   It packages each method as a self-describing directory (a **bundle**). It also provides the code that applies a
   method inside the model during generation (the **hook**).
 
-What exists now (branch `steering-handover`):
+What exists now:
 
 | Part | State | Evidence |
 |---|---|---|
 | Bank `t0_s0` (700 prompts), checker, baseline runner | on `main` | `prompt_bank/README.md` |
 | Extraction, fitting, diagnostics | on `main` | `steering/README.md` |
-| Torch edits, generation-time hook, replay readout | branch | tests; Qwen3.5-0.8B/2B; Gemma 4 31B (§10) |
-| Bundles (`steer-method/1`), `Method.refit`, search log | branch | tests; Qwen3.5-2B bundles checked in-model (§10) |
-| Hook gate `tools/check_hook.py` | branch | passed on Qwen3.5-0.8B, Qwen3.5-2B, Gemma 4 31B |
-| Upload scripts (Hugging Face, GCS) | branch | tests; real Hugging Face upload verified (§10) |
-| Rented-GPU run script `tools/vast_smoke.sh` | branch | one A100 run (§11) |
-| Full Gemma 4 31B baseline, fit and bundles | **not run** | throughput problem, §11.3 |
+| Torch edits, generation-time hook, replay readout | on `main` | tests; Qwen3.5-0.8B/2B; Gemma 4 31B (§10) |
+| Bundles (`steer-method/1`), `Method.refit`, search log | on `main` | tests; Qwen3.5-2B bundles checked in-model (§10) |
+| Hook gate `tools/check_hook.py` | on `main` | passed on Qwen3.5-0.8B, Qwen3.5-2B, Gemma 4 31B |
+| Upload scripts (Hugging Face, GCS) | on `main` | tests; two real Hugging Face uploads verified (§10); the one real GCS upload was refused by the account (§12) |
+| Rented-GPU run script `tools/vast_smoke.sh` | on `main` | three A100 runs, the last one the full run (§11) |
+| Hook fix for generation without padding; single-token edits (`at_generated`); gate option `--positions` | on `main` | tests; Qwen3.5-2B (§6, §10) |
+| Practice hand-over: Qwen3.5-2B, thinking off, all 700 prompts | published on Hugging Face (§12) | `steering/progress-20261117.md` |
+| Shared random draws | built by the evaluation team, on `main`; `fit.py --draws` reads them | `evaluation/shared_draws.py` (§8.2 item 6) |
+| Horizon site: activations at the tokens that state the horizon, all layers; `at_prompt` | on `main` | tests; Qwen3.5-0.8B/2B (§6, §10) |
+| Within-regime CAA: `caa-none`, `caa-near_only`, `caa-both`, `caa-within` | on `main` | tests; Qwen3.5-2B (§5, §9.2) |
+| Extraction keeps every steerable layer, four sites and the top prelabel logits | on `main` (2026-11-22) | tests; Qwen3.5-2B; Gemma 4 31B (§4, §10.1) |
+| Full Gemma 4 31B baseline, extraction, draws, fits and bundles | **run on 2026-11-23; not uploaded** | §10.1; `steering/progress-20261123.md` |
 
 ## 2. Glossary
 
@@ -76,7 +91,9 @@ method, replay readout, and so on) mean the same here. Additions and precise mea
   grid value "23 months").
 - **Log-time t:** log10 of the grid value in days.
 - **Baseline run:** one unsteered pass of a model over the bank, in `prompt_bank/runs/<model>__<bank>/`:
-  - thinking on, greedy decoding;
+  - thinking on unless `--no-thinking` is given;
+  - decoding: seeded sampling when thinking is on, greedy (always the most likely next token) when it is off;
+    `--decoding` overrides (§11.3). Every run before 2026-11-22 was greedy;
   - every reply's exact generated token ids are stored (`generated_ids`).
 
 **Extraction**
@@ -88,7 +105,9 @@ method, replay readout, and so on) mean the same here. Additions and precise mea
 - **Replay margin:** at the token before the label, the logit of the label the model generated minus the best other
   logit.
   - A faithful replay of greedy generation gives ≥ 0, except on near-ties of one bf16 step (0.125).
-  - `extract.json` records the smallest margin.
+  - A sampled run can write a label that is not the most likely token, so its margins can be negative. Its check is
+    the label's rank instead: it must be among the run's top-k tokens.
+  - `extract.json` records the smallest margin, the largest rank, and which check applied.
 - **bf16:** the 16-bit floating-point format the model runs in.
 
 **Methods and hand-over**
@@ -104,13 +123,14 @@ method, replay readout, and so on) mean the same here. Additions and precise mea
   - whether this pass edits it;
   - optional per-row facts supplied by the caller [`steering/steer/edits.py`].
 - **Positions:** which tokens an edit is applied to: `all`, `prompt`, `generated`, or a callable on the context.
+  `steer.hooks.at_generated(index)` builds a callable that edits one token per row, for example only the label token.
   Padding is never edited.
 - **Hook gate:** `tools/check_hook.py`, a pass/fail check that the hook behaves in one model's real generation setup.
 - **Fit name:** the label of one fit configuration (`default` unless `--name` is given).
 - **Search log:** `fits/<activations>/search.jsonl`, one line per `fit.py` run on those activations, whatever its
   outcome.
-- **Code commit:** the git commit recorded in every output, with `-dirty` if `steering/` or `prompt_bank/` had
-  uncommitted edits [`steering/steer/provenance.py`].
+- **Code commit:** the git commit recorded in every output, with `-dirty` if tracked files under `steering/` or
+  `prompt_bank/` had uncommitted changes [`steering/steer/provenance.py`].
 
 ## 3. The pipeline at a glance
 
@@ -126,7 +146,7 @@ prompt_bank/                                   steering/
 | Stage | Command (from the package directory) | Writes | Needs | Refuses |
 |---|---|---|---|---|
 | Baseline | `baseline.py --bank data/t0_s0` | `runs/<model>__<bank>/` run.json, responses.jsonl, summary.json | GPU holding the model in bf16 | resuming with different settings, or a different bank |
-| Extract | `extract.py --bank … --run … --layers 38` | `activations/<run>/` extract.json, index.jsonl, skipped.jsonl, `L38_label.npy`, `L38_prelabel.npy` | same GPU, minutes | a run on another bank; replies without `generated_ids`; overwriting |
+| Extract | `extract.py --bank … --run … --layers all` (or layer numbers) | `activations/<run>/` extract.json, index.jsonl, skipped.jsonl, `L<layer>_{label,prelabel,prompt_end,think_end}.npy`, `prelabel_top_logits.npz` | same GPU, minutes | a run on another bank; replies without `generated_ids`; overwriting |
 | Fit | `fit.py --activations … --bank … --layer 38` | `fits/<run>/<name>/L38_label/`; appends `fits/<run>/search.jsonl` | CPU, seconds | overwriting; activations whose hashes don't match |
 | Bundle | `bundle.py --fit … --activations …` | `methods/<model>/<method>__<run>__<name>__L38_label/` | CPU | overwriting; activations other than the fit's |
 | Gate | `tools/check_hook.py --method <bundle> --bank …` | nothing (exit code 0/1) | GPU | — |
@@ -144,12 +164,26 @@ committed.
   `…language_model.layers`; code that hard-codes `model.model.layers` (as in Qwen) misses it
   [`steering/steer/layers.py`]. The headline is layer 38 of Gemma 4 31B's 60.
 - **Sites.**
-  - `label` is the token carrying the label character. It is fit.py's default and the site every bundle so far uses.
-  - `prelabel` is the token before it. Its identity depends on the label style, because the tokenizer merges the space
+  - `label` is the token carrying the label character. It is fit.py's default and the site of every published bundle.
+    Its state is computed after the label was written, so an edit at this token alone cannot change the choice (§6).
+  - `prelabel` is the token before it, the one whose state predicts the label. `fit.py --site prelabel` fits there
+    (§9.6). Its identity depends on the label style, because the tokenizer merges the space
     into letters but not into digits. On Gemma 4 the label token is `' a'` after `':'`, but `'1'` after `' '`
     (x0001 and x0002 in the A100 run, §10).
 
   So the prelabel site sits on a different token for each label style, which matters for C1.
+  - `prompt_end` is the last token of the model input: its state predicts the first generated token, before any
+    thinking. `think_end` is the end-of-thinking token: its state predicts the first token of the answer (thinking-on
+    runs only). Both are extracted since 2026-11-22, because with thinking on the prelabel token comes after
+    hundreds of tokens of reasoning that may already have settled the choice. No method has been fitted or gated
+    at either yet (`fit.py --site` takes both names); `tools/check_hook.py --positions` does not know them. The
+    full Gemma run has the arrays (§10.1), and its result at the prelabel site (the choice is already settled
+    there) makes these two sites the next ones to try.
+- **What an extraction keeps.** `--layers all` keeps every layer a hook can steer (1 .. n_layers − 1) at all the
+  sites above, so fits at other layers and sites are CPU work on saved arrays. It also keeps the 64 largest
+  next-token logits at the prelabel site, with token ids (`prelabel_top_logits.npz`): the unsteered scores of the
+  two answer letters, a finer baseline than the parsed choice. For Gemma 4 31B the full run's extraction is 3.2 GB
+  (59 layers × 4 sites, each array 659 answered prompts × 5,376).
 - **Thinking.** Gemma 4 ends its thinking with `<channel|>`, Qwen3/3.5 with `</think>`. pbank finds the marker in the
   tokenizer and refuses a model family with neither [`prompt_bank/README.md`, "How a model's answer is read"].
   The label site is in the answer, after the marker.
@@ -163,7 +197,12 @@ committed.
 - **Sign.** +x moves toward longer horizons for `caa` and both curve methods, toward larger reward multipliers for
   `reward`, and toward "chose far" for `choice`. Each bundle states its own sign in `method.json` → `request.sign`.
 - **Default positions:** `all`, following the report, which steers all tokens. The hook also takes `prompt`,
-  `generated`, or a callable.
+  `generated`, or a callable. **This default is under review.**
+  - The methods are fitted at one site, but `all` applies them to every prompt and reply token, and those tokens'
+    activations are unlike the fitted site's. For the curve methods, t̂ is then read at tokens the curve was never
+    fitted on (raised by the evaluation team, 2026-11-18).
+  - For the curve methods `all` was an oversight, not a decision.
+  - No new default is chosen yet. §6 has the first single-token results.
 - **Arithmetic.** Edits compute in float32 by default, and the result is cast back to the model's dtype once. A zero
   request gives an exactly zero displacement [`steering/steer/edits.py`].
 
@@ -176,6 +215,8 @@ committed.
 | `curve-displace` | target | `CurveEdit(mode="displace")` | add c(t̂ + x) − c(t̂) | shift, decades |
 | `reward` | push | `LinearEdit` | concept control: reward multiplier ≥ 25 minus ≤ 5 | strength |
 | `choice` | push | `LinearEdit` | concept control: replies that chose far minus those that chose near | strength |
+| `caa-none`, `caa-near_only`, `caa-both` | push | `LinearEdit` | comparison method: CAA inside one regime (§9.2) | strength |
+| `caa-within` | push | `LinearEdit` | comparison method: the `near_only` and `both` within-regime differences, pooled (§9.2) | strength |
 
 - **Random directions:** the fit also stores 100 isotropic random unit vectors (seed 0) in `directions.npz`.
   These are not bundled.
@@ -191,8 +232,9 @@ committed.
   - `displace` keeps the offset. x = 0 is the identity, but where the curve turns, the realised t̂ misses t̂ + x. In
     `tests/test_manifold.py` the median miss is 0.028 decade, against 0.0017 for snap.
 - **Δ = 0 for snap matters in practice.** On Qwen3.5-2B (thinking off, 8 prompts) `curve-snap` at x = 0 changed 7 of
-  8 replies; `curve-displace` and `caa` at x = 0 changed none [`steering/progress-20261114.md`]. This is plumbing
-  scale, but the Δ = 0 control `[eval §6.3]` is not a formality.
+  8 replies; `curve-displace` and `caa` at x = 0 changed none [`steering/progress-20261114.md`]. Edited at the label
+  token only, snap at x = 0 still changed 4 of 8 [`steering/progress-20261119.md`], so editing every token explains
+  only part of the 7. This is plumbing scale, but the Δ = 0 control `[eval §6.3]` is not a formality.
 
 ## 6. Applying a method inside the model
 
@@ -205,18 +247,29 @@ lcm = LocalChatModel("google/gemma-4-31B-it")
 m = load("methods/gemma-4-31B-it/caa__gemma-4-31B-it__t0_s0__default__L38_label")    # checks every file's SHA-256
 
 with steering(lcm.model, m.edit, x=0.1, layer=m.layer, positions=m.positions):
-    replies = lcm.generate(texts, thinking=True, max_new_tokens=8192)
+    replies = lcm.generate(texts, thinking=True, max_new_tokens=4096)   # greedy; pass decoding= to sample (§11.3)
 
 logits = replay_logits(lcm.model, prompt_ids, answer_ids, m.edit, x=0.1, layer=m.layer)  # one teacher-forced pass
 ```
 
 **What the hook does** [`steering/steer/hooks.py`]:
-- **Per-pass context.** A forward pre-hook on the model reads each pass's `cache_position` and `attention_mask`:
+- **Per-pass context.** A forward pre-hook on the model works out the position of every token in each pass. It uses
+  the first of `cache_position`, `attention_mask` and `position_ids` that `generate()` passes:
   - the pass that starts at position 0 is the prompt;
   - every later pass is generated tokens;
   - attention-mask zeros are padding.
 
-  This is what makes it work inside batched, left-padded `generate()` with the key-value cache.
+  This is what makes it work inside batched, left-padded `generate()` with the key-value cache, and at batch 1.
+- **Bug fixed on 2026-11-19.**
+  - transformers 5.22.2 passes no `cache_position`, and at batch 1 no attention mask either. The hook then took every
+    generated token for a prompt token. On Qwen3.5-2B at batch 1, `positions="generated"` edited nothing.
+  - Only generation without padding (batch 1, or a batch of equal-length prompts) with `prompt`, `generated` or a
+    callable was affected. `positions="all"` and replay were not, so no result reported so far changes.
+  - The fix reads `position_ids` when there is no attention mask [`steering/progress-20261119.md`].
+- **Single-token edits.** `at_generated(index)` returns a `positions` callable that edits one token per row:
+  generated token `index[i]` of row i, with −1 meaning the last prompt token. With the label's index from
+  `steer.sites.locate_label` it edits the label token; one less gives the prelabel token. It works in generation and in
+  replay.
 - **Edit and mask.** The edit's displacement is computed at every position and applied only where the mask allows,
   with `torch.where`. Unedited positions keep their exact bits.
 - **Per-row requests.** `x` may be one number, or one value per row (a different strength per prompt in a batch).
@@ -238,6 +291,51 @@ logits = replay_logits(lcm.model, prompt_ids, answer_ids, m.edit, x=0.1, layer=m
 2. roles and positions correct;
 3. a strong edit has an effect;
 4. with `--method`, the bundled method at x = 0 reproduces the unhooked ids. curve-snap is exempt and only reported.
+
+`--positions {all,prompt,generated,label,prelabel}` chooses where checks 3 and 4 apply the edit. For
+`label` and `prelabel` the gate also checks that exactly one token per row was edited and that each reply matches the
+unhooked one up to that token. Check 3 then reports changed choices beside changed replies.
+
+**Which token to edit: first results.** Qwen3.5-2B, thinking off, layer 15, 8 prompts, strength 0.5 for the push
+methods and a 2-decade shift for the curve methods [`steering/progress-20261119.md`]:
+
+| Method | label-site bundle, label token only: replies / choices changed | prelabel-site bundle, prelabel token only: replies / choices changed | label-site bundle, all tokens: replies changed |
+|---|---|---|---|
+| `caa` | 2/8, 0/8 | 7/8, 5/8 | 8/8 |
+| `reward` | 2/8, 0/8 | 1/8, 1/8 | 8/8 |
+| `choice` | 3/8, 0/8 | 5/8, 4/8 | 8/8 |
+| `curve-snap` | 5/8, 0/8 | 4/8, 2/8 | 8/8 |
+| `curve-displace` | 3/8, 0/8 | 2/8, 1/8 | 7/8 |
+
+- **An edit at the label token alone never changes the choice.** The label is already written when that token's state
+  is computed; only the text after it can change.
+- **An edit at the prelabel token can.** That is the candidate for a single-token default, with a prelabel fit.
+- **This is a plumbing check, not an effect size:** 8 prompts, one strength, a model that barely represents the
+  horizon (§12).
+
+**The horizon site** (requested by the evaluation team, for comparison methods that are
+fitted on, or edit only, the tokens that state the horizon):
+
+- **`extract_horizon.py`** reads the residual stream at each token of the stated horizon, separately, at every layer.
+  - It needs no baseline run: one forward pass per prompt, no generation.
+  - Numbers are split into digits, so "15 minutes" is `'1'`, `'5'`, `' minutes'`. On `t0_s0` a horizon has 2 to 7
+    tokens on both Gemma 4 and Qwen3.5, 2,600 tokens over the 671 prompts that state one.
+  - The run audits itself: every horizon's tokens must decode back to the stated horizon, or nothing is written.
+- **Output** (`steering/steer/activations.py` has the fields):
+  - `L<layer>_horizon.npy`, one float32 file per layer, one row per horizon token;
+  - `index.jsonl`: per row, the uid, which token of the horizon, its index in the model input, its string;
+  - `horizon_sites.jsonl`: per prompt, the horizon's character span, token indices and strings, plus option order,
+    label style and log-time. All 700 prompts have a row; the 29 without a horizon have empty lists.
+- **Layers** 0 to the number of blocks. Layer 0 is the embeddings. The last layer is the last block's output before
+  the final norm, which is not `hidden_states[n]`.
+- **Thinking changes the model input on Gemma 4** (a system turn is added before the prompt), so the token indices
+  and activations depend on it. The setting is recorded; extract with the one the runs will use.
+- **Editing only those tokens:** pass a prompt's rows of `horizon_sites.jsonl` as the hook's `rows`, and their
+  `token_indices` to `steer.hooks.at_prompt`, which accounts for left padding in a batch
+  [`steering/README.md`, "The horizon site"].
+- **Run on Gemma 4 31B on 2026-11-22** (thinking on): 700 prompts, 671 with a horizon, 2,600 horizon tokens, 61
+  layers, no decode mismatch, under two minutes on an A100 with the model load. The output is 3.2 GB (2,600 tokens × 61
+  layers × a hidden size of 5,376 × 4 bytes). It is not uploaded yet.
 
 ## 7. The bundle
 
@@ -288,8 +386,8 @@ The curve bundles' `request` reads:
  "t_range_log10_days": [-3.46, 5.26], "clamped": "t-hat + x is clamped to t_range"}
 ```
 
-The two `"unknown"` commits are a real gap, described in §11.2. The code was shipped to the rented machine without
-its `.git` directory, so `extract.py` and `fit.py` could not name their commit.
+The two `"unknown"` commits were a real gap, described in §11.2 and since closed. The code was shipped to the rented
+machine without its `.git` directory, so `extract.py` and `fit.py` could not name their commit.
 
 **Loading and refitting** [`steering/steer/methods.py`]:
 
@@ -308,6 +406,8 @@ What it is for:
 - **N4, label-shuffled null:** `horizons={uid: grid value}` relabels prompts, for example a shuffle within option
   order. Refitting on a prompt's own horizon reproduces the parameters bit for bit (tested).
 - **C8, held-out horizons:** `uids=` without the held-out horizons' prompts, or fit with `--exclude-horizons`.
+- **Strength calibration:** `uids=` without one fold (`fit_uids.jsonl` has a `fold` column); the strength is then
+  chosen on the held-out fold. The evaluation runner does this [`evaluation/replay_eval.py`].
 - **C1, within-order refits:** `uids=` restricted to one option order or label style. `fit_uids.jsonl` has both
   columns.
 
@@ -321,7 +421,7 @@ What it is for:
 | I2 conventions | done, machine-readable | `method.json`: layer + convention, site, positions, request name/unit/sign, typical norm or t range |
 | I3 fitting data | done | `fit_uids.jsonl` per bundle; `fit.json` counts what was left out and why |
 | I4 refit as a function | done | `Method.refit(activations, bank, uids=, horizons=)` |
-| I5 activations | exist per run | `activations/<run>/L38_{label,prelabel}.npy`, published with the upload scripts |
+| I5 activations | exist per run | `activations/<run>/L<layer>_{label,prelabel,prompt_end,think_end}.npy`, published with the upload scripts. Gemma 4 31B: layers 1–59, not uploaded yet (§12) |
 | I6 structure | done | `Method.structure`: the unit direction, or the `Manifold` (`arrays.npz`) |
 | I7 objective | not applicable | all methods are closed form; `method.json` → `training.selected_by_search: false` |
 | I8 search history | done | `search.jsonl`, append-only, written by `fit.py` itself, including refused and failed runs |
@@ -338,20 +438,45 @@ What it is for:
    - `fit.py` and `refit` fit only on the 500-prompt extraction split. Verification-grid prompts are dropped even if
      they were extracted, so the evaluation team can extract the grid for its own nulls without risk of leakage.
    - `--exclude-horizons` holds out horizons. **The list of held-out horizons is the evaluation team's call (C8).**
+     Its first proposal (2026-11-18): 5 weeks, 15 months, 16 years and 210 years (grid points 28, 34, 40 and 46 of
+     48). That takes 39 of the 471 fitted prompts out of the C8 refit, 12 of them from CAA's 57 long-class prompts.
+     The list is not final.
    - Layer 38 is fixed by the spec.
    - k = 4 components and the 0.3-decade bandwidth come from the report's range (3–8) and the grid spacing (0.185
      decade), not from tuning. They stay frozen for the Gemma fit.
 4. **Operating point.** Extraction hands over a strength unit, not a frozen strength. Calibrating α_k on the evaluation
    team's own split keeps the strength choice inside its nulls (P4).
+   - The bank has no separate split for this. The evaluation runner holds out one fold of the extraction split, refits
+     without it, and calibrates on that fold (§7).
 5. **Search disclosure.** `search.jsonl` (I8).
-6. **Shared random draws.** Not built yet.
-   - Each fit stores 100 isotropic unit vectors (seed 0).
-   - Seeded isotropic (N1) and covariance-matched (N2) draws per (model, layer, site), with hashes, can be published
-     from our activations once the evaluation team picks the families and K `[eval §6]`.
+6. **Shared random draws.** Built by the evaluation team: `evaluation/shared_draws.py`.
+   - **Input:** what `extract.py` writes (`L<layer>_<site>.npy`, and `index.jsonl` with each row's `uid`), plus the
+     bank.
+   - **Output,** per (model, layer, site): three families of K = 99 directions each, from the extraction-split prompts
+     that have a horizon, with a manifest of seeds and input hashes:
+     - N1 isotropic;
+     - N2 covariance-matched;
+     - N2′ real differences (the activation of one prompt minus another's).
+
+     `shared_draws.py verify` regenerates a file and compares.
+   - **Plan:** whoever extracts the Gemma activations runs it right after `extract.py` and publishes the draws beside
+     them.
+   - **`fit.py --draws DIR`** uses these files as the fit's random baseline, as
+     the evaluation team proposed.
+     - It refuses draws made for another model, layer, site or activations file.
+     - The methods do not change, bit for bit; only the diagnostic does. `fit.json` records the draws' hashes.
+     - Without `--draws`, a fit still stores its own 100 isotropic unit vectors (seed 0).
+   - **What the families show.** On the Qwen3.5-2B practice activations (layer 15, label site), CAA's largest
+     |cosine| with 99 random directions is 0.044 for isotropic, 0.879 for covariance-matched and 0.716 for real
+     differences [`steering/progress-20261122.md`]. Against isotropic directions CAA's cosine of 0.862 with the
+     `choice` direction looks far from chance; against directions with the activations' own covariance it does not.
+     The isotropic baseline alone overstates how special a direction is.
+   - **File names:** `shared_draws.py` reads `L<layer>_<site>.npy`, and `extract.py` writes the layer with two
+     digits. The names agree for layers 10 and above.
 7. **Versioning.**
    - Every output records the SHA-256 of its inputs and the code commit; bundles record a hash for every file.
-   - A gap was found on the rented GPU: with the code shipped without `.git`, the commit is recorded as `"unknown"`
-     (§11.2).
+   - On a machine without `.git` the commit comes from a stamp written before the code is copied (§11.2 item 6).
+     Outputs of the 2026-11-15 rented-GPU run predate it and say `"unknown"`.
 
 ## 9. Fitting choices that matter for evaluation
 
@@ -371,19 +496,72 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 
    CAA therefore partly encodes "which answer is correct". `fit.json` reports its cosine with the `choice` direction.
    On a Qwen3.5-2B smoke run that cosine was 0.862 with "none" kept and 0.904 without. This is the C2 confound in
-   numbers. A within-regime contrast is not implemented, pending a team decision.
+   numbers.
+
+   **On the full Gemma run** the classes are smaller, because a prompt without an answer has no label site: the
+   long class is 55 `both` prompts and the short class 241 `none` + 71 `near_only`. The cosine with `choice` is
+   +0.889 at the label site and +0.680 at the prelabel site (§10.1).
+
+   **Within-regime CAA** (asked for by the evaluation team on 2026-11-18, to separate
+   "longer horizon" from "pick the far option"). Inside one regime the correct answer is the same for every prompt.
+   - **Classes.** H/D cannot define them: within `none` or `near_only` the far option does not pay off, so H/D < 1
+     for every prompt. Instead, inside a regime, long is the third of its prompts with the longest horizons and short
+     the third with the shortest, split on log-horizon (`--within-quantile`, default 1/3). Whole grid horizons fall on
+     one side, so a class is about, not exactly, a third.
+   - **Four methods,** bundled like `caa`:
+     - `caa-none`, `caa-near_only`, `caa-both`: long minus short inside that regime;
+     - `caa-within`: the `near_only` and `both` differences averaged, weighted by regime size (`--within-pool`).
+       `none` is left out of the pool by decision (Alan, 2026-11-22): there the horizon cannot change the answer, and
+       the pool then covers 10 days to 500 years, the range the choice can test.
+   - **`fit.json` → `diagnostics.caa_within`** has, per regime, the class sizes, the horizon cut-offs, each class's
+     share of far choices, and cosines with `caa`, `choice` and `reward`; and the cosines between the regimes'
+     directions.
+   - **`fit_uids.jsonl`** has a `caa_within_class` column.
+   - **On Qwen3.5-2B** (practice activations, layer 15, label site) [`steering/progress-20261122.md`]:
+
+   | Direction | Long / short prompts | Horizons: long from, short up to | Cosine with `choice` | Cosine with `caa` |
+   |---|---|---|---|---|
+   | `caa` (for comparison) | 57 / 350 | set by H/D | +0.862 | 1 |
+   | `caa-none` | 94 / 97 | 1.2 days / 23 minutes | +0.369 | +0.440 |
+   | `caa-near_only` | 43 / 36 | 3 years / 6 months | +0.427 | +0.212 |
+   | `caa-both` | 30 / 36 | 210 years / 59 years | −0.333 | −0.362 |
+   | `caa-within` (pool of `near_only` and `both`) | 73 / 72 | | +0.011 | −0.140 |
+
+     - The choice contamination drops from 0.86 to at most 0.43 in size, and to 0.01 for the pooled direction.
+     - **The regimes' directions do not agree with each other:** their cosines are +0.112 (`both`, `near_only`),
+       +0.008 (`both`, `none`) and −0.176 (`near_only`, `none`). One shared "horizon length" direction would make them
+       point the same way. On this small model, which barely represents the horizon, that may only mean there is
+       little to find; the same numbers on Gemma are the ones that matter.
+   - **On Gemma 4 31B** (full run, layer 38; §10.1 has the table): the within-regime directions do not point with
+     `choice`, they point **against** it in `both` and `none` (cosine −0.56 to −0.76), and `caa-within` does too
+     (−0.46 at the label site, −0.51 at the prelabel site). The regimes' directions agree weakly at the label site
+     (+0.128, +0.117, −0.048) and more at the prelabel site (+0.277, +0.590, +0.197).
+   - **What a within-regime contrast does not remove:**
+     - inside `near_only` and `both`, longer horizons come with longer far delays (rank correlation 0.40 and 0.35 on
+       `t0_s0`, computed once and not by committed code), because of how the bank is built;
+     - the model's own choice still varies inside a regime (far choices: 0.63 of the long class and 0.81 of the short
+       class in `both`).
+   - **For a label-shuffled null (N4):** `refit(horizons=...)` does not recompute regimes, so shuffle horizons within
+     a regime for these methods. A shuffle across regimes would put a prompt's new horizon in its old regime's
+     ranking.
 3. **Concept controls.** `reward` (multiplier ≥ 25 minus ≤ 5) and `choice` (chose far minus chose near), built by the
    same recipe. The report names a reward-contrast control but doesn't define it; this definition is ours.
 4. **The prelabel token depends on label style** (§4). This matters for any C1 analysis at that site.
 5. **`fit.py` has no minimum class size.** On the 16-prompt smoke run it wrote a fit whose CAA long class held one
    prompt. Whether it should refuse below a minimum is an open decision (§13). Until then, check `fit.json`'s class
    sizes.
+6. **The fitting site.** `--site prelabel` fits the same methods at the prelabel token, the one an edit must reach to
+   change the choice (§6). On Qwen3.5-2B, layer 15, the prelabel fit is weaker than the label fit: cos(CAA, choice) is
+   +0.551 against +0.862, and the curve's held-out Spearman is +0.121 against +0.222
+   [`steering/progress-20261119.md`]. These are practice-model numbers. **On Gemma 4 31B both sites are fitted
+   and bundled** (decided by Alan, 2026-11-22, so that the choice stays open). There too the prelabel fit is weaker:
+   cos(CAA, choice) is +0.680 against +0.889, and the curve's held-out Spearman is −0.020 against +0.324 (§10.1).
 
 ## 10. What has been checked, and on what
 
 | Check | Model / data | Result | Source |
 |---|---|---|---|
-| Test suites | CPU + local GPU | steering 81 passed; prompt_bank 64 passed | `progress-20261114.md` |
+| Test suites | CPU + local GPU | steering 98 passed (2026-11-22, branch); prompt_bank 64 passed (2026-11-14) | `progress-20261122.md`; `progress-20261114.md` |
 | Layer convention | tiny Qwen3; Gemma 4 module tree; Qwen3.5-0.8B weights | exact | `tests/test_layers.py` |
 | Torch edits vs numpy references | synthetic | max diff 4.44e-16 (float64) | `progress-20261114.md` |
 | Hook in real `generate()` | Qwen3.5-0.8B bf16, 6 prompts | zero edit identical 6/6; strength 4 changed 6/6 | `progress-20261114.md` |
@@ -394,11 +572,159 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 | Extraction replay | Gemma 4 31B, A100, 13 answered prompts | 0 replay mismatches; smallest label margin +11.56 | `progress-20261115.md` |
 | Label-site hand audit | same 13 | all 13 are the label right after `<channel|>I choose:`; a shifted-index negative control fails 13/13 | `progress-20261115.md` |
 | Hugging Face upload | the A100 outputs, 14 files | created private; 14/14 remote hashes verified | `progress-20261115.md` |
+| Practice baseline | Qwen3.5-2B, thinking off, all 700 prompts | 700/700 parsed; none at the token cap; longest reply 147 tokens | `progress-20261117.md` |
+| Extraction replay | same run, 700 prompts | 18 margins at −0.125 (one bf16 step), none lower | `progress-20261117.md` |
+| Label-site audit | same 700 | the label token is the parsed label for 700/700 | `progress-20261117.md` |
+| Hook gate, each of the 5 bundles | same run's bundles, 8 prompts | all pass, same counts as on 2026-11-14; `choice` gated for the first time | `progress-20261117.md` |
+| Hugging Face upload | the practice hand-over, 42 files | 42/42 remote hashes verified; later made public | `progress-20261117.md` |
+| Hook at batch 1 (no padding) | tiny Qwen3; Qwen3.5-2B | before the fix no generated token was edited; after it, one per decoding step | `tests/test_hooks.py`; `progress-20261119.md` |
+| Hook gate at a single token | Qwen3.5-2B, 8 prompts: 5 label-site and 5 prelabel-site bundles | all 10 pass; exactly one token edited per row; results in §6 | `progress-20261119.md` |
+| Horizon tokens found | Gemma 4 and Qwen3.5 tokenizers, thinking on and off, 671 horizons | all decode back to the stated horizon; shifted by one token, none does | `tests/test_sites.py` |
+| Horizon extraction | Qwen3.5-0.8B, 21 prompts | stored rows equal `hidden_states` at those tokens exactly (layers 0 and 12) | `tests/test_extract_horizon.py` |
+| Horizon-only edit in a padded batch | Qwen3.5-0.8B, 21 prompts | the edited tokens are each prompt's horizon; the 2 prompts without one are unchanged | `tests/test_extract_horizon.py` |
+| Hook gate, fixed hook, sampled | Gemma 4 31B, A100 80 GB, 8 prompts, thinking on | zero edit 8/8 identical; roles ok (left padding [2, 4, 0, 3, 4, 8, 4, 6]); strong edit changed 8/8 | `progress-20261122.md` |
+| Horizon extraction, full bank | Gemma 4 31B, thinking on, 700 prompts, 61 layers | 671 horizons, 2,600 tokens, 0 decode mismatches | `progress-20261122.md` |
+| Sampled baseline | Gemma 4 31B, A100, first 16 extraction prompts, cap 4,096 | 16/16 parsed, 0 at the cap; the greedy run of 2026-11-15 had 13/16 and 3 (§11.3) | `progress-20261122.md` |
+| Extraction replay and label audit, sampled run | same 16 | label is the top prediction for 16/16, margins +11.56 to +19.44; 16 label sites, 0 not matching | `progress-20261122.md` |
+| Shared draws, fit with draws, bundles, hook gate per bundle | same 16 (plumbing: too few prompts for a meaningful fit) | draws verified; 8 bundles, all pass the gate; no `caa-near_only` (one prompt in that regime) | `progress-20261122.md` |
+| Code commit without `.git` | the same rented run | every output records the stamped commit `cabc33d…` | `progress-20261122.md` |
+| Copy-back | the same run, 122 files | 122/122 SHA-256 verified | `progress-20261122.md` |
+| Horizon extraction, full bank | Qwen3.5-2B, thinking off, 700 prompts, 25 layers | 671 horizons, 2,600 tokens, 0 decode mismatches; 32 s | `progress-20261122.md` |
+| Within-regime CAA | synthetic activations over the real bank; Qwen3.5-2B practice activations | class sizes 94/97, 43/36, 30/36; directions equal the stated differences of means; existing directions and curve unchanged; the 4 new bundles pass the hook gate | `tests/test_fit.py`; `progress-20261122.md` |
+| `fit.py --draws` | Qwen3.5-2B practice activations | methods identical to the fit without draws; draws for other inputs refused | `tests/test_fit.py`; `progress-20261122.md` |
+
+| Test suites on a rented machine with a CPU quota | A100 host, quota 30.72 of 256 cores | steering 102 passed in 154.73 s: the thread limit of §11.2 item 9 works in-process | `progress-20261123.md` |
+| Full run: baseline, extraction, audit, draws, fits, bundles, gate, copy-back | Gemma 4 31B, thinking on, sampled, 700 prompts | §10.1 | `progress-20261123.md` |
 
 **Not yet checked on Gemma:**
-- `check_hook.py --method` with a real bundle;
-- any full-size fit;
-- any steered generation beyond the gate's strong-edit check.
+- the hook gate at the prelabel token for 7 of the 9 prelabel-site bundles (only `caa` and `curve-snap` were run);
+- the hook gate with the edit at the label token only, at `prompt_end` or at `think_end`;
+- any fit at a layer other than 38, or at `prompt_end` or `think_end`;
+- any steered generation beyond the gate's 4 prompts per bundle.
+
+### 10.1 The full Gemma 4 31B run (2026-11-22 to 11-23)
+
+One run of the whole extraction side on all 700 prompts: baseline, extraction, shared draws, fits, bundles and the
+hook gate. The source for everything here is `steering/progress-20261123.md`. Numbers marked † were computed once
+from the saved files, not by committed code; the others are in the run's own output files (`summary.json`,
+`extract.json`, `fit.json`) or its log.
+
+**Settings.** Code at commit `1c32ce1`, recorded in every output. One rented A100 SXM4 80 GB. Thinking on; seeded
+sampling with Gemma's own settings (temperature 1.0, top-p 0.95, top-k 64, seed 0); batch 8; cap of 4,096 new
+tokens. The run is named `gemma-4-31B-it__t0_s0`.
+
+**Baseline.** 9 h 32 min, 49.0 s per prompt. Of 700 replies, 659 have a parsed choice. The other 41 never closed
+their thinking before the cap. 42 replies hit the cap; one of them still gave an answer.
+
+| Split / regime | Prompts | Parsed | Chose near | Chose far | At the cap | Correct |
+|---|---|---|---|---|---|---|
+| extraction / `both` | 86 | 83 | 19 | 64 | 3 | 64 of 86 |
+| extraction / `near_only` | 106 | 106 | 106 | 0 | 0 | 106 of 106 |
+| extraction / `none` | 279 | 241 | 169 | 72 | 39 | (no correct answer) |
+| extraction / `no_horizon` | 29 | 29 | 10 | 19 | 0 | (no correct answer) |
+| verification / `both` | 100 | 100 | 40 | 60 | 0 | 60 of 100 |
+| verification / `near_only` | 100 | 100 | 100 | 0 | 0 | 100 of 100 |
+
+- **The capped prompts are not a random sample.** 39 of the 42 are extraction prompts in the `none` regime, 14% of
+  that regime. Every fit's `none` class is the 241 that finished.
+- **More prompts are close to the cap.** Tokens per reply†: median 788, 90th percentile 3,070; 31 replies have
+  between 3,000 and 4,095 tokens.
+- **Gemma follows the horizon, but not always.** When only the near option pays off in time it chose near on 206 of
+  206 prompts. When both pay off it chose far on 124 of 183 answered prompts.
+
+**Extraction.** Layers 1 to 59 at the four sites of §4: 236 arrays of 659 × 5,376, 3.2 GB, in 6 minutes.
+- **Replay:** the written label is the model's top prediction on 659 of 659 prompts; the smallest margin is 6.375
+  logits. The audit found 0 label sites that differ from the parsed choice.
+- **Tokens at the sites:** `prompt_end` is `'\n'` and `think_end` is `'<channel|>'` on all 659. `prelabel` is `' '` on
+  331 prompts and `':'` on 328, the label-style split of §4.
+- **Top logits at the prelabel site:** both answer letters are among the 64 kept on 659 of 659 prompts. The gap
+  between the two letters' logits† has median 18.5 and minimum 13.19.
+
+**Shared draws.** Made and verified at both sites: K = 99 per family, from 430 prompts.
+
+**Fits** at layer 38 on 430 prompts (`both` 83, `near_only` 106, `none` 241), with the shared draws as the random
+baseline:
+
+| | Label site | Prelabel site |
+|---|---|---|
+| Typical norm | 303.7 | 302.9 |
+| CAA classes, long / short | 55 / 312 | 55 / 312 |
+| CAA difference of means, as a fraction of the typical norm | 0.062 | 0.057 |
+| cos(CAA, `choice`) | +0.889 | +0.680 |
+| cos(CAA, `reward`) | +0.464 | +0.239 |
+| Largest \|cos\| of CAA with 99 random directions: isotropic / covariance-matched / real differences | 0.038 / 0.763 / 0.766 | 0.035 / 0.599 / 0.731 |
+| Spearman of log-horizon against the horizon means' projection on CAA | +0.427 | +0.377 |
+| Curve: share of the means' variance in each of the 4 components | 0.388, 0.292, 0.070, 0.046 | 0.600, 0.119, 0.102, 0.030 |
+| Curve, fitted prompts: median error of t̂, decades | 0.354 | 0.672 |
+| Curve, held-out prompts (5 folds): Spearman of t̂ against the true log-horizon | +0.324 | −0.020 |
+| Curve, held-out prompts: median error of t̂, decades (`both` / `near_only` / `none`) | 1.198 (0.70 / 0.56 / 2.90) | 2.854 (6.28 / 4.29 / 1.92) |
+
+Within-regime CAA (§9.2), label site / prelabel site:
+
+| Direction | Long / short prompts | Share that chose far: long / short class | Cosine with `choice` | Cosine with `caa` |
+|---|---|---|---|---|
+| `caa-both` | 28 / 35 | 0.64 / 0.94 | −0.594 / −0.679 | −0.360 / −0.197 |
+| `caa-near_only` | 43 / 36 | 0 / 0 | −0.063 / −0.083 | +0.035 / +0.241 |
+| `caa-none` | 80 / 81 | 0.21 / 0.36 | −0.561 / −0.757 | −0.564 / −0.299 |
+| `caa-within` (pool of `near_only` and `both`) | 71 / 71 | | −0.463 / −0.511 | −0.236 / +0.002 |
+
+**Bundles.** Nine per site, 18 in all: `caa`, `curve-snap`, `curve-displace`, `reward`, `choice`, `caa-none`,
+`caa-near_only`, `caa-both`, `caa-within`. Their names end in `__gemma-4-31B-it__t0_s0__default__L38_label` or
+`…L38_prelabel`.
+
+**Hook gate** (4 prompts per bundle; a strength of 4 for push methods, a 4-decade shift for curve methods):
+- **Unsteered model:** all checks passed.
+- **Label-site bundles,** every token edited, 64-token replies: 8 of 9 pass. `curve-displace` failed check 3, "a
+  strong edit must change something" (below).
+- **Prelabel-site bundles,** only the prelabel token edited, whole replies. In both, exactly one token per row was
+  edited and each reply equals the unhooked one up to that token:
+
+  | Bundle | Replies changed | Choices changed |
+  |---|---|---|
+  | `caa` | 4 of 4 | 1 of 4 |
+  | `curve-snap` | 2 of 4 | 0 of 4 |
+
+**Copy-back.** 352 files; all 352 SHA-256 hashes verified after the copy.
+
+**Cost.** 10.1 hours of an A100 at $1.074 per hour, about $10.90.
+
+#### The failed check: `curve-displace` at the label site
+
+The same bundle and the same 4 prompts were run again on the machine, with other shifts:
+
+| Shift x, decades | +4 | −4 | +1 |
+|---|---|---|---|
+| Replies changed | 0 of 4 | 0 of 4 | 2 of 4 |
+
+- **The hook is applied.** A 1-decade shift changes replies, and the same hook passes for the other eight bundles.
+- **What fails is the check's assumption** that a 4-decade shift is a strong edit. For this curve it is not†:
+  - the label-site curve is 79.3 long but only 22.6 from end to end, in activation units (the typical norm is 304).
+    It is folded back on itself;
+  - the largest displacement a 4-decade shift can give is 23.2, under 8% of the typical norm. A push method at
+    strength 4 moves the activation by 4 times that norm;
+  - from the curve's short end (t = −3.46), a 1-decade shift moves the activation by 10.0 and a 4-decade shift by
+    8.0: a larger shift can move it less;
+  - the prelabel-site curve is folded more: 175.2 long, 14.1 from end to end.
+- **Not verified:** which t̂ the edited tokens had in those replies. That needs the model. The explanation fits the
+  three runs; they do not prove it.
+- **Nothing was changed.** `curve-displace` is bundled as fitted, and `check_hook.py` is as it was (§13).
+
+#### What the run shows that matters for evaluation
+
+1. **At the prelabel token the choice is already settled.** The letter the model wrote is its top prediction on
+   every prompt, ahead of the other letter by at least 13 logits. An edit at that one token has to overturn that:
+   CAA at strength 4 changed 1 of 4 choices. With thinking on, the reasoning before the answer has already decided.
+   The earlier sites, `think_end` and `prompt_end`, are extracted and are the next ones to fit.
+2. **CAA's agreement with `choice` comes from comparing regimes.** Plain CAA has cosine +0.889 with `choice`. Inside
+   one regime the long-minus-short direction points against `choice` in `both` and `none`. One reading, not tested:
+   in those two regimes the long class chose far less often than the short class (0.64 against 0.94, and 0.21
+   against 0.36), so a long-minus-short difference also carries "chose near".
+3. **The curve predicts a held-out prompt's horizon weakly at the label site and not at all at the prelabel site**
+   (Spearman +0.324 and −0.020). In the `none` regime, where the horizons are short, the label-site curve is off by
+   2.9 decades at the median.
+4. **Which random baseline is used decides how special CAA looks.** Random directions with the activations' own
+   covariance reach a cosine of 0.76 with CAA; isotropic ones reach 0.04.
+5. **The missing prompts are selected.** 14% of the `none` regime has no answer, and so no label site.
 
 ## 11. Running on a rented GPU
 
@@ -408,11 +734,43 @@ All are command-line options of `fit.py`, recorded in `fit.json` and `method.jso
 and stops at the first failure:
 
 ```
-crlf  setup  weights  tests  hook  baseline  extract  audit  fit  bundle  method  sums
+crlf  version  setup  weights  tests  hook  horizon  baseline  extract  audit  draws  fit  bundle  method  sums
 ```
 
-- **Settings** come from the environment: `MODEL` (default Gemma 4 31B-it), `LAYER` (38), `N` (64 prompts), `BATCH`
-  (8), `MAX_NEW` (4096), `RUN` (smoke).
+- **Before copying the code to the box,** stamp it in the git checkout (§11.2 item 6):
+  `cd prompt_bank && python -m pbank.provenance stamp`. The `version` stage fails if the outputs would record
+  `"unknown"`.
+- **`horizon`** runs `extract_horizon.py` on all 700 prompts; it needs no baseline run.
+- **`extract`** keeps every layer (`LAYERS=all`) and every site (§4), so later fits need no GPU.
+- **`draws`, `fit` and `bundle`** run at `LAYER`, once per site of `SITES` (default `label prelabel`). `draws` runs the
+  evaluation team's `shared_draws.py` and verifies its output; `fit` then uses the draws.
+- **`method`** runs the hook gate on the run's bundles: every label-site bundle on 64-token replies, as it declares
+  itself (every token); and the prelabel-site bundles named in `PRELABEL_CHECK` (default `caa curve-snap`, one
+  linear method and one curve method) with the edit at the prelabel token only, on whole replies. With thinking on,
+  whole replies take minutes per bundle, which is why not all nine are checked there. Every bundle is run even
+  after a failure, and the stage fails at the end if any did. It writes nothing, so `sums` can come before it.
+
+- **A smoke run is the default:** the first 64 extraction prompts. **The full run is `N=all SPLIT=all`:** all 700
+  prompts, with both splits extracted, which the evaluation runner needs (it reads the verification prompts' label
+  positions). Rehearsed locally on Qwen3.5-0.8B, thinking off: 700 prompts, 699 extracted (499 extraction, 200
+  verification; one reply had conflicting choices), 0 label sites not matching.
+- **Settings** come from the environment: `MODEL` (default Gemma 4 31B-it), `LAYER` (38), `LAYERS` (all), `SITES` (label prelabel), `PRELABEL_CHECK`
+  (caa curve-snap), `N` (64 prompts, or `all`),
+  `SPLIT` (extraction), `BATCH`
+  (8), `MAX_NEW` (4096), `RUN` (smoke), `THINKING` (on), `DECODING` (auto, as `baseline.py`), `SAMPLING` (extra
+  sampling options for a model without a generation config) and `DRAWS_MIN_ROWS` (100).
+- **Rehearsed locally on 2026-11-22** in a copy without `.git`, on Qwen3.5-0.8B: every stage but `setup`, `weights`
+  and `tests` ran and passed, the hook gate on all nine bundles included [`steering/progress-20261122.md`].
+- **Rehearsed again that day with all layers and both sites,** on Qwen3.5-2B, thinking off, 700 prompts: 69
+  activation arrays (23 layers × 3 sites), draws verified and fits written at both sites, 18 bundles, and the gate
+  passed on the 9 label-site bundles and the 2 checked prelabel-site ones. The prelabel-token gate on whole
+  thinking-on, sampled replies ran for the first time in the full Gemma run: about 5 minutes per bundle for 4
+  prompts.
+- **The full run (2026-11-22 to 11-23)** on a rented A100, Gemma 4 31B:
+  `N=all SPLIT=all BATCH=8 MAX_NEW=4096 RUN=t0_s0 vast_smoke.sh hook baseline extract audit draws fit bundle sums method`.
+  Every stage passed except `method`, where one bundle failed one check (§10.1). 10.1 hours, about $10.90.
+- **Run on a rented A100 the same day** on Gemma 4 31B: every stage passed except `tests`, whose steering half
+  was very slow and was stopped (§11.2 item 9). The run cost about $2.15 for 50 minutes.
 - **The `audit` stage** prints every label site with its decoded neighbours and fails if any decoded token differs
   from the parsed choice.
 - **The HF token** reaches the box only through ssh's stdin, never on disk or on a command line:
@@ -434,18 +792,34 @@ crlf  setup  weights  tests  hook  baseline  extract  audit  fit  bundle  method
    - The key-value cache needs about 1.1 GB per sequence at about 3k tokens.
    - On top of that, SDPA's `repeat_kv` makes temporary copies.
 4. **Settings are locked once a run starts.** A run directory remembers its settings. After a failed first batch,
-   retrying with a different batch size is refused until the empty directory is removed. That is deliberate: greedy
-   outputs depend on padding, so batch size is part of a run's identity.
+   retrying with a different batch size is refused until the empty directory is removed. That is deliberate: a reply
+   depends on the batch it is generated in, so batch size is part of a run's identity.
 5. **No `/workspace`.** The image `vastai/pytorch:cuda-12.8.1-auto` has no `/workspace`, which the team justfile
-   assumes.
+   assumes. The same on the full run's host; the code went to `/root/spar`.
 6. **Shipping without `.git` loses provenance.** `just push`-style rsync leaves out dotfiles, including `.git`, so
-   every output records its code commit as `"unknown"`. **Not fixed yet.** Options: ship `.git`, or pass the commit in
-   an environment variable that `provenance.py` reads.
+   every output recorded its code commit as `"unknown"`. **Fixed on 2026-11-22:**
+   - `python -m pbank.provenance stamp`, run in the git checkout before copying, writes `CODE_STAMP.json`: the commit
+     and the SHA-256 of every tracked file (dotfiles left out, since such a copy drops them).
+   - Without git, outputs record the stamped commit if the code files still match their hashes, and the commit with
+     `-modified` if any was edited on the box.
+   - Rejected: passing the commit in an environment variable, which would keep vouching for the commit after the code
+     was edited; and shipping `.git`, which is large and changes how the team's `just push` works.
 7. **Bandwidth is billed by some hosts.** The host billed $40/TB in both directions, so the 64 GB download (weights
    plus packages) cost $2.50, more than the GPU time. Filter offers on download cost.
 8. **Destroy, don't stop.** A stopped instance keeps billing its disk: $0.28/h for 200 GB.
+9. **A container has fewer cores than it shows.** The A100 host reported 128 cores, but the container's CPU quota was
+   15.36 (cgroup `cpu.max`). torch started 128 threads, and the steering tests that run a tiny model on the CPU
+   crawled: 43 of 99 tests in 600 s, against all of them in 106 s with `OMP_NUM_THREADS=15` (2026-11-22, same
+   machine). Nothing was hung and no result was wrong. **Fixed:** `pbank/cpu.py` reads the quota;
+   `LocalChatModel` and the steering tests lower torch's thread count to it, and `vast_smoke.sh` exports
+   `OMP_NUM_THREADS` from it. On the full run's machine (quota 30.72 of 256 cores) the steering tests passed in
+   154.73 s.
 
 ### 11.3 Throughput: the open problem
+
+**The full run's figures (2026-11-23, §10.1):** 49.0 s per prompt at batch 8 with sampling, so 9 h 32 min of
+generation for 700 prompts on one A100, about $10. 42 replies hit the 4,096 cap. The planning figure below (about
+10 GPU-hours) held. The rest of this section is the history behind it.
 
 Measured on the A100 (batch 8, thinking on, cap 4,096 new tokens):
 
@@ -477,7 +851,8 @@ reply) / (batch size). `prompt_bank/tools/step_times.py` computes both quantitie
 
   The runs also differ in transformers version (5.17 vs 5.22.2) and generation code, so the 1.6 is not attributed
   further. The 2026-11-15 figures rest on 16 prompts.
-- **Planning figure:** about 15 GPU-hours for this bank at cap 4,096, and more at the spec's 8,192.
+- **Planning figure:** about 15 GPU-hours for this bank at cap 4,096 under greedy decoding, and more at the spec's
+  8,192. With sampling the 2026-11-22 run suggests about 10 (below).
 - **The largest lever is the runaway reply,** not the GPU: one long reply makes the other seven slots in its batch wait.
   Options include a lower cap, smaller batches, or generation that refills finished slots. None is decided, and each
   has trade-offs: a lower cap changes which replies get parsed.
@@ -485,9 +860,65 @@ reply) / (batch size). `prompt_bank/tools/step_times.py` computes both quantitie
   per step at about 2 TB/s, about 31 ms). That needs a profile of `generate()` on Gemma 4's layer layout, which can be
   done locally on a model with the real layer layout but fewer layers.
 
-This is the main thing standing between the current state and a full Gemma run. It also sets the cost of every
-generation readout the evaluation pipeline plans `[eval §9]`. Note that the evaluation design's cost estimate quotes
-the old 13 s figure.
+**Decoding: replies that loop under greedy decoding.** Small Qwen models with thinking on often repeat the
+same block of reasoning until the token cap, so the reply never reaches an answer:
+
+- **Our probes, cap 4,096:** Qwen3.5-2B parsed 0 of 16 replies and Qwen3.5-4B 3 of 16
+  [`steering/progress-20261117.md`]. This is why the practice hand-over has thinking off.
+- **The evaluation team's full run** (Qwen3-1.7B, thinking on, greedy, cap 4,096): 370 of 700 prompts answered. 337
+  hit the cap, 323 of them in a loop (a 64-token block repeated at least 3 times)
+  [`evaluation/reports/Qwen3-1.7B__t0_s0__think_loops.txt`].
+- **Sampling instead of greedy** (reported by the evaluation team on 2026-11-19, with Qwen's recommended settings and
+  a fixed seed; code on branch `eval-runner`, `evaluation/sampling_test.py`; not rechecked here):
+  - of 100 prompts that looped, 5 still loop and 62 now answer;
+  - the other 33 are long, not looping, and still hit the cap;
+  - on prompts that greedy had answered, sampling changed 5 of 26 choices, so a readout from generated answers would
+    need several samples per prompt.
+- **Gemma 4 31B:** 3 of the first 16 replies hit the cap (table above). They are not loops (below).
+- **Decided (Alan, 2026-11-22): seeded sampling for thinking-on runs, and a default cap of 4,096 tokens.** Built:
+  - `baseline.py --decoding {auto,greedy,sample}`. `auto`, the default, samples when thinking is on and is greedy
+    when it is off. The cap is `--max-new-tokens`, default 4,096 (it was 8,192).
+  - Sampling values come from the model's own generation config (Gemma 4: temperature 1.0, top-p 0.95, top-k 64)
+    unless `--temperature`, `--top-p` or `--top-k` are given. A model without such a file (Qwen3.5) must be given all
+    three. The values and where each came from are recorded in `run.json`.
+  - `--seed` (default 0). Each batch is seeded from it and from the batch's own prompts, so the same batch repeats
+    exactly whatever ran before it. On Qwen3.5-2B, two runs gave identical token ids for 16 of 16 prompts.
+  - **The replay check** for a sampled run is that the label is among the top-k tokens, since it need not be the most
+    likely one (§2, "Replay margin"). On a sampled Qwen3.5-2B run the label was the second most likely token for 35
+    of 96 prompts; the greedy check would have flagged all 35.
+  - **The hook gate** takes the same options. A zero edit still reproduces a sampled batch exactly (6 of 6 prompts
+    on Qwen3.5-0.8B), because the unhooked and hooked runs are seeded alike.
+  - Bundles record the baseline's decoding (`method.json` → `fitted_on.decoding`).
+  - New runs are not comparable with the earlier greedy ones. `--decoding greedy` reproduces their setting.
+- **What sampling does not fix** [`steering/progress-20261122.md`]:
+  - **Qwen3.5-2B with thinking on still answers nothing.** With the sampling values above for Qwen, all 16 of 16
+    replies ran to the 4,096 cap, as under greedy. None is a loop by the evaluation team's definition: the model
+    deliberates in circles ("Wait, …") without repeating itself exactly.
+  - **Gemma's capped replies were not loops either.** The 3 of 16 replies at the cap in the 2026-11-15 greedy run
+    are long deliberations (all three on horizons under a week, where neither option pays off), not repeated
+    blocks. Sampling helped them all the same (next item).
+- **Sampling on Gemma 4 31B: the same 16 prompts, greedy (2026-11-15) against sampled (2026-11-22)**, both at batch
+  8 and cap 4,096 on an A100; sampled with Gemma's own settings and seed 0 [`steering/progress-20261122.md`]:
+
+  | | greedy | sampled |
+  |---|---|---|
+  | answered | 13 of 16 | 16 of 16 |
+  | at the cap | 3 | 0 |
+  | tokens per reply: median / mean / max | 1,306 / 1,661 / 4,096 | 1,062 / 1,383 / 3,091 |
+  | seconds per prompt | 75.1 | 50.6 and 53.5 (two batches) |
+
+  - The 13 prompts both runs answered have the same choice in both.
+  - The three that hit the cap under greedy now answer, at 2,337 to 3,091 tokens: 57 to 75% of the cap.
+  - **Limits:** 16 prompts and one seed. Other prompts or seeds may still hit the cap.
+  - **Planning figure with sampling:** about 10 GPU-hours for the 700 prompts at 52 s per prompt.
+  - **One reply is one draw.** Readouts that count generated answers need several seeds per prompt.
+  - **The evaluation runner** calls `generate` without a decoding argument, so its generation check is greedy until
+    it passes the run's decoding (`evaluation/replay_eval.py`; theirs to change).
+
+Throughput and decoding no longer block a full Gemma run: it took one night on one A100. They still set the cost
+of every generation readout the evaluation pipeline plans `[eval §9]`: at 49 s per prompt, each further pass over
+the 700 prompts, steered or with another seed, is about 9.5 GPU-hours. Note that the evaluation design's cost
+estimate quotes the old 13 s figure.
 
 ## 12. Getting the outputs
 
@@ -506,27 +937,76 @@ python tools/upload_gcs.py ... --upload --dest BUCKET/PREFIX --key KEY.json
 
   `steer.methods.load` checks each bundle's own hashes again.
 - **Refusals:** both scripts refuse a destination that already has files. Nothing is ever overwritten.
-- **Hosting is not decided.** The Hugging Face path has been exercised for real, into a private repo under Alan's
-  personal account. The GCS path has been tested only against a local directory.
+- **Hosting: Hugging Face.** The evaluation team agreed on 2026-11-19 to use it for everything.
+  - The Hugging Face path has run for real twice (§10).
+  - The one real GCS upload (2026-11-17) was refused, because the project's billing account is closed. Nothing was
+    written [`steering/progress-20261117.md`].
+
+**The full Gemma 4 31B run is not uploaded yet.** Its outputs are on Alan's machine, with every file's hash
+verified against the rented machine's (§10.1). Mirroring the repository, they are:
+
+| Directory | What | Size |
+|---|---|---|
+| `prompt_bank/runs/gemma-4-31B-it__t0_s0/` | the baseline run: every reply and its token ids | 8.6 MB |
+| `steering/activations/gemma-4-31B-it__t0_s0/` | 236 activation arrays, the index, the top prelabel logits | 3.2 GB |
+| `steering/draws/gemma-4-31B-it/L38_{label,prelabel}/` | the shared random draws | 13 MB |
+| `steering/fits/gemma-4-31B-it__t0_s0/default/L38_{label,prelabel}/` | the two fits and the search log | 5.6 MB |
+| `steering/methods/gemma-4-31B-it/*__t0_s0__default__L38_{label,prelabel}/` | the 18 bundles | 6 MB |
+| `steering/activations/gemma-4-31B-it__t0_s0__horizon/` | the horizon-site activations of 2026-11-22 (§6) | 3.2 GB |
+
+**The practice hand-over.** A complete small-model hand-over is public, for building and debugging evaluation code
+against the real interfaces: <https://huggingface.co/datasets/CodeReclaimers/spar-steering-practice-qwen35-2b>.
+
+- **Contents:** the baseline run (Qwen3.5-2B, thinking off, all 700 prompts), activations at layers 12 and 15 (label
+  and prelabel), the layer-15 label-site fit, and the five bundles. Its dataset card lists the commands and checks.
+- **It is for plumbing only.** Thinking is off, the model barely represents the horizon (the curve's held-out
+  Spearman is +0.222), and answers flip easily (the median replay margin is 0.25 logits). Draw no conclusion about
+  steering from it.
+- **Not in it:** the prelabel-site fit and bundles of §6, which exist only locally.
 
 ## 13. Open items
 
-**Needed from the evaluation team:**
-- the held-out horizon list for C8;
-- the null families and K to precompute as shared draws (§8.2 item 6);
-- whether `EditContext` covers the comparison methods' needs, before anything depends on it;
-- the preferred host: Hugging Face or GCS.
+**Answered by the evaluation team (2026-11-18 and 11-19):**
+- **Held-out horizons for C8:** a first list (§8.2 item 3), not final.
+- **Shared draws:** built on their side (§8.2 item 6).
+- **`EditContext`:** it covers their comparison methods. What is missing is upstream: the `horizon` site below.
+- **Host:** Hugging Face (§12).
 
-**Decisions on the extraction side:**
-- a minimum class size in `fit.py` (§9.5);
-- a within-regime CAA contrast (§9.2);
-- recording the code commit when shipping without `.git` (§11.2.6);
-- the throughput problem (§11.3).
+**Requested by the evaluation team, built:**
+- **The horizon site** (§6): activations at the tokens that state the horizon, every token separately, all layers,
+  with the audit and the per-prompt rows for the hook. Run on Gemma 4 31B on 2026-11-22; not uploaded yet.
+- **`fit.py`'s random baseline from the shared draw files** (§8.2 item 6).
+- **A within-regime CAA** as comparison methods (§9.2).
+
+**Open after the full Gemma run (§10.1). None is decided; anyone on the team can pick one up:**
+- **The 41 prompts without an answer,** 38 of them in the `none` regime. Options: rerun them with a higher cap,
+  rerun them with another seed, or report them as missing. A rerun in a different batch is a different draw, so it
+  would be recorded as its own run.
+- **The gate's "strong edit" check for curve methods** (`steering/tools/check_hook.py`, check 3). It applies a
+  4-decade shift, which on a folded curve can move the activation very little. Options: a smaller shift, the shift
+  with the largest displacement on that curve, or reporting the displacement's size and not failing.
+- **Where to edit.** The prelabel token is too late to change the choice with thinking on. Next: fit at `think_end`
+  and `prompt_end` (CPU work on the saved arrays; `fit.py --site` already takes both names, untried), and teach
+  `check_hook.py --positions` those two sites, which it does not know.
+- **Other layers.** Layers 1 to 59 are saved; only layer 38 is fitted. The shared draws exist only for layer 38.
+- **The bundles' default positions** are still `all` (§4).
+- **A steering vector known from the literature** for these models, reproduced with this code, as a check of the
+  code (asked for by Ian at the weekly meeting). No owner yet. `fit.py` has no entry point for a contrast other than the
+  bank's.
+- **The evaluation runner's generation check is greedy** (`evaluation/replay_eval.py`); this run is sampled
+  (§11.3).
+- **How many sampled seeds per prompt.** This run is one draw per prompt.
+- **The prelabel-token gate for the other 7 prelabel-site bundles** (`PRELABEL_CHECK=all`; about 5 minutes each on
+  a rented GPU).
+- a minimum class size in `fit.py` (§9.5).
+
+**To do:**
+- upload the full Gemma run and the Gemma horizon activations (§12);
 
 **Not built:**
-- shared random-draw files;
 - an answer-letter control direction;
-- the switch-point, gate and α_k calibration code (roadmap step 2's second half).
+- the switch-point and gate code (roadmap step 2's second half). The evaluation runner now calibrates the strength
+  (§8.2 item 4); whether anything of this remains for extraction is to be confirmed with the evaluation team.
 
 ## 14. Sources
 
@@ -534,6 +1014,13 @@ python tools/upload_gcs.py ... --upload --dest BUCKET/PREFIX --key KEY.json
 - `steering/README.md`: the steps, conventions, fitting choices, hook, bundles, uploads.
 - `steering/progress-20261114.md`: Steps 1–6, the Qwen3.5 checks, the local Gemma smoke test.
 - `steering/progress-20261115.md`: the vast.ai run, its gotchas and its numbers.
+- `steering/progress-20261117.md`: the Qwen3.5-2B practice hand-over, its checks and its uploads.
+- `steering/progress-20261119.md`: the label-only and prelabel-only gate, and the batch-1 hook fix.
+- `steering/progress-20261122.md`: the horizon site, within-regime CAA, sampling, the 16-prompt sampled Gemma run,
+  and the extraction of every layer and four sites.
+- `steering/progress-20261123.md`: the full Gemma 4 31B run.
+- `evaluation/`: the shared draws (`shared_draws.py`), the evaluation runner (`replay_eval.py`) and its first reports.
+- The evaluation team's review and requests: Slack, #planning-temporal-manifolds, 2026-11-18 and 2026-11-19.
 - Code: `steering/steer/{edits,hooks,methods,manifold,fitting,layers,sites}.py`, `steering/tools/check_hook.py`,
   `steering/tools/vast_smoke.sh`, `steering/tools/upload_{hf,gcs,common}.py`.
 - Figures: `explainer/make_figs.py`.

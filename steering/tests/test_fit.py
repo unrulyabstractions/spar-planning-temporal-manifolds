@@ -157,3 +157,128 @@ def test_search_log_records_every_run_and_only_grows(tmp_path):
     assert (fits / "acts" / "search.jsonl").read_text().startswith(first_two)    # earlier lines untouched
     assert log[0]["headline"]["curve_held_out_spearman"] > 0.99 and log[2]["settings"]["include_none"] is False
     assert all(len(r["code_commit"]) >= 40 or r["code_commit"] == "unknown" for r in log)
+
+
+# ---- shared random draws (evaluation/shared_draws.py) as the fit's random baseline ---------------------------------
+
+def make_draws(acts, out, layer=15, site="label"):
+    """Run the evaluation team's script on the synthetic activations; returns the draws directory."""
+    script = STEERING.parent / "evaluation" / "shared_draws.py"
+    subprocess.run([sys.executable, str(script), "make", "--activations", str(acts), "--bank",
+                    str(BANK / "prompts.jsonl"), "--model", "synthetic/tiny", "--layer", str(layer), "--site", site,
+                    "--out", str(out)], check=True, capture_output=True)
+    return out / "tiny" / f"L{layer}_{site}"
+
+
+def test_fit_with_shared_draws_changes_only_the_random_baseline(tmp_path):
+    acts = make_activations(tmp_path / "acts")
+    draws = make_draws(acts, tmp_path / "draws")
+    own = run_fit(acts, tmp_path / "fits")
+    shared = run_fit(acts, tmp_path / "fits", "--name", "shared", "--draws", str(draws))
+    a, b = np.load(own / "directions.npz"), np.load(shared / "directions.npz")
+    stored = np.load(draws / "draws.npz")
+    meta = json.loads((shared / "fit.json").read_text())
+    src, cos = meta["random_source"], meta["diagnostics"]["caa"]["abs_cos_random"]
+    print(f"random_source {src['kind']} {src['directory']}, K {src['k']}, families {src['families']}; "
+          f"|cos(CAA, random)| max/p95: " + ", ".join(f"{f} {v['max']:.3f}/{v['p95']:.3f}" for f, v in cos.items()))
+    print(f"own fit: {json.loads((own / 'fit.json').read_text())['random_source']}")
+    # The methods are untouched; only the random vectors differ, and they are the shared file's, bit for bit.
+    for key in ("caa", "reward", "choice", "typical_norm"):
+        assert np.array_equal(a[key], b[key]), key
+    assert (own / "manifold.npz").read_bytes() == (shared / "manifold.npz").read_bytes()
+    assert np.array_equal(b["random"], stored["isotropic"]) and b["random"].shape == (99, 24)
+    assert a["random"].shape == (100, 24)
+    assert src["families"] == ["isotropic", "covariance", "real_diff"] and src["k"] == 99
+    assert src["drawn_from_activations_sha256"] == meta["inputs"]["array_sha256"]
+    for f in src["families"]:
+        expect = np.abs(stored[f] @ b["caa"]).max()
+        assert cos[f]["n"] == 99 and abs(cos[f]["max"] - expect) < 1e-6
+    assert meta["diagnostics"]["caa"]["max_abs_cos_random"] == cos["isotropic"]["max"]
+    assert "draws" not in meta["settings"]
+
+
+def test_fit_refuses_draws_made_for_other_inputs(tmp_path):
+    acts = make_activations(tmp_path / "acts", layers=(12, 15))
+    other = make_activations(tmp_path / "other", seed=1)
+    cases = {"another site": make_draws(acts, tmp_path / "d1", site="prelabel"),
+             "another layer": make_draws(acts, tmp_path / "d2", layer=12),
+             "another extraction": make_draws(other, tmp_path / "d3")}
+    tampered = make_draws(acts, tmp_path / "d4")
+    (tampered / "uids.txt").write_text("x0001\n")
+    cases["a file changed after SHA256SUMS"] = tampered
+    for n, (what, draws) in enumerate(cases.items()):
+        with pytest.raises(SystemExit) as e:
+            run_fit(acts, tmp_path / "fits", "--name", f"r{n}", "--draws", str(draws))
+        print(f"{what}: refused: {str(e.value.code)[:110]}")
+        assert str(e.value.code).startswith("--draws:")
+    log = [json.loads(line) for line in (tmp_path / "fits" / "acts" / "search.jsonl").read_text().splitlines()]
+    assert [row["outcome"] for row in log] == ["refused"] * 4
+
+
+# ---- within-regime CAA -----------------------------------------------------------------------------------------------
+
+def test_within_regime_caa_classes_and_directions(tmp_path):
+    from pbank.records import load_prompts, read_jsonl
+    acts = make_activations(tmp_path / "acts")
+    out = run_fit(acts, tmp_path / "fits")
+    w = json.loads((out / "fit.json").read_text())["diagnostics"]["caa_within"]
+    d = np.load(out / "directions.npz")
+    rows = read_jsonl(out / "fit_uids.jsonl")
+    recs = {r.uid: r for r in load_prompts(BANK)}
+    X = np.load(acts / "L15_label.npy").astype(np.float64)
+    for g, v in w["by_regime"].items():
+        print(f"within {g}: {v['n_long']} long (t >= {v['long_min_log10_days']:.2f}) / {v['n_short']} short "
+              f"(t <= {v['short_max_log10_days']:.2f}) of {v['n_regime']}; cos with choice {v['cos_choice']:+.3f}, "
+              f"with CAA {v['cos_caa']:+.3f}")
+    print(f"pooled over {w['pool']}: cos with choice {w['pooled']['cos_choice']:+.3f}; agreement {w['agreement']}; "
+          f"CAA's own cos with choice {json.loads((out / 'fit.json').read_text())['diagnostics']['caa']['cos_choice']:+.3f}")
+    # The classes on the real bank, by log-horizon thirds within each regime.
+    sizes = {g: (v["n_long"], v["n_short"]) for g, v in w["by_regime"].items()}
+    assert sizes == {"none": (94, 97), "near_only": (43, 36), "both": (30, 36)}
+    assert w["pool"] == ["near_only", "both"] and w["not_formed"] == [] and w["quantile"] == 1 / 3
+    # Every prompt's class is within its own regime, and the directions are the stated differences of means.
+    from steer.fitting import log10_days
+    raw = {}
+    for g, v in w["by_regime"].items():
+        long_ = [r["row"] for r in rows if r["regime"] == g and r["caa_within_class"] == "long"]
+        short = [r["row"] for r in rows if r["regime"] == g and r["caa_within_class"] == "short"]
+        assert (len(long_), len(short)) == sizes[g]
+        t_long = [log10_days(recs[r["uid"]].horizon_grid_value) for r in rows if r["row"] in set(long_)]
+        t_short = [log10_days(recs[r["uid"]].horizon_grid_value) for r in rows if r["row"] in set(short)]
+        t_mid = [log10_days(r["horizon_grid_value"]) for r in rows if r["regime"] == g and r["caa_within_class"] is None]
+        assert max(t_short) < min(t_mid) and max(t_mid) < min(t_long)
+        raw[g] = X[long_].mean(0) - X[short].mean(0)
+        assert np.allclose(d[f"caa_{g}"], raw[g] / np.linalg.norm(raw[g]), atol=1e-12)
+        assert abs(float(d[f"caa_{g}_raw_norm"]) - np.linalg.norm(raw[g])) < 1e-12
+    n = {g: w["by_regime"][g]["n_regime"] for g in ("near_only", "both")}
+    pooled = (n["near_only"] * raw["near_only"] + n["both"] * raw["both"]) / (n["near_only"] + n["both"])
+    assert np.allclose(d["caa_within"], pooled / np.linalg.norm(pooled), atol=1e-12)
+    # The fixture's baseline chooses the correct option where there is one, so within near_only and within both
+    # every prompt made the same choice: those contrasts cannot carry the planted choice vector c, and CAA does.
+    # (c is rebuilt as fixtures.make_activations draws it. The fitted `choice` direction is not the yardstick: far
+    # choices come with longer horizons, so it carries the planted horizon curve as well.)
+    basis, _ = np.linalg.qr(np.random.default_rng(0).standard_normal((24, 4)))
+    c = basis[:, 3]
+    on_c = {key: float(d[key] @ c) for key in ("caa", "caa_none", "caa_near_only", "caa_both", "caa_within")}
+    print(f"component along the planted choice vector: { {k: round(v, 3) for k, v in on_c.items()} }")
+    assert all(abs(on_c[key]) < 0.05 for key in ("caa_near_only", "caa_both", "caa_within")) and on_c["caa"] > 0.2   # measured 0.281
+    assert set(w["agreement"]) == {"both|near_only", "both|none", "near_only|none"}
+
+
+def test_within_regime_settings_and_degenerate_regimes(tmp_path):
+    acts = make_activations(tmp_path / "acts")
+    half = run_fit(acts, tmp_path / "fits", "--name", "all3", "--within-pool", "none", "near_only", "both",
+                   "--within-quantile", "0.25")
+    w = json.loads((half / "fit.json").read_text())["diagnostics"]["caa_within"]
+    print(f"quantile 0.25, pool of three: sizes { {g: (v['n_long'], v['n_short']) for g, v in w['by_regime'].items()} }")
+    assert w["pool"] == ["none", "near_only", "both"] and w["quantile"] == 0.25
+    assert all(v["n_long"] < 0.4 * v["n_regime"] for v in w["by_regime"].values())
+    # A regime left with a single horizon has no long and short class: it is reported, not fitted, and not pooled.
+    import numpy as np
+    from steer.fitting import within_regime_classes
+    t = np.array([1.0, 1.0, 1.0, 2.0, 3.0, 4.0])
+    regime = np.array(["both"] * 3 + ["none"] * 3, dtype=object)
+    classes, label = within_regime_classes(t, regime, 1 / 3)
+    assert list(classes) == ["none"] and label.tolist() == ["", "", "", "short", "", "long"]
+    with pytest.raises(ValueError):
+        within_regime_classes(t, regime, 0.5)

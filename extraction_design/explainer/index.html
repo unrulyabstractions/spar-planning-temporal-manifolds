@@ -251,7 +251,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
   <div class="eyebrow">Planning Temporal Manifolds · Extraction · hand-over to Evaluations</div>
   <h1>What extraction hands over, and how to use it</h1>
   <p class="lede">Extraction turns the T0 prompt bank and one model's activations into steering methods: a linear direction, a manifold curve, two concept controls and random directions. This page describes each method, how to apply it inside the model during generation, how it is packaged, what has been checked, and what is still open. It answers the evaluation design item by item.</p>
-  <p class="meta">Built and tested, not merged (branch <code>steering-handover</code>) · Gemma 4 31B run only at smoke scale (16 prompts); no full-run methods yet · Extraction (Alan), drafted with Claude, 2026-11-15 · reference version for LLM assistants: <code>extraction_design/README.md</code> (same content, plain text) · answers <code>evaluation_design/README.md</code></p>
+  <p class="meta">Built, tested and on <code>main</code> (merged 2026-11-15) · full Gemma 4 31B run done on 2026-11-23 (700 prompts; results in the reference version, §10.1), not uploaded yet · Extraction (Alan), drafted with Claude, 2026-11-15 · statements that had become false were corrected on 2026-11-22 and 2026-11-23; everything added since is only in the reference version, <code>extraction_design/README.md</code> · answers <code>evaluation_design/README.md</code></p>
   <nav class="toc" aria-label="Contents">
     <a href="#summary"><span class="toc-n">00</span><span><span class="toc-q">Summary</span> <span class="toc-a">the hand-over on one screen</span></span></a>
     <a href="#status"><span class="toc-n">01</span><span><span class="toc-q">Purpose and status</span> <span class="toc-a">what exists, what doesn't yet</span></span></a>
@@ -301,7 +301,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
         <li><b>CAA's classes differ in which answer is correct</b>, not only in horizon (§09).</li>
         <li><b><code>curve-snap</code> at Δ = 0 is not the identity</b>, and it changes generations (§05).</li>
         <li><b>Gemma generation is slow</b>: about 15 GPU-hours for the full baseline, not 2.5. Long replies and one runaway reply per batch explain most of it (§11).</li>
-        <li><b>Needed from you</b>: held-out horizons, null families and K, whether <code>EditContext</code> is enough, and the preferred host (§13).</li>
+        <li><b>Asked of you, and since answered</b>: held-out horizons, null families and K, whether <code>EditContext</code> is enough, and the preferred host (§13).</li>
       </ul>
     </div>
   </div>
@@ -317,19 +317,23 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
   <div class="readings">
     <div class="reading"><h3>Two packages</h3><p><code>prompt_bank/</code> builds the bank, has a second model check every prompt, and runs the model unsteered once over the bank. It is the official generator for the experiments. <code>steering/</code> reads activations from that run, fits the methods, packages them, and applies them inside the model.</p></div>
     <div class="reading"><h3>For whom</h3><p>The evaluation pipeline should run a method without knowing how it was built <code>[eval §3]</code>. Every bundle carries what it is, how to apply it, and what it was fitted on, with hashes.</p></div>
-    <div class="reading"><h3>What is missing</h3><p>No full Gemma 4 31B run yet. The pipeline has run end to end on Gemma only for 16 prompts on a rented A100. Generation speed is the blocker (§11).</p></div>
+    <div class="reading"><h3>What is missing</h3><p>The full Gemma 4 31B run finished on 2026-11-23 (700 prompts, 659 answered); its results are in the reference version, §10.1. Its outputs are not uploaded yet, and the earlier edit sites (end of prompt, end of thinking) are extracted but not fitted.</p></div>
   </div>
   <div class="tbl-wrap"><table>
     <thead><tr><th>Part</th><th>State</th><th>Evidence</th></tr></thead>
     <tbody>
       <tr><td>Bank <code>t0_s0</code> (700 prompts), checker, baseline runner</td><td>on <code>main</code></td><td><code>prompt_bank/README.md</code></td></tr>
       <tr><td>Extraction, fitting, diagnostics</td><td>on <code>main</code></td><td><code>steering/README.md</code></td></tr>
-      <tr><td>Torch edits, generation-time hook, replay readout</td><td>branch</td><td>tests; Qwen3.5-0.8B/2B; Gemma 4 31B (§10)</td></tr>
-      <tr><td>Bundles, <code>Method.refit</code>, search log</td><td>branch</td><td>tests; Qwen3.5-2B bundles checked in-model</td></tr>
-      <tr><td>Hook gate <code>tools/check_hook.py</code></td><td>branch</td><td>passed on Qwen3.5-0.8B, Qwen3.5-2B, Gemma 4 31B</td></tr>
-      <tr><td>Upload scripts (Hugging Face, GCS)</td><td>branch</td><td>tests; one real Hugging Face upload, verified</td></tr>
-      <tr><td>Rented-GPU run script <code>tools/vast_smoke.sh</code></td><td>branch</td><td>one A100 run (§11)</td></tr>
-      <tr class="em"><td>Full Gemma 4 31B baseline, fit and bundles</td><td>not run</td><td>throughput, §11</td></tr>
+      <tr><td>Torch edits, generation-time hook, replay readout</td><td>on <code>main</code></td><td>tests; Qwen3.5-0.8B/2B; Gemma 4 31B (§10)</td></tr>
+      <tr><td>Bundles, <code>Method.refit</code>, search log</td><td>on <code>main</code></td><td>tests; Qwen3.5-2B bundles checked in-model</td></tr>
+      <tr><td>Hook gate <code>tools/check_hook.py</code></td><td>on <code>main</code></td><td>passed on Qwen3.5-0.8B, Qwen3.5-2B, Gemma 4 31B</td></tr>
+      <tr><td>Upload scripts (Hugging Face, GCS)</td><td>on <code>main</code></td><td>tests; two real Hugging Face uploads, verified</td></tr>
+      <tr><td>Rented-GPU run script <code>tools/vast_smoke.sh</code></td><td>on <code>main</code></td><td>one A100 run (§11)</td></tr>
+      <tr><td>Hook fix for generation without padding; single-token edits; gate option <code>--positions</code></td><td>on <code>main</code></td><td>tests; Qwen3.5-2B (README §6, §10)</td></tr>
+      <tr><td>Horizon site (activations at the tokens that state the horizon); <code>fit.py --draws</code></td><td>on <code>main</code></td><td>tests; Qwen3.5-0.8B/2B (README §6, §8.2)</td></tr>
+      <tr><td>Practice hand-over: Qwen3.5-2B, thinking off, all 700 prompts</td><td>published on Hugging Face</td><td>README §12</td></tr>
+      <tr><td>Shared random draws</td><td>built by the evaluation team, on <code>main</code></td><td><code>evaluation/shared_draws.py</code></td></tr>
+      <tr class="em"><td>Full Gemma 4 31B baseline, fit and bundles</td><td>not run</td><td>throughput and decoding, §11</td></tr>
     </tbody>
   </table></div>
 </section>
@@ -351,7 +355,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
         <dt>Regime</dt><dd>Which options pay off within the stated horizon: <code>none</code>, <code>near_only</code>, <code>both</code>; <code>no_horizon</code> when there is no CONSTRAINT line. A payout exactly at the horizon counts.</dd>
         <dt>H/D</dt><dd>Stated horizon over the <b>far</b> option's delay.</dd>
         <dt>Grid value · log-time t</dt><dd>The horizon on the 48-point grid (30 s to 500 y), before any unit rewrite. t is log10 of it in days.</dd>
-        <dt>Baseline run</dt><dd>One unsteered, greedy, thinking-on pass of a model over the bank. Every reply's exact token ids are stored (<code>generated_ids</code>).</dd>
+        <dt>Baseline run</dt><dd>One unsteered pass of a model over the bank (thinking on; greedy until 2026-11-22, seeded sampling by default since). Every reply's exact token ids are stored (<code>generated_ids</code>).</dd>
       </dl>
     </div>
     <div class="stack">
@@ -371,7 +375,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
         <dt>Edit · EditContext</dt><dd>The torch object computing <code>edit.delta(h, x, ctx)</code>. <code>ctx</code> gives each token's role (pad / prompt / generated) and position, the edit mask, and optional per-row facts.</dd>
         <dt>Positions</dt><dd>Where an edit applies: <code>all</code>, <code>prompt</code>, <code>generated</code>, or a callable. Padding is never edited.</dd>
         <dt>Hook gate</dt><dd><code>tools/check_hook.py</code>: pass/fail check of the hook on one model's real generation.</dd>
-        <dt>Search log · code commit</dt><dd><code>search.jsonl</code> holds one line per <code>fit.py</code> run, whatever its outcome. The code commit is recorded in every output, with <code>-dirty</code> if <code>steering/</code> or <code>prompt_bank/</code> had uncommitted edits.</dd>
+        <dt>Search log · code commit</dt><dd><code>search.jsonl</code> holds one line per <code>fit.py</code> run, whatever its outcome. The code commit is recorded in every output, with <code>-dirty</code> if tracked files under <code>steering/</code> or <code>prompt_bank/</code> had uncommitted changes.</dd>
       </dl>
     </div>
   </div>
@@ -412,7 +416,7 @@ p code, li code, dd code, figcaption code { overflow-wrap: anywhere; }
     <div class="check"><b>Push strength</b><p>An edit adds <code>x × typical_norm × direction</code>. Directions are unit vectors, and the typical norm (the mean activation norm at the layer and site) is in the bundle. Every push method at the same x has the same norm.</p></div>
     <div class="check"><b>Target shift</b><p>x is in decades of log10(horizon in days), measured from each token's own t̂. <code>t̂ + x</code> is clamped to the curve's range, which is stored in the bundle.</p></div>
     <div class="check"><b>Sign</b><p>+x means longer horizons for <code>caa</code> and the curve methods, larger reward multipliers for <code>reward</code>, and "chose far" for <code>choice</code>. Each bundle states its own sign.</p></div>
-    <div class="check"><b>Positions and arithmetic</b><p>Default positions: <code>all</code>, as in the report. Edits compute in float32 and cast back once. A zero request gives an exactly zero displacement.</p></div>
+    <div class="check"><b>Positions and arithmetic</b><p>Default positions: <code>all</code>, as in the report. This default is under review: for the curve methods it was an oversight, and an edit at the label token alone cannot change the choice (README §4, §6). Edits compute in float32 and cast back once. A zero request gives an exactly zero displacement.</p></div>
   </div>
   <figure>
     <div class="stack">
@@ -491,7 +495,7 @@ with steering(lcm.model, m.edit, x=0.1, layer=m.layer, positions=m.positions):
 
 logits = replay_logits(lcm.model, prompt_ids, answer_ids, m.edit, x=0.1, layer=m.layer)   # one teacher-forced pass</pre>
   <div class="checks">
-    <div class="check"><b>Knows each token's role</b><p>A pre-hook reads each pass's <code>cache_position</code> and <code>attention_mask</code>. The pass starting at position 0 is the prompt, later passes are generated tokens, and mask zeros are padding. This works inside batched, left-padded <code>generate()</code> with the key-value cache.</p></div>
+    <div class="check"><b>Knows each token's role</b><p>A pre-hook works out each token's position in every pass, from the first of <code>cache_position</code>, <code>attention_mask</code> and <code>position_ids</code> that <code>generate()</code> passes. The pass starting at position 0 is the prompt, later passes are generated tokens, and mask zeros are padding. This works inside batched, left-padded <code>generate()</code> with the key-value cache. At batch 1 it works since the 2026-11-19 fix: before it, <code>prompt</code> and <code>generated</code> edits hit the wrong tokens there (README §6).</p></div>
     <div class="check"><b>Edits only where asked</b><p>The displacement is computed everywhere and applied through a mask (<code>torch.where</code>), so unedited positions keep their exact bits.</p></div>
     <div class="check"><b>Per-row requests and facts</b><p><code>x</code> may be one value per row. <code>rows=[…]</code> passes facts such as uid or stated horizon into <code>ctx.rows</code>. CAA and the curve ignore them, but edits that need them (centroid substitution, horizon-token-only edits) keep the same signature.</p></div>
     <div class="check"><b>Size record for matched nulls</b><p><code>record=[]</code> collects the context and the L2 norm of the applied displacement per token, so random controls can match a method's size token by token (N1, N6).</p></div>
@@ -575,7 +579,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
     <div class="check"><i>3</i><b>Data splits</b><p>Only the extraction split is ever fitted on. Verification-grid prompts are dropped even if extracted, so you can extract the grid for your nulls without leakage. <code>--exclude-horizons</code> holds horizons out, and <b>the list is your call (C8)</b>. k = 4 and the 0.3-decade bandwidth come from the report's range and the grid spacing, not from tuning, and stay frozen.</p></div>
     <div class="check"><i>4</i><b>Operating point</b><p>We hand over a strength unit, not a frozen strength. Calibrating α<sub>k</sub> on your own split keeps the choice inside your nulls (P4).</p></div>
     <div class="check"><i>5</i><b>Search disclosure</b><p><code>search.jsonl</code> (I8).</p></div>
-    <div class="check"><i>6</i><b>Shared random draws</b><p>Not built yet. Each fit has 100 isotropic unit vectors. Seeded N1 and N2 draws per (model, layer, site), with hashes, will follow once you choose the families and K.</p></div>
+    <div class="check"><i>6</i><b>Shared random draws</b><p>Built by the evaluation team: <code>evaluation/shared_draws.py</code> writes N1, N2 and N2′ draws, K = 99 each, per (model, layer, site), from the files <code>extract.py</code> writes. Each fit still stores its own 100 isotropic unit vectors.</p></div>
     <div class="check"><i>7</i><b>Versioning</b><p>Every output records its inputs' SHA-256 and the code commit, and bundles hash every file. One gap: shipping code without <code>.git</code> records the commit as <code>"unknown"</code> (§11).</p></div>
   </div>
 </section>
@@ -594,7 +598,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
   </figure>
   <div class="checks">
     <div class="check"><b>"None" prompts are included by default</b><p>This follows the written spec ("used for extraction"). One recorded switch, <code>--no-include-none</code>, removes them from CAA, the controls and the curve together. Switching later is only a refit. Leaving them out moves the curve's start from 30 s to 10 days and shrinks CAA's short class from 350 prompts to 71.</p></div>
-    <div class="check"><b>CAA partly encodes "which answer is correct"</b><p>Its classes are not balanced by regime (figure, right). <code>fit.json</code> reports CAA's cosine with the <code>choice</code> direction: 0.862 with "none" kept and 0.904 without, on a Qwen3.5-2B smoke run. That is C2 in numbers. A within-regime contrast is not implemented, pending a team decision.</p></div>
+    <div class="check"><b>CAA partly encodes "which answer is correct"</b><p>Its classes are not balanced by regime (figure, right). <code>fit.json</code> reports CAA's cosine with the <code>choice</code> direction: 0.862 with "none" kept and 0.904 without, on a Qwen3.5-2B smoke run. That is C2 in numbers. The evaluation team asked for a within-regime contrast as a comparison method. It is built: long against short horizons inside one regime, as <code>caa-none</code>, <code>caa-near_only</code>, <code>caa-both</code> and the pooled <code>caa-within</code> (README §9.2).</p></div>
     <div class="check"><b>Concept controls are our definitions</b><p>The report names a reward-contrast control without defining it. <code>reward</code> is multiplier ≥ 25 minus ≤ 5. <code>choice</code> is chose far minus chose near.</p></div>
     <div class="check"><b><code>fit.py</code> has no minimum class size</b><p>On the 16-prompt smoke run it wrote a fit whose CAA long class held one prompt. Until a minimum is decided, check the class sizes in <code>fit.json</code>.</p></div>
   </div>
@@ -611,7 +615,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
   <div class="tbl-wrap"><table>
     <thead><tr><th>Check</th><th>Model / data</th><th>Result</th><th>Source</th></tr></thead>
     <tbody>
-      <tr><td>Test suites</td><td>CPU and local GPU</td><td>steering 81 passed; prompt_bank 64 passed</td><td><code>progress-20261114.md</code></td></tr>
+      <tr><td>Test suites</td><td>CPU and local GPU</td><td>steering 98 passed (2026-11-22, branch); prompt_bank 64 passed (2026-11-14)</td><td><code>progress-20261122.md</code>; <code>progress-20261114.md</code></td></tr>
       <tr><td>Layer convention</td><td>tiny Qwen3; Gemma 4 module tree; Qwen3.5-0.8B</td><td>exact</td><td><code>tests/test_layers.py</code></td></tr>
       <tr><td>Torch edits vs numpy</td><td>synthetic</td><td>max diff 4.44e-16 (float64)</td><td><code>progress-20261114.md</code></td></tr>
       <tr><td>Hook in real <code>generate()</code></td><td>Qwen3.5-0.8B bf16, 6 prompts</td><td>zero edit identical 6/6; strong edit changed 6/6</td><td><code>progress-20261114.md</code></td></tr>
@@ -624,7 +628,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
       <tr><td>Hugging Face upload</td><td>A100 outputs, 14 files</td><td>created private; 14/14 remote hashes verified</td><td><code>progress-20261115.md</code></td></tr>
     </tbody>
   </table></div>
-  <p class="col muted">Not yet on Gemma: <code>check_hook --method</code> with a real bundle, a full-size fit, and steered generation beyond the gate's strong-edit check.</p>
+  <p class="col muted">Not yet on Gemma: a full-size fit, and steered generation beyond the gate's strong-edit check. Checks made since 2026-11-15, on Qwen3.5-2B, are in the README's §10.</p>
 </section>
 
 <hr>
@@ -635,7 +639,7 @@ m.refit(activations_dir, bank_dir, uids=None, horizons=None)     # same recipe a
     <h2>The run script, the gotchas, and the throughput problem</h2>
   </div>
   <div class="readings">
-    <div class="reading"><h3>The run script</h3><p><code>steering/tools/vast_smoke.sh STAGE …</code>, run on the box from the repository root, executes <code>crlf setup weights tests hook baseline extract audit fit bundle method sums</code> and stops at the first failure. Settings: <code>MODEL</code>, <code>LAYER</code> (38), <code>N</code>, <code>BATCH</code> (8), <code>MAX_NEW</code> (4096). The <code>audit</code> stage fails if any decoded label token differs from the parsed choice.</p></div>
+    <div class="reading"><h3>The run script</h3><p><code>steering/tools/vast_smoke.sh STAGE …</code>, run on the box from the repository root, executes <code>crlf version setup weights tests hook horizon baseline extract audit draws fit bundle method sums</code> and stops at the first failure. Stamp the code first (<code>python -m pbank.provenance stamp</code>) so outputs can name their commit without <code>.git</code>. Settings: <code>MODEL</code>, <code>LAYER</code> (38), <code>N</code>, <code>BATCH</code> (8), <code>MAX_NEW</code> (4096). The <code>audit</code> stage fails if any decoded label token differs from the parsed choice.</p></div>
     <div class="reading"><h3>The token</h3><p>The Hugging Face token reaches the box only through ssh's stdin: <code>printf '%s\n' "$TOKEN" | ssh BOX 'read -r HF_TOKEN; export HF_TOKEN; …'</code>. It is never on disk or on a command line.</p></div>
     <div class="reading"><h3>The run</h3><p>One A100 SXM4 80 GB on vast.ai, 2026-11-15: 92 minutes, $4.62. The 63 GB weights downloaded in 55 s.</p></div>
   </div>
@@ -687,7 +691,7 @@ cd &lt;download&gt;/&lt;prefix&gt; &amp;&amp; sha256sum -c SHA256SUMS           
   <ul class="tight col">
     <li>Names mirror the repository, so a download unpacked at a checkout's root sits where the code expects it. <code>steer.methods.load</code> checks each bundle's hashes again.</li>
     <li>Both scripts refuse a destination that already has files; nothing is overwritten.</li>
-    <li>Hosting is not decided. The Hugging Face path has run for real (a private repo on Alan's personal account). The GCS path has been tested only against a local directory.</li>
+    <li>Hosting: Hugging Face, agreed with the evaluation team on 2026-11-19. A practice hand-over (Qwen3.5-2B, thinking off, for plumbing only) is public at <code>CodeReclaimers/spar-steering-practice-qwen35-2b</code>. The one real GCS upload was refused because the project's billing account is closed.</li>
   </ul>
 </section>
 
@@ -700,21 +704,19 @@ cd &lt;download&gt;/&lt;prefix&gt; &amp;&amp; sha256sum -c SHA256SUMS           
   </div>
   <div class="summary">
     <div class="stack">
-      <h3>Needed from the evaluation team</h3>
+      <h3>From the evaluation team</h3>
       <ul>
-        <li>The held-out horizon list for C8.</li>
-        <li>The null families and K to precompute as shared draws.</li>
-        <li>Whether <code>EditContext</code> covers your comparison methods, before anything depends on it.</li>
-        <li>The preferred host: Hugging Face or GCS.</li>
+        <li>Answered: a first held-out horizon list for C8 (5 weeks, 15 months, 16 years, 210 years; not final); shared draws built on their side; <code>EditContext</code> is enough; host is Hugging Face.</li>
+        <li>Requested and built: the horizon site, <code>extract_horizon.py</code>; <code>fit.py</code>'s random baseline from the shared draws; a within-regime CAA.</li>
       </ul>
     </div>
     <div class="stack">
       <h3>Extraction's side</h3>
       <ul>
-        <li>Decide: a minimum class size in <code>fit.py</code>; a within-regime CAA contrast.</li>
-        <li>Fix: recording the commit when code ships without <code>.git</code>.</li>
+        <li>Decided 2026-11-22: seeded sampling for thinking-on runs, default cap 4,096 tokens (README §11.3). Decide: the bundles' default positions and the fitting site; a minimum class size in <code>fit.py</code>.</li>
         <li>Diagnose: generation throughput.</li>
-        <li>Not built: shared random-draw files, an answer-letter control direction, switch-point and α<sub>k</sub> code.</li>
+        <li>To do: the full 700-prompt Gemma baseline (the 16-prompt sampled run of 2026-11-22 answered 16 of 16; README §11.3).</li>
+        <li>Not built: an answer-letter control direction, switch-point and gate code.</li>
       </ul>
     </div>
   </div>

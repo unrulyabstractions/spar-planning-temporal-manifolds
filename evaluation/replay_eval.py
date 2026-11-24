@@ -26,6 +26,7 @@ import re
 import sys
 import time
 from contextlib import contextmanager
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -106,12 +107,33 @@ def run_settings(run_dir: Path) -> dict:
     meta = json.loads((run_dir / "run.json").read_text())
     s = {"model_id": find_key(meta, ["model_id", "model"]), "thinking": find_key(meta, ["thinking"]),
          "max_new_tokens": find_key(meta, ["max_new_tokens"]), "batch_size": find_key(meta, ["batch_size"])}
+    # Runs from before pbank's seeded sampling (PR 19) record no decoding: they were greedy.
+    s["decoding"] = find_key(meta, ["decoding"]) or "greedy"
     if isinstance(s["model_id"], dict):
         s["model_id"] = find_key(s["model_id"], ["model_id", "id", "name"])
     missing = [k for k, v in s.items() if v is None]
     if missing:
         sys.exit(f"run.json: could not find {missing}")
     return s
+
+
+def gen_decodings(decoding, n_samples: int) -> list:
+    """The pbank Decoding of each generation-check sample, from the baseline run's recorded setting.
+
+    Greedy (or a run that records none): one deterministic pass, whatever n_samples says. Sampling: n_samples
+    passes with the run's temperature / top-p / top-k and seeds seed, seed+1, ... pbank re-seeds every batch from
+    the seed and the batch's prompts, so every arm sees the same random numbers for the same sample and batch
+    (paired comparisons across arms)."""
+    from pbank.local_model import GREEDY, Decoding
+    if decoding in (None, "greedy") or (isinstance(decoding, dict) and decoding.get("mode") == "greedy"):
+        return [GREEDY]
+    if not isinstance(decoding, dict) or decoding.get("mode") != "sample":
+        raise ValueError(f"run.json: unknown decoding setting {decoding!r}")
+    if n_samples < 1:
+        raise ValueError("--gen-samples must be >= 1")
+    return [Decoding(mode="sample", temperature=decoding["temperature"], top_p=decoding["top_p"],
+                     top_k=decoding["top_k"], seed=decoding["seed"] + k, source=decoding.get("source"))
+            for k in range(n_samples)]
 
 
 def last_per_uid(rows: list[dict]) -> dict:
@@ -299,9 +321,12 @@ class Replayer:
         0..len-1, so each row reads as it would alone, up to batched bf16 arithmetic (stage_replay measures that gap).
         The steering hook leaves padding unedited (attention mask 0)."""
         device = self.M.model.device
+        # rows sorted by length, so a batch pads little (thinking replies run from 100 to 4,000 tokens); the
+        # readouts go back to the callers' order at the end
+        order = sorted(range(len(seqs)), key=lambda i: len(seqs[i]))
         out = []
-        for s in range(0, len(seqs), self.batch_size):
-            chunk = seqs[s: s + self.batch_size]
+        for s in range(0, len(order), self.batch_size):
+            chunk = [seqs[i] for i in order[s: s + self.batch_size]]
             ids = torch.zeros(len(chunk), max(map(len, chunk)), dtype=torch.long)
             mask = torch.zeros_like(ids)
             for i, q in enumerate(chunk):
@@ -313,7 +338,10 @@ class Replayer:
                               logits_to_keep=last).logits
             rows = torch.arange(len(chunk), device=lg.device)
             out.append(lg[rows, rows].float())
-        return torch.cat(out)
+        sorted_logits = torch.cat(out)
+        back = torch.empty(len(order), dtype=torch.long)
+        back[torch.tensor(order, dtype=torch.long)] = torch.arange(len(order))
+        return sorted_logits[back.to(sorted_logits.device)]
 
     @staticmethod
     def _readout(items, lg: torch.Tensor):
@@ -353,6 +381,15 @@ class Replayer:
 
 
 # ------------------------------------------------------------------ arms
+
+def arm_selected(arm: dict, wanted) -> bool:
+    """Whether a list of wanted arms (--arms, a check set's `arms`) names this arm, its family or its method (the
+    name before "[" or "@"); None selects every arm."""
+    if wanted is None:
+        return True
+    names = {arm["arm"], arm["family"], arm["arm"].split("[")[0].split("@")[0]}
+    return bool(names & set(wanted))
+
 
 def method_dirs(methods_dir: Path) -> dict:
     out = {}
@@ -564,7 +601,8 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "veri
 
 
 def stage_gencheck(args, M, settings, cal: dict) -> None:
-    """Steered generation on a subset of verification pairs: none, caa +-x, isotropic[0] +-x, curve-displace +-shift."""
+    """Steered generation on a subset of verification pairs: none, and each of --gen-arms (caa +-x, isotropic[0] +-x,
+    curve-displace +-shift)."""
     from steer.hooks import steering
     out = Path(args.out) / "gencheck"
     out.mkdir(exist_ok=True)
@@ -582,37 +620,43 @@ def stage_gencheck(args, M, settings, cal: dict) -> None:
     for nm, spec in (("caa", {"family": "method", "src": str(md["caa"])}),
                      ("isotropic[0]", {"family": "isotropic", "row": 0}),
                      ("curve-displace", {"family": "method", "src": str(md.get("curve-displace", ""))})):
-        if spec.get("src") == "":
+        if spec.get("src") == "" or nm not in args.gen_arms:
             continue
         x = cal["x_shift"] if nm.startswith("curve") else cal["x_push"]
         arms += [(f"{nm}+", spec, x), (f"{nm}-", spec, -x)]
     end_think = M.end_think_id()
+    decodings = gen_decodings(settings["decoding"], args.gen_samples)
+    if len(decodings) < args.gen_samples:
+        print(f"gencheck: the baseline run is greedy, so one pass (not {args.gen_samples}): extra samples would be identical")
     for name, spec, x in arms:
         path = out / f"{name}.jsonl"
         if path.exists():
             continue
         rows = []
         t0 = time.time()
-        for s in range(0, len(sub), args.gen_batch):
-            batch = sub[s: s + args.gen_batch]
-            texts = [bank[it["uid"]]["text"] for it in batch]
-            if spec is None:
-                reps = M.lcm.generate(texts, thinking=settings["thinking"], max_new_tokens=settings["max_new_tokens"])
-            else:
-                edit, positions = fac.make(spec)
-                with steering(M.model, edit, x, fac.caa.layer, positions=positions):
-                    reps = M.lcm.generate(texts, thinking=settings["thinking"],
-                                          max_new_tokens=settings["max_new_tokens"])
-            for it, r in zip(batch, reps):
-                ids = list(getattr(r, "generated_ids", []) or [])
-                idx, what = locate_label(M.tok, ids, end_think, settings["thinking"]) if ids else (None, "no ids")
-                b = bank[it["uid"]]
-                chars = [lab[0].lower() for lab in b["labels"]]
-                far_char = chars[1] if b["near_first"] else chars[0]
-                rows.append({"uid": it["uid"], "arm": name, "x": x, "parsed": idx is not None,
-                             "chose_far": (what == far_char) if idx is not None else None,
-                             "reason": None if idx is not None else what,
-                             "n_generated": len(ids), "hit_cap": len(ids) >= settings["max_new_tokens"]})
+        for k, dec in enumerate(decodings):
+            for s in range(0, len(sub), args.gen_batch):
+                batch = sub[s: s + args.gen_batch]
+                texts = [bank[it["uid"]]["text"] for it in batch]
+                if spec is None:
+                    reps = M.lcm.generate(texts, thinking=settings["thinking"], max_new_tokens=settings["max_new_tokens"],
+                                          decoding=dec)
+                else:
+                    edit, positions = fac.make(spec)
+                    with steering(M.model, edit, x, fac.caa.layer, positions=positions):
+                        reps = M.lcm.generate(texts, thinking=settings["thinking"],
+                                              max_new_tokens=settings["max_new_tokens"], decoding=dec)
+                for it, r in zip(batch, reps):
+                    ids = list(getattr(r, "generated_ids", []) or [])
+                    idx, what = locate_label(M.tok, ids, end_think, settings["thinking"]) if ids else (None, "no ids")
+                    b = bank[it["uid"]]
+                    chars = [lab[0].lower() for lab in b["labels"]]
+                    far_char = chars[1] if b["near_first"] else chars[0]
+                    rows.append({"uid": it["uid"], "arm": name, "x": x, "sample": k, "seed": dec.seed,
+                                 "parsed": idx is not None,
+                                 "chose_far": (what == far_char) if idx is not None else None,
+                                 "reason": None if idx is not None else what,
+                                 "n_generated": len(ids), "hit_cap": len(ids) >= settings["max_new_tokens"]})
         write_jsonl_atomic(path, rows)
         ok = [r for r in rows if r["parsed"]]
         print(f"gencheck {name}: {len(ok)}/{len(rows)} parsed, P(far) "
@@ -642,6 +686,12 @@ def main(argv=None):
                         "(an 8B model: 32 GB), so bfloat16 on a smaller GPU, at ~0.3 logit of rounding per item")
     p.add_argument("--prompting", action="store_true",
                    help="also replay the prompting baseline (PROMPTS: disposition and shift pairs, neutral sentence)")
+    p.add_argument("--arms", nargs="+", help="replay only these arms, families or methods (e.g. caa curve-snap "
+                                             "covariance); default every arm")
+    p.add_argument("--gen-arms", nargs="+", default=["caa", "isotropic[0]", "curve-displace"],
+                   help="steered arms of the generation check, each at +-x, beside the unsteered one")
+    p.add_argument("--gen-samples", type=int, default=1,
+                   help="generation check on a sampled baseline: passes per arm, seeds seed..seed+n-1 (greedy: 1)")
     args = p.parse_args(argv)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -658,7 +708,7 @@ def main(argv=None):
         if "calibrate" in args.stages or "replay" in args.stages or "gencheck" in args.stages:
             cal = stage_calibrate(args, M, settings, rep)
         if "replay" in args.stages:
-            stage_replay(args, M, settings, rep, cal)
+            stage_replay(args, M, settings, rep, cal, keep_arm=partial(arm_selected, wanted=args.arms))
     if "gencheck" in args.stages:
         stage_gencheck(args, M, settings, cal)
 

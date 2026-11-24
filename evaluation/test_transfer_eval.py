@@ -66,10 +66,11 @@ def test_model_input():
 
 class FakeChat:
     def __init__(self):
-        self.seen = []
+        self.seen, self.seeds = [], []
 
-    def generate(self, prompts, thinking, max_new_tokens):
+    def generate(self, prompts, thinking, max_new_tokens, decoding):
         self.seen += prompts
+        self.seeds.append((decoding.mode, decoding.batch_seed(prompts)))
         return [SimpleNamespace(thinking="t", answer="I choose: b). My reasoning: x", n_generated=5,
                                 hit_token_cap=False, seconds=0.1, generated_ids=[1, 2, 3]) for _ in prompts]
 
@@ -98,6 +99,23 @@ def test_baseline_runs_scored_prompts_with_conversations(tmp_path):
     assert len(chat.seen) == 3
     with pytest.raises(SystemExit):
         te.stage_baseline(bank, tmp_path / "run", chat, {**SETTINGS, "thinking": False})
+
+
+def test_baseline_follows_a_sampled_t0_run(tmp_path):
+    pytest.importorskip("pbank.local_model")
+    from pbank.local_model import Decoding
+    bank = tmp_path / "bank"
+    write_bank(bank, [row("u1"), row("u2", messages=MESSAGES)])
+    dec = {"mode": "sample", "temperature": 1.0, "top_p": 0.95, "top_k": 64, "seed": 0, "source": {}}
+    chat = FakeChat()
+    te.stage_baseline(bank, tmp_path / "run", chat, {**SETTINGS, "decoding": dec})
+    assert rv.run_settings(tmp_path / "run")["decoding"] == dec
+    # one batch of a text and a conversation: sampled, seeded; a text alone seeds exactly as pbank does
+    assert [mode for mode, _ in chat.seeds] == ["sample"]
+    plain = Decoding(mode="sample", temperature=1.0, top_p=0.95, top_k=64, seed=0)
+    assert te.ConversationSeeds(plain).batch_seed(["prompt u1"]) == plain.batch_seed(["prompt u1"])
+    with pytest.raises(SystemExit):                                         # a greedy rerun is another run
+        te.stage_baseline(bank, tmp_path / "run", chat, SETTINGS)
 
 
 def test_baseline_hash_covers_the_conversation():
@@ -317,7 +335,7 @@ def test_arm_selected_by_name_family_or_method():
     arms = [{"arm": "caa", "family": "method"}, {"arm": "curve-snap", "family": "method"},
             {"arm": "curve-snap@0", "family": "control"}, {"arm": "isotropic[3]", "family": "isotropic"},
             {"arm": "shuffled:caa[1]", "family": "shuffled:caa"}, {"arm": "reward", "family": "control"}]
-    pick = lambda wanted: [a["arm"] for a in arms if te.arm_selected(a, wanted)]
+    pick = lambda wanted: [a["arm"] for a in arms if rv.arm_selected(a, wanted)]
     assert pick(None) == [a["arm"] for a in arms]
     assert pick(["caa", "isotropic"]) == ["caa", "isotropic[3]"]
     assert pick(["curve-snap", "shuffled:caa"]) == ["curve-snap", "curve-snap@0", "shuffled:caa[1]"]
