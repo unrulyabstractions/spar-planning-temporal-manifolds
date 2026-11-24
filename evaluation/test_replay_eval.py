@@ -129,3 +129,12 @@ def test_weights_in_float32_restores_the_exact_bf16_weights():
         assert model.dtype == torch.float32
     assert model.dtype == torch.bfloat16
     assert all(torch.equal(before[k], v) for k, v in model.state_dict().items())
+
+
+def test_health_uses_the_even_part_of_the_label_mass():
+    # one-sided: +x lowers the mass as much as -x raises it (steering), so the even part is unchanged -> healthy
+    even, ok = re_.label_mass_health(0.845, 1.000, 0.923, 0.95)
+    assert abs(even - 0.9225) < 1e-12 and ok
+    # both signs lose mass (disruption) -> unhealthy
+    even, ok = re_.label_mass_health(0.85, 0.85, 0.923, 0.95)
+    assert abs(even - 0.85) < 1e-12 and not ok

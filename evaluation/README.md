@@ -109,7 +109,8 @@ shared draws → `replay_eval.py items calibrate replay gencheck` → `analyze.p
   end-of-thinking token), then compared with extract.py's `label_index` (`label_crosscheck.json`). Prompts that pbank
   could not parse, or whose thinking never closed, are listed in `skipped.jsonl`, never dropped silently.
 - **calibrate (P4):** CAA refitted without fold 0 of the extraction split; x swept on that fold's scored prompts; the
-  smallest x whose order-balanced |mean odd effect| reaches 1 logit while the label mass stays ≥ 95% of unsteered.
+  smallest x whose order-balanced |mean odd effect| reaches 1 logit while the even part of the label mass,
+  (mass(+x) + mass(−x))/2, stays ≥ 95% of unsteered (P2: a mass change that reverses with the sign is steering).
   The sign is a result, not a criterion. If no healthy x reaches the target, the largest healthy x is used and
   `calibration.json` says so.
 - **replay:** every arm at +x and −x on the verification grid: the 5 bundles (`curve-snap` also at x = 0), and K
@@ -128,8 +129,10 @@ bootstrap CIs, the replay-vs-generation agreement statistic (the raw generation 
 Tests: `python -m pytest -q test_replay_eval.py` (label location on the real Qwen3 tokenizer, strata shuffle, the
 meaning/letter and switch-point arithmetic, the loop detector).
 
-The calibration health bound (the worst held-out item keeps ≥ 95% of its unsteered label mass, `--min_mass_ratio`) is an
-untested default and probably too strict: on Qwen3-1.7B with thinking on, it stopped calibration at x = 0.02.
+The calibration health bound was first the smaller of the ±x mean label masses. On Qwen3-1.7B (thinking off, fp32)
+CAA at +x lowered the mass (0.845 at x = 0.4) while −x raised it (1.000), so that rule stopped at x = 0.02, where
+the odd effect is noise. The even part stays at the unsteered 0.923 up to x = 0.4 and drops only at 0.8 (0.631).
+`calibration.json` keeps both signs' masses (`label_mass_plus/minus`).
 
 ## Transfer to the eval types: `transfer_eval.py`
 

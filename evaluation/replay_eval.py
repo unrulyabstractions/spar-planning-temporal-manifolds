@@ -461,6 +461,14 @@ class EditFactory:
 
 # ------------------------------------------------------------------ stages
 
+def label_mass_health(mass_plus: float, mass_minus: float, mass0: float, ratio: float) -> tuple[float, bool]:
+    """Health on the even part of the label mass (P2): (mass(+x) + mass(-x)) / 2 must stay >= ratio * unsteered.
+    A mass change that reverses with the sign is steering, not damage: on Qwen3-1.7B, CAA at +x lowered the mass
+    as much as -x raised it, and a rule on the smaller of the two stopped calibration at x = 0.02."""
+    even = (mass_plus + mass_minus) / 2
+    return even, even >= ratio * mass0
+
+
 def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     out = Path(args.out)
     if (out / "calibration.json").exists():
@@ -485,13 +493,10 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
         nf = np.array([it["near_first"] for it in items])
         # average the two option orders' means, so a push toward one label (letter, C1) cancels out
         odd = float((o[nf].mean() + o[~nf].mean()) / 2) if nf.any() and (~nf).any() else float(o.mean())
-        mass = float(min(mp.mean(), mm.mean()))
-        ok = mass >= args.min_mass_ratio * mass0
-        # both signs kept: the health rule uses the smaller, but a sign-dependent (odd) mass change is steering, not
-        # damage, and the mean of the two is the even part, so the record shows where either rule would stop
-        sweep.append({"x": x, "mean_odd_logit": odd, "min_label_mass": mass, "healthy": ok,
+        mass, ok = label_mass_health(float(mp.mean()), float(mm.mean()), mass0, args.min_mass_ratio)
+        sweep.append({"x": x, "mean_odd_logit": odd, "even_label_mass": mass, "healthy": ok,
                       "label_mass_plus": float(mp.mean()), "label_mass_minus": float(mm.mean())})
-        print(f"calibrate: x={x:g} mean odd {odd:+.3f} logits, label mass {mass:.3f} (unsteered {mass0:.3f})"
+        print(f"calibrate: x={x:g} mean odd {odd:+.3f} logits, even label mass {mass:.3f} (unsteered {mass0:.3f})"
               f"{'' if ok else ' UNHEALTHY'} on {len(items)} held-out prompts")
         if ok:
             healthy.append(x)
@@ -624,7 +629,8 @@ def main(argv=None):
     p.add_argument("--x-grid", type=float, nargs="+", default=[0.02, 0.05, 0.1, 0.2, 0.4, 0.8])
     p.add_argument("--target-logit", type=float, default=1.0)
     p.add_argument("--min-mass-ratio", type=float, default=0.95,
-                   help="health bound: label mass at +-x must stay >= this fraction of the unsteered mass")
+                   help="health bound: the even part of the label mass, (mass(+x) + mass(-x)) / 2, must stay >= this "
+                        "fraction of the unsteered mass")
     p.add_argument("--extraction-index", help="extract.py's index.jsonl, to cross-check our label locator")
     p.add_argument("--x-shift", type=float, default=1.0, help="request for target methods, decades")
     p.add_argument("--calib-fold", type=int, default=0)
