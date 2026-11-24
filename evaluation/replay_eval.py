@@ -35,6 +35,30 @@ import shared_draws as sd
 
 CHOICE_RE = re.compile(r"I\s+choose\s*:?[\s*_`]*\(?([ab12])(?![a-z0-9])", re.I)
 SCORED = ("near_only", "both")
+COMPARISON_PUSH = ("caa-none", "caa-near_only", "caa-both", "caa-within")   # within-regime CAA (PR 18)
+
+# N6 (damage-matched null): "damage" is the mean next-token KL(unedited || edited) over every token of these texts,
+# edited at the method's own positions. Plain prose with no amounts, options, durations or planning, so that the KL
+# measures disruption of the model in general, not a change in what it thinks of the task.
+NEUTRAL_TEXTS = (
+    "The library on the corner has tall windows and wooden shelves. In the reading room, people sit at long tables "
+    "with books and notebooks, and the only sound is the turning of pages.",
+    "Bread is made from flour, water, salt and yeast. The dough is kneaded until it is smooth, left to rise, shaped "
+    "into a loaf and baked until the crust is golden brown.",
+    "A bicycle chain carries the force of the pedals to the rear wheel. Keeping it clean and lightly oiled makes the "
+    "ride quieter and helps the gears change smoothly.",
+    "Leaves are green because they contain chlorophyll, a pigment that absorbs red and blue light. Plants use that "
+    "light to turn water and carbon dioxide into sugar and oxygen.",
+    "The river runs through the middle of the town. Two stone bridges cross it, and on summer evenings families walk "
+    "along the bank to watch the ducks and the small boats.",
+    "In chess, each player starts with sixteen pieces. The knight moves in an L shape, the bishop moves diagonally, "
+    "and the rook moves in straight lines along ranks and files.",
+    "The museum's new exhibit shows pottery from many regions. Some bowls are painted with geometric patterns, while "
+    "others are left plain to show the colour and texture of the clay.",
+    "A good map shows roads, rivers and hills with clear symbols. The legend explains each symbol, and the scale bar "
+    "lets the reader estimate the distance between two places.",
+)
+N6_TOLERANCE = 0.10        # a draw is matched when its KL is within 10% of the method's
 
 
 # ------------------------------------------------------------------ io helpers
@@ -293,11 +317,23 @@ class Replayer:
 
 # ------------------------------------------------------------------ arms
 
-def method_dirs(methods_dir: Path) -> dict:
-    out = {}
+def method_dirs(methods_dir: Path, site: str | None = None) -> dict:
+    """method name -> bundle directory, for the bundles in `methods_dir` (at `site` only, if given).
+
+    A methods directory can hold the same method at several sites (the Gemma run bundles each method at the label
+    and the prelabel token). Two bundles of one method are refused rather than one silently replacing the other."""
+    out, sites = {}, {}
     for d in sorted(methods_dir.iterdir()):
-        if (d / "method.json").exists():
-            out[json.loads((d / "method.json").read_text())["method"]] = d
+        if not (d / "method.json").exists():
+            continue
+        meta = json.loads((d / "method.json").read_text())
+        if site is not None and meta.get("site") != site:
+            continue
+        name = meta["method"]
+        if name in out:
+            sys.exit(f"{methods_dir} has {name} twice ({out[name].name} and {d.name}, sites {sites[name]} and "
+                     f"{meta.get('site')}): pass --site to choose one")
+        out[name], sites[name] = d, meta.get("site")
     return out
 
 
@@ -318,12 +354,15 @@ def shuffled_horizons(rows: list[dict], bank: dict, seed: int) -> dict:
 
 def build_arms(args, cfg: dict) -> list[dict]:
     """Arm specs (no tensors): what to load and at which request. Edits are built lazily in make_edit."""
-    md = method_dirs(Path(args.methods))
+    md = method_dirs(Path(args.methods), args.site)
     arms = []
     for name in ("caa", "reward", "choice"):
         if name in md:
             arms.append({"arm": name, "family": "method" if name == "caa" else "control", "kind": "push",
                          "x": cfg["x_push"], "src": str(md[name])})
+    for name in COMPARISON_PUSH:
+        if name in md:
+            arms.append({"arm": name, "family": "comparison", "kind": "push", "x": cfg["x_push"], "src": str(md[name])})
     for name in ("curve-displace", "curve-snap"):
         if name in md:
             arms.append({"arm": name, "family": "method", "kind": "target", "x": cfg["x_shift"], "src": str(md[name])})
@@ -343,6 +382,15 @@ def build_arms(args, cfg: dict) -> list[dict]:
                 arms.append({"arm": f"shuffled:{base}[{i}]", "family": f"shuffled:{base}",
                              "kind": "push" if base == "caa" else "target",
                              "x": cfg["x_push"] if base == "caa" else cfg["x_shift"], "src": str(md[base]), "seed": i})
+    n6_path = Path(args.out) / "n6.json"
+    if n6_path.exists():                     # N6: isotropic draws at the strength that matches the method's damage
+        for m, rec in json.loads(n6_path.read_text())["methods"].items():
+            for d in rec["draws"]:
+                if d["matched"]:
+                    arm = {"arm": f"n6:{m}[{d['row']}]", "family": f"n6:{m}", "kind": "push", "x": d["x"], "row": d["row"]}
+                    if d["x"] == cfg["x_push"] and d["row"] < K:
+                        arm["same_as"] = f"isotropic[{d['row']}]"     # same vector, same strength: reuse, don't replay
+                    arms.append(arm)
     return arms
 
 
@@ -353,7 +401,7 @@ class EditFactory:
         self.LinearEdit, self.load = LinearEdit, load
         self.args = args
         self.bank = {r["uid"]: r for r in read_jsonl(Path(args.bank) / "prompts.jsonl")}
-        md = method_dirs(Path(args.methods))
+        md = method_dirs(Path(args.methods), args.site)
         self.caa = load(md["caa"])
         self.typical_norm = float(self.caa.meta["request"]["typical_norm"])
         self.positions = self.caa.positions
@@ -374,11 +422,11 @@ class EditFactory:
 
     def make(self, arm: dict):
         fam = arm["family"]
-        if fam in ("method", "control"):
+        if fam in ("method", "control", "comparison"):
             m = self.method(arm["src"])
             return m.edit, m.positions
-        if fam in ("isotropic", "covariance", "real_diff"):
-            v = self.draws[fam][arm["row"]].astype(np.float64)
+        if fam in ("isotropic", "covariance", "real_diff") or fam.startswith("n6:"):
+            v = self.draws["isotropic" if fam.startswith("n6:") else fam][arm["row"]].astype(np.float64)
             return self.LinearEdit(v, self.typical_norm), self.positions
         if fam == "in_span":
             key = sd.seed_key(self.caa.meta.get("fitted_on", {}).get("model", {}).get("model_id", "model"),
@@ -401,7 +449,7 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     if (out / "calibration.json").exists():
         return json.loads((out / "calibration.json").read_text())
     from steer.methods import load
-    caa = load(method_dirs(Path(args.methods))["caa"])
+    caa = load(method_dirs(Path(args.methods), args.site)["caa"])
     rows = caa.fit_uids()
     fold = args.calib_fold
     train = [r["uid"] for r in rows if r["fold"] != fold]
@@ -442,6 +490,88 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     return cal
 
 
+class Damage:
+    """Next-token KL(unedited || edited), averaged over every token of NEUTRAL_TEXTS (N6's damage measure)."""
+
+    def __init__(self, M: Model, layer: int):
+        from steer.hooks import steering
+        self.steering, self.M, self.layer = steering, M, layer
+        dev = M.model.get_input_embeddings().weight.device
+        self.ids = [torch.tensor([M.tok(t)["input_ids"]], device=dev) for t in NEUTRAL_TEXTS]
+        with torch.no_grad():
+            self.ref = [torch.log_softmax(M.model(input_ids=x).logits[0].float(), -1) for x in self.ids]
+
+    @torch.no_grad()
+    def kl(self, edit, x: float, positions="all") -> float:
+        tot, n = 0.0, 0
+        with self.steering(self.M.model, edit, x, self.layer, positions=positions):
+            for x_ids, ref in zip(self.ids, self.ref):
+                lq = torch.log_softmax(self.M.model(input_ids=x_ids).logits[0].float(), -1)
+                tot += float((ref.exp() * (ref - lq)).sum(-1).sum())
+                n += ref.shape[0]
+        return tot / n
+
+    def pm(self, edit, x: float, positions="all") -> float:
+        """Mean of the KL at +x and -x: the damage of a ± pair, as the replay arms use it."""
+        return (self.kl(edit, x, positions) + self.kl(edit, -x, positions)) / 2
+
+
+def match_strength(f, target: float, x0: float, tol: float = N6_TOLERANCE, max_steps: int = 30):
+    """A strength x > 0 with f(x) within `tol` (relative) of `target`, for f increasing in x: bracket by doubling or
+    halving from x0, then bisect on log x. Returns (x, f(x), matched, steps). Every step costs one evaluation of f."""
+    x, steps = x0, 0
+    fx = f(x); steps += 1
+    lo = hi = None
+    while steps < max_steps:
+        if abs(fx / target - 1) <= tol:
+            return x, fx, True, steps
+        if fx < target:
+            lo = (x, fx)
+            x = x * 2 if hi is None else float(np.sqrt(lo[0] * hi[0]))
+        else:
+            hi = (x, fx)
+            x = x / 2 if lo is None else float(np.sqrt(lo[0] * hi[0]))
+        fx = f(x); steps += 1
+    return x, fx, abs(fx / target - 1) <= tol, steps
+
+
+def stage_n6(args, M, settings, cal: dict) -> None:
+    """N6: for each method in --n6-methods, rescale the first --n6-k isotropic draws until their damage matches the
+    method's at its replay request (x_push for push methods, x_shift for curves). Writes n6.json; the replay stage
+    then runs each matched draw at its own strength as the null family n6:<method>."""
+    out = Path(args.out)
+    if (out / "n6.json").exists():
+        return
+    fac = EditFactory(args)
+    md = method_dirs(Path(args.methods), args.site)
+    dmg = Damage(M, fac.caa.layer)
+    res, t0 = {}, time.time()
+    for m in args.n6_methods:
+        if m not in md:
+            print(f"n6: no {m} bundle, skipped")
+            continue
+        meth = fac.method(str(md[m]))
+        x_m = cal["x_shift"] if meth.meta["kind"] == "target" else cal["x_push"]
+        target = dmg.pm(meth.edit, x_m, meth.positions)
+        rec = {"x_method": x_m, "kl_method": target, "draws": []}
+        if not target > 0:
+            print(f"n6: {m} at x={x_m:g} does no measurable damage (KL {target:.2e}); no N6 family")
+            res[m] = rec
+            continue
+        for i in range(args.n6_k):
+            v = fac.draws["isotropic"][i].astype(np.float64)
+            edit = fac.LinearEdit(v, fac.typical_norm)
+            x, kl, ok, steps = match_strength(lambda z: dmg.pm(edit, z, fac.positions), target, max(cal["x_push"], 1e-3))
+            rec["draws"].append({"row": i, "x": x, "kl": kl, "matched": bool(ok), "steps": steps})
+        xs = [d["x"] for d in rec["draws"] if d["matched"]]
+        print(f"n6: {m} at x={x_m:g}: KL {target:.4f}; {len(xs)}/{args.n6_k} draws matched, strength "
+              f"{np.median(xs) if xs else float('nan'):.3g} (median) × typical norm  ({(time.time() - t0) / 60:.1f} min)")
+        res[m] = rec
+    write_json(out / "n6.json", {"tolerance": N6_TOLERANCE, "damage": "mean next-token KL(unedited || edited) over "
+                                 f"{len(NEUTRAL_TEXTS)} neutral texts, mean of +x and -x", "neutral_texts": NEUTRAL_TEXTS,
+                                 "draw_family": "isotropic", "methods": res})
+
+
 def stage_replay(args, M, settings, rep: Replayer, cal: dict) -> None:
     out = Path(args.out)
     adir = out / "arms"
@@ -469,6 +599,11 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict) -> None:
         path = adir / (hashlib.sha1(arm["arm"].encode()).hexdigest()[:12] + ".npz")
         if path.exists():
             continue
+        twin = adir / (hashlib.sha1(arm.get("same_as", "").encode()).hexdigest()[:12] + ".npz")
+        if arm.get("same_as") and twin.exists():
+            savez_atomic(path, **dict(np.load(twin)))
+            print(f"[{n + 1}/{len(arms)}] {arm['arm']} = {arm['same_as']} (same vector and strength)", flush=True)
+            continue
         edit, positions = fac.make(arm)
         rec = {}
         rec["y_plus"], rec["mass_plus"] = rep.run(items, edit, arm["x"], positions)
@@ -493,7 +628,7 @@ def stage_gencheck(args, M, settings, cal: dict) -> None:
     sub = [it for p in pick for it in pairs[p]]
     bank = {r["uid"]: r for r in read_jsonl(Path(args.bank) / "prompts.jsonl")}
     fac = EditFactory(args)
-    md = method_dirs(Path(args.methods))
+    md = method_dirs(Path(args.methods), args.site)
     arms = [("none", None, 0.0)]
     for nm, spec in (("caa", {"family": "method", "src": str(md["caa"])}),
                      ("isotropic[0]", {"family": "isotropic", "row": 0}),
@@ -543,7 +678,7 @@ def stage_gencheck(args, M, settings, cal: dict) -> None:
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("stages", nargs="+", choices=["items", "calibrate", "replay", "gencheck"])
+    p.add_argument("stages", nargs="+", choices=["items", "calibrate", "n6", "replay", "gencheck"])
     p.add_argument("--bank", required=True), p.add_argument("--run", required=True)
     p.add_argument("--activations", required=True), p.add_argument("--methods", required=True)
     p.add_argument("--draws", required=True), p.add_argument("--out", required=True)
@@ -557,6 +692,11 @@ def main(argv=None):
     p.add_argument("--calib-fold", type=int, default=0)
     p.add_argument("--n0-check", type=int, default=8)
     p.add_argument("--gen-pairs", type=int, default=16), p.add_argument("--gen-batch", type=int, default=8)
+    p.add_argument("--site", help="use only bundles fitted at this site (label, prelabel, ...); required when the "
+                                  "methods directory holds a method at several sites")
+    p.add_argument("--n6-methods", nargs="+", default=["caa", "curve-displace"],
+                   help="methods that get a damage-matched null family (N6)")
+    p.add_argument("--n6-k", type=int, default=sd.K_GEN, help="draws per N6 family (rows [:k] of the isotropic draws)")
     p.add_argument("--gen-samples", type=int, default=1,
                    help="generation check on a sampled baseline: passes per arm, seeds seed..seed+n-1 (greedy: 1)")
     args = p.parse_args(argv)
@@ -566,13 +706,15 @@ def main(argv=None):
     write_json(out / "settings.json", {"args": vars(args), "run": settings})
     M = Model(settings["model_id"])
     from steer.methods import load
-    layer = load(method_dirs(Path(args.methods))["caa"]).layer
+    layer = load(method_dirs(Path(args.methods), args.site)["caa"]).layer
     rep = Replayer(M, Path(args.run), Path(args.bank), settings["thinking"], layer)
     if "items" in args.stages:
         build_items(args, M, settings)
     cal = None
-    if "calibrate" in args.stages or "replay" in args.stages or "gencheck" in args.stages:
+    if {"calibrate", "n6", "replay", "gencheck"} & set(args.stages):
         cal = stage_calibrate(args, M, settings, rep)
+    if "n6" in args.stages:
+        stage_n6(args, M, settings, cal)
     if "replay" in args.stages:
         stage_replay(args, M, settings, rep, cal)
     if "gencheck" in args.stages:
