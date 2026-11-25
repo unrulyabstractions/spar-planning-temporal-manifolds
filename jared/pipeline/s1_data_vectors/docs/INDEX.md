@@ -15,6 +15,8 @@ Findings are in `01_plan.md` §4.
 | `18_spec_multichoice.md` | spec (run in stage 2 doc `26`) | 4- and 8-choice banks; header still says draft |
 | `19_results_fill.md` | result | fill bank pooled with the old 8B runs |
 | `20_results_overnight_fill.md` | result | second overnight, post hoc on saved activations |
+| `32_spec_neuron_lens.md` | spec (done) | horizon and decision neurons against the Neuron Lens catalog (stage A local, stage B exact activations on the box) |
+| `33_results_neuron_lens.md` | result | horizon is dense, no keyword enrichment survives correction; stage B: A1's top lists mostly artefacts (overlap 1-7/20), L22 magnitude theme in decision list survives (post hoc) |
 
 `18_spec_multichoice.md` shares its number with `../../s2_steering/docs/18_results_overnight.md`.
 Stage 2 docs are in `../../s2_steering/docs/INDEX.md`. Root docs (`12`, `13`, `23`, `24`, `31`) are
