@@ -31,3 +31,7 @@
 
 # Written by `python -m pbank.provenance stamp` before copying the code to a machine without .git
 CODE_STAMP.json
+
+# Box drivers and exported banks used by the evaluation runs (not committed by design)
+/_*.sh
+/_evaltype_banks/
