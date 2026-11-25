@@ -1,0 +1,437 @@
+<title>Horizon Eval Prompts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: family rail on the left (chip row on phones), a feed of prompt cards on the right.
+   Each card reads top to bottom: what the model sees, then where the options fall against H, then the labels. */
+:root {
+  --bg: #f2f4f1;
+  --surface: #ffffff;
+  --sunken: #e9ede8;
+  --ink: #18211d;
+  --muted: #5a6761;
+  --line: #d5dcd6;
+  --accent: #1d5b86;
+  --good: #23764a;
+  --good-bg: #e2f1e7;
+  --bad: #a9432a;
+  --bad-bg: #f6e4de;
+  --warn: #8a5a00;
+  --warn-bg: #f7ecd2;
+  --horizon: #c27a0c;
+  --late: #9aa59f;
+  --font-text: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.5rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101513; --surface: #171e1b; --sunken: #1f2824; --ink: #e2e9e4; --muted: #95a49c; --line: #2c3732;
+    --accent: #82b8e0; --good: #6cc48f; --good-bg: #1c3427; --bad: #e88a6f; --bad-bg: #3a221b;
+    --warn: #e2b354; --warn-bg: #352a14; --horizon: #e8a73d; --late: #5e6b65; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101513; --surface: #171e1b; --sunken: #1f2824; --ink: #e2e9e4; --muted: #95a49c; --line: #2c3732;
+  --accent: #82b8e0; --good: #6cc48f; --good-bg: #1c3427; --bad: #e88a6f; --bad-bg: #3a221b;
+  --warn: #e2b354; --warn-bg: #352a14; --horizon: #e8a73d; --late: #5e6b65; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: var(--step-0); line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+h1, h2, h3 { text-wrap: balance; margin: 0; font-weight: 600; }
+h1 { font-size: var(--step-2); letter-spacing: -0.01em; }
+h2 { font-size: var(--step-1); }
+code, .mono { font-family: var(--font-data); font-size: 0.92em; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.page { max-width: 1180px; margin: 0 auto; display: grid; gap: 24px; }
+.intro { display: grid; gap: 8px; max-width: 72ch; }
+.intro p { margin: 0; color: var(--muted); }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-data); font-size: var(--step--1); color: var(--muted); }
+.stats b { color: var(--ink); font-weight: 500; }
+
+details.decisions { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
+details.decisions summary { cursor: pointer; font-weight: 600; }
+.decisions ol { margin: 12px 0 0; padding-left: 1.4em; display: grid; gap: 10px; max-width: 80ch; }
+.decisions li span { color: var(--muted); }
+
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 28px; align-items: start; }
+nav.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: grid; gap: 16px; }
+.rail .group-name { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.rail a {
+  display: flex; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: 5px;
+  color: var(--ink); text-decoration: none; font-family: var(--font-data); font-size: var(--step--1);
+}
+.rail a:hover { background: var(--sunken); }
+.rail a[aria-current="true"] { background: var(--accent); color: var(--surface); }
+.rail a .count { color: inherit; opacity: 0.7; }
+.rail a .new { color: var(--good); font-weight: 500; }
+.rail a[aria-current="true"] .new { color: inherit; }
+.toggle { display: flex; align-items: center; gap: 8px; font-size: var(--step--1); color: var(--muted); }
+
+.feed { display: grid; gap: 28px; min-width: 0; }
+.family-head { display: grid; gap: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.family-head p { margin: 0; color: var(--muted); }
+.family-head code { color: var(--accent); }
+.family { display: grid; gap: 14px; }
+
+article.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 14px; min-width: 0; }
+.card-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.card-top .id { font-family: var(--font-data); font-weight: 500; margin-right: auto; overflow-wrap: anywhere; }
+.chip { font-family: var(--font-data); font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+.chip.answer { background: var(--good-bg); color: var(--good); font-weight: 500; }
+.chip.answer.none { background: var(--sunken); color: var(--muted); }
+.chip.prior-wrong { background: var(--bad-bg); color: var(--bad); }
+.chip.prior-right { background: var(--good-bg); color: var(--good); }
+.horizon-line { color: var(--muted); font-size: var(--step--1); }
+.horizon-line b { color: var(--horizon); font-weight: 600; }
+
+.transcript { display: grid; gap: 8px; min-width: 0; }
+.turn { display: grid; gap: 2px; min-width: 0; }
+.turn .role { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.turn .text { white-space: pre-wrap; overflow-wrap: anywhere; padding: 10px 12px; border-radius: 6px; background: var(--sunken); }
+.turn.assistant .text { background: transparent; border: 1px dashed var(--line); }
+.turn.system .text { background: transparent; border-left: 3px solid var(--accent); border-radius: 0; font-style: italic; }
+.turn .text.data { font-family: var(--font-data); font-size: var(--step--1); }
+
+.timeline svg { width: 100%; height: auto; display: block; overflow: visible; }
+.timeline .axis { stroke: var(--line); stroke-width: 1; }
+.timeline .tick { fill: var(--muted); font-family: var(--font-data); font-size: 10px; }
+.timeline .hline { stroke: var(--horizon); stroke-width: 2; }
+.timeline .hlabel { fill: var(--horizon); font-family: var(--font-data); font-size: 10px; font-weight: 500; }
+.timeline .dline { stroke: var(--bad); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.timeline .dlabel { fill: var(--bad); font-family: var(--font-data); font-size: 10px; }
+.timeline .dot { fill: var(--accent); }
+.timeline .dot.late { fill: var(--late); }
+.timeline .dot.truth { fill: var(--good); }
+.timeline .ring { fill: none; stroke: var(--bad); stroke-width: 2; }
+.timeline .ring.right { stroke: var(--good); }
+.timeline .olabel { fill: var(--ink); font-family: var(--font-data); font-size: 11px; }
+
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 500; color: var(--muted); font-size: 0.75rem; }
+td.num { text-align: right; font-family: var(--font-data); }
+tr.truth td { background: var(--good-bg); }
+tr.late td { color: var(--late); }
+td.tags { white-space: nowrap; }
+.tag { font-family: var(--font-data); font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; margin-right: 4px; }
+.tag.t { color: var(--good); border: 1px solid var(--good); }
+.tag.d { color: var(--bad); border: 1px solid var(--bad); }
+.tag.p { color: var(--accent); border: 1px solid var(--accent); }
+
+.flags { display: flex; flex-wrap: wrap; gap: 6px; }
+.flag { font-size: var(--step--1); padding: 3px 10px; border-radius: 5px; background: var(--warn-bg); color: var(--warn); }
+.card-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: start; justify-content: space-between; }
+.card-foot details { flex: 1 1 320px; min-width: 0; font-size: var(--step--1); color: var(--muted); }
+.card-foot summary { cursor: pointer; color: var(--ink); }
+.card-foot details p, .card-foot details pre { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.card-foot details pre { font-family: var(--font-text); background: var(--sunken); padding: 8px 10px; border-radius: 6px; color: var(--ink); }
+button.copy { border: 1px solid var(--line); background: var(--surface); padding: 4px 12px; border-radius: 5px; cursor: pointer; font-size: var(--step--1); }
+button.copy:hover { border-color: var(--accent); color: var(--accent); }
+.empty { color: var(--muted); padding: 24px 0; }
+
+@media (max-width: 820px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  nav.rail { position: static; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .rail .group { display: contents; }
+  .rail .group-name { display: none; }
+  .rail a { flex: none; border: 1px solid var(--line); }
+  .toggle { flex: none; white-space: nowrap; }
+}
+@media (prefers-reduced-motion: no-preference) { .rail a { transition: background 0.12s; } }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <h1>Horizon eval prompts</h1>
+    <p>Hand-checked samples for the realism tiers and robustness banks, before scaling up. Correct answers use the rule
+      <code>max_value_within_H</code>: among options that pay out within the horizon H, the largest payout wins. Nothing here has been run through a model yet.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <details class="decisions">
+    <summary>Open decisions before scaling up</summary>
+    <ol>
+      <li><b>The horizon must decide the answer.</b> <span>Some other H must make a different option correct. Flagged on cards as "horizon never changes the answer".</span></li>
+      <li><b>Options that pay after H must say they can't be cashed out early.</b> <span>Otherwise "an index fund held 5 years" against a 2-year need has no defensible answer. Flagged as "late option not locked".</span></li>
+      <li><b>Keep risk out of the correct-answer rule, but cross it against the answer in about half of items.</b> <span>Flagged when the correct option is also strictly the safest.</span></li>
+      <li><b>City projects: equal cost per option, or state net benefit.</b> <span>The rule uses total benefit, so a model that weighs cost disagrees with it.</span></li>
+      <li><b>No "nothing pays in time" items in scored banks.</b> <span>The spec already keeps those for extraction only.</span></li>
+      <li><b>Reword T3 retirement items to a hard withdrawal date.</b> <span>"Retire at 65" isn't a liability date; the money is spent for decades after.</span></li>
+      <li><b>Scale-up: a script makes the numbers and labels, subagents write only the prose, a validator re-parses the text.</b> <span>The midterm spec said Haiku 5.5 generates and GPT-5.6 Luna checks; this would replace that.</span></li>
+    </ol>
+  </details>
+
+  <div class="layout">
+    <nav class="rail" id="rail" aria-label="Prompt families"></nav>
+    <main class="feed" id="feed"></main>
+  </div>
+</div>
+
+<script id="samples" type="application/json">/*SAMPLES_JSON*/[]</script>
+<script>
+const FAMILIES = JSON.parse(document.getElementById("samples").textContent);
+const NEW_FAMILIES = new Set(["multiturn_recheck"]);
+const state = { family: "all", flaggedOnly: false };
+
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs || {})) {
+    if (value === null || value === undefined || value === false) continue;
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else node.setAttribute(key, value);
+  }
+  for (const child of children.flat()) {
+    if (child === null || child === undefined || child === false) continue;
+    node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+  return node;
+}
+
+function svgEl(tag, attrs, text) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function trimNumber(x) {
+  return x >= 10 ? String(Math.round(x)) : String(Math.round(x * 10) / 10);
+}
+
+function formatDuration(years) {
+  if (years === null || years === undefined) return "none";
+  const days = years * 365;
+  const plural = (n, unit) => `${n} ${unit}${n === "1" ? "" : "s"}`;
+  if (days < 1) return plural(trimNumber(days * 24), "hour");
+  if (days < 14) return plural(trimNumber(days), "day");
+  if (years < 0.23) return plural(trimNumber(days / 7), "week");
+  if (years < 2) return plural(trimNumber(years * 12), "month");
+  return plural(trimNumber(years), "year");
+}
+
+function formatValue(option) {
+  if (option.value === null || option.value === undefined) return "none";
+  return "$" + Number(option.value).toLocaleString("en-US");
+}
+
+function flagMessages(rec) {
+  const messages = [];
+  if (rec.flags.horizon_not_decisive) messages.push("Horizon never changes the answer: one option wins at every H where anything pays.");
+  if (rec.flags.risk_favors_truth) messages.push("The correct option is also the safest, so a risk-averse model passes without reading H.");
+  if (rec.flags.unlocked_late_options.length) {
+    messages.push(`Late option not locked: ${rec.flags.unlocked_late_options.join(", ")}) pays after H but the text never says it can't be cashed out early.`);
+  }
+  return messages;
+}
+
+function isFlagged(rec) {
+  return flagMessages(rec).length > 0;
+}
+
+function timeline(rec) {
+  const options = rec.options || [];
+  if (!options.length) return null;
+  const marks = options.map(o => o.h_years);
+  if (rec.horizon_years) marks.push(rec.horizon_years);
+  for (const d of rec.distractors || []) marks.push(d.years);
+  const lo = Math.log10(Math.min(...marks)) - 0.35;
+  const hi = Math.log10(Math.max(...marks)) + 0.35;
+  const width = 640, left = 16, right = 16, axisY = 58;
+  const x = years => left + ((Math.log10(years) - lo) / (hi - lo)) * (width - left - right);
+  const svg = svgEl("svg", { viewBox: `0 0 ${width} 84`, role: "img",
+    "aria-label": "Option payout times against the horizon, on a log scale" });
+  svg.append(svgEl("line", { class: "axis", x1: left, x2: width - right, y1: axisY, y2: axisY }));
+  const ticks = [[1 / 365, "1 day"], [7 / 365, "1 wk"], [1 / 12, "1 mo"], [1, "1 yr"], [10, "10 yr"], [100, "100 yr"]];
+  for (const [years, label] of ticks) {
+    const log = Math.log10(years);
+    if (log < lo || log > hi) continue;
+    svg.append(svgEl("line", { class: "axis", x1: x(years), x2: x(years), y1: axisY - 3, y2: axisY + 3 }));
+    svg.append(svgEl("text", { class: "tick", x: x(years), y: axisY + 16, "text-anchor": "middle" }, label));
+  }
+  if (rec.horizon_years) {
+    const hx = x(rec.horizon_years);
+    if (rec.horizon_lo_years && rec.horizon_hi_years && rec.horizon_hi_years > rec.horizon_lo_years) {
+      svg.append(svgEl("rect", { x: x(rec.horizon_lo_years), y: 8, width: x(rec.horizon_hi_years) - x(rec.horizon_lo_years),
+        height: axisY - 8, fill: "var(--horizon)", opacity: 0.14 }));
+    }
+    svg.append(svgEl("line", { class: "hline", x1: hx, x2: hx, y1: 6, y2: axisY + 4 }));
+    svg.append(svgEl("text", { class: "hlabel", x: hx + 4, y: 14 }, "H"));
+  }
+  for (const d of rec.distractors || []) {
+    const dx = x(d.years);
+    svg.append(svgEl("line", { class: "dline", x1: dx, x2: dx, y1: 18, y2: axisY + 4 }));
+    svg.append(svgEl("text", { class: "dlabel", x: dx + 4, y: 26 }, "distractor"));
+  }
+  const sorted = [...options].sort((a, b) => a.h_years - b.h_years);
+  let lastX = -Infinity, row = 0;
+  for (const option of sorted) {
+    const ox = x(option.h_years);
+    row = ox - lastX < 26 ? (row + 1) % 2 : 0;
+    lastX = ox;
+    const late = rec.horizon_years !== null && option.h_years > rec.horizon_years;
+    const isTruth = option.label === rec.truth_label;
+    svg.append(svgEl("circle", { class: `dot${isTruth ? " truth" : late ? " late" : ""}`, cx: ox, cy: axisY, r: 5 }));
+    if (rec.prior_turn_recommendation === option.label) {
+      svg.append(svgEl("circle", { class: `ring${rec.prior_turn_correct ? " right" : ""}`, cx: ox, cy: axisY, r: 9 }));
+    }
+    svg.append(svgEl("text", { class: "olabel", x: ox, y: axisY - 14 - row * 13, "text-anchor": "middle" }, option.label));
+  }
+  return el("div", { class: "timeline" }, svg);
+}
+
+function optionsTable(rec) {
+  if (!rec.options || !rec.options.length) return null;
+  const head = el("tr", {}, ["", "option", "pays at", "value", "%/yr", "risk"].map(h => el("th", { text: h })));
+  const rows = rec.options.map(option => {
+    const late = rec.horizon_years !== null && option.h_years > rec.horizon_years;
+    const tags = el("td", { class: "tags" });
+    if (option.label === rec.truth_label) tags.append(el("span", { class: "tag t", text: "correct" }));
+    if (option.label === rec.distractor_truth_label) tags.append(el("span", { class: "tag d", text: "if distractor" }));
+    if (option.label === rec.prior_turn_recommendation) tags.append(el("span", { class: "tag p", text: "earlier pick" }));
+    return el("tr", { class: option.label === rec.truth_label ? "truth" : late ? "late" : "" },
+      el("td", { class: "mono", text: option.label + ")" }),
+      el("td", { text: option.text }),
+      el("td", { class: "num", text: formatDuration(option.h_years) }),
+      el("td", { class: "num", text: formatValue(option) }),
+      el("td", { class: "num", text: option.return_pct_annual === null ? "none" : option.return_pct_annual.toFixed(1) }),
+      el("td", { text: option.risk || "none" }),
+      tags);
+  });
+  head.append(el("th", { text: "" }));
+  return el("div", { class: "table-wrap" }, el("table", {}, el("thead", {}, head), el("tbody", {}, rows)));
+}
+
+function transcriptText(rec) {
+  const parts = [];
+  if (rec.system) parts.push(`[system]\n${rec.system}`);
+  for (const turn of rec.turns) parts.push(`[${turn.role}]\n${turn.content}`);
+  return parts.join("\n\n");
+}
+
+function copyButton(rec) {
+  const button = el("button", { class: "copy", type: "button", text: "Copy prompt" });
+  button.addEventListener("click", () => {
+    const done = () => { button.textContent = "Copied"; setTimeout(() => { button.textContent = "Copy prompt"; }, 1500); };
+    try {
+      navigator.clipboard.writeText(transcriptText(rec)).then(done, () => { button.textContent = "Copy blocked: select the text"; });
+    } catch (error) {
+      button.textContent = "Copy blocked: select the text";
+    }
+  });
+  return button;
+}
+
+function card(rec) {
+  const answer = rec.truth_label
+    ? el("span", { class: "chip answer", text: `correct ${rec.truth_label})` })
+    : el("span", { class: "chip answer none", text: rec.readout && rec.readout !== "choice" ? `readout ${rec.readout}` : "no correct answer" });
+  const chips = [el("span", { class: "chip", text: rec.tier }), rec.regime ? el("span", { class: "chip", text: rec.regime }) : null];
+  if (rec.prior_turn_recommendation) {
+    chips.push(el("span", { class: `chip ${rec.prior_turn_correct ? "prior-right" : "prior-wrong"}`,
+      text: rec.prior_turn_correct ? "earlier answer right" : `earlier answer wrong${rec.prior_turn_error ? " (" + rec.prior_turn_error.replace("_", " ") + ")" : ""}` }));
+  }
+  const horizon = rec.horizon_years
+    ? el("div", { class: "horizon-line" }, "Horizon ", el("b", { text: formatDuration(rec.horizon_years) }),
+        rec.horizon_text ? ` from "${rec.horizon_text}"` : "", rec.anchor_type ? ` (${rec.anchor_type} anchor)` : "",
+        rec.horizon_lo_years && rec.horizon_hi_years && rec.horizon_hi_years > rec.horizon_lo_years
+          ? `, plausible ${formatDuration(rec.horizon_lo_years)} to ${formatDuration(rec.horizon_hi_years)}` : "")
+    : el("div", { class: "horizon-line", text: rec.horizon_text ? `Horizon cue: "${rec.horizon_text}" (no single value)` : "No horizon given" });
+  const dataFont = rec.surface === "structured" || rec.surface === "json";
+  const turns = [];
+  if (rec.system) turns.push(el("div", { class: "turn system" }, el("div", { class: "role", text: "system" }), el("div", { class: "text", text: rec.system })));
+  for (const turn of rec.turns) {
+    turns.push(el("div", { class: `turn ${turn.role}` }, el("div", { class: "role", text: turn.role }),
+      el("div", { class: `text${dataFont && turn.role === "user" ? " data" : ""}`, text: turn.content })));
+  }
+  const flags = flagMessages(rec);
+  const extra = [];
+  if (rec.notes) extra.push(el("p", { text: rec.notes }));
+  if (rec.reference_range) extra.push(el("p", { text: `Reference range: ${rec.reference_range.join(" to ")}; longer horizon should push it ${rec.expected_direction}.` }));
+  if (rec.explicit_twin_prompt) extra.push(el("p", { text: "Explicit twin (same prompt, horizon stated outright):" }), el("pre", { text: rec.explicit_twin_prompt }));
+  return el("article", { class: "card", id: rec.id },
+    el("div", { class: "card-top" }, el("span", { class: "id", text: rec.id }), chips, answer),
+    horizon,
+    el("div", { class: "transcript" }, turns),
+    timeline(rec),
+    optionsTable(rec),
+    flags.length ? el("div", { class: "flags" }, flags.map(m => el("span", { class: "flag", text: m }))) : null,
+    el("div", { class: "card-foot" },
+      extra.length ? el("details", {}, el("summary", { text: "Notes" }), extra) : el("span"),
+      copyButton(rec)));
+}
+
+function slug(family) { return family.replace(/_/g, "-"); }
+
+function renderRail() {
+  const rail = document.getElementById("rail");
+  rail.replaceChildren();
+  const total = FAMILIES.reduce((n, f) => n + f.records.length, 0);
+  rail.append(el("div", { class: "group" }, el("a", { href: "#all", "aria-current": state.family === "all" ? "true" : null },
+    el("span", { text: "all families" }), el("span", { class: "count", text: total }))));
+  const groups = [...new Set(FAMILIES.map(f => f.group))];
+  for (const group of groups) {
+    const links = FAMILIES.filter(f => f.group === group).map(f =>
+      el("a", { href: "#" + slug(f.family), "aria-current": state.family === f.family ? "true" : null },
+        el("span", {}, f.family, NEW_FAMILIES.has(f.family) ? el("span", { class: "new", text: " new" }) : null),
+        el("span", { class: "count", text: f.records.length })));
+    rail.append(el("div", { class: "group" }, el("div", { class: "group-name", text: group }), links));
+  }
+  const checkbox = el("input", { type: "checkbox", id: "flagged-only" });
+  checkbox.checked = state.flaggedOnly;
+  checkbox.addEventListener("change", () => { state.flaggedOnly = checkbox.checked; renderFeed(); });
+  rail.append(el("label", { class: "toggle", for: "flagged-only" }, checkbox, "Flagged cards only"));
+}
+
+function renderFeed() {
+  const feed = document.getElementById("feed");
+  feed.replaceChildren();
+  const shown = FAMILIES.filter(f => state.family === "all" || f.family === state.family);
+  let cards = 0;
+  for (const family of shown) {
+    const records = family.records.filter(r => !state.flaggedOnly || isFlagged(r));
+    if (!records.length) continue;
+    cards += records.length;
+    feed.append(el("section", { class: "family" },
+      el("div", { class: "family-head" }, el("h2", {}, el("code", { text: family.family })), el("p", { text: family.description })),
+      records.map(card)));
+  }
+  if (!cards) feed.append(el("p", { class: "empty", text: "No flagged cards in this family." }));
+}
+
+function renderStats() {
+  const records = FAMILIES.flatMap(f => f.records);
+  const flagged = records.filter(isFlagged).length;
+  const stats = document.getElementById("stats");
+  stats.replaceChildren(
+    el("span", {}, el("b", { text: FAMILIES.length }), " families"),
+    el("span", {}, el("b", { text: records.length }), " samples"),
+    el("span", {}, el("b", { text: flagged }), " with an automatic flag"),
+    el("span", {}, el("b", { text: records.filter(r => r.turns.length > 1).length }), " multi-turn"));
+}
+
+function route() {
+  const name = location.hash.slice(1);
+  const match = FAMILIES.find(f => slug(f.family) === name);
+  state.family = match ? match.family : "all";
+  renderRail();
+  renderFeed();
+}
+
+window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
+renderStats();
+route();
+</script>
