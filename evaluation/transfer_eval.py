@@ -329,7 +329,7 @@ def type_args(args, t: str) -> tuple[argparse.Namespace, argparse.Namespace]:
                                   extraction_index=None)
     replay_ns = argparse.Namespace(bank=args.t0_bank, activations=args.activations, methods=args.methods,
                                    draws=args.draws, k=args.k, n0_check=args.n0_check, out=str(type_out),
-                                   prompting=True)          # the prompting baseline runs here by default
+                                   site=args.site, prompting=True)   # the prompting baseline runs here by default
     return items_ns, replay_ns
 
 
@@ -343,6 +343,7 @@ def main(argv=None):
     p.add_argument("--t0-out", required=True, help="replay_eval.py's output on T0 (calibration.json, items, arms)")
     p.add_argument("--activations", required=True), p.add_argument("--methods", required=True)
     p.add_argument("--draws", required=True), p.add_argument("--out", required=True)
+    p.add_argument("--site", help="use only bundles fitted at this site, as replay_eval.py --site")
     p.add_argument("--k", type=int, default=rv.sd.K_GEN, help="draws per null family (rows [:k] of the shared draws)")
     p.add_argument("--n0-check", type=int, default=8)
     p.add_argument("--replay-batch", type=int, default=16, help="prompts per teacher-forced replay pass")
@@ -372,7 +373,7 @@ def main(argv=None):
     if model_stages:
         M = load_model(settings["model_id"])
         from steer.methods import load
-        layer = load(rv.method_dirs(Path(args.methods))["caa"]).layer
+        layer = load(rv.method_dirs(Path(args.methods), args.site)["caa"]).layer
         for t in types:
             if t in skipped_types:
                 continue

@@ -161,3 +161,24 @@ def test_run_settings_reads_decoding(tmp_path):
     dec = {"mode": "sample", "temperature": 1.0, "top_p": 0.95, "top_k": 64, "seed": 0}
     (tmp_path / "run.json").write_text(json.dumps({"settings": base | {"decoding": dec}}))
     assert re_.run_settings(tmp_path)["decoding"] == dec
+
+
+def test_match_strength_finds_the_matching_scale():
+    f = lambda x: 0.3 * x ** 2                                             # damage grows with strength
+    x, fx, ok, steps = re_.match_strength(f, target=1.2, x0=0.01)
+    assert ok and abs(fx / 1.2 - 1) <= re_.N6_TOLERANCE and abs(x - 2.0) < 0.15 and steps < 30
+    x, fx, ok, _ = re_.match_strength(f, target=1e-6, x0=5.0)             # from above, by halving
+    assert ok and abs(fx / 1e-6 - 1) <= re_.N6_TOLERANCE
+    assert not re_.match_strength(lambda x: 0.0, target=1.0, x0=1.0)[2]   # no damage at any strength: not matched
+
+
+def test_method_dirs_site_filter_and_duplicates(tmp_path):
+    import json
+    for name, site in (("caa", "label"), ("caa", "prelabel"), ("reward", "label")):
+        d = tmp_path / f"{name}__{site}"
+        d.mkdir()
+        (d / "method.json").write_text(json.dumps({"method": name, "site": site}))
+    assert set(re_.method_dirs(tmp_path, "label")) == {"caa", "reward"}
+    assert re_.method_dirs(tmp_path, "prelabel")["caa"].name == "caa__prelabel"
+    with pytest.raises(SystemExit):
+        re_.method_dirs(tmp_path)                                          # caa twice, no site given

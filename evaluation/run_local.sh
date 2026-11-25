@@ -8,7 +8,7 @@
 # Settings (environment): MODEL, LAYER, THINK (0/1), CAP (max new tokens), BATCH, TAG (run name suffix), K (draws per
 # null family), PY (python), STAGES (which runner stages), GEN_PAIRS, GEN_SAMPLES (generation-check passes on a
 # sampled baseline), DECODING (baseline: auto | greedy | sample; auto samples when thinking is on; an older greedy run
-# resumes only with DECODING=greedy).
+# resumes only with DECODING=greedy), SITE (which bundles the runner reads; default label).
 # PROMPTING=1 also replays the prompting baseline on T0 (replay_eval.py --prompting; the transfer stage runs it always).
 # Opt-in transfer to the eval types (off by default): TRANSFER=1, with TRANSFER_BANKS (export_evaltype_banks.py's
 # output) and either TRANSFER_SET (a check set, evaluation/transfer_sets/<name>.json: which types, prompts and arms)
@@ -29,7 +29,8 @@ K=${K:-19}
 GEN_PAIRS=${GEN_PAIRS:-16}
 GEN_SAMPLES=${GEN_SAMPLES:-1}
 DECODING=${DECODING:-auto}
-STAGES=${STAGES:-"items calibrate replay gencheck"}
+SITE=${SITE:-label}
+STAGES=${STAGES:-"items calibrate n6 replay gencheck"}
 PY=${PY:-$(cd "$(dirname "$0")/.." && pwd)/../PTM_workspace/ptm_env/bin/python}
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -98,7 +99,7 @@ stamp "shared draws"
 stamp "replay evaluation: $STAGES"
 (cd "$ROOT/evaluation" && $PY -u replay_eval.py $STAGES --bank "$BANK" --run "$RUN_DIR" --activations "$ACT" \
     --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH" --gen-samples "$GEN_SAMPLES" --replay-batch "$BATCH" \
-    --replay-dtype "${REPLAY_DTYPE:-float32}" ${ARMS:+--arms $ARMS} ${GEN_ARMS:+--gen-arms $GEN_ARMS} \
+    --replay-dtype "${REPLAY_DTYPE:-float32}" --site "$SITE" ${ARMS:+--arms $ARMS} ${GEN_ARMS:+--gen-arms $GEN_ARMS} \
     $([ "${PROMPTING:-0}" = 1 ] && echo --prompting))
 
 stamp "report card"
@@ -110,7 +111,7 @@ if [ "${TRANSFER:-0}" = 1 ]; then
     stamp "transfer to the eval types: $TRANSFER_BANKS"
     (cd "$ROOT/evaluation" && $PY -u transfer_eval.py baseline items replay report --banks "$TRANSFER_BANKS" \
         ${TRANSFER_SET:+--set $TRANSFER_SET} ${TRANSFER_TYPES:+--types $TRANSFER_TYPES} --t0-bank "$BANK" --t0-run "$RUN_DIR" --t0-out "$OUT" \
-        --activations "$ACT" --methods "$METHODS_RUN" --draws "$DRAWS" --k "$K" --replay-batch "$BATCH" \
+        --activations "$ACT" --methods "$METHODS_RUN" --draws "$DRAWS" --site "$SITE" --k "$K" --replay-batch "$BATCH" \
         --replay-dtype "${REPLAY_DTYPE:-float32}" --out "$OUT/transfer")
     stamp "done: transfer_report.md under $OUT/transfer"
 fi
