@@ -1,0 +1,458 @@
+<title>Horizon Phrase Patching</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column (~68ch) with figures allowed a little wider; research-note register. */
+:root {
+  --page: #f6f6f3; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #7d7b75;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --chip: #ecebe6;
+  --donor: #2a78d6; --domain: #eb6834; --effects: #eb6834; --random: #1baf7a; --noop: #898781;
+  --phrase: #dbe8fa;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #111110; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #94928b;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --chip: #262624;
+    --donor: #3987e5; --domain: #d95926; --effects: #d95926; --random: #199e70; --noop: #8a8880;
+    --phrase: #1d3350; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #111110; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #94928b;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --chip: #262624;
+  --donor: #3987e5; --domain: #d95926; --effects: #d95926; --random: #199e70; --noop: #8a8880;
+  --phrase: #1d3350; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+main { max-width: 860px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px; }
+section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+h1, h2 { text-wrap: balance; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
+h1 { font-size: clamp(1.7rem, 4.5vw, 2.3rem); line-height: 1.15; }
+h2 { font-size: 1.25rem; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.1rem; color: var(--ink-2); }
+.meta { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.finding { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.finding .num { font-size: 1.9rem; font-weight: 600; line-height: 1.1; }
+.finding .lbl { font-size: 0.92rem; color: var(--ink-2); }
+
+/* the method diagram */
+.flow { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 18px; display: grid; gap: 12px; }
+.prompt-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: baseline; }
+.prompt-row .who { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.prompt { font-family: var(--mono); font-size: 0.86rem; color: var(--ink-2); line-height: 1.7; min-width: 0; overflow-wrap: anywhere; }
+.tok { background: var(--phrase); color: var(--ink); border-radius: 4px; padding: 1px 5px; }
+.arrow { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2); padding-left: 120px; }
+.arrow b { color: var(--ink); font-weight: 500; }
+@media (max-width: 560px) { .prompt-row { grid-template-columns: 1fr; gap: 2px; } .arrow { padding-left: 0; } }
+.arms { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.arm { display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; font-size: 0.92rem; color: var(--ink-2); }
+.arm b { color: var(--ink); font-weight: 600; }
+.key { width: 12px; height: 12px; border-radius: 50%; margin-top: 5px; }
+
+/* charts */
+.figure { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 16px 16px 10px; display: flex; flex-direction: column; gap: 8px; position: relative; min-width: 0; }
+.figure h3 { margin: 0; font-size: 1rem; font-weight: 600; }
+.figure .sub { font-size: 0.88rem; color: var(--ink-2); max-width: 70ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.85rem; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.legend i.line { width: 16px; height: 0; border-radius: 0; border-top: 2px solid var(--muted); }
+.scroll { overflow-x: auto; }
+svg.chart { display: block; width: 100%; min-width: 600px; height: auto; font-family: var(--sans); }
+svg .tick, svg .rowlabel { fill: var(--ink-2); font-size: 12px; }
+svg .axislabel { fill: var(--muted); font-size: 12px; }
+svg .annot { fill: var(--ink-2); font-size: 12px; }
+svg .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+svg .grid { stroke: var(--grid); stroke-width: 1; }
+svg .base { stroke: var(--axis); stroke-width: 1; }
+svg .ref { stroke: var(--muted); stroke-width: 1.5; }
+svg .connector { stroke: var(--axis); stroke-width: 2; stroke-linecap: round; }
+svg .dot { stroke: var(--surface); stroke-width: 2; }
+svg .whisker { stroke-width: 2; stroke-linecap: round; }
+svg .hit { fill: transparent; cursor: default; outline: none; }
+svg .hit:focus-visible + .focusring, svg .hit:hover + .focusring { stroke: var(--ink); }
+svg .focusring { fill: none; stroke: transparent; stroke-width: 1.5; pointer-events: none; }
+.fill-donor { fill: var(--donor); } .fill-noop { fill: var(--noop); } .fill-domain { fill: var(--domain); }
+.fill-effects { fill: var(--effects); } .fill-random { fill: var(--random); }
+.stroke-donor { stroke: var(--donor); } .stroke-domain { stroke: var(--domain); }
+.stroke-effects { stroke: var(--effects); } .stroke-random { stroke: var(--random); }
+.tooltip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--ring); border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12); padding: 8px 10px; font-size: 0.84rem; min-width: 170px; max-width: 260px; z-index: 5; }
+.tooltip .tt-title { color: var(--ink-2); font-size: 0.8rem; margin-bottom: 4px; }
+.tooltip .tt-row { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: center; }
+.tooltip .tt-row i { width: 12px; height: 0; border-top: 2px solid; display: inline-block; }
+.tooltip .tt-row b { font-family: var(--mono); font-weight: 500; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tooltip .tt-row span { color: var(--ink-2); }
+
+/* table */
+.tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 0.84rem; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 500; color: var(--ink-2); font-size: 0.78rem; }
+td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td:first-child { font-family: var(--sans); }
+td .id { display: block; font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+ul.caveats { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; max-width: 70ch; }
+ul.caveats li { color: var(--ink-2); }
+ul.caveats b { color: var(--ink); font-weight: 600; }
+.loopstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.loopstats div { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.loopstats b { font-size: 1.4rem; font-weight: 600; }
+.loopstats span { font-size: 0.85rem; color: var(--ink-2); }
+.loops { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+@media (max-width: 420px) { .loops { grid-template-columns: 1fr; } }
+.loop { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.loop header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.loop .tag { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-2); }
+.loopmeta { font-size: 0.88rem; color: var(--ink-2); }
+.loopmeta b { color: var(--ink); font-weight: 600; }
+.loop blockquote { margin: 0; padding: 8px 12px; border-left: 2px solid var(--axis); background: var(--chip); border-radius: 0 6px 6px 0;
+  font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; color: var(--ink); overflow-wrap: anywhere; }
+.loop .repeat { font-size: 0.84rem; color: var(--ink-2); }
+footer { font-size: 0.82rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<main>
+  <header style="display:flex;flex-direction:column;gap:12px">
+    <div class="eyebrow">SPAR · temporal horizon · E20 · Qwen3-8B, thinking on</div>
+    <h1>Swapping the horizon phrase changes the decision in every prompt format we tested</h1>
+    <p class="lede">We copied the model's internal state for the time-horizon phrase from a prompt with a different horizon. In 13 of 14 prompt types, including city planning, public health and a coding agent, the model then chose the answer that the new horizon makes rational. How far a prompt sits from the original investment prompts made no difference.</p>
+    <div class="meta">Run 2026-11-21 · one RTX 4090, $1.72 · 14 prompt types, 233 prompts · <code>EvalsSteeringResults.md</code></div>
+  </header>
+
+  <section class="findings" aria-label="Key results">
+    <div class="finding"><div class="num">13 / 14</div><div class="lbl">prompt types where the donor patch moved the answer, with log-odds CIs clear of zero</div></div>
+    <div class="finding"><div class="num">ρ ≈ 0</div><div class="lbl">correlation between the effect and distance from the original prompt (n = 14)</div></div>
+    <div class="finding"><div class="num">+0.8 to +2.5</div><div class="lbl">log-odds from the steering direction fitted on the original prompts: no better than a random direction</div></div>
+  </section>
+
+  <section>
+    <h2>What we did</h2>
+    <p>Each prompt asks the model to choose between a payoff that arrives soon and one that arrives later, under a stated time horizon. Whether the later option is rational depends on whether it arrives inside the horizon. We ran the same prompt with its horizon phrase rewritten, saved the layer-16 activations at the phrase's tokens, and pasted them into the original prompt while the model reasoned and answered.</p>
+    <div class="flow" aria-label="How the donor patch works">
+      <div class="prompt-row"><div class="who">original</div><div class="prompt">a) A light-rail line … opens in 30 years and serves 16,000 commuters a day. b) A pedestrian bridge … opens in 5 years and serves 2,000 commuters a day. … the greatest benefit for this time <span class="tok">horizon: 10 years</span>.</div></div>
+      <div class="prompt-row"><div class="who">donor</div><div class="prompt">the same prompt, with <span class="tok">horizon: 91 years</span></div></div>
+      <div class="arrow">↓ copy the donor's layer-16 states at the <b>phrase tokens only</b> into the original, then let the model reason and answer</div>
+      <div class="prompt-row"><div class="who">result</div><div class="prompt">unpatched: <b style="color:var(--ink);font-weight:500">b) bridge</b> · patched: <b style="color:var(--ink);font-weight:500">a) light rail</b>. The rail line opens inside the 91-year horizon (city_values_002)</div></div>
+      <div class="arms">
+        <div class="arm"><i class="key fill-donor"></i><div><b>Donor</b>: phrase states from the donor prompt. The rest of the prompt is unchanged.</div></div>
+        <div class="arm"><i class="key fill-noop"></i><div><b>Noop</b>: an unpatched rerun. It sets the noise floor, because batched bf16 generation is not bit-exact.</div></div>
+        <div class="arm"><i class="key fill-effects"></i><div><b>Bank-fit step</b>: the horizon direction fitted on the original investment prompts (E14), from the prompt's horizon to the target.</div></div>
+        <div class="arm"><i class="key fill-random"></i><div><b>Random</b>: a random step of the same length.</div></div>
+      </div>
+    </div>
+    <p style="color:var(--ink-2);font-size:0.92rem">The donor horizon is chosen so that the rational answer changes: a near-regime prompt gets a horizon past the far delay, and the other way round. It must have the same number of tokens as the original phrase.</p>
+  </section>
+
+  <section>
+    <h2>The donor flips the answer far above the noise floor</h2>
+    <div class="figure" id="fig-flips">
+      <h3>Share of prompts that switch to the target answer</h3>
+      <div class="sub">Of the prompts whose original answer was not the target. Types are ordered by distance from the original prompt, nearest at the top.</div>
+      <div class="legend"><span><i class="fill-noop"></i>Noop (unpatched rerun)</span><span><i class="fill-donor"></i>Donor patch</span></div>
+      <div class="scroll"><svg class="chart" id="svg-flips" role="img" aria-label="Dumbbell chart of flip rates, noop versus donor, for 14 prompt types"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Distance from the original prompt does not weaken it</h2>
+    <div class="figure" id="fig-dist">
+      <h3>Donor effect on near-vs-far log-odds, against distance from the original prompt</h3>
+      <div class="sub">Change against noop, signed toward the target answer, with 95% bootstrap intervals. Distance is measured inside the model, in the horizon subspace at layer 18. 0 is the original wording, and 1 is about the gap between two of the original prompts.</div>
+      <div class="legend"><span><i class="fill-domain"></i>New domain (city, public health, coding agent)</span><span><i class="fill-donor"></i>Investment, new format</span><span><i class="line"></i>Donor patch on the original bank (E14), +9.9</span></div>
+      <div class="scroll"><svg class="chart" id="svg-dist" role="img" aria-label="Scatter plot of donor log-odds effect against distance for 14 prompt types"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The fitted steering direction does not transfer; the real state does</h2>
+    <div class="figure" id="fig-arms">
+      <h3>Four non-investment domains: donor patch against the bank-fit step and a random step</h3>
+      <div class="sub">Near-vs-far log-odds change against noop, toward the target, with 95% intervals. The direction fitted on the investment prompts moves the choice no more than a random direction of the same length. It was null on the investment prompts too.</div>
+      <div class="legend"><span><i class="fill-donor"></i>Donor patch</span><span><i class="fill-effects"></i>Bank-fit step (E14)</span><span><i class="fill-random"></i>Random step</span></div>
+      <div class="scroll"><svg class="chart" id="svg-arms" role="img" aria-label="Interval plot of three interventions on four prompt types"></svg></div>
+    </div>
+    <p>The coding-agent prompts make the point most clearly. Steering along the bank's horizon direction at the answer slot (E19, a separate run) did nothing there. The donor patch still moves them by +13 log-odds. So the decision reads the horizon phrase in this domain too, just not along the direction fitted on investment prompts.</p>
+  </section>
+
+  <section>
+    <h2>Steering vectors barely move the answer, and CAA moves it the wrong way. Patches move it.</h2>
+    <p>A steering vector adds one fixed direction for "longer horizon" to every prompt. CAA (contrastive activation addition) takes that direction as the mean activation of long-horizon prompts minus short-horizon prompts. A patch instead copies the real state from the same prompt with another horizon. With thinking on, all of them are scored the same way: how far the near-vs-far log-odds move toward the answer the new horizon makes rational.</p>
+    <div class="figure" id="fig-compare">
+      <h3>Shift toward the rational answer, in near-vs-far log-odds</h3>
+      <div class="sub">95% bootstrap intervals where we have per-prompt data. E14's bank-level numbers are single values. The answer-slot steers (E8) add the vector after the model's reasoning, with that reasoning held fixed. The phrase interventions (E14, E20) act on the prompt, and the model then reasons again.</div>
+      <div class="legend"><span><i class="fill-effects"></i>Steering vector</span><span><i class="fill-random"></i>Control (random or probe line)</span><span><i class="fill-donor"></i>Patch (real state from a re-horizoned prompt)</span></div>
+      <div class="scroll"><svg class="chart" id="svg-compare" role="img" aria-label="Interval plot comparing steering vectors, controls and patches"></svg></div>
+    </div>
+    <p><b>Why CAA goes backwards.</b> In the original bank, every short horizon is in the regime where neither option arrives in time, and the model answers those like the long-horizon cases. Every prompt where only the near option arrives sits in the long half. So "long minus short" mostly encodes "the near option is the right answer", and adding more of it pushes the model toward near. A longer horizon should push it the other way. Refitting on prompts with natural closes did not fix it (E8 run 3), so the cause is the composition of the bank, not traces cut off at the reasoning limit.</p>
+    <p><b>Why the fitted curve is weak.</b> It moves the stated horizon by about one decade within the same unit (6 months becomes 66 months), which rarely crosses a delay. The real change a donor causes at the phrase is mostly in other directions: the fitted step explains 2% of its variance (E14, R² 0.02).</p>
+  </section>
+
+  <section>
+    <h2>When the reasoning loops</h2>
+    <p>A trace that reaches the 3,072-token limit is cut off, and the answer is read right after. Most of these traces are loops: in 72 of the 100, one sentence comes back 5 or more times, up to 46. A random step or a donor patch at the phrase roughly doubles the rate; the bank-fit step barely changes it.</p>
+    <div class="loopstats">
+      <div><b>10%</b><span>noop (24 of 233)</span></div>
+      <div><b>12%</b><span>bank-fit step (11 of 94)</span></div>
+      <div><b>19%</b><span>random step (18 of 94)</span></div>
+      <div><b>20%</b><span>donor patch (47 of 233)</span></div>
+    </div>
+    <p>In two of the donor loops below, the model quotes the donor's horizon as if it were written in the prompt, then rereads the prompt to check, and keeps doing it. That fits the patch changing what the model reads at the phrase while the rest of the prompt still implies the original horizon. It is an interpretation from four traces, not a tested result.</p>
+    <div class="loops">
+      <article class="loop">
+        <header><span class="tag">donor patch</span><span class="mono">city_values_015</span></header>
+        <div class="loopmeta">Prompt says <b>20 years</b>. Donor phrase: <b>91 years</b>. Answer b, not the target a.</div>
+        <blockquote>The goal is to pick the option that provides the greatest benefit over a 91-year time horizon. Wait, the time horizon is 91 years? Wait, the original question says the time horizon is 91 years? Wait, the user wrote: "for this time horizon: 91 years." … Let me check again.</blockquote>
+        <div class="repeat">The "Let me check again" cycle repeats 44 times until the limit.</div>
+      </article>
+      <article class="loop">
+        <header><span class="tag">donor patch</span><span class="mono">system_prompt_clear_014</span></header>
+        <div class="loopmeta">Prompt says <b>5 years</b>. Donor phrase: <b>3 weeks</b>. Answer b, not the target a.</div>
+        <blockquote>The goal is to leave the household with the most money after three weeks. … So if they choose option a) they get the money in one week, and then have two weeks to use it. But if they choose option b) they have to wait two months, which is longer than the three weeks. Wait, maybe the time horizon is three weeks …</blockquote>
+        <div class="repeat">It reasons about the donor's 3 weeks throughout. The last sentence repeats 42 times.</div>
+      </article>
+      <article class="loop">
+        <header><span class="tag">bank-fit step</span><span class="mono">coding_agent_009</span></header>
+        <div class="loopmeta">Prompt says <b>2 weeks</b>. Step aimed at 5 years. Answer b, not the target a.</div>
+        <blockquote>The time horizon given is 52 weeks … So the benefit is the total savings over that time. Therefore, option b is better. But maybe the options are not about total savings but about the rate. Wait, the problem says "the greatest benefit for this time horizon: 52 weeks."</blockquote>
+        <div class="repeat">The step moved the stated horizon from 2 to 52 weeks, short of the target. The loop repeats 46 times.</div>
+      </article>
+      <article class="loop">
+        <header><span class="tag">no patch</span><span class="mono">public_health_002</span></header>
+        <div class="loopmeta">Unpatched rerun, horizon <b>20 years</b>. Loops are not only caused by patching.</div>
+        <blockquote>If the program is implemented now, then in 20 years, it would have prevented 160. But if the program in option b is a program that, when implemented, prevents 200 admissions in one month … So option b is better. But maybe the program in option a is a program that …</blockquote>
+        <div class="repeat">The same proportional argument repeats 18 times.</div>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Every number</h2>
+    <div class="tablewrap">
+      <table id="table">
+        <thead><tr><th>Prompt type</th><th>Distance</th><th>Prompts (no donor)</th><th>Noop flipped</th><th>Donor flipped</th><th>Donor log-odds [95% CI]</th><th>Bank-fit step</th><th>Random step</th><th>Forced close noop / donor</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Caveats</h2>
+    <ul class="caveats">
+      <li><b>Assistant role has no usable baseline.</b> Rerunning it unpatched changes the original answer on 6 of 12 prompts, so a flip rate against the original answer cannot show an effect. Comparing donor directly with noop, the donor moves 2 prompts toward the target and none away.</li>
+      <li><b>Some donor runs hit the reasoning limit more often.</b> On the original wording, 69% of donor traces reach the 3,072-token limit, against 15% for noop. The answer is then read after a cut-off trace. The effect there (+10.3) still clears zero.</li>
+      <li><b>Small samples.</b> 11 to 28 prompts per type. 4 to 16 prompts per type had no donor, because a usable donor needs the same token count and a horizon in the other regime. Most of those were near-regime prompts.</li>
+      <li><b>The donor is an upper bound, not a usable steer.</b> It needs the prompt rewritten with the target horizon. What it shows is where the decision reads the horizon: the phrase tokens at layer 16, in every format.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <div>Results: <code>results/horizon/exp20_Qwen3-8B_evaltype_transfer/</code> · code: <code>pipeline/s2_steering/experiments/manifold_steer/exp20_evaltype_transfer.py</code> · table: <code>pipeline/s3_analysis/eval_types_donor.py</code></div>
+    <div>Spec <code>EvalsSteeringSpec.md</code> · results <code>EvalsSteeringResults.md</code> · branch <code>jared-eval-types</code></div>
+  </footer>
+</main>
+
+<script>
+const NAMES = {
+  t0_w0: "Original wording", distractor_temporal: "Distracting dates", t0_w1_cash: "Cash wording",
+  city_no_values: "City projects, no values", t0_w3_clear: "Clear wording", public_health: "Public health",
+  city_values: "City projects, with values", role_assistant: "Assistant role", role_fund_manager: "Fund manager role",
+  system_prompt: "System prompt", sycophancy_lean: "User leans one way", coding_agent: "Coding agent",
+  multiturn_analyst: "Multi-turn analyst", system_prompt_clear: "System prompt, clear wording"
+};
+const DATA = [{"t":"t0_w0","g":"format","dist":0.0,"n":13,"nd":16,"noop":0.111,"donor":0.778,"lo":[10.3,4.8,16.0],"fn":0.15,"fd":0.69},{"t":"distractor_temporal","g":"format","dist":1.3,"n":16,"nd":4,"noop":0.067,"donor":0.867,"lo":[12.0,7.0,16.5],"fn":0.12,"fd":0.25},{"t":"t0_w1_cash","g":"format","dist":1.57,"n":13,"nd":16,"noop":0.077,"donor":1.0,"lo":[23.1,20.1,25.7],"fn":0.08,"fd":0.08},{"t":"city_no_values","g":"domain","dist":2.24,"n":21,"nd":11,"noop":0.071,"donor":0.929,"lo":[19.5,13.9,24.6],"fn":0.0,"fd":0.0,"elo":[2.5,-1.4,6.3],"ef":0.143,"rlo":[0.8,-0.7,2.6],"rf":0.071},{"t":"t0_w3_clear","g":"format","dist":3.63,"n":13,"nd":16,"noop":0.0,"donor":1.0,"lo":[29.1,26.2,31.7],"fn":0.0,"fd":0.15},{"t":"public_health","g":"domain","dist":3.83,"n":21,"nd":11,"noop":0.067,"donor":0.333,"lo":[7.9,3.7,12.4],"fn":0.29,"fd":0.29,"elo":[0.9,-1.8,4.0],"ef":0.067,"rlo":[0.9,-1.6,3.5],"rf":0.0},{"t":"city_values","g":"domain","dist":5.18,"n":24,"nd":8,"noop":0.045,"donor":0.818,"lo":[22.0,17.8,25.9],"fn":0.04,"fd":0.21,"elo":[1.3,-0.4,3.6],"ef":0.136,"rlo":[0.7,-1.1,2.9],"rf":0.091},{"t":"role_assistant","g":"format","dist":5.55,"n":12,"nd":15,"noop":0.5,"donor":0.625,"lo":[0.5,-4.3,5.5],"fn":0.08,"fd":0.42},{"t":"role_fund_manager","g":"format","dist":6.4,"n":15,"nd":8,"noop":0.214,"donor":0.643,"lo":[11.8,7.8,16.4],"fn":0.13,"fd":0.47},{"t":"system_prompt","g":"format","dist":7.59,"n":15,"nd":8,"noop":0.0,"donor":0.9,"lo":[13.6,8.2,19.1],"fn":0.2,"fd":0.27},{"t":"sycophancy_lean","g":"format","dist":8.2,"n":11,"nd":13,"noop":0.125,"donor":1.0,"lo":[13.0,6.7,19.3],"fn":0.0,"fd":0.0},{"t":"coding_agent","g":"domain","dist":8.78,"n":28,"nd":4,"noop":0.087,"donor":0.565,"lo":[13.2,8.5,18.3],"fn":0.14,"fd":0.07,"elo":[0.8,-1.0,2.5],"ef":0.043,"rlo":[1.2,-0.4,2.8],"rf":0.087},{"t":"multiturn_analyst","g":"format","dist":9.37,"n":16,"nd":6,"noop":0.0,"donor":0.714,"lo":[20.1,15.7,23.7],"fn":0.06,"fd":0.06},{"t":"system_prompt_clear","g":"format","dist":10.24,"n":15,"nd":8,"noop":0.0,"donor":0.933,"lo":[28.3,25.9,30.7],"fn":0.07,"fd":0.07}];
+const BANK_DONOR = 9.9;
+const SVGNS = "http://www.w3.org/2000/svg";
+
+function el(tag, attrs, parent) {
+  const node = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+function text(parent, x, y, str, cls, anchor) {
+  const t = el("text", { x, y, class: cls, "text-anchor": anchor || "start" }, parent);
+  t.textContent = str;
+  return t;
+}
+const pct = v => Math.round(v * 100) + "%";
+const signed = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1);
+const ci = a => `${signed(a[0])} [${signed(a[1])}, ${signed(a[2])}]`;
+
+// One tooltip per figure; rows are [color var, label, value]. Built with textContent only.
+function attachTooltip(fig, hit, title, rows) {
+  let tip = fig.querySelector(".tooltip");
+  if (!tip) { tip = document.createElement("div"); tip.className = "tooltip"; tip.hidden = true; fig.appendChild(tip); }
+  const show = (clientX, clientY) => {
+    tip.replaceChildren();
+    const head = document.createElement("div"); head.className = "tt-title"; head.textContent = title; tip.appendChild(head);
+    for (const [color, label, value] of rows) {
+      const row = document.createElement("div"); row.className = "tt-row";
+      const key = document.createElement("i"); key.style.borderColor = `var(${color})`;
+      const name = document.createElement("span"); name.textContent = label;
+      const val = document.createElement("b"); val.textContent = value;
+      row.append(key, name, val); tip.appendChild(row);
+    }
+    tip.hidden = false;
+    const box = fig.getBoundingClientRect();
+    let left = clientX - box.left + 14, top = clientY - box.top + 14;
+    left = Math.min(left, box.width - tip.offsetWidth - 8);
+    if (top + tip.offsetHeight > box.height - 4) top = clientY - box.top - tip.offsetHeight - 12;
+    tip.style.left = Math.max(8, left) + "px"; tip.style.top = Math.max(8, top) + "px";
+  };
+  hit.addEventListener("pointermove", e => show(e.clientX, e.clientY));
+  hit.addEventListener("pointerleave", () => { tip.hidden = true; });
+  hit.addEventListener("focus", () => { const r = hit.getBoundingClientRect(); show(r.right, r.top); });
+  hit.addEventListener("blur", () => { tip.hidden = true; });
+  hit.setAttribute("tabindex", "0");
+}
+
+function drawFlips() {
+  const svg = document.getElementById("svg-flips"), fig = document.getElementById("fig-flips");
+  const W = 760, left = 210, right = 40, top = 28, rowH = 28, H = top + DATA.length * rowH + 34;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const x = v => left + v * (W - left - right);
+  for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+    el("line", { x1: x(t), x2: x(t), y1: top - 8, y2: H - 30, class: t === 0 ? "base" : "grid" }, svg);
+    text(svg, x(t), H - 12, pct(t), "tick num", "middle");
+  }
+  DATA.forEach((d, i) => {
+    const y = top + i * rowH + rowH / 2;
+    text(svg, left - 12, y + 4, NAMES[d.t], "rowlabel", "end");
+    el("line", { x1: x(d.noop), x2: x(d.donor), y1: y, y2: y, class: "connector" }, svg);
+    el("circle", { cx: x(d.noop), cy: y, r: 5, class: "dot fill-noop" }, svg);
+    el("circle", { cx: x(d.donor), cy: y, r: 5.5, class: "dot fill-donor" }, svg);
+    if (d.t === "role_assistant") text(svg, x(d.donor) + 12, y + 4, "unstable baseline", "annot");
+    const hit = el("rect", { x: left - 200, y: y - rowH / 2, width: W - left + 200 - right + 20, height: rowH, class: "hit" }, svg);
+    attachTooltip(fig, hit, `${NAMES[d.t]} · ${d.n} prompts`, [["--donor", "Donor", pct(d.donor)], ["--noop", "Noop", pct(d.noop)]]);
+  });
+}
+
+function drawDistance() {
+  const svg = document.getElementById("svg-dist"), fig = document.getElementById("fig-dist");
+  const W = 760, H = 380, left = 56, right = 24, top = 18, bottom = 50;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const xmax = 11, ymin = -5, ymax = 35;
+  const x = v => left + (v / xmax) * (W - left - right);
+  const y = v => top + (1 - (v - ymin) / (ymax - ymin)) * (H - top - bottom);
+  for (let t = 0; t <= 10; t += 2) { el("line", { x1: x(t), x2: x(t), y1: top, y2: H - bottom, class: "grid" }, svg); text(svg, x(t), H - bottom + 18, String(t), "tick num", "middle"); }
+  for (let t = 0; t <= 30; t += 10) { el("line", { x1: left, x2: W - right, y1: y(t), y2: y(t), class: t === 0 ? "base" : "grid" }, svg); text(svg, left - 8, y(t) + 4, t === 0 ? "0" : "+" + t, "tick num", "end"); }
+  text(svg, (left + W - right) / 2, H - 8, "Distance from the original prompt (horizon subspace, layer 18)", "axislabel", "middle");
+  const yl = text(svg, 14, (top + H - bottom) / 2, "Near-vs-far log-odds vs noop", "axislabel", "middle");
+  yl.setAttribute("transform", `rotate(-90 14 ${(top + H - bottom) / 2})`);
+  el("line", { x1: left, x2: W - right, y1: y(BANK_DONOR), y2: y(BANK_DONOR), class: "ref" }, svg);
+  text(svg, W - right - 4, y(BANK_DONOR) - 6, "original bank, donor +9.9", "annot", "end");
+  const LABELS = { coding_agent: [8, 14], public_health: [8, 4], role_assistant: [8, 4], system_prompt_clear: [-8, -10, "end"], t0_w0: [8, 4] };
+  for (const d of DATA) {
+    const cls = d.g === "domain" ? "domain" : "donor";
+    const cx = x(d.dist), cy = y(d.lo[0]);
+    el("line", { x1: cx, x2: cx, y1: y(d.lo[1]), y2: y(d.lo[2]), class: `whisker stroke-${cls}`, "stroke-opacity": 0.55 }, svg);
+    el("circle", { cx, cy, r: 5.5, class: `dot fill-${cls}` }, svg);
+    if (LABELS[d.t]) { const [dx, dy, anchor] = LABELS[d.t]; text(svg, cx + dx, cy + dy, NAMES[d.t], "annot", anchor || "start"); }
+    const hit = el("circle", { cx, cy, r: 13, class: "hit" }, svg);
+    attachTooltip(fig, hit, `${NAMES[d.t]} · distance ${d.dist.toFixed(2)}`, [[d.g === "domain" ? "--domain" : "--donor", "Donor log-odds", ci(d.lo)], ["--noop", "Flipped, donor / noop", `${pct(d.donor)} / ${pct(d.noop)}`]]);
+  }
+  text(svg, left + 8, top + 14, "Spearman ρ = +0.19 (p = 0.52, n = 14)", "annot");
+}
+
+function drawArms() {
+  const svg = document.getElementById("svg-arms"), fig = document.getElementById("fig-arms");
+  const types = DATA.filter(d => d.g === "domain");
+  const arms = [["lo", "donor", "--donor", "Donor patch"], ["elo", "effects", "--effects", "Bank-fit step"], ["rlo", "random", "--random", "Random step"]];
+  const W = 760, left = 210, right = 30, top = 20, groupH = 70, H = top + types.length * groupH + 34;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const xmin = -5, xmax = 30;
+  const x = v => left + ((v - xmin) / (xmax - xmin)) * (W - left - right);
+  for (let t = 0; t <= 30; t += 10) { el("line", { x1: x(t), x2: x(t), y1: top - 6, y2: H - 30, class: t === 0 ? "base" : "grid" }, svg); text(svg, x(t), H - 12, t === 0 ? "0" : "+" + t, "tick num", "middle"); }
+  types.forEach((d, i) => {
+    const y0 = top + i * groupH;
+    text(svg, left - 12, y0 + groupH / 2 + 4, NAMES[d.t], "rowlabel", "end");
+    arms.forEach(([key, cls], j) => {
+      const v = d[key], y = y0 + 14 + j * 18;
+      el("line", { x1: x(v[1]), x2: x(v[2]), y1: y, y2: y, class: `whisker stroke-${cls}`, "stroke-opacity": 0.55 }, svg);
+      el("circle", { cx: x(v[0]), cy: y, r: 5, class: `dot fill-${cls}` }, svg);
+    });
+    text(svg, x(d.lo[2]) + 8, y0 + 18, signed(d.lo[0]), "annot num");
+    const hit = el("rect", { x: left - 200, y: y0, width: W - left + 200 - right + 20, height: groupH - 4, class: "hit" }, svg);
+    attachTooltip(fig, hit, NAMES[d.t], arms.map(([key, , color, label]) => [color, label, ci(d[key])]));
+  });
+}
+
+function fillTable() {
+  const body = document.querySelector("#table tbody");
+  for (const d of DATA) {
+    const tr = document.createElement("tr");
+    const first = document.createElement("td");
+    first.textContent = NAMES[d.t];
+    const id = document.createElement("span"); id.className = "id"; id.textContent = d.t; first.appendChild(id);
+    tr.appendChild(first);
+    const cells = [d.dist.toFixed(2), `${d.n} (${d.nd})`, pct(d.noop), pct(d.donor), ci(d.lo),
+      d.elo ? ci(d.elo) : "–", d.rlo ? ci(d.rlo) : "–", `${pct(d.fn)} / ${pct(d.fd)}`];
+    for (const c of cells) { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); }
+    body.appendChild(tr);
+  }
+}
+
+// Interventions on one log-odds scale (thinking on). E8: exp8_Qwen3-8B_answer_slot on|pre-label|24, both ±2-decade
+// steps pooled, x contrast 12.9; E14: 22_results_phrase_steering.md (single values); E20: per-row pooled over types.
+const COMPARE = [
+  { group: "Original bank: answer slot, layer 24 (E8)", rows: [
+    { label: "CAA (mean difference)", kind: "effects", v: [-1.62, -1.83, -1.41] },
+    { label: "Fitted horizon curve", kind: "effects", v: [1.88, 1.59, 2.18] },
+    { label: "Probe line", kind: "random", v: [-0.06, -0.11, -0.01] },
+    { label: "Random direction", kind: "random", v: [0.18, 0.12, 0.25] } ] },
+  { group: "Original bank: horizon phrase, layer 16 (E14)", rows: [
+    { label: "Fitted manifold step", kind: "effects", v: [1.4] },
+    { label: "Donor patch", kind: "donor", v: [9.9] } ] },
+  { group: "Eval types: horizon phrase, layer 16 (E20)", rows: [
+    { label: "Bank-fit step (4 domains)", kind: "effects", v: [1.32, 0.08, 2.59] },
+    { label: "Random step (4 domains)", kind: "random", v: [0.91, -0.02, 1.93] },
+    { label: "Donor patch (14 types)", kind: "donor", v: [16.11, 14.50, 17.72] } ] }
+];
+
+function drawCompare() {
+  const svg = document.getElementById("svg-compare"), fig = document.getElementById("fig-compare");
+  const W = 760, left = 230, right = 60, top = 10, rowH = 26, groupGap = 30;
+  const nRows = COMPARE.reduce((s, g) => s + g.rows.length, 0);
+  const H = top + nRows * rowH + COMPARE.length * groupGap + 34;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const xmin = -4, xmax = 20;
+  const x = v => left + ((v - xmin) / (xmax - xmin)) * (W - left - right);
+  for (const t of [-4, 0, 4, 8, 12, 16, 20]) {
+    el("line", { x1: x(t), x2: x(t), y1: top, y2: H - 30, class: t === 0 ? "base" : "grid" }, svg);
+    text(svg, x(t), H - 12, t > 0 ? "+" + t : String(t), "tick num", "middle");
+  }
+  text(svg, x(-0.4), top + 12, "← wrong way", "annot", "end");
+  let y = top;
+  for (const g of COMPARE) {
+    y += groupGap - 8;
+    text(svg, 0, y, g.group, "axislabel");
+    y += 8;
+    for (const r of g.rows) {
+      const cy = y + rowH / 2;
+      text(svg, left - 12, cy + 4, r.label, "rowlabel", "end");
+      if (r.v.length === 3) el("line", { x1: x(r.v[1]), x2: x(r.v[2]), y1: cy, y2: cy, class: `whisker stroke-${r.kind}`, "stroke-opacity": 0.55 }, svg);
+      el("circle", { cx: x(r.v[0]), cy, r: 5.5, class: `dot fill-${r.kind}` }, svg);
+      text(svg, x(r.v.length === 3 ? Math.max(r.v[2], r.v[0]) : r.v[0]) + 10, cy + 4, signed(r.v[0]), "annot num");
+      const hit = el("rect", { x: 0, y, width: W, height: rowH, class: "hit" }, svg);
+      attachTooltip(fig, hit, g.group, [[`--${r.kind}`, r.label, r.v.length === 3 ? ci(r.v) : signed(r.v[0])]]);
+      y += rowH;
+    }
+  }
+}
+
+drawFlips(); drawDistance(); drawArms(); drawCompare(); fillTable();
+</script>

@@ -65,6 +65,7 @@ Analysis (`analysis/`, saved activations only, run locally; `steering_prepare`, 
 | `steering_prepare.py` | per-cell directions and cached reasoning: the inputs of E8, E13 | `python -m pipeline.s1_data_vectors.analysis.steering_prepare $RESULTS` |
 | `patch_prepare.py` | inputs of the phrase number patch | `python -m pipeline.s1_data_vectors.analysis.patch_prepare --phrase-dir $RESULTS/exp14_Qwen3-8B_phrase` |
 | `scan_prepare.py` | inputs of the Part B steering scan | `python -m pipeline.s1_data_vectors.analysis.scan_prepare --phrase-dir $RESULTS/exp14_Qwen3-8B_phrase --e0-root $RESULTS` |
+| `export_evaltype_banks.py` | the gated eval types as prompt_bank banks (tier `evaltype`, split `transfer`), for `evaluation/transfer_eval.py`; no model | `python -m pipeline.s1_data_vectors.analysis.export_evaltype_banks` (writes `~/SPAR/results/horizon/evaltype_banks/`) |
 
 Each script's docstring has its exact arguments; `exp14_geometry` and `caa_confound` take the paths
 given there.
@@ -94,7 +95,7 @@ Tests stay in `jared/tests/`; those for this stage are `test_exp0_choice`, `test
 `test_exp14_states`, `test_warm_cache`, `test_probe_natural_within_unit`, `test_cross_model_alignment`,
 `test_stage_markers`, `test_pristine_manifold`, `test_pristine_confounds`, `test_direction_stability`,
 `test_off_curve_content`, `test_exp14_geometry`, `test_steering_prepare`, `test_phrase_prepare`,
-`test_patch_prepare`, `test_scan_prepare`, `test_pristine_steering`, and the CAA part of
+`test_patch_prepare`, `test_scan_prepare`, `test_pristine_steering`, `test_export_evaltype_banks`, and the CAA part of
 `test_autoresearch_2026_11_03`.
 
 ## Moved from

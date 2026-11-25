@@ -10,7 +10,7 @@ Outcome: the near-option log-odds, logit(near label) - logit(far label), read
 at the last position of each sequence in one forward pass.
 """
 
-from contextlib import contextmanager, nullcontext
+from contextlib import ExitStack, contextmanager, nullcontext
 
 import numpy as np
 import torch
@@ -173,24 +173,45 @@ def score(model, device, id_lists, near_first, labels, pad_id, batch_size,
     return np.concatenate(out)
 
 
+def probe_readout(hidden_states, probes):
+    """[B, len(probes)] logits (x - mean) @ coef + intercept of each (layer, mean, coef,
+    intercept) probe, x = hidden_states[layer] at the last position."""
+    return np.stack([(hidden_states[layer][:, -1].float().cpu().numpy() - mean) @ coef + intercept
+                     for layer, mean, coef, intercept in probes], 1)
+
+
 @torch.no_grad()
-def score_last_edits(model, device, id_lists, near_first, labels, pad_id, batch_size, edits):
+def score_last_edits(model, device, id_lists, near_first, labels, pad_id, batch_size, edits, probes=None):
     """Near log-odds [len(edits), n] for edits at the last position only. `edits`
-    holds (layer, make_edit) pairs, or None for the unedited sequences. A causal
+    holds (layer, make_edit) pairs, or None for the unedited sequences. `layer` may
+    also be a tuple of layers, edited in one pass: make_edit(rows) then returns one
+    edit per layer, in the same order. A causal
     model's states before the last position do not depend on an edit there, so
     each batch's prefix (all but the last token) runs once and its key/value cache
     serves every edit, which then costs a one-token pass. Equals score() per edit;
     on ~2.5k-token reasoning traces this is the difference between hours and minutes.
     Models with recurrent layers (linear attention) fall back to full passes: their
-    cache holds a running state that cannot be cropped back to the prefix."""
+    cache holds a running state that cannot be cropped back to the prefix.
+
+    With `probes`, a list of (layer, mean, coef, intercept) arrays, also returns the
+    probe logits [len(edits), n, len(probes)] read in the same passes (`probe_readout`).
+    transformers records hidden_states[layer] before forward hooks run, so a probe at
+    the edited layer itself reads the unedited state; read probes at later layers."""
     layer_types = getattr(model.config.get_text_config(), "layer_types", None) or ["full_attention"]
     if any(t != "full_attention" for t in layer_types):
+        if any(spec is not None and isinstance(spec[0], tuple) for spec in edits):
+            raise NotImplementedError("several layers per edit need the prefix-cache path (full-attention models)")
         last = [[len(seq) - 1] for seq in id_lists]
-        return np.stack([score(model, device, id_lists, near_first, labels, pad_id, batch_size)
-                         if spec is None else
-                         score(model, device, id_lists, near_first, labels, pad_id, batch_size, spec[0], last, spec[1])
-                         for spec in edits])
+        if probes is None:
+            return np.stack([score(model, device, id_lists, near_first, labels, pad_id, batch_size)
+                             if spec is None else
+                             score(model, device, id_lists, near_first, labels, pad_id, batch_size, spec[0], last,
+                                   spec[1])
+                             for spec in edits])
+        return _full_passes_with_probes(model, device, id_lists, near_first, labels, pad_id, batch_size, edits,
+                                        probes)
     out = np.zeros((len(edits), len(id_lists)))
+    readouts = None if probes is None else np.zeros((len(edits), len(id_lists), len(probes)))
     one = torch.ones((1, 1), dtype=torch.bool, device=device)
     for start in range(0, len(id_lists), batch_size):
         rows = list(range(start, min(start + batch_size, len(id_lists))))
@@ -204,16 +225,43 @@ def score_last_edits(model, device, id_lists, near_first, labels, pad_id, batch_
         # left padding puts every row's last token in the last column: slot 0 of the one-token pass
         index, mask = torch.zeros((len(rows), 1), dtype=torch.long, device=device), one.expand(len(rows), 1)
         for e, spec in enumerate(edits):
-            context = nullcontext() if spec is None else edit_residual(model, spec[0], index, mask, spec[1](rows))
-            with context:
-                logits = model(input_ids=ids[:, -1:], attention_mask=attention, position_ids=position_ids[:, -1:],
-                               past_key_values=cache, use_cache=True, logits_to_keep=1).logits[:, -1].float()
+            with ExitStack() as hooks:
+                if spec is not None and isinstance(spec[0], tuple):
+                    for layer, edit in zip(spec[0], spec[1](rows), strict=True):
+                        hooks.enter_context(edit_residual(model, layer, index, mask, edit))
+                elif spec is not None:
+                    hooks.enter_context(edit_residual(model, spec[0], index, mask, spec[1](rows)))
+                step = model(input_ids=ids[:, -1:], attention_mask=attention, position_ids=position_ids[:, -1:],
+                             past_key_values=cache, use_cache=True, logits_to_keep=1,
+                             output_hidden_states=probes is not None)
             # drop the edited last token, so the next edit sees only the prefix; a negative count,
             # since newer transformers reject crop() to a positive length
             cache.crop(-1)
+            out[e, start:start + len(rows)] = near_log_odds(step.logits[:, -1].float(), [near_first[r] for r in rows],
+                                                            [labels[r] for r in rows])
+            if probes is not None:
+                readouts[e, start:start + len(rows)] = probe_readout(step.hidden_states, probes)
+    return out if probes is None else (out, readouts)
+
+
+def _full_passes_with_probes(model, device, id_lists, near_first, labels, pad_id, batch_size, edits, probes):
+    """score_last_edits with probes for models whose cache cannot serve the prefix:
+    one full pass per batch and edit."""
+    out = np.zeros((len(edits), len(id_lists)))
+    readouts = np.zeros((len(edits), len(id_lists), len(probes)))
+    for start in range(0, len(id_lists), batch_size):
+        rows = list(range(start, min(start + batch_size, len(id_lists))))
+        batch = [id_lists[r] for r in rows]
+        for e, spec in enumerate(edits):
+            if spec is None:
+                logits, hidden, _ = forward(model, device, batch, pad_id, hidden=True)
+            else:
+                logits, hidden, _ = forward(model, device, batch, pad_id, hidden=True, layer=spec[0],
+                                            positions=[[len(seq) - 1] for seq in batch], edit=spec[1](rows))
             out[e, start:start + len(rows)] = near_log_odds(logits, [near_first[r] for r in rows],
                                                             [labels[r] for r in rows])
-    return out
+            readouts[e, start:start + len(rows)] = probe_readout(hidden, probes)
+    return out, readouts
 
 
 def gather(hidden, positions, offsets):
@@ -534,16 +582,17 @@ def prompt_patch(model, layer, positions, donor, basis=None, add=False):
 
     def read_padding(_module, args, kwargs):
         mask = kwargs.get("attention_mask")
-        if mask is not None and mask.dim() == 2:
-            padding["left"] = (mask == 0).sum(1).tolist()
+        if mask is None:
+            # generate drops an all-ones mask (transformers 5.18 generation/utils.py, "We can drop
+            # the mask altogether"), so no mask means no row is padded. This hit E14's one-prompt
+            # batches on the box and E20's equal-length smoke batch.
+            ids = kwargs.get("input_ids")
+            rows = (ids if ids is not None else kwargs.get("inputs_embeds", args[0] if args else None)).shape[0]
+            padding["left"] = [0] * rows
             return
-        # A batch of one row is never padded, and generate on the box (CUDA) passes no 2-D
-        # mask for it (E14 crashed on the last, one-prompt batch of a condition).
-        ids = kwargs.get("input_ids")
-        rows = (ids if ids is not None else kwargs.get("inputs_embeds", args[0] if args else None)).shape[0]
-        if rows != 1:
+        if mask.dim() != 2:
             raise ValueError("prompt_patch needs the 2-D attention mask to locate each row's prompt")
-        padding["left"] = [0]
+        padding["left"] = (mask == 0).sum(1).tolist()
 
     def patch(_module, _inputs, out):
         h = out[0] if isinstance(out, tuple) else out

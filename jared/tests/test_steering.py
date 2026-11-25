@@ -2,6 +2,7 @@
 direction maths on planted data, crossing pairs with the real 0.8B tokenizer."""
 
 import random
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -304,17 +305,22 @@ def test_prompt_patch_applies_to_the_prefill_and_not_to_decode_steps(tiny):
     assert out[0, len(seq)].item() == donor_logits[0].argmax().item()   # first token read from the patched prefill
 
 
-def test_prompt_patch_of_one_row_needs_no_mask_and_a_batch_does(tiny):
+def test_prompt_patch_without_a_mask_treats_every_row_as_unpadded(tiny):
+    # generate drops an all-ones mask, for one row (E14 on the box) or for equal-length rows (E20 smoke)
     layer, seq = 2, SEQS[0]
     donor = [seq[0]] + [(t + 1) % 64 for t in seq[1:]]
     values = [hidden_at(tiny, donor, layer)]
-    with S.prompt_patch(tiny, layer, [list(range(len(seq)))], values):
-        patched = tiny(input_ids=torch.tensor([seq])).logits[0, -1]   # no attention mask, as on the box
     donor_logits, _, _ = S.forward(tiny, "cpu", [donor], PAD)
+    with S.prompt_patch(tiny, layer, [list(range(len(seq)))], values):
+        patched = tiny(input_ids=torch.tensor([seq])).logits[0, -1]
     assert torch.allclose(patched, donor_logits[0], atol=1e-4)
-    with pytest.raises(ValueError, match="2-D attention mask"):
-        with S.prompt_patch(tiny, layer, [[0], [0]], values * 2):
-            tiny(input_ids=torch.tensor([seq, seq]))
+    # two rows of the same length, only the second patched: it reads as the donor, the first as itself
+    own_logits, _, _ = S.forward(tiny, "cpu", [seq], PAD)
+    own = hidden_at(tiny, seq, layer)
+    with S.prompt_patch(tiny, layer, [list(range(len(seq)))] * 2, [own, values[0]]):
+        batch = tiny(input_ids=torch.tensor([seq, seq])).logits[:, -1]
+    assert torch.allclose(batch[0], own_logits[0], atol=1e-4)
+    assert torch.allclose(batch[1], donor_logits[0], atol=1e-4)
 
 
 def test_subspace_patch_swaps_only_the_span_of_the_basis(tiny):
@@ -371,6 +377,28 @@ def test_last_position_edits_through_the_prefix_cache_equal_full_passes(tiny):
     np.testing.assert_allclose(reversed_order[::-1], cached, atol=1e-5)
 
 
+def test_last_position_edits_at_several_layers_at_once(tiny):
+    """A tuple of layers edits all of them in one pass: equal to the single-layer edit for a
+    one-layer tuple, and to a full pass with both hooks nested for two layers."""
+    near_first = [True, False, True]
+    gen = torch.Generator().manual_seed(2)
+    d1, d2 = torch.randn(3, 32, generator=gen), torch.randn(3, 32, generator=gen)
+    edits = [(1, lambda rows: S.Add(d1[rows])), ((1,), lambda rows: (S.Add(d1[rows]),)),
+             ((1, 2), lambda rows: (S.Add(d1[rows]), S.Add(d2[rows]))),
+             (2, lambda rows: S.Add(d2[rows]))]
+    cached = S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=edits)
+    np.testing.assert_allclose(cached[1], cached[0], atol=1e-6)
+    one = torch.ones((1, 1), dtype=torch.bool)
+    for r, seq in enumerate(SEQS):
+        last = torch.tensor([[len(seq) - 1]])
+        with S.edit_residual(tiny, 1, last, one, S.Add(d1[[r]])):
+            both = S.score(tiny, "cpu", [seq], [near_first[r]], [LABELS], PAD, batch_size=1, layer=2,
+                           positions=[[len(seq) - 1]], make_edit=lambda rows: S.Add(d2[[r]]))
+        np.testing.assert_allclose(cached[2, r], both[0], atol=1e-5)
+    # both layers act: the stacked result differs from either layer alone
+    assert np.abs(cached[2] - cached[0]).max() > 1e-4 and np.abs(cached[2] - cached[3]).max() > 1e-4
+
+
 def test_models_with_linear_attention_fall_back_to_full_passes(tiny, monkeypatch):
     """A recurrent layer's cache cannot be cropped, so score_last_edits must not use it."""
     monkeypatch.setattr(tiny.config, "layer_types", ["full_attention", "linear_attention", "full_attention"])
@@ -380,6 +408,61 @@ def test_models_with_linear_attention_fall_back_to_full_passes(tiny, monkeypatch
     out = S.score_last_edits(tiny, "cpu", SEQS, [True] * 3, ROWS, PAD, batch_size=2,
                              edits=[None, (1, lambda rows: S.Add(torch.zeros(len(rows), 32)))])
     assert out.shape == (2, 3) and len(calls) == 2
+
+
+def random_probes(layers, seed=3):
+    rng = np.random.default_rng(seed)
+    return [(layer, rng.normal(size=32), rng.normal(size=32), float(rng.normal())) for layer in layers]
+
+
+PROBE_EDITS_DELTA = torch.randn(3, 32, generator=torch.Generator().manual_seed(4))
+PROBE_EDITS = [None, (2, lambda rows: S.Add(PROBE_EDITS_DELTA[rows])), (1, lambda rows: S.Add(-PROBE_EDITS_DELTA[rows]))]
+
+
+def full_pass_probes(model, edits, probes):
+    """Probe logits [len(edits), n, len(probes)] from uncached full passes, one row at a time."""
+    out = np.zeros((len(edits), len(SEQS), len(probes)))
+    for e, spec in enumerate(edits):
+        for r, seq in enumerate(SEQS):
+            if spec is None:
+                _, hidden, _ = S.forward(model, "cpu", [seq], PAD, hidden=True)
+            else:
+                _, hidden, _ = S.forward(model, "cpu", [seq], PAD, hidden=True, layer=spec[0],
+                                         positions=[[len(seq) - 1]], edit=spec[1]([r]))
+            out[e, r] = S.probe_readout(hidden, probes)[0]
+    return out
+
+
+def test_probe_readouts_through_the_prefix_cache_equal_full_passes(tiny):
+    probes = random_probes((1, 2, 3))
+    near_first = [True, False, True]
+    lo, read = S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=PROBE_EDITS,
+                                  probes=probes)
+    assert read.shape == (len(PROBE_EDITS), len(SEQS), len(probes))
+    np.testing.assert_allclose(lo, S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2,
+                                                      edits=PROBE_EDITS), atol=1e-6)
+    np.testing.assert_allclose(read, full_pass_probes(tiny, PROBE_EDITS, probes), atol=1e-4)
+    # the edit at layer 2 leaves layers 1 and 2 as recorded unedited and moves layer 3
+    np.testing.assert_allclose(read[1, :, :2], read[0, :, :2], atol=1e-5)
+    assert np.abs(read[1, :, 2] - read[0, :, 2]).min() > 1e-3
+
+
+def test_probe_readouts_on_the_full_pass_fallback_equal_the_cached_path(tiny, monkeypatch):
+    probes = random_probes((1, 2, 3))
+    near_first = [True, False, True]
+    cached = S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=PROBE_EDITS,
+                                probes=probes)
+    # a stand-in that reports a linear-attention layer to score_last_edits while running the Qwen3,
+    # whose own forward cannot run one
+    linear = SimpleNamespace(layer_types=["full_attention", "linear_attention", "full_attention"])
+    recurrent = SimpleNamespace(config=SimpleNamespace(get_text_config=lambda: linear), model=tiny.model)
+    full_passes, real_forward = [], S.forward
+    monkeypatch.setattr(S, "forward", lambda model, *a, **k: full_passes.append(1) or real_forward(tiny, *a, **k))
+    fallback = S.score_last_edits(recurrent, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=PROBE_EDITS,
+                                  probes=probes)
+    assert len(full_passes) == 2 * len(PROBE_EDITS)     # two batches, one full pass per edit
+    np.testing.assert_allclose(fallback[0], cached[0], atol=1e-5)
+    np.testing.assert_allclose(fallback[1], cached[1], atol=1e-4)
 
 
 def confounded_bank(seed=0, d=40, noise=0.05):
