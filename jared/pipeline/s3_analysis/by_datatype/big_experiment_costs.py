@@ -1,4 +1,4 @@
-"""Cost model for the "first big experiment" (big_experiment_plan.md).
+"""Cost model for the "first big experiment" (history/big_experiment_plan_2026-11-19.md).
 
 Pure arithmetic, no model. Every rate below was measured on earlier box runs by
 pipeline/s3_analysis/by_datatype/run_throughput.py; prices are market assumptions. Change a constant and

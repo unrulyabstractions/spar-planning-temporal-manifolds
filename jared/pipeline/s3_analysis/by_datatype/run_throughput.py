@@ -1,4 +1,4 @@
-"""Measured throughput of earlier box runs, and prompt token counts (big_experiment_plan.md, Steps 1-2).
+"""Measured throughput of earlier box runs, and prompt token counts (history/big_experiment_plan_2026-11-19.md, Steps 1-2).
 
 Reads saved results only, runs no model. The tokenizer part needs transformers:
     ~/miniconda3/envs/mp/bin/python -m pipeline.s3_analysis.by_datatype.run_throughput ../../results/horizon

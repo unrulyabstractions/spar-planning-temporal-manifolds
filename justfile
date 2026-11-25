@@ -1,15 +1,18 @@
 # spar-planning-temporal-manifolds -- box verbs for this project.
 # Run `just` with no argument to see this list. Get a box with
 #
-#   just up 2h        # rent + provision; 2h is the expected use, shown in its label
+#   just box=probe up 2h   # rent + provision; 2h is the expected use, shown in its label
 #
 # or, for a box rented in the vast.ai console, paste its ssh line:
 #
-#   just new ssh -p 41234 root@ssh5.vast.ai -L 8080:localhost:8080
+#   just box=probe new ssh -p 41234 root@ssh5.vast.ai -L 8080:localhost:8080
 #
-# Every other verb then uses that box. They are the SPAR root verbs
-# (SPAR/justfile), run through the same SPAR/infra/vast.sh, except `push`,
-# which ships this checkout.
+# Then name the box on every verb: `just box=probe push`, `just box=probe ssh
+# "..."`. With no box= a verb uses the only box there is (up/new default to
+# "main") and refuses when several are up. `just status` lists every box.
+#
+# The verbs are the SPAR root verbs (SPAR/justfile), run through the same
+# SPAR/infra/vast.sh, except `push`, which ships this checkout.
 #
 # Verbs not defined here (up, label, search, doctor, vastai, adopt, services,
 # test) fall through to SPAR/justfile and run from SPAR/, so they work from
@@ -24,8 +27,10 @@ push_excludes := "--exclude '.*' --exclude '__pycache__' --exclude 'results' --e
 
 # SPAR/ is the nearest ancestor holding infra/vast.sh: the parent of the main
 # checkout, or several levels up from a worktree under .claude/worktrees/.
+# The box a verb acts on; passed through to SPAR/justfile on fallback too.
+box := ""
 spar := shell('d="$1"; while [ "$d" != / ] && [ ! -f "$d/infra/vast.sh" ]; do d="$(dirname "$d")"; done; echo "$d"', justfile_directory())
-vast := "bash " + quote(spar / "infra" / "vast.sh")
+vast := "BOX=" + quote(box) + " bash " + quote(spar / "infra" / "vast.sh")
 # Where this project lives on the box, whichever checkout or worktree ships it.
 box_project := "/workspace/SPAR/spar-planning-temporal-manifolds"
 
@@ -42,9 +47,9 @@ new +LINK:
 ssh *ARGS:
     @{{vast}} ssh {{quote(ARGS)}}
 
-# Forward the box's Jupyter to a local port. Foreground; ctrl-C to close.
-tunnel:
-    @{{vast}} tunnel
+# Forward the box's Jupyter to a local port (PORT, default 8888). Foreground; ctrl-C to close.
+tunnel PORT="":
+    @{{vast}} tunnel {{PORT}}
 
 # Ship this checkout to /workspace/SPAR/spar-planning-temporal-manifolds/ on the
 # box, then install jared/requirements.txt into the image's python. Local
@@ -72,7 +77,7 @@ push-dry:
     rsync -avzn --stats --mkpath {{push_excludes}} \
       -e "$rsh" {{quote(justfile_directory() + "/")}} "root@$host:{{box_project}}/" | tail -n 15
 
-# Pull the box's /workspace/results/ into SPAR/results/.
+# Pull the box's /workspace/results/ into SPAR/results/<box>/. `just box=all sync` does every box.
 sync:
     @{{vast}} sync
 
@@ -82,7 +87,7 @@ provision:
 
 # --- money ---------------------------------------------------------------
 
-# Instance state and dollars spent.
+# Every box's state and dollars spent (or only the one named with box=).
 status:
     @{{vast}} status
 

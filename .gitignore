@@ -35,3 +35,6 @@ CODE_STAMP.json
 # Box drivers and exported banks used by the evaluation runs (not committed by design)
 /_*.sh
 /_evaltype_banks/
+
+# Built copy of midterm_report/latex/report.pdf (tracked there)
+jared/report.pdf

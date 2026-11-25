@@ -4,13 +4,77 @@ Extracted 2026-11-09 from the docs, nothing new decided here. Where a doc says s
 find a decision for, it is in section 7.
 
 Citation keys (all relative to `jared/`; line numbers are the file's own):
-`plan` = `01_plan.md`; `31` = `31_goals_next_specs.md`; `README` = `pipeline/s2_steering/README.md`;
+`plan` = `history/01_plan_2026-11-19.md`; `31` = `history/31_goals_next_specs_2026-11-19.md`; `README` = `pipeline/s2_steering/README.md`;
 `07, 08, 09, 18, 21, 22, 25, 27, 28, 29, 30` = `pipeline/s2_steering/docs/NN_*.md`;
 `15c` = `15_spec_crossing.md`; `15s` = `15_spec_same_subspace_sweep.md`; `26s` / `26r` = `26_spec_overnight_choice_scan.md` / `26_results_overnight_choice_scan.md`;
 `16s` = `pipeline/s1_data_vectors/docs/16_spec_pristine_manifold.md`; `CLAUDE` = `/home/Jared/SPAR/CLAUDE.md`.
 Status tags: PRE-REG (criterion fixed before a run), DECIDED (Jared, dated), DEFAULT (in code/spec, no recorded decision),
 DRAFT (not approved), SUPERSEDED/RETRACTED (and by what). C = the regime contrast (section 1).
 
+
+### Human Summary
+
+Generally the types of steering are:
+
+
+**Data**
+	**Have some different domain prompts (eval)**
+		**General two choice decision making**
+	**Four-choice Eight-Choice**
+	**Free form** 
+		**Investment domain**
+	Second test 
+		Same as alan differently spaced 
+.
+	**Implicit is different than open ended!**
+	Explicit Horizons
+		4 / 8 option
+	Implicit Horizon
+		2 options
+	Explicit + 4/8 + domain switch
+
+
+Alan Soham we need to get:
+	For every layer + token position we want to steer at 
+		We need the manifold or different vectors for steering along the manifold.
+
+We should coordinate on what exact output
+
+Get activations straight from them.
+**Activation Patching with Donor Time Horizon**:
+	Patch at the number token
+	Top-8 Dim PCA subspace.
+
+**CAA**
+	Test CAA input 1 layer 1 token, and then every layer past as well as every token past addition.
+		Tokens 
+			Time Horizon Tokens
+				Right after
+			Change of Turn tokens 
+				Suffix newline \n
+
+
+
+
+
+
+**Specific Metrics / Baselines**:
+	Percentage of decisions changed (that are expected to change)
+		Percentage of decisions when steering just past the boundary that change
+		Percentage of decisions when steering just before the boundary that change.
+		(Epsilon perturbation from time horizon boundary) can be in units days seconds hours years etc...
+	Log odds of each Change
+	For four-choices
+		Same metrics
+
+**Baselines:**
+	Batching (try 2 different batch size)
+	Model size (generally increasing coherence)
+		Check baseline
+	Self activation patching from same time horizons
+	Yes/No order prompts
+	A/B labels for yes and no
+	 
 ## 0. If you only read one thing
 
 1. Every Stage 2 result is Qwen3-8B, thinking on, greedy, 3,072-token think cap, full bank (or a derived bank); thinking off is closed for new work (plan:187-194), though thinking-off stage A steering still ran on 2026-10-30 (see section 7).
