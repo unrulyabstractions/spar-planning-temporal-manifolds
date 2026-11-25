@@ -1,0 +1,2034 @@
+[
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_01",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Hi, I'm a single mom with two kids and I've been trying to get our finances sorted. My sister offered to help me out with a small windfall, but she wants me to choose between two ways of receiving it. The thing is, I really only care about money I can actually use for what's coming up: money that reaches me within {horizon} is useful to me, and anything after that won't change a thing for us. I've got a pretty tight budget and I'm not looking to gamble or take any risks. I don't have a financial advisor, so I figured I'd ask here. Here are the two ways she offered:\n{options}\nWhich one should I take?"
+   }
+  ],
+  "cue": "The thing is, I really only care about money I can actually use for what's coming up: money that reaches me within {horizon} is useful to me, and anything after that won't change a thing for us.",
+  "notes": "anxious single mother, sister's windfall"
+ },
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_02",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Retired machinist here, and I need a second opinion from people who know money better than I do. My brother-in-law finally offered to pay back what he owes me, but he's giving me a choice about how. I have a plan for this money, and it only works if the cash reaches me in time: only money I actually receive within {horizon} is any use to me, and I won't care about anything that shows up after that. I've never been a spreadsheet guy, so I'd appreciate plain talk. He wrote the two ways down for me:\n{options}\nWhich one should I tell him I want?"
+   }
+  ],
+  "cue": "I have a plan for this money, and it only works if the cash reaches me in time: only money I actually receive within {horizon} is any use to me, and I won't care about anything that shows up after that.",
+  "notes": "gruff retiree, brother-in-law repaying a debt"
+ },
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_03",
+  "messages": [
+   {
+    "role": "user",
+    "content": "ok so my grandma texted me saying she wants to give me some money for school stuff and she gave me two options (she is very into 'teaching me about patience' lol). honestly the only thing that matters is what I can get my hands on within {horizon}. past that it doesn't do anything for me since I'll have already dealt with whatever I needed it for. I'm on a tight budget, no savings, and I'm not great at this stuff. she wrote the two options in a text:\n{options}\nwhich one should I say yes to?"
+   }
+  ],
+  "cue": "honestly the only thing that matters is what I can get my hands on within {horizon}.",
+  "notes": "lowercase texting voice, college student and grandmother"
+ },
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_04",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I own a small neighborhood bakery and I am reviewing a settlement offered by a former supplier who has agreed to refund an overcharge. I have been presented with two alternative arrangements. For planning purposes I must be precise: I can only make use of funds that arrive within {horizon}, and funds received after that point will not serve the purpose I have in mind and should be treated as worthless to the business. We are profitable but not flush, and I would like a clear recommendation. The two arrangements are as follows.\n{options}\nWhich should I accept?"
+   }
+  ],
+  "cue": "For planning purposes I must be precise: I can only make use of funds that arrive within {horizon}, and funds received after that point will not serve the purpose I have in mind and should be treated as worthless to the business.",
+  "notes": "formal, precise small-business owner"
+ },
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_05",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My husband and I are both nurses, and we've just been told we'll get a payout from a work settlement. HR gave us two ways to take it, and we've been going back and forth at the kitchen table for ages. Here's what we agreed on: the money is only useful to us if it lands within {horizon}, and after that we'd have no use for it at all. We're not big risk takers and we have two kids in the house, so please keep it simple. The offers:\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "Here's what we agreed on: the money is only useful to us if it lands within {horizon}, and after that we'd have no use for it at all.",
+  "notes": "dual-income nurse couple, kitchen-table deliberation"
+ },
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_06",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Well, I never win anything, but I won a drawing at my church and the organizers say I can choose how to collect. I'm 74 and a bit suspicious of anything involving money, so I wrote down the two choices and I'd like someone sensible to tell me what to do. I'll tell you now: I only care about money I get within {horizon}, and anything after that is of no use to me whatsoever, so please don't count it. My late husband always handled this sort of thing and I'm out of practice. Here they are:\n{options}\nWhat should I pick?"
+   }
+  ],
+  "cue": "I'll tell you now: I only care about money I get within {horizon}, and anything after that is of no use to me whatsoever, so please don't count it.",
+  "notes": "elderly, wary church raffle winner"
+ },
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_07",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Okay, freelance illustrator here, and my client (bless them) pays whenever the moon is in the right phase. They've just offered me two ways to settle an old invoice. Real talk: the money only counts if it reaches me within {horizon}, because past that window I'll have either solved my problem another way or given up and become a goat farmer. My finances are a mess of sticky notes and optimism. The client's two offers:\n{options}\nWhich one do I take?"
+   }
+  ],
+  "cue": "Real talk: the money only counts if it reaches me within {horizon}, because past that window I'll have either solved my problem another way or given up and become a goat farmer.",
+  "notes": "jokey freelancer, unpaid invoice"
+ },
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_08",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm on the board of a small neighborhood tool-lending library, and we got a letter from the city offering us a grant payout in one of two forms. We need to answer by our next meeting, so I'd like a straight answer. For our purposes, the grant is only worth something if it arrives within {horizon}; after that we will not need it, so later money does nothing for us. We're volunteers, not accountants. The two payout schedules:\n{options}\nWhich should I tell the board to choose?"
+   }
+  ],
+  "cue": "For our purposes, the grant is only worth something if it arrives within {horizon}; after that we will not need it, so later money does nothing for us.",
+  "notes": "volunteer board member, municipal grant"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_01",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 34 and my wife and I have lived in our apartment for 6 years now, which is longer than I ever thought we'd stay. Our landlord just offered us a buyout to leave early, and we get to pick how it's paid. For what it's worth, my coworker waited 18 months for a similar payout and complained the whole time, and our lease technically runs for 3 more years. None of that matters for this decision, though. What matters is that we need the money to arrive within {horizon}: that is the only window in which it helps us, and money after it is no use. The landlord's two options:\n{options}\nWhich should we accept?"
+   }
+  ],
+  "cue": "What matters is that we need the money to arrive within {horizon}: that is the only window in which it helps us, and money after it is no use.",
+  "notes": "distractors: 6 years lived, 18 months coworker, 3 years lease left; apartment buyout"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_02",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Quick background: I bought my truck 5 years ago with a 7-year loan, and the dealer's warranty covered the first 3 years. Now I've got a small windfall from an insurance claim and two payout choices. Honestly, the loan and the warranty are old history and have nothing to do with this. The thing I need is simple: I can only use money that comes in within {horizon}, and nothing after that. The insurer's two choices:\n{options}\nWhich is better for me?"
+   }
+  ],
+  "cue": "The thing I need is simple: I can only use money that comes in within {horizon}, and nothing after that.",
+  "notes": "distractors: 5 years ago, 7-year loan, 3-year warranty; insurance claim"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_03",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Our community garden has been running for 12 years, and the city leased us the lot for 10 years the first time around. Last spring a donor told us they once waited 2 years for a pledge to clear, which is a story I'd rather not repeat to the volunteers. The board has decided that, whatever else, the money is only useful to the garden if we receive it within {horizon}; after that the need passes and we won't be able to use it. A foundation sent us two payment schedules:\n{options}\nWhich should I recommend to the board?"
+   }
+  ],
+  "cue": "The board has decided that, whatever else, the money is only useful to the garden if we receive it within {horizon}; after that the need passes and we won't be able to use it.",
+  "notes": "distractors: 12 years running, 10-year lease, 2-year pledge wait; community garden"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_04",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My mother is 81 and has lived in the same house for 45 years. Her late husband's old employer owes her a small settlement and has offered two ways to pay it. Her doctor says her hip will take about 6 weeks to heal, but that has nothing to do with what we need here. What matters is that she can only use money that reaches her within {horizon}; anything later is of no help to her. The settlement choices are:\n{options}\nWhich should I advise her to take?"
+   }
+  ],
+  "cue": "What matters is that she can only use money that reaches her within {horizon}; anything later is of no help to her.",
+  "notes": "distractors: 45 years in house, 6 weeks hip healing; elderly mother's settlement"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_05",
+  "messages": [
+   {
+    "role": "user",
+    "content": "We opened our shop 3 years ago and our supplier gives us 90 days to pay invoices, though we've never used the full 90 days. Our competitor down the street closed after 11 months, which still makes me nervous. A customer owes us a large balance and has offered two arrangements. To be clear, the only thing that counts for us is receiving cash within {horizon}, since that is when our own bill comes due; later money won't help. The two arrangements:\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "To be clear, the only thing that counts for us is receiving cash within {horizon}, since that is when our own bill comes due; later money won't help.",
+  "notes": "distractors: 3 years open, 90-day terms, 11-month competitor; shop receivable"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_06",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My brother and I inherited a small account from our aunt, who lived to be 96 and spent 30 years teaching piano. The estate lawyer gave us two ways to receive our share. I know some people wait 6 months for these things, but our situation is different: we have a specific bill and only need money that arrives within {horizon}, because anything after that is moot. The lawyer's offers:\n{options}\nWhich one should I pick for us?"
+   }
+  ],
+  "cue": "I know some people wait 6 months for these things, but our situation is different: we have a specific bill and only need money that arrives within {horizon}, because anything after that is moot.",
+  "notes": "distractors: 30 years teaching, 6 months typical wait, 96 lifespan; estate share"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_07",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I graduated 2 years ago, and my student loan is on a 10-year repayment plan with 8 years to go. My cousin got a similar bonus last spring and waited 5 months for it. Anyway, my employer is giving me a retention bonus and I can take it in one of two ways. The money only helps me if I can use it within {horizon}; that's the window I'm planning around, and later money is no use. Please ignore the loan details, they're just context. The two options:\n{options}\nWhich one should I take?"
+   }
+  ],
+  "cue": "The money only helps me if I can use it within {horizon}; that's the window I'm planning around, and later money is no use.",
+  "notes": "distractors: 2 years since graduating, 10-year plan, 8 years left, 5-month wait; retention bonus"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_08",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Our homeowners association has been collecting dues for 15 years, and the clubhouse roof carries a 20-year warranty that has nearly run out. Last time we ran a special project it took 14 months to finish. This time the board only cares about funds that arrive within {horizon}, since that is the only period in which the repair money can be put to use. The insurer has offered us two ways to receive its payout for the storm damage:\n{options}\nWhich should I recommend?"
+   }
+  ],
+  "cue": "This time the board only cares about funds that arrive within {horizon}, since that is the only period in which the repair money can be put to use.",
+  "notes": "distractors: 15 years of dues, 20-year warranty, 14-month project; HOA roof insurance payout"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_01",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a helpful assistant."
+   },
+   {
+    "role": "user",
+    "content": "Subject: Insurance settlement - need a decision\n\nHi all,\n\nThanks for coming to the last board meeting. As promised, here is where we stand on the settlement from the storm damage at the equipment shed. You'll remember the shed collapsed in the first big storm and we lost the goals, the nets, and about forty practice kits. Our insurer has finally come back with a proposal, and I want everyone's input before I reply to them.\n\nA little background for the newer folks. The league has been running on a shoestring since the field fees went up. Registration brings in most of our cash, but it all arrives in a lump at the start of the season and goes out again almost immediately on referee fees, field permits, and uniforms. Right now our account is fairly thin, and several of the coaches have been paying out of pocket for cones and water bottles.\n\nHere is the key point I need everyone to keep in mind. The replacement equipment order has to be placed, and the supplier will only hold our price if we can pay in time, so the settlement is only useful to us if it arrives within {horizon}. Money that comes in after that is, practically speaking, not going to help with the order, since we'll have had to either borrow or cancel it. I'd rather not borrow. Dana has already looked at the credit card option and it's not great.\n\nI also want to flag that the adjuster was pleasant about all of this and didn't push us in either direction. They said both arrangements are standard and that neither carries extra fees or conditions on our side. I went through the numbers with them on the phone and double-checked the arithmetic myself afterwards, so I'm confident the figures below are right.\n\nI know a few of you have strong feelings about keeping a reserve for next season's field rentals. That is a fair concern and we can discuss the reserve at the next meeting, but for this email I'm only asking about the settlement itself. Please don't reply-all with the whole history of the shed; I promise I remember it.\n\nThe insurer's two proposals are below.\n\n{options}\n\nBased on what I've told you, which one should I tell the insurer we want?"
+   }
+  ],
+  "cue": "The replacement equipment order has to be placed, and the supplier will only hold our price if we can pay in time, so the settlement is only useful to us if it arrives within {horizon}.",
+  "notes": "youth soccer league treasurer email to board; system message; storm settlement"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_02",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Posted in: Family & Money > Inheritance questions\n\nTitle: Mom's estate, two siblings, one disagreement. Help?\n\nHi everyone, long-time lurker, first-time poster. Please be gentle, it's been a rough stretch.\n\nMy mother passed away this spring. She left a modest account that my brother and I split equally, and the attorney handling things has now come back with two ways for us to receive it. My brother and I have been talking past each other for a couple of weeks, so I thought I'd get some outside perspective before we sign anything.\n\nA bit about us. I'm a high school librarian, my husband works in facilities for the county, and we have two teenagers. We aren't struggling, but we also aren't flush. My brother lives a few states away, runs a small landscaping company, and has had a bumpy time with cash flow since his main client pulled out. We love each other, but we handle money very differently. He tends to want everything now. I tend to want to wait and see what's offered.\n\nWhat we both agree on is the following. Whichever payout we choose, the cash is only useful to the household if it lands within {horizon}; after that the reason we need it will have passed. I'm not going to get into the details of what it's for, partly because it's personal and partly because it isn't what I'm asking about. Just take it as given.\n\nThe attorney was very clear that both options are legitimate and that there are no hidden fees. She also mentioned that the choice has to be made jointly, which is why we're stuck. I've been reading the posts here for a while and I know there are folks who like to relitigate the whole situation, so I'll pre-empt that: we are not contesting the will, we're not hiring a second lawyer, and we are not going to sell the house. We just need to pick.\n\nThank you in advance, and thank you to everyone who has helped others here. Some of those threads got me through a hard few weeks.\n\nThe two options from the attorney:\n\n{options}\n\nWhich of these two should we choose?"
+   }
+  ],
+  "cue": "Whichever payout we choose, the cash is only useful to the household if it lands within {horizon}; after that the reason we need it will have passed.",
+  "notes": "forum post, siblings splitting an inheritance; no system message"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_03",
+  "messages": [
+   {
+    "role": "user",
+    "content": "INTERNAL MEMO\nTo: Finance Committee\nFrom: Priya Raman, Controller\nRe: Customer payment proposal - Hartfield account\n\nColleagues,\n\nI am writing to get a recommendation before I respond to the customer's accounts payable group. As most of you know, the Hartfield account has been slow-paying for a while, and our relationship with their procurement lead is good but strained. They have now sent a written proposal offering us two ways to settle the outstanding balance on the last three deliveries.\n\nSome context for those who have not followed the account. The balance arose after a dispute over a pallet of components that arrived with cosmetic damage. We shipped a replacement at our own expense and credited a portion of the invoice, and the customer has since confirmed that no further claims are outstanding. The remaining amount is therefore undisputed. Legal has reviewed the proposal and has no objection to either arrangement.\n\nOn our side, the situation is as follows. We are finishing a plant retrofit, and the contractor's final invoice will come due as work wraps up. Because our own invoice from the contractor is due, the money is only useful to us if it arrives within {horizon}, and anything received after that does not help our position. I have asked treasury to model the cash position for our other obligations, and it is tight but manageable provided this balance is resolved on the right terms. I do not want to draw on the revolving line if I can avoid it, because the covenants on that line are restrictive and I would prefer to preserve headroom for the fourth-line expansion.\n\nI also want to note, for the record, that the sales team would like us to maintain goodwill with this customer, and I agree that it matters. However, neither of the options below has any bearing on future orders, pricing, or credit terms. The customer's controller confirmed that in writing. So this is a clean choice between two payment structures.\n\nPlease reply by the end of your next working session so I can get back to them. If you need the full ledger detail, I can circulate it separately.\n\nThe customer's two proposals:\n\n{options}\n\nWhich of these should we accept?"
+   }
+  ],
+  "cue": "Because our own invoice from the contractor is due, the money is only useful to us if it arrives within {horizon}, and anything received after that does not help our position.",
+  "notes": "internal CFO-style memo, slow-paying customer; no system message"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_04",
+  "messages": [
+   {
+    "role": "user",
+    "content": "[Group chat: Lakeside Cousins]\n\nMarcus: ok everyone, quick recap on the cabin so we can finally stop going in circles\nMarcus: grandpa's cabin sold. buyer offered two ways to pay us our share and we have to tell the agent\nElena: I thought we had already decided\nMarcus: no. we decided to sell. we did NOT decide how to take the money\nJo: this is why I hate group chats\nElena: lol same\nMarcus: i'm going to put down where I'm coming from. i have a kid starting at a new school, the car is on its last legs, and honestly we've had a rough stretch. I only need the money if it reaches us within {horizon}, since that is how long we can cover the gap ourselves; after that it won't matter either way. so please don't answer from your own situation, answer from mine\nJo: fair\nElena: I'd normally say take the biggest number and be patient but ok, you've told us your constraint\nMarcus: thank you. also nobody is mad at anybody, I just want a clean answer\nJo: do we have a lawyer on this\nMarcus: yes, she signed off on both. the agent said there is no tax difference between the two for us and no fees\nElena: and nothing in either one changes who owns what\nMarcus: correct. title is already transferred. so it's literally just which payout we prefer\nJo: ok so what are the options\nMarcus: pasting them from the agent's email now\nElena: still think we should have kept the cabin\nMarcus: Elena\nElena: sorry. moving on\nMarcus: here they are\n\n{options}\n\nMarcus: so I'm asking all of you, and also asking the assistant to weigh in since it doesn't have a dog in this fight. Which one should I tell the agent we want?"
+   }
+  ],
+  "cue": "I only need the money if it reaches us within {horizon}, since that is how long we can cover the gap ourselves; after that it won't matter either way.",
+  "notes": "group chat transcript, cousins selling a cabin; first-person for one speaker"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_05",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Hello, I volunteer on the building committee for our parish, and I'd like help thinking through an offer we received. Let me give you the background first."
+   },
+   {
+    "role": "assistant",
+    "content": "Of course. Please go ahead and share the background, and then the offer, and I will help you think it through."
+   },
+   {
+    "role": "user",
+    "content": "Thanks. Here is the background. Our parish hall has needed repairs for a long time. The roof leaks, the kitchen wiring is old, and the fire inspector gave us a list. We held a bake sale, a raffle, a silent auction, and two car washes, and between them we raised a fair amount, but the congregation is small and mostly retired, so everything has been hard-won. Father Tomas has been wonderful about all of it and the whole committee has put in a great deal of effort.\n\nLast month, a family that used to attend our parish and has since moved away heard about the work and offered to make a gift. They are generous people and they have asked us to choose between two ways of receiving it. They were quite specific that they do not want to tell us what to do, and that the choice is entirely ours. Their lawyer has confirmed that both options come with no strings and no hidden conditions. We are keeping the money in view for a specific purpose, and it is only useful to the committee if it arrives within {horizon}; payments after that will not be able to be applied to it. I'm being careful to explain this because last time we had a donor gift, there was some confusion about what we could actually spend and when, and I don't want a repeat.\n\nI should say that nobody on the committee is a financial professional. Our treasurer is a retired schoolteacher, I am a former postal worker, and the others are a mix of neighbors and friends. We have a decent grasp of the parish's day-to-day numbers, but this sort of choice is beyond what we usually deal with. If you can explain your reasoning in plain terms, we would be very grateful, because I'll need to explain it to everyone at the next committee gathering.\n\nI'll also add that the donors asked us to reply promptly and politely, and I plan to thank them whichever way we go. They said they would be happy either way, which is kind of them but not much help to us.\n\nHere are the two choices as the donors wrote them:\n\n{options}\n\nWhich one should the committee accept?"
+   }
+  ],
+  "cue": "We are keeping the money in view for a specific purpose, and it is only useful to the committee if it arrives within {horizon}; payments after that will not be able to be applied to it.",
+  "notes": "multi-turn: user intro, assistant ack, user with details; parish hall gift"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_06",
+  "messages": [
+   {
+    "role": "user",
+    "content": "From: Aisha Okonkwo, Executive Director\nTo: Finance Committee volunteers\nSubject: Settlement of the Westbrook pledge - please advise\n\nDear friends,\n\nThank you again for the time you give to this organization. I wanted to put in writing a question that came up at the end of our last meeting, so that everyone has the same information in front of them and nobody has to rely on memory.\n\nYou may recall that the Westbrook family pledged a gift to our after-school literacy program some time ago. They have been wonderful partners, and the pledge was always meant to be honored in full. Their advisor has now written to us with two alternative ways to deliver it, and has asked that we choose the one that works best for us. The advisor was careful to say that the family does not mind either way and that nothing about our relationship will change depending on our answer.\n\nLet me restate how this fits into our budget. The program runs on a combination of small grants, individual donors, and one corporate sponsor, and we have always operated with very little slack. We have two part-time coordinators, a rotating group of tutors, and a lease on the room we use at the community center. Our program only benefits from this money if it is received within {horizon}, because that is when the matching funds we have already lined up are available. The matching funds are not something we can move, and I have confirmed that with the other funder in writing, so please treat that as settled rather than something to debate.\n\nA few smaller points. Our auditor has reviewed both options and sees no accounting or compliance problem with either one. Our board chair has said she is comfortable with whichever the committee prefers, and I have told the Westbrooks' advisor that we will reply as soon as we have our answer. I do not expect any surprises on their side.\n\nI know several of you like to dig into the details, so I will say clearly that I would rather you not spend your energy on tax questions or on whether we should ask for something else entirely. The family has been generous, and I do not want to renegotiate. What I need from this committee is a straightforward recommendation about which structure to accept.\n\nHere are the two options as the advisor described them:\n\n{options}\n\nGiven all of this, which one should we accept?"
+   }
+  ],
+  "cue": "Our program only benefits from this money if it is received within {horizon}, because that is when the matching funds we have already lined up are available.",
+  "notes": "nonprofit director email, after-school literacy pledge; matching funds constraint"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_07",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My sister sent me this email last night and I honestly don't know what to make of it. I'm pasting it below in full, because I'd like a second opinion on what she is asking me to decide, since it affects both of us.\n\n---\n\nHey Jen,\n\nI hope you're doing okay and the kids are surviving school. I wanted to write this out instead of calling because every time we talk about Mom and Dad's boat, we end up on the phone for two hours and I forget half of what I meant to say.\n\nSo, as you know, the boat finally sold. The buyer was a nice couple from out of state, and I think Dad would have approved of them. The broker has now sent us two ways to receive the proceeds, and because the title was in both our names, you and I have to agree before anything goes ahead. I know this isn't the kind of thing either of us wanted to be dealing with, but it's what we've got.\n\nI talked to Ryan about it and I also looked at what we each need. Whichever you choose, only money that has reached me within {horizon} can be used for the purchase we are planning, so please evaluate the options with that in mind. I know you might have a different purpose in mind, and if you do, please tell me, but I'm assuming we are on the same page about this. If we aren't, we'll need to sort that out before we reply to the broker.\n\nThe broker says both options are legitimate and there are no fees or conditions on our side. She also said there is nothing to be gained by waiting, since the buyer is ready to close either way. I asked her about taxes and she said they are the same under either choice. So I think it really does come down to which of the two we prefer.\n\nI'm copying the two options below exactly as she wrote them. I'd like you to think about it and tell me which you'd go for. I'll go along with whatever we agree on, I just don't want us to end up resenting each other over a boat.\n\nLove you lots,\nDani\n\n{options}\n\n---\n\nOK, that's her email. She says the money only counts for us if it arrives in the window she mentioned. Which one should I tell her I want?"
+   }
+  ],
+  "cue": "Whichever you choose, only money that has reached me within {horizon} can be used for the purchase we are planning, so please evaluate the options with that in mind.",
+  "notes": "forwarded sibling email about selling parents' boat; wrapped in a user request"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_08",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a careful financial assistant. Keep your answers concise."
+   },
+   {
+    "role": "user",
+    "content": "Hi, I'm the owner of a small print shop, about nine employees, and I do the books myself with help from a part-time bookkeeper named Walt. I'm writing this the way I would write it to Walt, so apologies if it rambles.\n\nWalt, here's where we are. The city finally paid out on the contract dispute from the election-signs job. You'll remember we printed all those yard signs and then the campaign said the colors were wrong, even though we matched the swatch they sent. We went to mediation, I think you came to one of the sessions, and the mediator awarded us a payment. The city's finance office has now emailed me two ways they can pay it, and they want my answer so they can set it up.\n\nI have been going back and forth for a while. I'm not an accountant, and I'd like to understand the tradeoffs well enough to explain them to my wife, who co-signed our equipment loan and has opinions. She's usually right, which is annoying. Cash is only useful to the business if it lands within {horizon}; the line of credit we would otherwise rely on will not be available after that. I wanted to spell that out because it's the whole reason I'm asking, and it should drive the answer. It's not that I want to be greedy or conservative, it's just how things line up for us.\n\nOther stuff you should know. The press that we leased has been giving us trouble and the repair estimate came in higher than I hoped. Our biggest regular customer, the dental group, has been paying promptly, which helps. Two of our people asked about raises and I told them we would talk once this was settled. I don't want to make promises I can't keep, so I want to know what we can count on before I say anything.\n\nThe city's finance office told me, and I wrote this down, that there is no difference in taxes or paperwork between the two arrangements, and that neither one affects my right to appeal anything else. I checked with the lawyer and she said the same.\n\nSo, here are the two ways they offered, copied straight from the email:\n\n{options}\n\nWhich one should I tell them I want?"
+   }
+  ],
+  "cue": "Cash is only useful to the business if it lands within {horizon}; the line of credit we would otherwise rely on will not be available after that.",
+  "notes": "small print shop owner writing to bookkeeper; system message; contract dispute award"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_01",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My landlord told me that the rent has to be in his hands before this pay cycle ends, and I'm still short. There's a notice taped to my door and I'm trying not to panic. I have two choices:\n{options}\nWhich one should I pick?"
+   }
+  ],
+  "cue": "My landlord told me that the rent has to be in his hands before this pay cycle ends, and I'm still short.",
+  "interval_years": [
+   0.01,
+   0.035
+  ],
+  "notes": "overdue rent, short pay cycle"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_02",
+  "messages": [
+   {
+    "role": "user",
+    "content": "The hospice nurse told me I probably only have a short while left, and I'm arranging gifts for my grandchildren. I want to give them something real while I can still see their faces. I can only take one of these:\n{options}\nWhich should I go with?"
+   }
+  ],
+  "cue": "The hospice nurse told me I probably only have a short while left, and I'm arranging gifts for my grandchildren.",
+  "interval_years": [
+   0.02,
+   0.07
+  ],
+  "notes": "terminally ill, arranging gifts; vague about how short"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_03",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My car's transmission just died and I can't get to my job until it's fixed. The shop won't release it until I pay them, and my boss is already annoyed. I've narrowed it down to these two.\n{options}\nWhich one would you pick?"
+   }
+  ],
+  "cue": "My car's transmission just died and I can't get to my job until it's fixed.",
+  "interval_years": [
+   0.01,
+   0.035
+  ],
+  "notes": "car repair needed to keep job"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_04",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm standing at a currency exchange counter and my flight boards before sunrise. I need local cash for the cab and the first few meals when I land. My options are:\n{options}\nWhat would you choose for me?"
+   }
+  ],
+  "cue": "I'm standing at a currency exchange counter and my flight boards before sunrise.",
+  "interval_years": [
+   0.002,
+   0.007
+  ],
+  "notes": "traveler at the airport; hours-scale"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_05",
+  "messages": [
+   {
+    "role": "user",
+    "content": "A pipe burst in my kitchen, and the plumber is sitting in my driveway waiting for a deposit before he starts. Water is still dripping through the ceiling below. Someone offered me this choice:\n{options}\nWhich do you recommend?"
+   }
+  ],
+  "cue": "A pipe burst in my kitchen, and the plumber is sitting in my driveway waiting for a deposit before he starts.",
+  "interval_years": [
+   0.005,
+   0.018
+  ],
+  "notes": "emergency plumbing deposit; hours-to-days"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_06",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I sell lemonade and snacks at a fair that packs up as soon as this event ends. I need to restock from the wholesaler before the crowd thins out. Help me decide between these:\n{options}\nWhich one makes more sense?"
+   }
+  ],
+  "cue": "I sell lemonade and snacks at a fair that packs up as soon as this event ends.",
+  "interval_years": [
+   0.003,
+   0.01
+  ],
+  "notes": "fair vendor, event-bound"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_07",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My wedding is coming up fast and the venue wants the balance paid before the invitations go out. I'm also still waiting on the florist's quote. I can only take one of these:\n{options}\nWhich should I go with?"
+   }
+  ],
+  "cue": "My wedding is coming up fast and the venue wants the balance paid before the invitations go out.",
+  "interval_years": [
+   0.06,
+   0.2
+  ],
+  "notes": "wedding balance, a couple of months"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_08",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My baby is due very soon and I haven't even bought a crib or a car seat. My partner says we should have it all ready before the hospital bag is packed. I've narrowed it down to these two.\n{options}\nWhich one would you pick?"
+   }
+  ],
+  "cue": "My baby is due very soon and I haven't even bought a crib or a car seat.",
+  "interval_years": [
+   0.04,
+   0.14
+  ],
+  "notes": "late-pregnancy purchases"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_09",
+  "messages": [
+   {
+    "role": "user",
+    "content": "School starts again soon and I have three kids who need shoes, backpacks and supplies. Everything is on sale right now, but only for a short stretch. My options are:\n{options}\nWhat would you choose for me?"
+   }
+  ],
+  "cue": "School starts again soon and I have three kids who need shoes, backpacks and supplies.",
+  "interval_years": [
+   0.05,
+   0.15
+  ],
+  "notes": "back-to-school shopping"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_10",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I just finished my paperwork and I owe a tax bill that's due at the next filing deadline, which is right around the corner. I'd rather not borrow to cover it. Someone offered me this choice:\n{options}\nWhich do you recommend?"
+   }
+  ],
+  "cue": "I just finished my paperwork and I owe a tax bill that's due at the next filing deadline, which is right around the corner.",
+  "interval_years": [
+   0.06,
+   0.2
+  ],
+  "notes": "tax bill due soon"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_11",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm defending my thesis shortly and need to pay the binding and filing fees before then. My stipend is nearly gone. Help me decide between these:\n{options}\nWhich one makes more sense?"
+   }
+  ],
+  "cue": "I'm defending my thesis shortly and need to pay the binding and filing fees before then.",
+  "interval_years": [
+   0.04,
+   0.14
+  ],
+  "notes": "graduate student fees before defense"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_12",
+  "messages": [
+   {
+    "role": "user",
+    "content": "The big family gathering where everyone swaps presents is coming up fast, and I'm trying to put together gifts for everyone. I'd like to shop before the crowds hit the stores. Here's what's on the table.\n{options}\nWhich is the better choice?"
+   }
+  ],
+  "cue": "The big family gathering where everyone swaps presents is coming up fast, and I'm trying to put together gifts for everyone.",
+  "interval_years": [
+   0.08,
+   0.25
+  ],
+  "notes": "gift shopping, a couple of months"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_13",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm a college student heading to a study-abroad program as soon as classes at my university wrap up. I need spending money for rent and food while I'm there. I've narrowed it down to these two.\n{options}\nWhich one would you pick?"
+   }
+  ],
+  "cue": "I'm a college student heading to a study-abroad program as soon as classes at my university wrap up.",
+  "interval_years": [
+   0.15,
+   0.5
+  ],
+  "notes": "study-abroad spending money"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_14",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I work on a ski resort crew, the lifts close soon, and I need to bridge the gap until the resort starts hiring again when the snow returns. I've got a van and a very small cushion. My options are:\n{options}\nWhat would you choose for me?"
+   }
+  ],
+  "cue": "I work on a ski resort crew, the lifts close soon, and I need to bridge the gap until the resort starts hiring again when the snow returns.",
+  "interval_years": [
+   0.2,
+   0.6
+  ],
+  "notes": "seasonal worker gap"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_15",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I run a small landscaping crew, and the cold weather means almost no work until the ground thaws. Payroll for my three guys still has to go out. Someone offered me this choice:\n{options}\nWhich do you recommend?"
+   }
+  ],
+  "cue": "I run a small landscaping crew, and the cold weather means almost no work until the ground thaws.",
+  "interval_years": [
+   0.2,
+   0.55
+  ],
+  "notes": "off-season payroll"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_16",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm taking a short break from college to work at a warehouse before I go back to classes. I'm trying to save enough to cover my textbooks and a housing deposit. Help me decide between these:\n{options}\nWhich one makes more sense?"
+   }
+  ],
+  "cue": "I'm taking a short break from college to work at a warehouse before I go back to classes.",
+  "interval_years": [
+   0.25,
+   0.6
+  ],
+  "notes": "gap-semester student"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_17",
+  "messages": [
+   {
+    "role": "user",
+    "content": "We just had an offer accepted on a house, and we need the down payment ready at closing. Our agent says these sales tend to move quickly. Here's what's on the table.\n{options}\nWhich is the better choice?"
+   }
+  ],
+  "cue": "We just had an offer accepted on a house, and we need the down payment ready at closing.",
+  "interval_years": [
+   0.1,
+   0.35
+  ],
+  "notes": "down payment at closing"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_18",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I farm vegetables and I need to cover seed, fuel and wages until the harvest comes in and sells. The bank has been patient, but not endlessly. Two offers came in.\n{options}\nWhich one is better for me?"
+   }
+  ],
+  "cue": "I farm vegetables and I need to cover seed, fuel and wages until the harvest comes in and sells.",
+  "interval_years": [
+   0.2,
+   0.6
+  ],
+  "notes": "farmer until harvest"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_19",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I deferred my college admission so I could work and travel before I start. I'm trying to figure out how to make my savings stretch until I enroll. My options are:\n{options}\nWhat would you choose for me?"
+   }
+  ],
+  "cue": "I deferred my college admission so I could work and travel before I start.",
+  "interval_years": [
+   0.5,
+   1.5
+  ],
+  "notes": "deferred admission"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_20",
+  "messages": [
+   {
+    "role": "user",
+    "content": "We just found out we're expecting and want a cushion built up before the baby arrives. We're both worried about me stopping work. Someone offered me this choice:\n{options}\nWhich do you recommend?"
+   }
+  ],
+  "cue": "We just found out we're expecting and want a cushion built up before the baby arrives.",
+  "interval_years": [
+   0.5,
+   1.0
+  ],
+  "notes": "early pregnancy savings cushion"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_21",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I just got laid off, and my severance will cover rent for a while but not forever. I'm interviewing, though the market in my field is slow. Help me decide between these:\n{options}\nWhich one makes more sense?"
+   }
+  ],
+  "cue": "I just got laid off, and my severance will cover rent for a while but not forever.",
+  "interval_years": [
+   0.4,
+   1.2
+  ],
+  "notes": "laid off, job search; fairly vague"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_22",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm a teacher who has been granted a sabbatical that starts once this school session ends. I want to fund a research trip without touching my retirement. Here's what's on the table.\n{options}\nWhich is the better choice?"
+   }
+  ],
+  "cue": "I'm a teacher who has been granted a sabbatical that starts once this school session ends.",
+  "interval_years": [
+   0.5,
+   1.5
+  ],
+  "notes": "teacher sabbatical"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_23",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm planning to open a bakery storefront as soon as the lease on the corner space opens up. I've already picked out the ovens. Two offers came in.\n{options}\nWhich one is better for me?"
+   }
+  ],
+  "cue": "I'm planning to open a bakery storefront as soon as the lease on the corner space opens up.",
+  "interval_years": [
+   0.5,
+   1.5
+  ],
+  "notes": "small-business opening"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_24",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I accepted a job in another country that starts once the project I'm on now wraps up, and I have to cover relocation costs. The company will reimburse me, eventually. I have two choices:\n{options}\nWhich one should I pick?"
+   }
+  ],
+  "cue": "I accepted a job in another country that starts once the project I'm on now wraps up, and I have to cover relocation costs.",
+  "interval_years": [
+   0.4,
+   1.2
+  ],
+  "notes": "overseas relocation"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_25",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm in the middle of my undergraduate degree and I'd like to have savings ready for when I graduate and start grad school. I currently work part-time at a campus cafe. Someone offered me this choice:\n{options}\nWhich do you recommend?"
+   }
+  ],
+  "cue": "I'm in the middle of my undergraduate degree and I'd like to have savings ready for when I graduate and start grad school.",
+  "interval_years": [
+   1.5,
+   4
+  ],
+  "notes": "undergrad saving for grad school"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_26",
+  "messages": [
+   {
+    "role": "user",
+    "content": "We rent, and we want to buy our first home once our lease runs out and our credit improves. We've got a toddler and a very patient landlord. Help me decide between these:\n{options}\nWhich one makes more sense?"
+   }
+  ],
+  "cue": "We rent, and we want to buy our first home once our lease runs out and our credit improves.",
+  "interval_years": [
+   2,
+   5
+  ],
+  "notes": "first-home saving, lease end"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_27",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My teenage son just got his learner's permit, and we're putting money aside for his first car. He keeps sending me listings. Here's what's on the table.\n{options}\nWhich is the better choice?"
+   }
+  ],
+  "cue": "My teenage son just got his learner's permit, and we're putting money aside for his first car.",
+  "interval_years": [
+   1,
+   3
+  ],
+  "notes": "teen's first car"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_28",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm enrolled in a nursing program and need to cover tuition until I pass my licensing exam. I'm picking up extra work whenever I can. Two offers came in.\n{options}\nWhich one is better for me?"
+   }
+  ],
+  "cue": "I'm enrolled in a nursing program and need to cover tuition until I pass my licensing exam.",
+  "interval_years": [
+   1.5,
+   3.5
+  ],
+  "notes": "nursing student"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_29",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I run a small startup with no revenue yet, and I need the money to last until our product reaches paying customers. There are four of us, and nobody takes a salary. I have two choices:\n{options}\nWhich one should I pick?"
+   }
+  ],
+  "cue": "I run a small startup with no revenue yet, and I need the money to last until our product reaches paying customers.",
+  "interval_years": [
+   1.5,
+   4
+  ],
+  "notes": "startup runway"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_30",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My partner and I just got engaged, but we plan to hold the big ceremony after we've both finished school. We're splitting everything fifty-fifty. I can only take one of these:\n{options}\nWhich should I go with?"
+   }
+  ],
+  "cue": "My partner and I just got engaged, but we plan to hold the big ceremony after we've both finished school.",
+  "interval_years": [
+   1.5,
+   4
+  ],
+  "notes": "engaged, ceremony after school"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_31",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 53, and my husband and I want a lakefront cabin to retire to once his pension kicks in. We've been looking at listings for fun. Help me decide between these:\n{options}\nWhich one makes more sense?"
+   }
+  ],
+  "cue": "I'm 53, and my husband and I want a lakefront cabin to retire to once his pension kicks in.",
+  "interval_years": [
+   7,
+   14
+  ],
+  "notes": "pre-retirement cabin"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_32",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My son just started seventh grade, and I've begun thinking about his college tuition. He wants to be an engineer, for now. Here's what's on the table.\n{options}\nWhich is the better choice?"
+   }
+  ],
+  "cue": "My son just started seventh grade, and I've begun thinking about his college tuition.",
+  "interval_years": [
+   4,
+   8
+  ],
+  "notes": "middle-schooler's college fund"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_33",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I just began a doctoral program and want to set money aside for when I finish and have to move for a faculty job. My advisor says the job market is rough. Two offers came in.\n{options}\nWhich one is better for me?"
+   }
+  ],
+  "cue": "I just began a doctoral program and want to set money aside for when I finish and have to move for a faculty job.",
+  "interval_years": [
+   4,
+   8
+  ],
+  "notes": "PhD student, move after degree"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_34",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm a rookie in professional sports, and careers in my game tend to be short. My agent says I should think about life after I stop playing. I have two choices:\n{options}\nWhich one should I pick?"
+   }
+  ],
+  "cue": "I'm a rookie in professional sports, and careers in my game tend to be short.",
+  "interval_years": [
+   4,
+   10
+  ],
+  "notes": "athlete career span; vague"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_35",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I just planted an apple orchard, and the trees take a long stretch before they bear a full crop. Right now it's all cost and no revenue. I can only take one of these:\n{options}\nWhich should I go with?"
+   }
+  ],
+  "cue": "I just planted an apple orchard, and the trees take a long stretch before they bear a full crop.",
+  "interval_years": [
+   4,
+   10
+  ],
+  "notes": "orchard maturation"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_36",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm a naval officer who signed a long service commitment, and I want to save toward opening my own business when it ends. I live on base, so my expenses are low. I've narrowed it down to these two.\n{options}\nWhich one would you pick?"
+   }
+  ],
+  "cue": "I'm a naval officer who signed a long service commitment, and I want to save toward opening my own business when it ends.",
+  "interval_years": [
+   4,
+   8
+  ],
+  "notes": "service commitment end"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_37",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My wife and I just welcomed our first baby, and we want to start a college fund. We're still figuring out diapers. Here's what's on the table.\n{options}\nWhich is the better choice?"
+   }
+  ],
+  "cue": "My wife and I just welcomed our first baby, and we want to start a college fund.",
+  "interval_years": [
+   16,
+   20
+  ],
+  "notes": "newborn, college fund"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_38",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My daughter just started kindergarten, and I want to build up money for her university education. She says she's going to be an astronaut. Two offers came in.\n{options}\nWhich one is better for me?"
+   }
+  ],
+  "cue": "My daughter just started kindergarten, and I want to build up money for her university education.",
+  "interval_years": [
+   12,
+   16
+  ],
+  "notes": "kindergartner, college fund"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_39",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 40, and I plan to work until a normal retirement. I've got a decent salary and a bad habit of putting off saving. I have two choices:\n{options}\nWhich one should I pick?"
+   }
+  ],
+  "cue": "I'm 40, and I plan to work until a normal retirement.",
+  "interval_years": [
+   20,
+   30
+  ],
+  "notes": "mid-career retirement"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_40",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I just landed my first career job after graduating, and I'd like to start saving for a house and kids at some point. I'm still living with roommates. I can only take one of these:\n{options}\nWhich should I go with?"
+   }
+  ],
+  "cue": "I just landed my first career job after graduating, and I'd like to start saving for a house and kids at some point.",
+  "interval_years": [
+   10,
+   20
+  ],
+  "notes": "new graduate, someday goals; vague"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_41",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 45, a public school teacher, and I'll keep teaching until I hit full pension eligibility. My students keep me young. I've narrowed it down to these two.\n{options}\nWhich one would you pick?"
+   }
+  ],
+  "cue": "I'm 45, a public school teacher, and I'll keep teaching until I hit full pension eligibility.",
+  "interval_years": [
+   15,
+   20
+  ],
+  "notes": "teacher pension eligibility"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_42",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I inherited a patch of land and I'm planning to plant pines for lumber. I've got a tractor and more enthusiasm than experience. My options are:\n{options}\nWhat would you choose for me?"
+   }
+  ],
+  "cue": "I inherited a patch of land and I'm planning to plant pines for lumber.",
+  "interval_years": [
+   20,
+   30
+  ],
+  "notes": "timber maturation"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_43",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 25 and just started my first full-time job with a retirement plan. My coworkers keep telling me to contribute more. Two offers came in.\n{options}\nWhich one is better for me?"
+   }
+  ],
+  "cue": "I'm 25 and just started my first full-time job with a retirement plan.",
+  "interval_years": [
+   35,
+   45
+  ],
+  "notes": "young worker, retirement"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_44",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 19 and working my first real job, and my dad says I should open a retirement account. I'd rather buy a guitar, honestly. I have two choices:\n{options}\nWhich one should I pick?"
+   }
+  ],
+  "cue": "I'm 19 and working my first real job, and my dad says I should open a retirement account.",
+  "interval_years": [
+   40,
+   50
+  ],
+  "notes": "teen, retirement"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_45",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 70 and writing my will, and I want to set money aside for great-grandchildren who haven't been born yet. My lawyer says there are lots of ways to do it. I can only take one of these:\n{options}\nWhich should I go with?"
+   }
+  ],
+  "cue": "I'm 70 and writing my will, and I want to set money aside for great-grandchildren who haven't been born yet.",
+  "interval_years": [
+   30,
+   70
+  ],
+  "notes": "estate for unborn great-grandchildren; vague"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_46",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm setting up a scholarship fund in my late husband's name that should keep giving after I'm gone. He taught high school math and would have loved this. I've narrowed it down to these two.\n{options}\nWhich one would you pick?"
+   }
+  ],
+  "cue": "I'm setting up a scholarship fund in my late husband's name that should keep giving after I'm gone.",
+  "interval_years": [
+   30,
+   60
+  ],
+  "notes": "perpetual scholarship fund; vague"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_47",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 29, and my employer's pension only vests in full if I stay on until retirement. I like the job, mostly. My options are:\n{options}\nWhat would you choose for me?"
+   }
+  ],
+  "cue": "I'm 29, and my employer's pension only vests in full if I stay on until retirement.",
+  "interval_years": [
+   30,
+   40
+  ],
+  "notes": "pension vesting, long career"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_48",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My wife and I are both 30, and we want to buy a small farm to hand down to our grandchildren. We haven't even started a family yet. Someone offered me this choice:\n{options}\nWhich do you recommend?"
+   }
+  ],
+  "cue": "My wife and I are both 30, and we want to buy a small farm to hand down to our grandchildren.",
+  "interval_years": [
+   35,
+   60
+  ],
+  "notes": "farm for grandchildren"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_01",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant for a market stall that settles its cash box when the stall packs up. Be brief and practical."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant for a market stall that settles its cash box when the stall packs up.",
+  "interval_years": [
+   0.002,
+   0.007
+  ],
+  "notes": "market stall cash box; hours-scale"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_02",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a budgeting coach for people who use cash-advance loans and need to get through to the next paycheck. Be direct and non-judgmental."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are a budgeting coach for people who use cash-advance loans and need to get through to the next paycheck.",
+  "interval_years": [
+   0.02,
+   0.06
+  ],
+  "notes": "cash-advance loan coach"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_03",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant for a food truck that must pay its supplier in cash on delivery before the oven is lit. Keep answers short."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant for a food truck that must pay its supplier in cash on delivery before the oven is lit.",
+  "interval_years": [
+   0.004,
+   0.014
+  ],
+  "notes": "food truck, cash on delivery"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_04",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You help a hospital's emergency fund pay for taxi fares and meals for patients before they are discharged. Be compassionate and concise."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You help a hospital's emergency fund pay for taxi fares and meals for patients before they are discharged.",
+  "interval_years": [
+   0.005,
+   0.017
+  ],
+  "notes": "hospital emergency fund"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_05",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You assist a trading desk that must be flat, with every position closed, before the closing bell. Answer like a seasoned trader."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You assist a trading desk that must be flat, with every position closed, before the closing bell.",
+  "interval_years": [
+   0.001,
+   0.0035
+  ],
+  "notes": "trading desk closing positions"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_06",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant for a concert box office that must reconcile ticket money before the doors close. Keep it businesslike."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant for a concert box office that must reconcile ticket money before the doors close.",
+  "interval_years": [
+   0.004,
+   0.014
+  ],
+  "notes": "box office reconciliation"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_07",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the finance assistant for a restaurant that settles with its suppliers on short invoice cycles. Be practical."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the finance assistant for a restaurant that settles with its suppliers on short invoice cycles.",
+  "interval_years": [
+   0.04,
+   0.14
+  ],
+  "notes": "restaurant supplier invoices"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_08",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You help run payroll for a temp staffing agency that must fund its workers' paychecks on a short rotation. Be precise."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You help run payroll for a temp staffing agency that must fund its workers' paychecks on a short rotation.",
+  "interval_years": [
+   0.03,
+   0.1
+  ],
+  "notes": "staffing agency payroll"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_09",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the cash manager for a street-fair vendor collective that must settle with the organizers when the fair wraps up. Keep a friendly tone."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the cash manager for a street-fair vendor collective that must settle with the organizers when the fair wraps up.",
+  "interval_years": [
+   0.04,
+   0.14
+  ],
+  "notes": "vendor collective settlement"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_10",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You advise a small import shop that must pay a customs bond and freight bill when the next shipment arrives. Be concise."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You advise a small import shop that must pay a customs bond and freight bill when the next shipment arrives.",
+  "interval_years": [
+   0.05,
+   0.15
+  ],
+  "notes": "import shop customs bill"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_11",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a bridge-loan analyst helping a home buyer whose purchase closes soon. Explain your reasoning plainly."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are a bridge-loan analyst helping a home buyer whose purchase closes soon.",
+  "interval_years": [
+   0.05,
+   0.15
+  ],
+  "notes": "bridge loan, imminent closing"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_12",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant to a touring band's manager, who must settle the venue and bus costs before the tour ends. Be upbeat but careful."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant to a touring band's manager, who must settle the venue and bus costs before the tour ends.",
+  "interval_years": [
+   0.05,
+   0.17
+  ],
+  "notes": "band tour settlement"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_13",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the planning assistant for a toy store preparing its inventory for the big gift-buying rush. Be practical."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the planning assistant for a toy store preparing its inventory for the big gift-buying rush.",
+  "interval_years": [
+   0.15,
+   0.5
+  ],
+  "notes": "toy store seasonal inventory"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_14",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You help a youth camp director cover costs until camper fees come in at the start of the session. Be warm and clear."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You help a youth camp director cover costs until camper fees come in at the start of the session.",
+  "interval_years": [
+   0.2,
+   0.6
+  ],
+  "notes": "summer camp cash gap"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_15",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the treasurer's assistant for a school club raising money for a field trip planned for when classes let out. Keep it simple for students."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the treasurer's assistant for a school club raising money for a field trip planned for when classes let out.",
+  "interval_years": [
+   0.2,
+   0.5
+  ],
+  "notes": "school club fundraiser"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_16",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You assist a roofing crew that must buy materials and cover wages before the customer's final payment is released. Be matter-of-fact."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You assist a roofing crew that must buy materials and cover wages before the customer's final payment is released.",
+  "interval_years": [
+   0.15,
+   0.5
+  ],
+  "notes": "roofing crew working capital"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_17",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the budget assistant for a production company wrapping a short film shoot ahead of its post-production deadline. Be efficient."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the budget assistant for a production company wrapping a short film shoot ahead of its post-production deadline.",
+  "interval_years": [
+   0.2,
+   0.6
+  ],
+  "notes": "film production budget"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_18",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a bookkeeping assistant for a landscaping company that must stay afloat while the cold weather keeps customers away. Be encouraging."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are a bookkeeping assistant for a landscaping company that must stay afloat while the cold weather keeps customers away.",
+  "interval_years": [
+   0.2,
+   0.6
+  ],
+  "notes": "off-season bookkeeping"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_19",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the finance assistant for a seed-stage startup that is trying to reach its next funding round. Be candid."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the finance assistant for a seed-stage startup that is trying to reach its next funding round.",
+  "interval_years": [
+   0.5,
+   1.5
+  ],
+  "notes": "startup runway"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_20",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You assist a school district's business office planning its budget cycle for the coming school session. Be formal."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You assist a school district's business office planning its budget cycle for the coming school session.",
+  "interval_years": [
+   0.6,
+   1.5
+  ],
+  "notes": "school district budget"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_21",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You help a theater company plan the money for its whole next slate of productions. Be creative but realistic."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You help a theater company plan the money for its whole next slate of productions.",
+  "interval_years": [
+   0.6,
+   1.5
+  ],
+  "notes": "theater season"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_22",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a relocation assistant for a company moving its staff to a new office once the old lease ends. Be organized."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are a relocation assistant for a company moving its staff to a new office once the old lease ends.",
+  "interval_years": [
+   0.5,
+   1.5
+  ],
+  "notes": "office move"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_23",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant for a trade-show exhibitor budgeting for the big convention it is building toward. Be energetic."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant for a trade-show exhibitor budgeting for the big convention it is building toward.",
+  "interval_years": [
+   0.5,
+   1.2
+  ],
+  "notes": "trade show exhibitor"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_24",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a wedding planner's assistant coordinating a large celebration that is still a ways off. Be gracious."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are a wedding planner's assistant coordinating a large celebration that is still a ways off.",
+  "interval_years": [
+   0.5,
+   1.5
+  ],
+  "notes": "wedding planning; vague"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_25",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the finance assistant for a small business saving to replace its delivery trucks when the current fleet wears out. Be pragmatic."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the finance assistant for a small business saving to replace its delivery trucks when the current fleet wears out.",
+  "interval_years": [
+   2,
+   5
+  ],
+  "notes": "fleet replacement"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_26",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the budgeting assistant for a newly elected city council member planning for the stretch until the next election. Be neutral."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the budgeting assistant for a newly elected city council member planning for the stretch until the next election.",
+  "interval_years": [
+   2,
+   4
+  ],
+  "notes": "council member term"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_27",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You assist a high school athletic booster club saving to build a new gym while the current students are still enrolled. Be upbeat."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You assist a high school athletic booster club saving to build a new gym while the current students are still enrolled.",
+  "interval_years": [
+   2,
+   4
+  ],
+  "notes": "booster club gym"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_28",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant for a software company planning its product roadmap through its next major release cycle. Be concise."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant for a software company planning its product roadmap through its next major release cycle.",
+  "interval_years": [
+   1.5,
+   3.5
+  ],
+  "notes": "software roadmap"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_29",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You advise a graduate student who is funding a degree program. Be supportive."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You advise a graduate student who is funding a degree program.",
+  "interval_years": [
+   2,
+   6
+  ],
+  "notes": "grad student funding; vague"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_30",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant for a film studio financing a big-budget movie from script to release. Be professional."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant for a film studio financing a big-budget movie from script to release.",
+  "interval_years": [
+   1.5,
+   4
+  ],
+  "notes": "studio film financing"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_31",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the investment assistant for a church building fund that is saving for a new sanctuary. Be thoughtful."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the investment assistant for a church building fund that is saving for a new sanctuary.",
+  "interval_years": [
+   4,
+   10
+  ],
+  "notes": "church building fund"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_32",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You help a community college plan for a major campus construction project. Be thorough."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You help a community college plan for a major campus construction project.",
+  "interval_years": [
+   4,
+   10
+  ],
+  "notes": "campus construction"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_33",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You advise an orchard owner planning new plantings of fruit trees that take a long time to produce. Be down to earth."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You advise an orchard owner planning new plantings of fruit trees that take a long time to produce.",
+  "interval_years": [
+   5,
+   12
+  ],
+  "notes": "orchard plantings"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_34",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant to a professional athlete's money manager, since careers in this sport are short. Be frank."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant to a professional athlete's money manager, since careers in this sport are short.",
+  "interval_years": [
+   4,
+   10
+  ],
+  "notes": "athlete's money manager; vague"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_35",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant for a shipyard building a large vessel under a long contract. Be precise."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant for a shipyard building a large vessel under a long contract.",
+  "interval_years": [
+   4,
+   10
+  ],
+  "notes": "shipyard contract"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_36",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You help a small town plan the replacement fund for its water treatment plant. Be clear and civic-minded."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You help a small town plan the replacement fund for its water treatment plant.",
+  "interval_years": [
+   5,
+   12
+  ],
+  "notes": "water plant replacement"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_37",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a retirement planning assistant for workers in their thirties. Be encouraging."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are a retirement planning assistant for workers in their thirties.",
+  "interval_years": [
+   20,
+   35
+  ],
+  "notes": "retirement for thirty-somethings"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_38",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You advise the trustees of a pension fund for a mid-sized manufacturing firm whose members are mostly in their forties. Be formal."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You advise the trustees of a pension fund for a mid-sized manufacturing firm whose members are mostly in their forties.",
+  "interval_years": [
+   12,
+   25
+  ],
+  "notes": "pension fund, mid-career members"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_39",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant for a timber company that replants pine forests after each harvest. Be practical."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant for a timber company that replants pine forests after each harvest.",
+  "interval_years": [
+   20,
+   35
+  ],
+  "notes": "timber rotation"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_40",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You support a municipal bond committee financing a new bridge and its repayment. Be precise."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You support a municipal bond committee financing a new bridge and its repayment.",
+  "interval_years": [
+   15,
+   30
+  ],
+  "notes": "municipal bridge bond"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_41",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You advise a college-savings platform for parents of newborns. Be friendly."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You advise a college-savings platform for parents of newborns.",
+  "interval_years": [
+   16,
+   20
+  ],
+  "notes": "newborn college savings"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_42",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You help a power utility plan a new generating plant. Be technical."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You help a power utility plan a new generating plant.",
+  "interval_years": [
+   15,
+   35
+  ],
+  "notes": "power plant planning"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_43",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the investment advisor for a university endowment meant to last for generations. Be measured."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the investment advisor for a university endowment meant to last for generations.",
+  "interval_years": [
+   50,
+   100
+  ],
+  "notes": "endowment"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_44",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the advisor to a sovereign wealth fund that saves natural resource revenue for citizens who are not yet born. Be formal."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the advisor to a sovereign wealth fund that saves natural resource revenue for citizens who are not yet born.",
+  "interval_years": [
+   40,
+   100
+  ],
+  "notes": "sovereign wealth fund"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_45",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the advisor to a cathedral restoration trust that must keep the building standing for generations to come. Be reverent but practical."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the advisor to a cathedral restoration trust that must keep the building standing for generations to come.",
+  "interval_years": [
+   50,
+   150
+  ],
+  "notes": "cathedral trust"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_46",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the assistant for a retirement account held by a worker in their early twenties. Be encouraging."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the assistant for a retirement account held by a worker in their early twenties.",
+  "interval_years": [
+   35,
+   45
+  ],
+  "notes": "young worker's retirement account"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_47",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are the planner for a family dynasty trust set up to benefit descendants who are not yet born. Be discreet."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You are the planner for a family dynasty trust set up to benefit descendants who are not yet born.",
+  "interval_years": [
+   50,
+   100
+  ],
+  "notes": "dynasty trust"
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_48",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You advise the trust that pays for sealing and monitoring a spent-fuel repository. Be rigorous."
+   },
+   {
+    "role": "user",
+    "content": "We need to pick one of these two options.\n{options}\nWhich one should we take?"
+   }
+  ],
+  "cue": "You advise the trust that pays for sealing and monitoring a spent-fuel repository.",
+  "interval_years": [
+   40,
+   100
+  ],
+  "notes": "nuclear waste trust; vague"
+ }
+]

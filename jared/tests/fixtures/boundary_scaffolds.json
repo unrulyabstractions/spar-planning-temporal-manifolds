@@ -1,0 +1,310 @@
+[
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_01",
+  "cue": "We need the money back within {horizon}",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Hi, I could use some advice. My partner and I have some savings and need to put them somewhere. We need the money back within {horizon} because of our plans. Here are the options:\n{options}\nWhich is better?"
+   }
+  ],
+  "notes": "fixture"
+ },
+ {
+  "type_id": "llm_prose",
+  "scaffold_id": "llm_prose_02",
+  "cue": "everything has to be paid out within {horizon}",
+  "messages": [
+   {
+    "role": "user",
+    "content": "Hello. We are tidying up our finances and have a decision to make. everything has to be paid out within {horizon} because of our plans. Here are the options:\n{options}\nWhich is better?"
+   }
+  ],
+  "notes": "fixture"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_01",
+  "cue": "my planning window is {horizon}",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I have a 25-year mortgage and sold my last house 3 years ago, but my planning window is {horizon}. Here are the options:\n{options}\nWhat should I pick?"
+   }
+  ],
+  "notes": "fixture"
+ },
+ {
+  "type_id": "llm_competing",
+  "scaffold_id": "llm_competing_02",
+  "cue": "must be finished in {horizon}",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My car loan runs for 5 years and I changed jobs 2 years ago. The plan must be finished in {horizon}. Here are the options:\n{options}\nWhich option?"
+   }
+  ],
+  "notes": "fixture"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_01",
+  "cue": "The board needs results in {horizon}.",
+  "messages": [
+   {
+    "role": "user",
+    "content": "MEMO\nTo: Finance\nFrom: Operations\n\nThe board met on Tuesday. The board needs results in {horizon}.\n\nHere are the options:\n{options}\nPlease recommend one."
+   }
+  ],
+  "notes": "fixture"
+ },
+ {
+  "type_id": "llm_document",
+  "scaffold_id": "llm_document_02",
+  "cue": "the deadline is {horizon} from now",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a careful analyst."
+   },
+   {
+    "role": "user",
+    "content": "Subject: budget\n\nTeam, the deadline is {horizon} from now. Here are the options:\n{options}\nReply with your pick."
+   }
+  ],
+  "notes": "fixture"
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_01",
+  "cue": "I trade on the exchange floor and close every position before the closing bell.",
+  "interval_years": [
+   0.003,
+   0.02
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I trade on the exchange floor and close every position before the closing bell. I have some money to invest. Here are the options:\n{options}\nWhich one?"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_02",
+  "cue": "I'm 24 and saving for my retirement.",
+  "interval_years": [
+   20,
+   40
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 24 and saving for my retirement. I have some money to invest. Here are the options:\n{options}\nWhich one?"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_03",
+  "cue": "I'm 81 and want this set aside for my grandchildren's wedding.",
+  "interval_years": [
+   3,
+   8
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm 81 and want this set aside for my grandchildren's wedding. I have some money to invest. Here are the options:\n{options}\nWhich one?"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_04",
+  "cue": "I'm finishing my thesis and moving abroad as soon as it is done.",
+  "interval_years": [
+   0.5,
+   2
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm finishing my thesis and moving abroad as soon as it is done. I have some money to invest. Here are the options:\n{options}\nWhich one?"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_05",
+  "cue": "My daughter just started primary school and I'm saving for her university.",
+  "interval_years": [
+   10,
+   20
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "user",
+    "content": "My daughter just started primary school and I'm saving for her university. I have some money to invest. Here are the options:\n{options}\nWhich one?"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_06",
+  "cue": "I'm planning my wedding and the venue deposits are due soon.",
+  "interval_years": [
+   0.1,
+   0.3
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I'm planning my wedding and the venue deposits are due soon. I have some money to invest. Here are the options:\n{options}\nWhich one?"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_user",
+  "scaffold_id": "persona_user_07",
+  "cue": "I am an immortal being with no plans at all.",
+  "interval_years": [
+   0.0005,
+   100
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "user",
+    "content": "I am an immortal being with no plans at all. I have some money to invest. Here are the options:\n{options}\nWhich one?"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_01",
+  "cue": "You are an assistant at a short-term trading desk.",
+  "interval_years": [
+   0.003,
+   0.02
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are an assistant at a short-term trading desk."
+   },
+   {
+    "role": "user",
+    "content": "A client asks which option to take. Here are the options:\n{options}"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_02",
+  "cue": "You advise a university endowment that plans to exist for generations.",
+  "interval_years": [
+   30,
+   80
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You advise a university endowment that plans to exist for generations."
+   },
+   {
+    "role": "user",
+    "content": "A client asks which option to take. Here are the options:\n{options}"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_03",
+  "cue": "You help retirees plan gifts for their grandchildren.",
+  "interval_years": [
+   3,
+   8
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You help retirees plan gifts for their grandchildren."
+   },
+   {
+    "role": "user",
+    "content": "A client asks which option to take. Here are the options:\n{options}"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_04",
+  "cue": "You are a relocation assistant for people moving abroad soon.",
+  "interval_years": [
+   0.5,
+   2
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a relocation assistant for people moving abroad soon."
+   },
+   {
+    "role": "user",
+    "content": "A client asks which option to take. Here are the options:\n{options}"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_05",
+  "cue": "You help parents save for their children's education.",
+  "interval_years": [
+   10,
+   20
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You help parents save for their children's education."
+   },
+   {
+    "role": "user",
+    "content": "A client asks which option to take. Here are the options:\n{options}"
+   }
+  ]
+ },
+ {
+  "type_id": "persona_model",
+  "scaffold_id": "persona_model_06",
+  "cue": "You are a wedding-budget assistant.",
+  "interval_years": [
+   0.1,
+   0.3
+  ],
+  "notes": "fixture",
+  "messages": [
+   {
+    "role": "system",
+    "content": "You are a wedding-budget assistant."
+   },
+   {
+    "role": "user",
+    "content": "A client asks which option to take. Here are the options:\n{options}"
+   }
+  ]
+ }
+]
