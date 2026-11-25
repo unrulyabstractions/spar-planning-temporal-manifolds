@@ -109,17 +109,22 @@ From this checkout or any worktree of it (`just` lists the verbs; SPAR-level
 ones like `up` fall through to `SPAR/justfile`):
 
 ```
-just up 2h     # rent + provision; 2h is the expected use, written to the instance label
-just push      # ships this checkout to /workspace/SPAR/spar-planning-temporal-manifolds/, not out/, then installs requirements.txt
-just sync      # results into SPAR/results/
-just down      # sync, then destroy (or: just stop, to keep the disk)
+just box=probe up 2h   # rent + provision box "probe"; 2h is the expected use, written to the instance label
+just box=probe push    # ships this checkout to /workspace/SPAR/spar-planning-temporal-manifolds/, not out/, then installs requirements.txt
+just box=probe sync    # results into SPAR/results/probe/
+just box=probe down    # sync, then destroy (or: stop, to keep the disk)
+just status            # every box, its $/hr, and total spend
 ```
 
-Run experiments on the box inside tmux, so they outlive the ssh session. One
-box serves every session: check `just status` before renting, and
-`just ssh "tmux ls; nvidia-smi"` before `down`. For a box rented in the
-console, `just new <its ssh line>` tracks it instead of `up`. After
-`just resume` the port can change; paste the new line with `just new`. Generation tests are
+Several boxes can be up at once, each under its own name. With only one box
+up, `box=` can be left out (`up` names it `main`).
+
+Run experiments on the box inside tmux, so they outlive the ssh session. Every
+session sees every box: check `just status` before renting, use only a box
+you rented, and run `just box=NAME ssh "tmux ls; nvidia-smi"` before `down`.
+For a box rented in the console, `just box=NAME new <its ssh line>` tracks it
+instead of `up`. After `just box=NAME resume` the port can change; paste the
+new line with `just box=NAME new`. Generation tests are
 skipped on the box: bf16 batched greedy is not token-identical to
 single-prompt, so they are CPU tests (`local_checks.py`).
 
