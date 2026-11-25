@@ -5,7 +5,7 @@ on, locate each answer after its type's choice prefix, keep the reduced activati
     python -m pipeline.s1_data_vectors.experiments.exp0_evaltypes --model Qwen/Qwen3.5-0.8B --types all --limit 2 \\
         --max-think-tokens 32 --batch-size 4 --out out/smoke                       # plumbing smoke
 
-Run from jared/. Writes `<out>/evaltypes_<model>_think-<mode>/<type_id>/`:
+Run from jared/. Writes `<out>/evaltypes_<model>_think-<mode>/<type_id>/` (`related_...` with `--suite related`):
   acts_<g>.npz   per group g of the type's records (records sharing a choice prefix and a label
                  count go through one extract call): activations at `--layers` (keyed L<layer>), the
                  kept layout (regions, tokens, keep_idx, keep_ids), label logits, forced mask, think length
@@ -23,6 +23,7 @@ from pathlib import Path
 
 import numpy as np
 
+from spar_horizon import related_qualities
 from spar_horizon.config import Settings
 from spar_horizon.eval_types import TYPES, build
 from spar_horizon.extract import extract
@@ -88,6 +89,8 @@ def run_type(type_id, records, cfg, model_bundle, layers, type_dir):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--model", default=Settings.model)
+    p.add_argument("--suite", choices=("evaltypes", "related"), default="evaltypes",
+                   help="eval-type banks, or the related-quality sets (spar_horizon/related_qualities.py)")
     p.add_argument("--types", default="all", help="comma-separated type ids, or 'all'")
     p.add_argument("--limit", type=int, default=None, help="records per type (smoke)")
     p.add_argument("--seed", type=int, default=0)
@@ -98,24 +101,26 @@ def main():
     p.add_argument("--no-cache", action="store_true")
     args = p.parse_args()
 
-    type_ids = list(TYPES) if args.types == "all" else args.types.split(",")
+    suite_types = TYPES if args.suite == "evaltypes" else related_qualities.TYPES
+    type_ids = list(suite_types) if args.types == "all" else args.types.split(",")
     base = out_base(args.out)
     cfg = Settings(model=args.model, thinking="on", bank="full", prefill="", choice_prefix="I choose:",
                    max_think_tokens=args.max_think_tokens, batch_size=args.batch_size, seed=args.seed,
                    answer_window=ANSWER_WINDOW, cache_dir=None if args.no_cache else str(base / "gen_cache"))
-    run(type_ids, cfg, base, tuple(int(x) for x in args.layers.split(",")), args.limit)
+    run(type_ids, cfg, base, tuple(int(x) for x in args.layers.split(",")), args.limit, args.suite)
 
 
-def run(type_ids, cfg, base, layers, limit=None):
+def run(type_ids, cfg, base, layers, limit=None, suite="evaltypes"):
     """Run every type in `type_ids` that has no rows.json yet; returns the run directory."""
-    run_dir = Path(base) / f"evaltypes_{cfg.model.split('/')[-1]}_think-{cfg.thinking}"
+    build_records = build if suite == "evaltypes" else related_qualities.build
+    run_dir = Path(base) / f"{suite}_{cfg.model.split('/')[-1]}_think-{cfg.thinking}"
     todo = []
     for type_id in type_ids:
         type_dir = run_dir / type_id
         if (type_dir / "rows.json").exists():
             stamp(f"{type_id}: done earlier, skipped")
             continue
-        records = build(type_id, cfg.seed)[:limit]
+        records = build_records(type_id, cfg.seed)[:limit]
         type_dir.mkdir(parents=True, exist_ok=True)
         todo.append((type_id, records, type_dir))
     stamp(f"{len(todo)} of {len(type_ids)} types to run, {sum(len(r) for _, r, _ in todo)} prompts, into {run_dir}")

@@ -2,6 +2,7 @@
 direction maths on planted data, crossing pairs with the real 0.8B tokenizer."""
 
 import random
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -407,6 +408,61 @@ def test_models_with_linear_attention_fall_back_to_full_passes(tiny, monkeypatch
     out = S.score_last_edits(tiny, "cpu", SEQS, [True] * 3, ROWS, PAD, batch_size=2,
                              edits=[None, (1, lambda rows: S.Add(torch.zeros(len(rows), 32)))])
     assert out.shape == (2, 3) and len(calls) == 2
+
+
+def random_probes(layers, seed=3):
+    rng = np.random.default_rng(seed)
+    return [(layer, rng.normal(size=32), rng.normal(size=32), float(rng.normal())) for layer in layers]
+
+
+PROBE_EDITS_DELTA = torch.randn(3, 32, generator=torch.Generator().manual_seed(4))
+PROBE_EDITS = [None, (2, lambda rows: S.Add(PROBE_EDITS_DELTA[rows])), (1, lambda rows: S.Add(-PROBE_EDITS_DELTA[rows]))]
+
+
+def full_pass_probes(model, edits, probes):
+    """Probe logits [len(edits), n, len(probes)] from uncached full passes, one row at a time."""
+    out = np.zeros((len(edits), len(SEQS), len(probes)))
+    for e, spec in enumerate(edits):
+        for r, seq in enumerate(SEQS):
+            if spec is None:
+                _, hidden, _ = S.forward(model, "cpu", [seq], PAD, hidden=True)
+            else:
+                _, hidden, _ = S.forward(model, "cpu", [seq], PAD, hidden=True, layer=spec[0],
+                                         positions=[[len(seq) - 1]], edit=spec[1]([r]))
+            out[e, r] = S.probe_readout(hidden, probes)[0]
+    return out
+
+
+def test_probe_readouts_through_the_prefix_cache_equal_full_passes(tiny):
+    probes = random_probes((1, 2, 3))
+    near_first = [True, False, True]
+    lo, read = S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=PROBE_EDITS,
+                                  probes=probes)
+    assert read.shape == (len(PROBE_EDITS), len(SEQS), len(probes))
+    np.testing.assert_allclose(lo, S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2,
+                                                      edits=PROBE_EDITS), atol=1e-6)
+    np.testing.assert_allclose(read, full_pass_probes(tiny, PROBE_EDITS, probes), atol=1e-4)
+    # the edit at layer 2 leaves layers 1 and 2 as recorded unedited and moves layer 3
+    np.testing.assert_allclose(read[1, :, :2], read[0, :, :2], atol=1e-5)
+    assert np.abs(read[1, :, 2] - read[0, :, 2]).min() > 1e-3
+
+
+def test_probe_readouts_on_the_full_pass_fallback_equal_the_cached_path(tiny, monkeypatch):
+    probes = random_probes((1, 2, 3))
+    near_first = [True, False, True]
+    cached = S.score_last_edits(tiny, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=PROBE_EDITS,
+                                probes=probes)
+    # a stand-in that reports a linear-attention layer to score_last_edits while running the Qwen3,
+    # whose own forward cannot run one
+    linear = SimpleNamespace(layer_types=["full_attention", "linear_attention", "full_attention"])
+    recurrent = SimpleNamespace(config=SimpleNamespace(get_text_config=lambda: linear), model=tiny.model)
+    full_passes, real_forward = [], S.forward
+    monkeypatch.setattr(S, "forward", lambda model, *a, **k: full_passes.append(1) or real_forward(tiny, *a, **k))
+    fallback = S.score_last_edits(recurrent, "cpu", SEQS, near_first, ROWS, PAD, batch_size=2, edits=PROBE_EDITS,
+                                  probes=probes)
+    assert len(full_passes) == 2 * len(PROBE_EDITS)     # two batches, one full pass per edit
+    np.testing.assert_allclose(fallback[0], cached[0], atol=1e-5)
+    np.testing.assert_allclose(fallback[1], cached[1], atol=1e-4)
 
 
 def confounded_bank(seed=0, d=40, noise=0.05):

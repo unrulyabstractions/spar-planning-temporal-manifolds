@@ -60,3 +60,18 @@ def test_done_types_are_skipped(setup, tmp_path, monkeypatch):
     runner.run(["t_plain"], setup, tmp_path, (10,))
     monkeypatch.setattr(runner, "extract", lambda *a, **k: pytest.fail("extract ran for a finished type"))
     runner.run(["t_plain"], setup, tmp_path, (10,))
+
+
+def test_related_suite_uses_its_own_builder_and_run_dir(tok, tiny, monkeypatch, tmp_path):
+    monkeypatch.setattr(runner, "load_model", lambda cfg: (tok, tiny, "cpu"))
+    monkeypatch.setattr(runner.related_qualities, "build", lambda set_id, seed: build_records(TEST_TYPES["t_plain"], seed))
+    monkeypatch.setattr(runner, "build", lambda *a: pytest.fail("the eval-type builder ran for the related suite"))
+    cfg = Settings(model=MODEL, thinking="on", bank="full", prefill="", choice_prefix="I choose:",
+                   max_think_tokens=3, n_response=6, answer_window=8)
+    run_dir = runner.run(["mwe_power"], cfg, tmp_path, (10,), limit=2, suite="related")
+    assert run_dir.name == f"related_{MODEL.split('/')[-1]}_think-on"
+    assert len(json.loads((run_dir / "mwe_power" / "rows.json").read_text())) == 2
+
+
+def test_related_types_are_the_four_sets():
+    assert list(runner.related_qualities.TYPES) == ["mwe_power", "mwe_survival", "mwe_wealth", "sorh"]
