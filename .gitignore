@@ -28,3 +28,6 @@
 
 # Local secrets (API keys). Never commit.
 .env
+
+# Built copy of midterm_report/latex/report.pdf (tracked there)
+jared/report.pdf

@@ -87,7 +87,7 @@ below say which labels or datatypes each script groups by.
 | `units_analysis.py` | E9: does the readout track the duration or the unit word | unit word | `python -m pipeline.s3_analysis.by_datatype.units_analysis $RESULTS` |
 | `written_unit.py` | which unit the reasoning writes the horizon in (number parsing also used by other scripts) | unit word, number format in the trace; units bank | `python -m pipeline.s3_analysis.by_datatype.written_unit $RESULTS` |
 | `run_throughput.py` | measured throughput of earlier box runs and prompt token counts | bank | `python -m pipeline.s3_analysis.by_datatype.run_throughput $RESULTS` |
-| `big_experiment_costs.py` | cost model for the first big experiment (`big_experiment_plan.md`) | bank | `python -m pipeline.s3_analysis.by_datatype.big_experiment_costs` |
+| `big_experiment_costs.py` | cost model for the first big experiment (`history/big_experiment_plan_2026-11-19.md`) | bank | `python -m pipeline.s3_analysis.by_datatype.big_experiment_costs` |
 
 ### figures/
 
@@ -123,7 +123,7 @@ Sorting calls: `run_throughput` and `big_experiment_costs` are in `by_datatype` 
 
 ## Docs
 
-The project-wide docs (`12`, `13`, `23`, `24`, `31`, `big_experiment_plan.md`) stay in `jared/` root
+The project-wide docs (`12`, `13`, `23`, `24`) stay in `jared/` root (`31` and `big_experiment_plan.md` are in `history/`, dated 2026-11-19)
 and are listed in `00_README.md`. Stage 1 and 2 specs and results: `docs/INDEX.md` in those stages.
 
 ## Status and known gaps

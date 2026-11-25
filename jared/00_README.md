@@ -1,7 +1,8 @@
 # Temporal horizon in Qwen3-8B with thinking on: Jared's working directory
 
-Read `01_plan.md` next: status, what is done (do not rerun it), what is
-established, what is next. The rest is reference.
+The current plan is `01_plan.md` (evaluation pipeline, from 2026-11-19). This file
+describes the finished Qwen3-8B work; its plan (what is done, do not rerun it, and what is
+established) is `history/01_plan_2026-11-19.md`. The rest is reference.
 
 Docs are numbered; the specs and results of stage 1 and 2 are listed once, in
 `pipeline/s1_data_vectors/docs/INDEX.md` and `pipeline/s2_steering/docs/INDEX.md`. Data locations:
@@ -9,14 +10,13 @@ Docs are numbered; the specs and results of stage 1 and 2 are listed once, in
 
 | File | What it is |
 |---|---|
-| `01_plan.md` | Question, done list, findings, next steps, dated decisions |
+| `01_plan.md` | Current plan: improving the evaluation pipeline (from 2026-11-19) |
+| `EvalsSpec.md`, `EvalsPromptTypes.md` | Draft eval prompt types (not approved, not in code) |
 | `12_results_local_checks.md` | Two local checks on saved activations: natural closes and within-unit R² (Check 1), horizon vs delay before the hand-off (Check 2) |
 | `13_evidence.md` | Evidence index: each claim we rely on, its strength, and the figure behind it |
 | `23_literature.md` | Literature (2026-11-03): numbers, durations and manifolds; patching and steering pitfalls; CoT faithfulness; intertemporal choice |
 | `24_results_overnight_autoresearch.md` | Overnight autoresearch (2026-11-03, post hoc, saved artifacts): both-regime choices follow whether the trace finishes the reinvestment arithmetic; proposals P1-P8 |
-| `31_goals_next_specs.md` | Goals to spec next (not approved) |
-| `big_experiment_plan.md` | Costs from measured runs and a recommendation for the first big experiment |
-| `history/` | Finished specs, superseded results and earlier plans; indexed at the end of `01_plan.md` |
+| `history/` | Finished specs, superseded results and earlier plans (the Qwen3-8B plan, `31_goals_next_specs` and `big_experiment_plan`, archived 2026-11-19); indexed at the end of `history/01_plan_2026-11-19.md` |
 | `spar_horizon/` | The package: prompt banks, model I/O, extraction, probes, steering, run manifests |
 | `pipeline/` | The three-stage pipeline (code, queues, per-stage docs); start at `pipeline/README.md` |
 | `tests/` | pytest: pure python, the real 0.8B tokenizer, a tiny random Qwen3 for the steering hooks |
@@ -99,7 +99,7 @@ python -m pipeline.s2_steering.analysis.steering_analysis $RESULTS
 ```
 
 E0 has already generated and extracted the full bank with thinking on
-(`01_plan.md` §3); do not rerun it unless the prompts or kept positions
+(`history/01_plan_2026-11-19.md` §3); do not rerun it unless the prompts or kept positions
 change. Its command, for reference: `python -m pipeline.s1_data_vectors.experiments.exp0_baseline
 --model Qwen/Qwen3-8B --thinking on --bank full --skip-behavior`.
 
