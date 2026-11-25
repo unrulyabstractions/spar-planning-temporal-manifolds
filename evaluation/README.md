@@ -111,7 +111,8 @@ With a methods directory that holds each method at several sites (the Gemma run:
   end-of-thinking token), then compared with extract.py's `label_index` (`label_crosscheck.json`). Prompts that pbank
   could not parse, or whose thinking never closed, are listed in `skipped.jsonl`, never dropped silently.
 - **calibrate (P4):** CAA refitted without fold 0 of the extraction split; x swept on that fold's scored prompts; the
-  smallest x whose order-balanced |mean odd effect| reaches 1 logit while the label mass stays ≥ 95% of unsteered.
+  smallest x whose order-balanced |mean odd effect| reaches 1 logit while the even part of the label mass,
+  (mass(+x) + mass(−x))/2, stays ≥ 95% of unsteered (P2: a mass change that reverses with the sign is steering).
   The sign is a result, not a criterion. If no healthy x reaches the target, the largest healthy x is used and
   `calibration.json` says so.
 - **n6 (damage-matched null):** for each of `--n6-methods` (default CAA and curve-displace), the method's damage at
@@ -143,10 +144,74 @@ answer label (prompt_end, think_end).
 Tests: `python -m pytest -q test_replay_eval.py` (label location on the real Qwen3 tokenizer, strata shuffle, the
 meaning/letter and switch-point arithmetic, the loop detector).
 
-The calibration health bound (the mean label mass over the held-out items, at the worse of ±x, stays ≥ 95% of unsteered;
-`--min_mass_ratio`) is an untested default. On Qwen3-1.7B with thinking on, it stopped calibration at x = 0.02, but
-loosening it would not have helped: the sweep in `calibration.json` gets CAA no further than +0.27 logits (target 1)
-even at 75% of the unsteered mass. Worth revisiting on a larger model.
+The calibration health bound was first the smaller of the ±x mean label masses. On Qwen3-1.7B (thinking off, fp32)
+CAA at +x lowered the mass (0.845 at x = 0.4) while −x raised it (1.000), so that rule stopped at x = 0.02, where
+the odd effect is noise. The even part stays at the unsteered 0.923 up to x = 0.4 and drops only at 0.8 (0.631).
+`calibration.json` keeps both signs' masses (`label_mass_plus/minus`).
+With thinking on (Qwen3-1.7B, bf16, under the old rule) the sweep got CAA no further than +0.27 logits even at 75%
+of the unsteered mass, so there the rule was not what held calibration back.
+
+## Transfer to the eval types: `transfer_eval.py`
+
+Stage 6 of `evaluation_design/` §9 (transfer), on the replay readout: do T0's methods, at the strength frozen on T0,
+also steer the horizon on Jared's eval types, realistic variations of the T0 prompts (system prompts, multi-turn,
+other domains, implied horizons, distractors; `jared/EvalsPromptTypes.md` on branch `jared-eval-types`)?
+
+```
+# in jared/ on jared-eval-types: one bank per eval type
+python -m pipeline.s1_data_vectors.analysis.export_evaltype_banks     # -> ~/SPAR/results/horizon/evaltype_banks/
+# then, with the T0 run
+TRANSFER=1 TRANSFER_SET=transfer_sets/pilot_3types.json evaluation/run_local.sh   # the 300-prompt pilot
+TRANSFER=1 evaluation/run_local.sh                                    # everything: 19 types, 2,630 prompts, every arm
+```
+
+- **Check sets: what to run, in one file.** `transfer_sets/<name>.json` picks the types (each with the result you
+  expect, printed beside its numbers), the regimes and variants, a cap on rows per type, the arms (names, families or
+  methods, e.g. `["caa", "curve-displace", "isotropic", "shuffled:caa"]`) and K. Rows are taken as whole items (base,
+  swap and twin together) in bank order, which alternates near and both items. Outputs go to `transfer/<name>/`, so a
+  pilot and the full run never share a baseline. Unknown keys are refused. `pilot_3types.json`: `system_prompt`
+  (expected to work), `prose_natural` (might work), `coding_agent` (not expected to work), 100 rows each: 20 near and
+  20 both items with their swaps, and twins for the first 10 per regime.
+
+- **Banks.** pbank's schema, tier `evaltype`, split `transfer`. Fitting, calibration and the shared draws take only split
+  `extraction`, and the T0 replay only `verification`, so these prompts never reach them. The eval-type record (type,
+  variant, twin, its own regime and truth) is kept in `notes`. Conversation-rendered types (`system_prompt`,
+  `system_prompt_clear`, `multiturn_analyst`) keep their messages in `notes["messages"]`; their `text` is a transcript,
+  for reading and hashing only.
+- **baseline:** the unsteered reply to every `near_only`/`both` prompt, with the T0 run's model, thinking mode, cap and
+  batch size, in baseline.py's file format (`transfer/<type>/run/`). It is generated here, not by
+  `prompt_bank/baseline.py`, which sends `text` as one user turn: a conversation is rendered from `notes["messages"]`
+  (a single user text renders exactly as pbank's `chat_text`, checked in the tests). Resumes; refuses a run with other
+  settings; the run's hash covers every turn of a conversation.
+- **items, replay:** replay_eval's own stages, per type in `transfer/<type>/` (`stage_replay(..., split="transfer")`):
+  label location and `skipped.jsonl`, the unsteered pass and the N0 check, every arm at ±x with x read from the T0 run's
+  `calibration.json` (never recalibrated). The shuffled-label refits use the T0 bank and activations, as on T0.
+- **report → `transfer/transfer_report.{md,json}`:** per type and group (`prompts`: the type's base and swap prompts;
+  `twins`: the same options in the T0 template with the horizon stated), next to T0's verification grid: per method and
+  control the meaning (order-balanced, on the 40 base/swap pairs of a type), the odd part over all items, Δlog10 H*, the
+  label mass at ±x, the unsteered label mass and accuracy, and each statistic ranked against each null family
+  (analyze.py's `arm_results` and `compare_to_nulls`). Types without a bank or results are listed as not run.
+- **Prompting baseline** (`evaluation_design` §9 stage 5, "vs prompting baseline"): one sentence appended as the last
+  line of the last user turn, read like an edit (the generated reasoning kept, no hook; `Replayer.run_prompted`). Arms,
+  family `prompting`: `prompt:disposition` (+ "be more long-term-minded", − "short-term-minded"), `prompt:shift`
+  (+ "as if the horizon were 100 times longer", − "shorter"), `prompt:neutral` ("Think carefully about this decision.",
+  one side: the floor for adding any sentence). Wording from Jared's E22 (Qwen3-8B, regenerated reasoning): both pairs
+  moved the choice as far as the best steering, the disposition pair also moved rows it should not. Reported beside the
+  methods, not ranked against the random nulls (no matched null; compare with `prompt:neutral`). On by default in the
+  transfer stage (drop with a check set's `arms`), opt-in on T0 (`PROMPTING=1`, `replay_eval.py --prompting`). Not yet
+  in `gencheck`: with regenerated reasoning the sentence can act on the reasoning too, which this readout cannot see.
+- **The switch point only where it applies:** a group needs ≥ 5 readable items with each correct option. `city_no_values`
+  gives no values, so its `both` prompts have no correct answer and no switch point is fitted. Eval-type horizons sit
+  ≥ 0.25 decades from both delays, so even where it is fitted the location is less pinned down than on the T0 grid: read
+  meaning and odd first.
+- **Cost.** The 19 exported types hold 2,630 `near_only`/`both` prompts, about 13 × T0's grid, and every arm is replayed
+  on each; the shuffled refits are redone per type. With thinking on, the baseline dominates (at the 75 s per prompt
+  measured for Gemma 4 31B in `prompt_bank/README.md`, about 55 GPU-hours); the pilot set is about a ninth of that.
+
+Tests: `python -m pytest -q test_transfer_eval.py` (conversation rendering on the real Qwen3 tokenizer, the baseline
+with a fake model, the replay stage on the transfer split with fake edits, the report on hand-made arm results, and
+analyze.py's report card after its refactor into `arm_results` / `compare_to_nulls`, check-set loading, row and arm
+selection, and the pilot set's row counts on the exported banks when they are present).
 
 ## Loop check: `check_loops.py`
 

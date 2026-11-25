@@ -25,6 +25,8 @@ import json
 import re
 import sys
 import time
+from contextlib import contextmanager
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -59,6 +61,30 @@ NEUTRAL_TEXTS = (
     "lets the reader estimate the distance between two places.",
 )
 N6_TOLERANCE = 0.10        # a draw is matched when its KL is within 10% of the method's
+
+# The prompting baseline (evaluation_design §9 stage 5, "vs prompting baseline"): one sentence appended as the last line
+# of the last user message. Wording from Jared's E22 (jared/EvalsPromptsV2.md §10-11 on branch jared-eval-types), where
+# on Qwen3-8B the disposition pair moved the choice as far as the best steering but also moved rows it should not, and
+# the shift pair was mostly horizon-specific.
+PROMPTS = {
+    "neutral": "Think carefully about this decision.",
+    "long": "When you decide, be more long-term-minded than you otherwise would be.",
+    "short": "When you decide, be more short-term-minded than you otherwise would be.",
+    "shift_long": "Act as if the time horizon were 100 times longer than stated.",
+    "shift_short": "Act as if the time horizon were 100 times shorter than stated.",
+}
+# arm -> (sentence at +x, sentence at -x or None); + is the longer horizon, as for the steering methods
+PROMPT_ARMS = {"prompt:disposition": ("long", "short"), "prompt:shift": ("shift_long", "shift_short"),
+               "prompt:neutral": ("neutral", None)}
+
+
+def with_sentence(prompt, sentence: str):
+    """A user text, or a conversation whose last message is the user's, with `sentence` as its new last line."""
+    if isinstance(prompt, str):
+        return f"{prompt}\n{sentence}"
+    if prompt[-1]["role"] != "user":
+        raise ValueError("the last message must be the user's")
+    return [*prompt[:-1], {**prompt[-1], "content": f"{prompt[-1]['content']}\n{sentence}"}]
 
 
 # ------------------------------------------------------------------ io helpers
@@ -163,6 +189,20 @@ class Model:
             if isinstance(i, int) and i != self.tok.unk_token_id and i is not None:
                 return i
         return None
+
+
+@contextmanager
+def weights_in(model, dtype: str):
+    """Run the block with the model's weights in `dtype`, then put them back. The replay readout differences are
+    small (CAA at the calibrated x moves y by ~0.02 logit per item), and bf16 rounding alone moves y by ~0.3 logit per
+    item vs float32 (Qwen3-1.7B, 2026-11-23), so the readout runs in float32. bf16 -> float32 -> bf16 is exact, so
+    generation afterwards uses the very same weights."""
+    before = model.dtype
+    model.to(getattr(torch, dtype))
+    try:
+        yield
+    finally:
+        model.to(before)
 
 
 # ------------------------------------------------------------------ items: where to read the answer
@@ -278,34 +318,83 @@ def load_items(out: Path, split: str) -> list[dict]:
 class Replayer:
     """y = logit(far) - logit(near) and label mass at the answer slot, per item, under one edit and request."""
 
-    def __init__(self, M: Model, run_dir: Path, bank_dir: Path, thinking: bool, layer: int):
-        from steer.hooks import replay_logits
-        self.replay_logits = replay_logits
-        self.M, self.layer = M, layer
+    def __init__(self, M: Model, run_dir: Path, bank_dir: Path, thinking: bool, layer: int, batch_size: int = 16):
+        from steer.hooks import steering
+        self.steering = steering
+        self.M, self.layer, self.batch_size = M, layer, batch_size
         bank = {r["uid"]: r for r in read_jsonl(bank_dir / "prompts.jsonl")}
         self.resp = last_per_uid(read_jsonl(run_dir / "responses.jsonl"))
         self.bank, self.thinking = bank, thinking
         self._cache = {}
 
+    def prompt_of(self, it):
+        """What the model was given for this item (a subclass may return a conversation)."""
+        return self.bank[it["uid"]]["text"]
+
     def seqs(self, it):
         if it["uid"] not in self._cache:
-            p = self.M.prompt_ids(self.bank[it["uid"]]["text"], self.thinking)
+            p = self.M.prompt_ids(self.prompt_of(it), self.thinking)
             a = self.resp[it["uid"]]["generated_ids"][: it["label_index"]]
             self._cache[it["uid"]] = (p, a)
         return self._cache[it["uid"]]
 
+    def _last_logits(self, seqs: list[list[int]]) -> torch.Tensor:
+        """Next-token logits (float32 [n, vocab]) after each token sequence, batch_size sequences per forward pass.
+
+        Right padding: under the causal mask a row's tokens never attend to the padding after them, and positions stay
+        0..len-1, so each row reads as it would alone, up to batched bf16 arithmetic (stage_replay measures that gap).
+        The steering hook leaves padding unedited (attention mask 0)."""
+        device = self.M.model.device
+        # rows sorted by length, so a batch pads little (thinking replies run from 100 to 4,000 tokens); the
+        # readouts go back to the callers' order at the end
+        order = sorted(range(len(seqs)), key=lambda i: len(seqs[i]))
+        out = []
+        for s in range(0, len(order), self.batch_size):
+            chunk = [seqs[i] for i in order[s: s + self.batch_size]]
+            ids = torch.zeros(len(chunk), max(map(len, chunk)), dtype=torch.long)
+            mask = torch.zeros_like(ids)
+            for i, q in enumerate(chunk):
+                ids[i, :len(q)] = torch.tensor(q)
+                mask[i, :len(q)] = 1
+            last = (mask.sum(1) - 1).to(device)
+            # logits only at the rows' last positions: [rows, rows, vocab], row i's own readout on the diagonal
+            lg = self.M.model(input_ids=ids.to(device), attention_mask=mask.to(device), use_cache=False,
+                              logits_to_keep=last).logits
+            rows = torch.arange(len(chunk), device=lg.device)
+            out.append(lg[rows, rows].float())
+        sorted_logits = torch.cat(out)
+        back = torch.empty(len(order), dtype=torch.long)
+        back[torch.tensor(order, dtype=torch.long)] = torch.arange(len(order))
+        return sorted_logits[back.to(sorted_logits.device)]
+
+    @staticmethod
+    def _readout(items, lg: torch.Tensor):
+        """y = logit(far) - logit(near) and label mass p(far) + p(near), per item, from [n, vocab] logits."""
+        rows = torch.arange(len(items), device=lg.device)
+        far = torch.tensor([it["far_id"] for it in items], device=lg.device)
+        near = torch.tensor([it["near_id"] for it in items], device=lg.device)
+        pr = torch.softmax(lg, -1)
+        y = (lg[rows, far] - lg[rows, near]).cpu().numpy().astype(np.float32)
+        mass = (pr[rows, far] + pr[rows, near]).cpu().numpy().astype(np.float32)
+        return y, mass
+
+    @torch.no_grad()
+    def run_prompted(self, items, sentence: str):
+        """y and label mass with `sentence` appended to the prompt and the generated reasoning kept as it was, so the
+        prompt is read like an edit is: with the reasoning held fixed (no hook)."""
+        seqs = [self.M.prompt_ids(with_sentence(self.prompt_of(it), sentence), self.thinking) + self.seqs(it)[1]
+                for it in items]
+        return self._readout(items, self._last_logits(seqs))
+
     @torch.no_grad()
     def run(self, items, edit, x, positions="all"):
-        y = np.empty(len(items), np.float32)
-        mass = np.empty(len(items), np.float32)
-        for n, it in enumerate(items):
-            p, a = self.seqs(it)
-            lg = self.replay_logits(self.M.model, p, a, edit, x, self.layer, positions=positions)
-            lg = lg.float()
-            y[n] = float(lg[it["far_id"]] - lg[it["near_id"]])
-            pr = torch.softmax(lg, -1)
-            mass[n] = float(pr[it["far_id"]] + pr[it["near_id"]])
-        return y, mass
+        if positions != "all":
+            # a batch has one pass but many prompt lengths, so the hook could not tell each row's prompt from its reply
+            raise ValueError(f"batched replay supports positions='all' only, not {positions!r}")
+        seqs = [p + a for p, a in map(self.seqs, items)]
+        with self.steering(self.M.model, edit, x, self.layer, positions):
+            lg = self._last_logits(seqs)
+        return self._readout(items, lg)
 
     @torch.no_grad()
     def plain(self, it):
@@ -316,6 +405,15 @@ class Replayer:
 
 
 # ------------------------------------------------------------------ arms
+
+def arm_selected(arm: dict, wanted) -> bool:
+    """Whether a list of wanted arms (--arms, a check set's `arms`) names this arm, its family or its method (the
+    name before "[" or "@"); None selects every arm."""
+    if wanted is None:
+        return True
+    names = {arm["arm"], arm["family"], arm["arm"].split("[")[0].split("@")[0]}
+    return bool(names & set(wanted))
+
 
 def method_dirs(methods_dir: Path, site: str | None = None) -> dict:
     """method name -> bundle directory, for the bundles in `methods_dir` (at `site` only, if given).
@@ -354,7 +452,7 @@ def shuffled_horizons(rows: list[dict], bank: dict, seed: int) -> dict:
 
 def build_arms(args, cfg: dict) -> list[dict]:
     """Arm specs (no tensors): what to load and at which request. Edits are built lazily in make_edit."""
-    md = method_dirs(Path(args.methods), args.site)
+    md = method_dirs(Path(args.methods), getattr(args, "site", None))   # no site given: no site filter
     arms = []
     for name in ("caa", "reward", "choice"):
         if name in md:
@@ -382,6 +480,10 @@ def build_arms(args, cfg: dict) -> list[dict]:
                 arms.append({"arm": f"shuffled:{base}[{i}]", "family": f"shuffled:{base}",
                              "kind": "push" if base == "caa" else "target",
                              "x": cfg["x_push"] if base == "caa" else cfg["x_shift"], "src": str(md[base]), "seed": i})
+    if getattr(args, "prompting", False):
+        for name, (plus, minus) in PROMPT_ARMS.items():
+            arms.append({"arm": name, "family": "prompting", "kind": "prompt", "x": 1.0, "plus": plus, "minus": minus,
+                         **({"single": True} if minus is None else {})})
     n6_path = Path(args.out) / "n6.json"
     if n6_path.exists():                     # N6: isotropic draws at the strength that matches the method's damage
         for m, rec in json.loads(n6_path.read_text())["methods"].items():
@@ -401,7 +503,7 @@ class EditFactory:
         self.LinearEdit, self.load = LinearEdit, load
         self.args = args
         self.bank = {r["uid"]: r for r in read_jsonl(Path(args.bank) / "prompts.jsonl")}
-        md = method_dirs(Path(args.methods), args.site)
+        md = method_dirs(Path(args.methods), getattr(args, "site", None))
         self.caa = load(md["caa"])
         self.typical_norm = float(self.caa.meta["request"]["typical_norm"])
         self.positions = self.caa.positions
@@ -444,6 +546,14 @@ class EditFactory:
 
 # ------------------------------------------------------------------ stages
 
+def label_mass_health(mass_plus: float, mass_minus: float, mass0: float, ratio: float) -> tuple[float, bool]:
+    """Health on the even part of the label mass (P2): (mass(+x) + mass(-x)) / 2 must stay >= ratio * unsteered.
+    A mass change that reverses with the sign is steering, not damage: on Qwen3-1.7B, CAA at +x lowered the mass
+    as much as -x raised it, and a rule on the smaller of the two stopped calibration at x = 0.02."""
+    even = (mass_plus + mass_minus) / 2
+    return even, even >= ratio * mass0
+
+
 def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     out = Path(args.out)
     if (out / "calibration.json").exists():
@@ -468,10 +578,10 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
         nf = np.array([it["near_first"] for it in items])
         # average the two option orders' means, so a push toward one label (letter, C1) cancels out
         odd = float((o[nf].mean() + o[~nf].mean()) / 2) if nf.any() and (~nf).any() else float(o.mean())
-        mass = float(min(mp.mean(), mm.mean()))
-        ok = mass >= args.min_mass_ratio * mass0
-        sweep.append({"x": x, "mean_odd_logit": odd, "min_label_mass": mass, "healthy": ok})
-        print(f"calibrate: x={x:g} mean odd {odd:+.3f} logits, label mass {mass:.3f} (unsteered {mass0:.3f})"
+        mass, ok = label_mass_health(float(mp.mean()), float(mm.mean()), mass0, args.min_mass_ratio)
+        sweep.append({"x": x, "mean_odd_logit": odd, "even_label_mass": mass, "healthy": ok,
+                      "label_mass_plus": float(mp.mean()), "label_mass_minus": float(mm.mean())})
+        print(f"calibrate: x={x:g} mean odd {odd:+.3f} logits, even label mass {mass:.3f} (unsteered {mass0:.3f})"
               f"{'' if ok else ' UNHEALTHY'} on {len(items)} held-out prompts")
         if ok:
             healthy.append(x)
@@ -572,25 +682,31 @@ def stage_n6(args, M, settings, cal: dict) -> None:
                                  "draw_family": "isotropic", "methods": res})
 
 
-def stage_replay(args, M, settings, rep: Replayer, cal: dict) -> None:
+def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "verification", keep_arm=None) -> None:
+    """keep_arm(arm) -> bool picks the arms to run (default: every arm of build_arms)."""
     out = Path(args.out)
     adir = out / "arms"
     adir.mkdir(exist_ok=True)
-    items = load_items(out, "verification")
+    items = load_items(out, split)
     fac = EditFactory(args)
     # unsteered pass and the zero-edit check against a hook-free forward pass (N0)
     if not (adir / "_none.npz").exists():
         y0, m0 = rep.run(items, fac.caa.edit, 0.0, fac.positions)
         n0 = min(args.n0_check, len(items))
-        diffs = [float((rep.run([it], fac.caa.edit, 0.0, fac.positions)[0][0])
-                       - float(rep.plain(it)[it["far_id"]] - rep.plain(it)[it["near_id"]])) for it in items[:n0]]
+        alone = [float(rep.run([it], fac.caa.edit, 0.0, fac.positions)[0][0]) for it in items[:n0]]
+        diffs = [a - float(rep.plain(it)[it["far_id"]] - rep.plain(it)[it["near_id"]]) for a, it in zip(alone, items)]
+        # the same items inside a padded batch vs alone: the cost of batching, kept apart from the hook check above
+        batch_diffs = [float(y0[i]) - a for i, a in enumerate(alone)]
         agrees = float(np.mean([(y > 0) == (it["chosen"] == "far") for y, it in zip(y0, items)]))
         savez_atomic(adir / "_none.npz", y=y0, mass=m0)
         write_json(out / "n0_check.json", {"n_checked": n0, "max_abs_diff_vs_hook_free": max(map(abs, diffs)) if diffs else None,
+                                          "max_abs_diff_batched_vs_alone": max(map(abs, batch_diffs)) if batch_diffs else None,
+                                          "replay_batch_size": rep.batch_size,
                                           "replay_matches_generated_choice": agrees})
         print(f"N0: zero edit vs hook-free max |diff| {max(map(abs, diffs)) if diffs else float('nan'):.3g}; "
-              f"unsteered replay picks the generated label on {agrees:.1%} of items")
-    arms = build_arms(args, cal)
+              f"batched vs alone max |diff| {max(map(abs, batch_diffs)) if batch_diffs else float('nan'):.3g} "
+              f"(batch {rep.batch_size}); unsteered replay picks the generated label on {agrees:.1%} of items")
+    arms = [a for a in build_arms(args, cal) if keep_arm is None or keep_arm(a)]
     with open(out / "arms.jsonl", "w") as f:
         for a in arms:
             f.write(json.dumps(a) + "\n")
@@ -604,18 +720,24 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict) -> None:
             savez_atomic(path, **dict(np.load(twin)))
             print(f"[{n + 1}/{len(arms)}] {arm['arm']} = {arm['same_as']} (same vector and strength)", flush=True)
             continue
-        edit, positions = fac.make(arm)
         rec = {}
-        rec["y_plus"], rec["mass_plus"] = rep.run(items, edit, arm["x"], positions)
-        if not arm.get("single"):
-            rec["y_minus"], rec["mass_minus"] = rep.run(items, edit, -arm["x"], positions)
+        if arm["family"] == "prompting":
+            rec["y_plus"], rec["mass_plus"] = rep.run_prompted(items, PROMPTS[arm["plus"]])
+            if not arm.get("single"):
+                rec["y_minus"], rec["mass_minus"] = rep.run_prompted(items, PROMPTS[arm["minus"]])
+        else:
+            edit, positions = fac.make(arm)
+            rec["y_plus"], rec["mass_plus"] = rep.run(items, edit, arm["x"], positions)
+            if not arm.get("single"):
+                rec["y_minus"], rec["mass_minus"] = rep.run(items, edit, -arm["x"], positions)
         savez_atomic(path, **rec)
         el = time.time() - t0
         print(f"[{n + 1}/{len(arms)}] {arm['arm']} x={arm['x']:g}  ({el / 60:.1f} min)", flush=True)
 
 
 def stage_gencheck(args, M, settings, cal: dict) -> None:
-    """Steered generation on a subset of verification pairs: none, caa +-x, isotropic[0] +-x, curve-displace +-shift."""
+    """Steered generation on a subset of verification pairs: none, and each of --gen-arms (caa +-x, isotropic[0] +-x,
+    curve-displace +-shift)."""
     from steer.hooks import steering
     out = Path(args.out) / "gencheck"
     out.mkdir(exist_ok=True)
@@ -633,7 +755,7 @@ def stage_gencheck(args, M, settings, cal: dict) -> None:
     for nm, spec in (("caa", {"family": "method", "src": str(md["caa"])}),
                      ("isotropic[0]", {"family": "isotropic", "row": 0}),
                      ("curve-displace", {"family": "method", "src": str(md.get("curve-displace", ""))})):
-        if spec.get("src") == "":
+        if spec.get("src") == "" or nm not in args.gen_arms:
             continue
         x = cal["x_shift"] if nm.startswith("curve") else cal["x_push"]
         arms += [(f"{nm}+", spec, x), (f"{nm}-", spec, -x)]
@@ -686,12 +808,23 @@ def main(argv=None):
     p.add_argument("--x-grid", type=float, nargs="+", default=[0.02, 0.05, 0.1, 0.2, 0.4, 0.8])
     p.add_argument("--target-logit", type=float, default=1.0)
     p.add_argument("--min-mass-ratio", type=float, default=0.95,
-                   help="health bound: label mass at +-x must stay >= this fraction of the unsteered mass")
+                   help="health bound: the even part of the label mass, (mass(+x) + mass(-x)) / 2, must stay >= this "
+                        "fraction of the unsteered mass")
     p.add_argument("--extraction-index", help="extract.py's index.jsonl, to cross-check our label locator")
     p.add_argument("--x-shift", type=float, default=1.0, help="request for target methods, decades")
     p.add_argument("--calib-fold", type=int, default=0)
     p.add_argument("--n0-check", type=int, default=8)
     p.add_argument("--gen-pairs", type=int, default=16), p.add_argument("--gen-batch", type=int, default=8)
+    p.add_argument("--replay-batch", type=int, default=16, help="prompts per teacher-forced replay pass")
+    p.add_argument("--replay-dtype", default="float32", choices=["float32", "bfloat16"],
+                   help="weights during calibrate and replay (weights_in); float32 takes 4 bytes per parameter "
+                        "(an 8B model: 32 GB), so bfloat16 on a smaller GPU, at ~0.3 logit of rounding per item")
+    p.add_argument("--prompting", action="store_true",
+                   help="also replay the prompting baseline (PROMPTS: disposition and shift pairs, neutral sentence)")
+    p.add_argument("--arms", nargs="+", help="replay only these arms, families or methods (e.g. caa curve-snap "
+                                             "covariance); default every arm")
+    p.add_argument("--gen-arms", nargs="+", default=["caa", "isotropic[0]", "curve-displace"],
+                   help="steered arms of the generation check, each at +-x, beside the unsteered one")
     p.add_argument("--site", help="use only bundles fitted at this site (label, prelabel, ...); required when the "
                                   "methods directory holds a method at several sites")
     p.add_argument("--n6-methods", nargs="+", default=["caa", "curve-displace"],
@@ -707,16 +840,18 @@ def main(argv=None):
     M = Model(settings["model_id"])
     from steer.methods import load
     layer = load(method_dirs(Path(args.methods), args.site)["caa"]).layer
-    rep = Replayer(M, Path(args.run), Path(args.bank), settings["thinking"], layer)
+    rep = Replayer(M, Path(args.run), Path(args.bank), settings["thinking"], layer, args.replay_batch)
     if "items" in args.stages:
         build_items(args, M, settings)
     cal = None
-    if {"calibrate", "n6", "replay", "gencheck"} & set(args.stages):
-        cal = stage_calibrate(args, M, settings, rep)
-    if "n6" in args.stages:
-        stage_n6(args, M, settings, cal)
-    if "replay" in args.stages:
-        stage_replay(args, M, settings, rep, cal)
+    # N6 measures damage in the replay's dtype, so the strengths it matches are the ones the replay then runs
+    with weights_in(M.model, args.replay_dtype):
+        if {"calibrate", "n6", "replay", "gencheck"} & set(args.stages):
+            cal = stage_calibrate(args, M, settings, rep)
+        if "n6" in args.stages:
+            stage_n6(args, M, settings, cal)
+        if "replay" in args.stages:
+            stage_replay(args, M, settings, rep, cal, keep_arm=partial(arm_selected, wanted=args.arms))
     if "gencheck" in args.stages:
         stage_gencheck(args, M, settings, cal)
 

@@ -9,6 +9,14 @@
 # null family), PY (python), STAGES (which runner stages), GEN_PAIRS, GEN_SAMPLES (generation-check passes on a
 # sampled baseline), DECODING (baseline: auto | greedy | sample; auto samples when thinking is on; an older greedy run
 # resumes only with DECODING=greedy), SITE (which bundles the runner reads; default label).
+# PROMPTING=1 also replays the prompting baseline on T0 (replay_eval.py --prompting; the transfer stage runs it always).
+# Opt-in transfer to the eval types (off by default): TRANSFER=1, with TRANSFER_BANKS (export_evaltype_banks.py's
+# output) and either TRANSFER_SET (a check set, evaluation/transfer_sets/<name>.json: which types, prompts and arms)
+# or TRANSFER_TYPES (space-separated; default: every bank there, every prompt, every arm).
+# A hand-over from the extraction side (e.g. Alan's Gemma run, downloaded into the checkout): RUN (its run name, e.g.
+# gemma-4-31B-it__t0_s0) and DRAWS (its shared draws); every stage whose outputs exist is skipped.
+# ARMS (replay only these arms, families or methods), GEN_ARMS (steered arms of the generation check), REPLAY_DTYPE
+# (float32 | bfloat16: float32 takes 4 bytes per parameter, so a 31B model replays in bfloat16).
 set -euo pipefail
 
 MODEL=${MODEL:-Qwen/Qwen3-1.7B}
@@ -27,13 +35,13 @@ PY=${PY:-$(cd "$(dirname "$0")/.." && pwd)/../PTM_workspace/ptm_env/bin/python}
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 SHORT=${MODEL##*/}
-RUN=${SHORT}__t0_s0__${TAG}
+RUN=${RUN:-${SHORT}__t0_s0__${TAG}}
 BANK=$ROOT/prompt_bank/data/t0_s0
 RUN_DIR=$ROOT/prompt_bank/runs/$RUN
 ACT=$ROOT/steering/activations/$RUN
 FIT=$ROOT/steering/fits/$RUN/default/L${LAYER}_label
 METHODS=$ROOT/steering/methods/$SHORT
-DRAWS=$ROOT/evaluation/draws/$RUN/$SHORT/L${LAYER}_label   # per run: covariance/real_diff depend on the activations
+DRAWS=${DRAWS:-$ROOT/evaluation/draws/$RUN/$SHORT/L${LAYER}_label}   # per run: covariance/real_diff depend on the activations
 OUT=$ROOT/evaluation/results/$RUN
 THINKFLAG=$([ "$THINK" = 1 ] && echo "" || echo "--no-thinking")
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -90,8 +98,20 @@ stamp "shared draws"
 
 stamp "replay evaluation: $STAGES"
 (cd "$ROOT/evaluation" && $PY -u replay_eval.py $STAGES --bank "$BANK" --run "$RUN_DIR" --activations "$ACT" \
-    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH" --gen-samples "$GEN_SAMPLES" --site "$SITE")
+    --methods "$METHODS_RUN" --draws "$DRAWS" --out "$OUT" --extraction-index "$ACT/index.jsonl" --k "$K" --gen-pairs "$GEN_PAIRS" --gen-batch "$BATCH" --gen-samples "$GEN_SAMPLES" --replay-batch "$BATCH" \
+    --replay-dtype "${REPLAY_DTYPE:-float32}" --site "$SITE" ${ARMS:+--arms $ARMS} ${GEN_ARMS:+--gen-arms $GEN_ARMS} \
+    $([ "${PROMPTING:-0}" = 1 ] && echo --prompting))
 
 stamp "report card"
 (cd "$ROOT/evaluation" && $PY analyze.py --out "$OUT")
 stamp "done: $OUT/report.md"
+
+if [ "${TRANSFER:-0}" = 1 ]; then
+    TRANSFER_BANKS=${TRANSFER_BANKS:-$HOME/SPAR/results/horizon/evaltype_banks}
+    stamp "transfer to the eval types: $TRANSFER_BANKS"
+    (cd "$ROOT/evaluation" && $PY -u transfer_eval.py baseline items replay report --banks "$TRANSFER_BANKS" \
+        ${TRANSFER_SET:+--set $TRANSFER_SET} ${TRANSFER_TYPES:+--types $TRANSFER_TYPES} --t0-bank "$BANK" --t0-run "$RUN_DIR" --t0-out "$OUT" \
+        --activations "$ACT" --methods "$METHODS_RUN" --draws "$DRAWS" --site "$SITE" --k "$K" --replay-batch "$BATCH" \
+        --replay-dtype "${REPLAY_DTYPE:-float32}" --out "$OUT/transfer")
+    stamp "done: transfer_report.md under $OUT/transfer"
+fi

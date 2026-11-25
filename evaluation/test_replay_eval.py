@@ -82,6 +82,64 @@ def test_check_loops_detects_repeats_only():
     assert not check_loops.is_looping(block * 2)                             # too short to call
 
 
+def test_batched_replay_matches_each_row_alone():
+    """Right-padded batches read every row as a batch-1 pass would, with and without a steering edit (tiny random
+    Qwen3 on CPU in float32, so any gap is padding leaking in, not bf16 arithmetic)."""
+    import sys
+    from pathlib import Path
+    from types import SimpleNamespace
+    torch = pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "steering"))
+    from steer.edits import LinearEdit
+
+    torch.manual_seed(0)
+    cfg = transformers.Qwen3Config(vocab_size=64, hidden_size=32, intermediate_size=64, num_hidden_layers=2,
+                                   num_attention_heads=4, num_key_value_heads=2, head_dim=8)
+    model = transformers.Qwen3ForCausalLM(cfg).eval()
+    rep = object.__new__(re_.Replayer)
+    from steer.hooks import steering
+    rep.M, rep.layer, rep.batch_size, rep.steering = SimpleNamespace(model=model), 1, 3, steering
+    lengths = [5, 9, 7, 12, 6]                                       # unequal, and 5 rows over batches of 3
+    rep._cache = {f"u{i}": (list(range(1, n)), [n % 60 + 2]) for i, n in enumerate(lengths)}
+    items = [{"uid": f"u{i}", "far_id": 3, "near_id": 4} for i in range(len(lengths))]
+    edit = LinearEdit(np.eye(32)[0], typical_norm=5.0)
+    for x in (0.0, 0.7):
+        y, mass = rep.run(items, edit, x)
+        for n, it in enumerate(items):
+            y1, m1 = rep.run([it], edit, x)
+            assert y[n] == pytest.approx(y1[0], abs=1e-5) and mass[n] == pytest.approx(m1[0], abs=1e-6)
+    assert not np.allclose(rep.run(items, edit, 0.7)[0], rep.run(items, edit, 0.0)[0])   # the edit does act
+
+
+def test_batched_replay_refuses_split_positions():
+    rep = object.__new__(re_.Replayer)
+    with pytest.raises(ValueError, match="positions='all' only"):
+        rep.run([], None, 0.1, positions="generated")
+
+
+def test_weights_in_float32_restores_the_exact_bf16_weights():
+    torch = pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+    cfg = transformers.Qwen3Config(vocab_size=64, hidden_size=32, intermediate_size=64, num_hidden_layers=1,
+                                   num_attention_heads=4, num_key_value_heads=2, head_dim=8)
+    model = transformers.Qwen3ForCausalLM(cfg).to(torch.bfloat16)
+    before = {k: v.clone() for k, v in model.state_dict().items()}
+    with re_.weights_in(model, "float32"):
+        assert model.dtype == torch.float32
+    assert model.dtype == torch.bfloat16
+    assert all(torch.equal(before[k], v) for k, v in model.state_dict().items())
+
+
+def test_health_uses_the_even_part_of_the_label_mass():
+    # one-sided: +x lowers the mass as much as -x raises it (steering), so the even part is unchanged -> healthy
+    even, ok = re_.label_mass_health(0.845, 1.000, 0.923, 0.95)
+    assert abs(even - 0.9225) < 1e-12 and ok
+    # both signs lose mass (disruption) -> unhealthy
+    even, ok = re_.label_mass_health(0.85, 0.85, 0.923, 0.95)
+    assert abs(even - 0.85) < 1e-12 and not ok
+
+
 def test_gen_decodings_follow_the_baseline_run():
     pytest.importorskip("pbank.local_model")
     one = re_.gen_decodings("greedy", 5)                                   # greedy: one pass whatever is asked

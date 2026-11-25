@@ -1,0 +1,11 @@
+{
+  "description": "Quickest transfer check, 40 prompts: the eval type most expected to work (system_prompt), 10 near and 10 both items with their swaps, no twins (the T0 replay is the positive control). CAA and curve-snap against the covariance-matched null family, with the prompting arms beside them.",
+  "types": {
+    "system_prompt": "expected to work (ranked 1st on Qwen3-8B: phrase donor flips 0.90, answer-slot patch 0.48, stacked steer 0.38)"
+  },
+  "regimes": ["near_only", "both"],
+  "variants": ["base", "swap"],
+  "rows_per_type": 40,
+  "arms": ["caa", "curve-snap", "covariance", "prompting"],
+  "k": 19
+}

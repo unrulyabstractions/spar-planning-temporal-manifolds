@@ -33,7 +33,10 @@ from scipy.optimize import curve_fit
 
 import nulls
 
-REPORTED = ("method", "control", "comparison")      # arms with their own rows in the report (not null draws)
+# Arms with their own rows in the report, never pooled as nulls. Prompting arms (replay_eval --prompting) have no
+# matched null family; their floor is the prompt:neutral sentence, so they are reported but not ranked.
+REPORTED = ("method", "control", "comparison", "prompting")
+RANKED = ("method", "control", "comparison")
 
 
 def read_jsonl(p):
@@ -185,37 +188,35 @@ def readout_agreement(out: Path, items, y0, arm_file, B: int = 1000, seed: int =
     return {"arms": per_arm, "effects": effects}
 
 
-def main(argv=None):
-    p = argparse.ArgumentParser()
-    p.add_argument("--out", required=True)
-    p.add_argument("--boot", type=int, default=1000, help="bootstrap resamples for the confidence intervals (0: none)")
-    a = p.parse_args(argv)
-    out = Path(a.out)
-    items = [it for it in read_jsonl(out / "items.jsonl") if it["split"] == "verification"]
-    arms = read_jsonl(out / "arms.jsonl")
-    base = np.load(out / "arms" / "_none.npz")
-    y0 = base["y"]
-    logr = np.log10([it["h_over_far_delay"] for it in items])
-    loc0, s0 = fit_switch(logr, sigmoid(y0))
+def arm_results(out: Path, items, y0, keep=None, boot: int = 0) -> dict:
+    """arm_stats of every arm in arms.jsonl with saved results, on the items where the boolean mask `keep` is True
+    (all items when None). boot > 0 adds 95% bootstrap intervals (`ci`) to the reported arms."""
+    if keep is not None:
+        items = [it for it, k in zip(items, keep) if k]
+        y0 = y0[keep]
     res = {}
-
-    def arm_file(name):
-        path = out / "arms" / (hashlib.sha1(name.encode()).hexdigest()[:12] + ".npz")
-        return dict(np.load(path)) if path.exists() else None
-
-    for arm in arms:
-        rec = arm_file(arm["arm"])
-        if rec is not None:
+    for arm in read_jsonl(out / "arms.jsonl"):
+        path = out / "arms" / (hashlib.sha1(arm["arm"].encode()).hexdigest()[:12] + ".npz")
+        if path.exists():
+            rec = dict(np.load(path))
+            if keep is not None:
+                rec = {k: v[keep] for k, v in rec.items()}
             res[arm["arm"]] = {**arm, **arm_stats(items, y0, rec, arm["x"])}
-            if a.boot and arm["family"] in REPORTED:
-                res[arm["arm"]]["ci"] = bootstrap_ci(items, y0, rec, arm["x"], a.boot)
+            if boot and arm["family"] in REPORTED:
+                res[arm["arm"]]["ci"] = bootstrap_ci(items, y0, rec, arm["x"], boot)
+    return res
+
+
+def compare_to_nulls(res: dict, stats=("meaning", "delta_log10_H")) -> dict:
+    """Each ranked arm (RANKED, not curve-snap@0) against every null family of its kind, per statistic; an N6 family
+    only against the method whose damage it matches."""
     fams = {}
     for r in res.values():
         if r["family"] not in REPORTED:
             fams.setdefault(r["family"], []).append(r)
     comps = {}
     for name, r in res.items():
-        if r["family"] not in REPORTED or name == "curve-snap@0":
+        if r["family"] not in RANKED or name == "curve-snap@0":
             continue
         comps[name] = {}
         for fam, rows in fams.items():
@@ -227,13 +228,34 @@ def main(argv=None):
                     continue
                 if (r["kind"] == "target") != (rows[0]["kind"] == "target"):
                     continue                       # push methods vs push nulls; curves vs shuffled curves
-            for stat in ("meaning", "delta_log10_H"):
+            for stat in stats:
                 null = np.array([q.get(stat, np.nan) for q in rows], float)
                 null = null[np.isfinite(null)]
                 if len(null) and np.isfinite(r.get(stat, np.nan)):
                     comps[name].setdefault(fam, {})[stat] = {
                         "stat": r[stat], "p": nulls.rank_p(r[stat], null), "K": len(null),
                         "null_p95_abs": float(np.percentile(np.abs(null), 95))}
+    return comps
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser()
+    p.add_argument("--out", required=True)
+    p.add_argument("--boot", type=int, default=1000, help="bootstrap resamples for the confidence intervals (0: none)")
+    a = p.parse_args(argv)
+    out = Path(a.out)
+    items = [it for it in read_jsonl(out / "items.jsonl") if it["split"] == "verification"]
+    base = np.load(out / "arms" / "_none.npz")
+    y0 = base["y"]
+    logr = np.log10([it["h_over_far_delay"] for it in items])
+    loc0, s0 = fit_switch(logr, sigmoid(y0))
+
+    def arm_file(name):
+        path = out / "arms" / (hashlib.sha1(name.encode()).hexdigest()[:12] + ".npz")
+        return dict(np.load(path)) if path.exists() else None
+
+    res = arm_results(out, items, y0, boot=a.boot)
+    comps = compare_to_nulls(res)
     cal = json.loads((out / "calibration.json").read_text())
     n0 = json.loads((out / "n0_check.json").read_text()) if (out / "n0_check.json").exists() else {}
     skipped = read_jsonl(out / "skipped.jsonl")
