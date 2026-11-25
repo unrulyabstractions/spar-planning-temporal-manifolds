@@ -79,6 +79,10 @@ class EvalType:
     # Seeds the item draws instead of type_id. Types that share it and draw the same way get the same
     # items and option orders, so a rewording can be compared with its original prompt by prompt.
     item_seed: str = ""
+    # Boundary types (`EvalsBoundarySpec.md`): cue(item, variant) is the exact text whose last token the
+    # runner captures (None: the type has none); render_twin(item, shown) replaces `render_reference`.
+    cue: Optional[Callable] = None
+    render_twin: Optional[Callable] = None
 
 
 def log_years(h):
@@ -211,6 +215,24 @@ def make_record(et, item, k, variant, order, prompt, truth, options):
     return rec
 
 
+def locate_cue(sample_uid, prompt, cue_text):
+    """Index of the message holding `cue_text` (0 for a string prompt); it must occur once in the prompt."""
+    contents = [prompt] if isinstance(prompt, str) else [m["content"] for m in prompt]
+    found = [i for i, content in enumerate(contents) for _ in range(content.count(cue_text))]
+    if len(found) != 1:
+        raise ValueError(f"{sample_uid}: cue {cue_text!r} occurs {len(found)} times in the prompt, expected once")
+    return found[0]
+
+
+def with_cue(et, item, rec):
+    """`rec` plus `cue_text` and `cue_message` for types that define a cue."""
+    if et.cue is not None:
+        text = et.cue(item, rec["variant"])
+        rec["cue_text"] = text
+        rec["cue_message"] = None if text is None else locate_cue(rec["sample_uid"], rec["prompt"], text)
+    return rec
+
+
 def build_records(et, seed=0):
     """The type's records: base items, their swaps and their explicit twins (module docstring)."""
     rng = random.Random(f"{et.item_seed or et.type_id}-{seed}")
@@ -221,16 +243,18 @@ def build_records(et, seed=0):
         base_order = list(range(n))
         if et.shuffle_base:
             rng.shuffle(base_order)
-        records.append(make_record(et, item, k, "base", base_order,
-                                   et.render(item, labelled(item.options, base_order)), item.truth, item.options))
+        records.append(with_cue(et, item, make_record(
+            et, item, k, "base", base_order, et.render(item, labelled(item.options, base_order)), item.truth,
+            item.options)))
         seen[regime] = seen.get(regime, 0) + 1
         if regime in ("near", "both") and seen[regime] <= SWAP_PER_REGIME and n > 1:
             order = base_order[::-1]
-            records.append(make_record(et, item, k, "swap", order,
-                                       et.render(item, labelled(item.options, order)), item.truth, item.options))
+            records.append(with_cue(et, item, make_record(
+                et, item, k, "swap", order, et.render(item, labelled(item.options, order)), item.truth,
+                item.options)))
         if et.twins and regime in ("near", "both") and seen[regime] <= TWIN_PER_REGIME and item.horizon_text:
             ref = reference_options(item)
-            records.append(make_record(et, item, k, "twin", base_order,
-                                       render_reference(item, labelled(ref, base_order)),
-                                       max_value_within(ref, item.horizon_years), ref))
+            records.append(with_cue(et, item, make_record(
+                et, item, k, "twin", base_order, (et.render_twin or render_reference)(item, labelled(ref, base_order)),
+                max_value_within(ref, item.horizon_years), ref)))
     return records

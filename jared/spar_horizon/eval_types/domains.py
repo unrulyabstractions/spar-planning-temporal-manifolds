@@ -15,18 +15,18 @@ DAY_DELAYS = tuple(Horizon(v, "days") for v in (1, 2, 3))
 IMPLICIT_MENU = tuple(sorted(DAY_DELAYS + DURATIONS, key=lambda h: h.years))
 
 
-def delay_pairs(regime, lo, hi, menu):
+def delay_pairs(regime, lo, hi, menu, margin=MARGIN):
     """(near, far) pairs from `menu` such that every horizon in [lo, hi] years is in `regime` and
-    at least MARGIN decades from the nearer delay, with the delays GAP decades apart."""
+    at least `margin` decades from the nearer delay, with the delays GAP decades apart."""
     log_lo, log_hi = math.log10(lo), math.log10(hi)
     pairs = []
     for near, far in combinations(sorted(menu, key=lambda h: h.years), 2):
         n, f = log_years(near), log_years(far)
         if f - n < GAP:
             continue
-        ok = {"near": n + MARGIN <= log_lo and log_hi <= f - MARGIN,
-              "both": f + MARGIN <= log_lo,
-              "none": log_hi <= n - MARGIN}[regime]
+        ok = {"near": n + margin <= log_lo and log_hi <= f - margin,
+              "both": f + margin <= log_lo,
+              "none": log_hi <= n - margin}[regime]
         if ok:
             pairs.append((near, far))
     return pairs

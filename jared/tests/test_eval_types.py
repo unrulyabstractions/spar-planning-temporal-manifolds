@@ -71,7 +71,8 @@ def test_swap_keeps_options_and_truth(records):
 def test_twin_states_the_horizon(records):
     _, recs = records
     for t in (r for r in recs if r["variant"] == "twin"):
-        assert f"time horizon: {t['horizon_text']}." in t["prompt"]
+        prompt = t["prompt"] if isinstance(t["prompt"], str) else "\n".join(m["content"] for m in t["prompt"])
+        assert f"time horizon: {t['horizon_text']}." in prompt
         assert t["choice_prefix"] == "I choose:" and t["answer_kind"] == "label"
         assert t["truth_labels"], t["sample_uid"]
 
