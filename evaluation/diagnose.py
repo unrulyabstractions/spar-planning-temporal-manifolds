@@ -26,7 +26,8 @@ import numpy as np
 
 # Thresholds, chosen from the 2026-11-25 Qwen3-8B numbers; to be revised.
 RELIABILITY_MIN = 0.7        # median split-half cosine of a refitted direction
-NUISANCE_COS_MAX = 0.3       # |cos| with letter / label style / option order / hit-the-cap
+NUISANCE_COS_MIN = 0.3       # |cos| with letter / style / order / cap is flagged above its shuffled-label null's 95th
+N_PERMUTATIONS = 100         # percentile, and never below this floor
 CLASS_GAP_MIN = 0.3          # far-rate gap between a direction's + and - classes
 SANITY_COS_MIN = 0.99        # saved bundle direction vs the recomputed one
 NONE_FAR_RATE_MAX = 0.25     # far rate on `none` prompts (no option pays within the horizon)
@@ -115,11 +116,37 @@ def fit_direction(X, sign, group, idx):
     return np.mean(parts, 0) if parts else None
 
 
+def permuted_nuisance_units(X, sign, rng):
+    """Unit nuisance directions refitted with the nuisance labels shuffled among the rows that have one.
+
+    Mean differences of raw residual activations share a few huge dimensions (Qwen3-8B L24: one dimension averages
+    ~89 against a mean |x| of 1.5), so even a random split of the rows has |cos| ~0.5 with any direction. A nuisance
+    cosine means something only above this null."""
+    used = np.flatnonzero(sign != 0)
+    units = []
+    for _ in range(N_PERMUTATIONS):
+        shuffled = sign.copy()
+        shuffled[used] = rng.permutation(sign[used])
+        v = fit_direction(X, shuffled, np.zeros(len(sign), int), np.arange(len(sign)))
+        if v is not None and np.linalg.norm(v):
+            units.append(v / np.linalg.norm(v))
+    return np.array(units)
+
+
+def nuisance_look(numbers, nuis):
+    """A nuisance cosine is flagged above its shuffled-label null's 95th percentile and the NUISANCE_COS_MIN floor."""
+    c, null95 = numbers["cos"].get(nuis), numbers.get("cos_null95", {}).get(nuis)
+    return c is not None and null95 is not None and abs(c) > max(null95, NUISANCE_COS_MIN)
+
+
 def site_numbers(X, coded, splits, typical_norm=None):
-    """Per direction at one site: raw norm, split-half reliability and cosines with the other directions."""
+    """Per direction at one site: raw norm, split-half reliability, cosines with the other directions, and each
+    nuisance cosine's permutation null (95th percentile of |cos|)."""
     everyone = np.arange(len(X))
     fit = lambda name, idx: fit_direction(X, *coded[name][:2], idx)
     vecs = {name: fit(name, everyone) for name in coded}
+    rng = np.random.default_rng(1)
+    null_units = {n: permuted_nuisance_units(X, coded[n][0], rng) for n in NUISANCES if vecs.get(n) is not None}
     out = {}
     for name in DIRECTIONS:
         if vecs[name] is None:
@@ -130,7 +157,9 @@ def site_numbers(X, coded, splits, typical_norm=None):
         out[name] = {"raw_norm": norm, "norm_over_typical": norm / typical_norm if typical_norm else None,
                      "reliability": float(np.median(halves)) if halves else None,
                      "reliability_p10_p90": [float(q) for q in np.percentile(halves, [10, 90])] if halves else None,
-                     "cos": {o: cosine(vecs[name], vecs[o]) for o in COMPARE if o != name}}
+                     "cos": {o: cosine(vecs[name], vecs[o]) for o in COMPARE if o != name},
+                     "cos_null95": {n: float(np.percentile(np.abs(units @ (vecs[name] / norm)), 95))
+                                    for n, units in null_units.items() if len(units) and norm}}
     return out, vecs
 
 
@@ -388,8 +417,10 @@ def section_c(bundles, acts_dir, baseline):
         checks.append(check(f"{name}: split-half reliability (median of {N_SPLITS}{spread_text})", now["reliability"], f"< {RELIABILITY_MIN}",
                             now["reliability"] is None or now["reliability"] < RELIABILITY_MIN, "refitting on a random half gives a different direction: it is mostly noise"))
         for nuis in NUISANCES:
-            c = now["cos"][nuis]
-            checks.append(check(f"{name}: cos with {nuis}", c, f"|cos| > {NUISANCE_COS_MAX}", c is not None and abs(c) > NUISANCE_COS_MAX, NUISANCE_MEANING[nuis]))
+            c, null95 = now["cos"][nuis], now["cos_null95"].get(nuis)
+            look = nuisance_look(now, nuis)
+            threshold = f"|cos| > shuffled-label null 95% ({null95:.2f})" if null95 is not None else "no null"
+            checks.append(check(f"{name}: cos with {nuis}", c, threshold, look, NUISANCE_MEANING[nuis]))
         for pool in gaps:
             g = pool["gap"]
             checks.append(check(f"{name} [{pool['group']}]: far-rate gap + minus - class", g, f"< {CLASS_GAP_MIN}", g is None or g < CLASS_GAP_MIN,
@@ -416,7 +447,7 @@ def section_c(bundles, acts_dir, baseline):
              "<h3>Checks</h3>", checks_table(checks)]
     cos_rows = []
     for name, now in sites[main_site].items():
-        cells = [(num(now["cos"].get(o)), "look" if o in NUISANCES and now["cos"].get(o) is not None and abs(now["cos"][o]) > NUISANCE_COS_MAX else "") if o in now["cos"] else "-" for o in COMPARE]
+        cells = [(num(now["cos"].get(o)), "look" if o in NUISANCES and nuisance_look(now, o) else "") if o in now["cos"] else "-" for o in COMPARE]
         cos_rows.append([name, num(now["norm_over_typical"], 3), num(sanity.get(name)), *cells])
     body += [f"<h3>Cosines at {esc(main_site)}</h3>", table(["direction", "norm / typical norm", "saved vs recomputed", *COMPARE], cos_rows),
              "<h3>The same at every extracted site</h3>"]
@@ -427,7 +458,7 @@ def section_c(bundles, acts_dir, baseline):
             if n is None:
                 continue
             rel = n["reliability"]
-            cells = [(num(n["cos"][o]), "look" if n["cos"][o] is not None and abs(n["cos"][o]) > NUISANCE_COS_MAX else "") for o in [*NUISANCES, "choice"] if o in n["cos"]]
+            cells = [(num(n["cos"][o]), "look" if o in NUISANCES and nuisance_look(n, o) else "") for o in [*NUISANCES, "choice"] if o in n["cos"]]
             site_rows.append([name, site + (" *" if site == main_site else ""), (num(rel), "look" if rel is None or rel < RELIABILITY_MIN else ""), *cells])
     body += [table(["direction", "site", "reliability", *NUISANCES, "choice"], site_rows), "<p>* the site the bundles were saved at.</p>"]
     if skipped:
