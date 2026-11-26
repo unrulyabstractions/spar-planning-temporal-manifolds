@@ -182,3 +182,31 @@ def test_method_dirs_site_filter_and_duplicates(tmp_path):
     assert re_.method_dirs(tmp_path, "prelabel")["caa"].name == "caa__prelabel"
     with pytest.raises(SystemExit):
         re_.method_dirs(tmp_path)                                          # caa twice, no site given
+
+
+def sweep_rows(odds, healthy=None):
+    xs = [0.02, 0.05, 0.1, 0.2, 0.4, 0.8]
+    healthy = healthy or [True] * len(odds)
+    return [{"x": x, "mean_odd_logit": o, "healthy": h} for x, o, h in zip(xs, odds, healthy)]
+
+
+def test_choose_strength_target_rule_is_unchanged():
+    from replay_eval import choose_strength
+    assert choose_strength(sweep_rows([0.1, 0.5, 1.2, 2.0, 3.0, 4.0]), "target", 1.0) == (
+        0.1, "smallest healthy x with |mean odd| >= target")
+    # Qwen3-8B 2026-11-25: the reversed effect at x = 0.8 (|-1.16| >= 1) counts as reaching the target.
+    qwen = sweep_rows([0.084, 0.183, 0.403, 0.652, 0.582, -1.160])
+    assert choose_strength(qwen, "target", 1.0) == (0.8, "smallest healthy x with |mean odd| >= target")
+    assert choose_strength(sweep_rows([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]), "target", 1.0) == (
+        0.8, "target not reached while healthy: largest healthy x")
+    assert choose_strength(sweep_rows([0.1] * 6, [False] * 6), "target", 1.0)[0] == 0.02
+
+
+def test_choose_strength_peak_rule_stops_at_the_first_sign_change():
+    from replay_eval import choose_strength
+    qwen = sweep_rows([0.084, 0.183, 0.403, 0.652, 0.582, -1.160])
+    assert choose_strength(qwen, "peak", 1.0) == (
+        0.2, "peak: largest |mean odd| among healthy x before the effect changes sign")
+    # A method that steers backwards from the start is kept (sign is a result); unhealthy x are never chosen.
+    assert choose_strength(sweep_rows([-0.1, -0.3, -0.6, -0.4, -2.0, 0.1], [True] * 4 + [False, True]), "peak", 1.0)[0] == 0.1
+    assert choose_strength(sweep_rows([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]), "peak", 1.0)[0] == 0.8

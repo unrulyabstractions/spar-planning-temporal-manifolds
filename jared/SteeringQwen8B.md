@@ -26,8 +26,10 @@ Findings:
    Inside a regime, longer horizons do not change behaviour at all (or reverse it in `both`): `caa-within` is noise
    (split-half <= 0.2) and, at `label`, mostly the answer letter.
 2. **Calibration picks a strength past the peak.** On the held-out fold the CAA effect is +0.65 logits at x = 0.2 and
-   -1.16 at 0.8; the target (1 logit) is never reached, so the rule (`replay_eval.py:591`, "largest healthy x") freezes
-   0.8. This explains the sign change between the held-out fold and the grid.
+   -1.16 at 0.8. The rule (smallest healthy x with |mean odd| >= 1 logit) judges size only, so the reversed effect at
+   0.8 counts as reaching the target and 0.8 is frozen (`calibration.json`: reached_target true). This explains the
+   sign change between the held-out fold and the grid. Fix: `--calib-rule peak` (largest effect before the first sign
+   change along the sweep: x = 0.2 here).
 3. **The regime contrast is reliable and moves behaviour, but at the answer it is largely the decision** (cos 0.55-0.85
    with choice). Only at `prompt_end` is it reliable and separate from the decision.
 
@@ -45,8 +47,8 @@ able to show an effect at all (`choice` as positive control)?
 - **Packaging:** regime is not a method in `steering/` (Alan's code, out of scope). It is written as a standard
   `LinearEdit` bundle (`method.json` + `arrays.npz` with `direction`, `typical_norm`) by a script in this branch, so
   `evaluation/` reads it unchanged. `choice` and `caa` are refitted at `prelabel` with `steering/fit.py --site`.
-- **Strength:** same held-out fold and x grid (0.02-0.8); new flag `--calib-rule peak` (largest odd effect among
-  healthy x; default stays `target`), with its dose curve saved. Nulls matched at the chosen x.
+- **Strength:** same held-out fold and x grid (0.02-0.8); new flag `--calib-rule peak` (largest |odd effect| among
+  healthy x before the first sign change; default stays `target`), with its dose curve saved. Nulls matched at the chosen x.
 - **Readout:** float32 replay, K = 19 covariance draws (shared draws for `prelabel` and `prompt_end` on the box).
 
 ## 4. Readouts, fixed before the run
