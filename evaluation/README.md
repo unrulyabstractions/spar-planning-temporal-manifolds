@@ -248,3 +248,21 @@ small models, so the numbers are not evidence about steering.
 - `Qwen3-1.7B__t0_s0__think_report.md`: report card of the full thinking-on run (2026-11-19, ~9–10 h on an 8 GB GPU).
 - `Qwen3-1.7B__t0_s0__think_loops.txt`: `check_loops.py` on the same run.
 - `Qwen3-1.7B__t0_s0__think_sampling.json`: `sampling_test.py` summary on the same run (100 looping + 31 controls).
+
+## Diagnostics report: `diagnose.py`
+
+CPU only (numpy and json), seconds; reports and never gates. Spec: `jared/EvalDiagnosticsSpec.md`. `run_local.sh` runs it
+as its last step; it also works right after fitting, before any replay (sections whose inputs are missing say
+"skipped: <file>").
+
+```
+python diagnose.py <run dir> --artifacts <dir with activations/ and methods/> --bank prompt_bank/data/t0_s0 \
+    --baseline <dir with responses.jsonl> [--out DIR]     # --out defaults to the run dir
+```
+
+It writes `diagnostics.html` (one self-contained page: summary of every "look" flag at the top, then sections A data and
+labels, B baseline behaviour, C each fitted direction, D strength, E outcomes, F readout noise), `diagnostics.json`
+(every number) and `diagnostics_items.csv` (one row per prompt). Every check shows its value, a threshold and a flag;
+the thresholds are constants at the top of `diagnose.py`. Directions are refitted from each bundle's `fit_uids.jsonl`
+and the activations (`caa`, `caa-within`, `choice`, `regime`, `reward`), so the report does not trust the saved
+cosines. Tests: `python -m pytest -q test_diagnose.py`.

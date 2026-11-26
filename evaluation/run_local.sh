@@ -115,3 +115,7 @@ if [ "${TRANSFER:-0}" = 1 ]; then
         --replay-dtype "${REPLAY_DTYPE:-float32}" --out "$OUT/transfer")
     stamp "done: transfer_report.md under $OUT/transfer"
 fi
+
+stamp "diagnostics (a failure here does not fail the run)"
+$PY "$ROOT/evaluation/diagnose.py" "$OUT" --activations "$ACT" --methods "$METHODS_RUN" --bank "$BANK" --baseline "$RUN_DIR" \
+    || echo "diagnostics failed: see above; the run itself is unaffected"
