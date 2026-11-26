@@ -554,6 +554,34 @@ def label_mass_health(mass_plus: float, mass_minus: float, mass0: float, ratio: 
     return even, even >= ratio * mass0
 
 
+def choose_strength(sweep: list[dict], rule_name: str, target_logit: float) -> tuple[float, str]:
+    """The operating strength from a calibration sweep (rows with x, mean_odd_logit, healthy, in increasing x).
+
+    Size, not sign, picks the strength: the sign is a result (a method may steer backwards), reported by analyze.py.
+    Never beyond the health bound.
+    - "target": the smallest healthy x whose |mean odd| reaches the target; if none does, the largest healthy x.
+    - "peak": the largest |mean odd| among the healthy x up to the first sign change of the effect. The effect need not
+      grow with x: on Qwen3-8B (2026-11-25) CAA rose to +0.65 at x = 0.2 and reversed to -1.16 at 0.8, and "target"
+      took 0.8 because |-1.16| reaches 1 logit. A sign change along the sweep means the edit has gone past what it
+      does at small x, so strengths beyond it are not the method's effect."""
+    healthy = [row for row in sweep if row["healthy"]]
+    if not healthy:
+        return sweep[0]["x"], "no healthy x: smallest x"
+    if rule_name == "peak":
+        first_sign = np.sign(healthy[0]["mean_odd_logit"])
+        before_flip = []
+        for row in healthy:
+            if np.sign(row["mean_odd_logit"]) != first_sign:
+                break
+            before_flip.append(row)
+        best = max(before_flip, key=lambda row: abs(row["mean_odd_logit"]))
+        return best["x"], "peak: largest |mean odd| among healthy x before the effect changes sign"
+    for row in healthy:
+        if abs(row["mean_odd_logit"]) >= target_logit:
+            return row["x"], "smallest healthy x with |mean odd| >= target"
+    return healthy[-1]["x"], "target not reached while healthy: largest healthy x"
+
+
 def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     out = Path(args.out)
     if (out / "calibration.json").exists():
@@ -569,8 +597,6 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     _, m0 = rep.run(items, caa_f.edit, 0.0, caa_f.positions)
     mass0 = float(m0.mean())
     sweep = []
-    chosen = None
-    healthy = []
     for x in args.x_grid:
         yp, mp = rep.run(items, caa_f.edit, x, caa_f.positions)
         ym, mm = rep.run(items, caa_f.edit, -x, caa_f.positions)
@@ -583,16 +609,7 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
                       "label_mass_plus": float(mp.mean()), "label_mass_minus": float(mm.mean())})
         print(f"calibrate: x={x:g} mean odd {odd:+.3f} logits, even label mass {mass:.3f} (unsteered {mass0:.3f})"
               f"{'' if ok else ' UNHEALTHY'} on {len(items)} held-out prompts")
-        if ok:
-            healthy.append(x)
-            if chosen is None and abs(odd) >= args.target_logit:
-                chosen = x
-    # Size, not sign, picks the strength: the sign is a result (a method may steer backwards), reported by analyze.py.
-    # Never beyond the health bound: if the target isn't reached while healthy, take the largest healthy strength.
-    rule = "smallest healthy x with |mean odd| >= target"
-    if chosen is None:
-        chosen = healthy[-1] if healthy else args.x_grid[0]
-        rule = "target not reached while healthy: largest healthy x" if healthy else "no healthy x: smallest x"
+    chosen, rule = choose_strength(sweep, args.calib_rule, args.target_logit)
     cal = {"fold": fold, "n_train": len(train), "n_heldout_scored": len(items), "target_logit": args.target_logit,
            "min_mass_ratio": args.min_mass_ratio, "unsteered_label_mass": mass0, "sweep": sweep, "x_push": chosen,
            "rule": rule, "reached_target": rule.startswith("smallest healthy"), "x_shift": args.x_shift}
@@ -807,6 +824,9 @@ def main(argv=None):
     p.add_argument("--k", type=int, default=sd.K_GEN, help="draws per null family (rows [:k] of the shared draws)")
     p.add_argument("--x-grid", type=float, nargs="+", default=[0.02, 0.05, 0.1, 0.2, 0.4, 0.8])
     p.add_argument("--target-logit", type=float, default=1.0)
+    p.add_argument("--calib-rule", choices=["target", "peak"], default="target",
+                   help="target: smallest healthy x reaching --target-logit (else the largest healthy x); "
+                        "peak: the healthy x with the largest |mean odd| (choose_strength)")
     p.add_argument("--min-mass-ratio", type=float, default=0.95,
                    help="health bound: the even part of the label mass, (mass(+x) + mass(-x)) / 2, must stay >= this "
                         "fraction of the unsteered mass")

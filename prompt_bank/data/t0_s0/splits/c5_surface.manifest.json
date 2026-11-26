@@ -1,0 +1,19 @@
+{
+  "name": "c5_surface",
+  "rule": "extraction split with a horizon; fit = phrasings {0, 2}, not rewritten, a)/b); test_phrasing = phrasings {1, 3}; test_rewrite = rewritten; test_labels = 1)/2); others (two features differ) in no set",
+  "seed": 0,
+  "bank_prompts_sha256": "75901a42a31fc674e490561cfccca428199f5196eaa6bef79c34aa4af60d32d9",
+  "counts": {
+    "rows": 269,
+    "role": {
+      "fit": 71,
+      "test": 198
+    },
+    "test_set": {
+      "fit": 71,
+      "test_rewrite": 44,
+      "test_labels": 76,
+      "test_phrasing": 78
+    }
+  }
+}

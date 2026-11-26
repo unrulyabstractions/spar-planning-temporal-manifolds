@@ -1,0 +1,50 @@
+{
+  "tier": "T0",
+  "split": "minimal_pair",
+  "prompts_sha256": "73894000acc5f40f57d51b4c5a8187b88b462fb1c6f9aafc8285376cc8985288",
+  "created_utc": "2026-11-26T09:55:33Z",
+  "code_commit": "e63c0643ef8dcbc94238f0bae72dac60c3a1e5a1",
+  "config": {
+    "seed": 0,
+    "n_items": 120,
+    "ratio_range": [
+      1.3,
+      1.6
+    ],
+    "decimals": 2,
+    "distinct_from": "t0_s0"
+  },
+  "counts": {
+    "prompts": 480,
+    "regime": {
+      "near_only": 240,
+      "both": 240
+    },
+    "far_delay": {
+      "50 years": 80,
+      "20 years": 80,
+      "5 years": 80,
+      "2 years": 80,
+      "10 years": 80,
+      "30 years": 80
+    },
+    "reward_multiplier": {
+      "50": 96,
+      "25": 96,
+      "10": 96,
+      "2": 96,
+      "5": 96
+    },
+    "phrasing_id": {
+      "0": 120,
+      "1": 120,
+      "2": 120,
+      "3": 120
+    },
+    "labels": {
+      "a)/b)": 240,
+      "1)/2)": 240
+    },
+    "near_first": 240
+  }
+}

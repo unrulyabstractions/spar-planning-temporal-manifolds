@@ -8,9 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from pipeline.s1_data_vectors.analysis.export_evaltype_banks import (EXPORTED, main, prompts_sha256,
-                                                                    to_prompt_record)
+from pipeline.s1_data_vectors.analysis.export_evaltype_banks import (EXPORTED, constraint_phrasing_id, main,
+                                                                    prompts_sha256, to_prompt_record)
 from spar_horizon.eval_types import build
+from spar_horizon.full_bank import CONSTRAINT_PHRASINGS
 
 PROMPT_RECORD_FIELDS = {"uid", "tier", "split", "text", "horizon", "horizon_grid_value", "horizon_unit",
                         "horizon_years", "rewritten", "phrasing_id", "near", "far", "reward_multiplier", "near_first",
@@ -53,6 +54,26 @@ def test_record_mapping():
         assert (row["h_over_far_delay"] < 1) == (row["regime"] != "both")
         assert row["notes"] == {k: v for k, v in rec.items() if k != "prompt"}
         assert f'{row["near"]["reward"]:,}' in row["text"] and row["near"]["delay"] in row["text"]
+
+
+@pytest.mark.parametrize("phrasing_id", range(len(CONSTRAINT_PHRASINGS)))
+@pytest.mark.parametrize("horizon", ["2 months", "0.7 years", "84 minutes"])
+def test_constraint_phrasing_found_in_text(phrasing_id, horizon):
+    line = CONSTRAINT_PHRASINGS[phrasing_id].format(horizon=horizon)
+    assert constraint_phrasing_id(f"TASK: x\nCONSTRAINT: {line}\nACTION: y") == phrasing_id
+    assert constraint_phrasing_id(f"[system]\n{line}\n\n[user]\nz") == phrasing_id
+    assert constraint_phrasing_id("TASK: x\nACTION: y") is None
+
+
+def test_phrasing_id_is_set_exactly_where_the_text_has_a_constraint_phrasing():
+    """system_prompt keeps the phrasing in its system message; t0_w3_clear words the constraint differently
+    (money at the end of the horizon), so it has none."""
+    rows = [to_prompt_record(r) for r in build("system_prompt", n_base=100)]
+    conversation = [r for r in rows if "messages" in r["notes"]]
+    assert conversation and {r["phrasing_id"] for r in conversation} == {0}
+    assert all((r["phrasing_id"] == 0) == (CONSTRAINT_PHRASINGS[0].format(horizon=r["horizon"]) in r["text"])
+               for r in rows)
+    assert {to_prompt_record(r)["phrasing_id"] for r in build("t0_w3_clear", n_base=100)} == {None}
 
 
 def test_pairs_are_the_two_option_orders():

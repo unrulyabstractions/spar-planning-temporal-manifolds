@@ -1,0 +1,12 @@
+{
+  "name": "debatable",
+  "rule": "all splits; exact ties (horizon equals a delay) and unit rewrites within 1% of a delay; role drop",
+  "seed": 0,
+  "bank_prompts_sha256": "75901a42a31fc674e490561cfccca428199f5196eaa6bef79c34aa4af60d32d9",
+  "counts": {
+    "rows": 9,
+    "role": {
+      "drop": 9
+    }
+  }
+}

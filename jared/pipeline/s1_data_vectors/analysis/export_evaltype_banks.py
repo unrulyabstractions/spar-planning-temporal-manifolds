@@ -20,7 +20,9 @@ Each row is a `pbank.records.PromptRecord` with exactly its fields (pbank's load
                   the horizon the truth is computed from, as the explicit twin writes it (horizon_text); the
                   prompt may state it otherwise (unit_mismatch) or only imply it (implicit_*): see notes
   horizon_unit, horizon_years   its unit word and value in years
-  rewritten, phrasing_id        False, None (T0 notions; a type's own phrasing id stays in notes)
+  rewritten       False (a T0 notion)
+  phrasing_id     the CONSTRAINT phrasing (0-3, as T0's) the prompt text contains, or None if it has none; a
+                  type's own phrasing id stays in notes
   near, far       reward (the option's value, None when the prompt gives none), delay (as written), delay_years
   reward_multiplier             far value / near value (None without values)
   near_first, labels            from near_label; labels as written in the prompt ("a)", "b)")
@@ -38,11 +40,13 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from collections import Counter
 from pathlib import Path
 
 from spar_horizon.eval_types import TYPES, build
 from spar_horizon.eval_types.common import EXPANDED_N_BASE
+from spar_horizon.full_bank import CONSTRAINT_PHRASINGS
 from spar_horizon.runs import git_hash
 
 # The types gated for the expanded banks (GATED in tests/test_eval_types_expanded.py).
@@ -53,6 +57,17 @@ EXPORTED = ("system_prompt", "city_no_values", "distractor_temporal", "t0_w0", "
 TIER, SPLIT = "evaltype", "transfer"
 REGIME = {"near": "near_only", "both": "both", "none": "none"}
 DEFAULT_OUT = Path.home() / "SPAR" / "results" / "horizon" / "evaltype_banks"
+
+
+# One pattern per CONSTRAINT phrasing with the horizon as a wildcard, not anchored to a line: a system message
+# carries the phrasing without "CONSTRAINT: ", and some types put it mid-line.
+PHRASING_PATTERNS = [re.compile(re.escape(head) + r"[^\n]+?" + re.escape(tail))
+                     for head, tail in (t.split("{horizon}") for t in CONSTRAINT_PHRASINGS)]
+
+
+def constraint_phrasing_id(text):
+    """The id of the CONSTRAINT phrasing the text contains, or None."""
+    return next((i for i, pattern in enumerate(PHRASING_PATTERNS) if pattern.search(text)), None)
 
 
 def transcript(messages):
@@ -74,12 +89,13 @@ def to_prompt_record(rec):
     if conversation:
         notes["messages"] = rec["prompt"]
     truth = rec.get("truth")
+    text = transcript(rec["prompt"]) if conversation else rec["prompt"]
     return {
         "uid": rec["sample_uid"], "tier": TIER, "split": SPLIT,
-        "text": transcript(rec["prompt"]) if conversation else rec["prompt"],
+        "text": text,
         "horizon": h_text, "horizon_grid_value": h_text,
         "horizon_unit": h_text.split()[-1] if h_text else None, "horizon_years": h_years,
-        "rewritten": False, "phrasing_id": None,
+        "rewritten": False, "phrasing_id": constraint_phrasing_id(text),
         "near": {"reward": near["value"], "delay": near["delay_text"], "delay_years": near["delay_years"]},
         "far": {"reward": far["value"], "delay": far["delay_text"], "delay_years": far["delay_years"]},
         "reward_multiplier": far["value"] / near["value"] if has_values else None,
