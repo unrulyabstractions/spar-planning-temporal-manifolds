@@ -580,7 +580,7 @@ def section_f(run, report):
 # ---- page ------------------------------------------------------------------------------------------------------------
 
 LIGHT = "--bg:#ffffff;--fg:#1f2328;--muted:#59636e;--border:#d1d9e0;--panel:#f6f8fa;--accent:#0969da;--look:#9a3412;--look-bg:#fff1e6;--ok:#1a7f37"
-DARK = "--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--border:#30363d;--panel:#161b22;--accent:#58a6ff;--look:#ffa657;--look-bg:#3a2411;--ok:#3fb950"
+DARK = "--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--border:#30363d;--panel:#161b22;--accent:#58a6ff;--look:#ffa657;--look-bg:#3a2411;--ok:#3fb950;color-scheme:dark"
 CSS = f"""
 :root{{{LIGHT}}}
 @media (prefers-color-scheme: dark){{:root:not([data-theme="light"]){{{DARK}}}}}
