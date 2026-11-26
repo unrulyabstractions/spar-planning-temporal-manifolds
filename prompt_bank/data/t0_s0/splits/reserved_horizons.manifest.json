@@ -1,0 +1,13 @@
+{
+  "name": "reserved_horizons",
+  "rule": "extraction split; horizon grid values 3, 9, ..., 45 of the 48 are test, the rest fit; null twins follow their source prompt",
+  "seed": 0,
+  "bank_prompts_sha256": "75901a42a31fc674e490561cfccca428199f5196eaa6bef79c34aa4af60d32d9",
+  "counts": {
+    "rows": 500,
+    "role": {
+      "fit": 419,
+      "test": 81
+    }
+  }
+}

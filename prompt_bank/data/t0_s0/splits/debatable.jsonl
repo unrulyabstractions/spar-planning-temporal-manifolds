@@ -1,0 +1,9 @@
+{"uid": "x0004", "role": "drop", "why": "tie+rewrite"}
+{"uid": "x0042", "role": "drop", "why": "tie"}
+{"uid": "x0224", "role": "drop", "why": "tie"}
+{"uid": "x0234", "role": "drop", "why": "tie"}
+{"uid": "x0238", "role": "drop", "why": "near_boundary+rewrite"}
+{"uid": "x0272", "role": "drop", "why": "near_boundary+rewrite"}
+{"uid": "x0290", "role": "drop", "why": "near_boundary+rewrite"}
+{"uid": "x0311", "role": "drop", "why": "tie"}
+{"uid": "x0340", "role": "drop", "why": "near_boundary+rewrite"}
