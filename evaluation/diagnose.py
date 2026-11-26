@@ -24,6 +24,9 @@ from pathlib import Path
 
 import numpy as np
 
+from confound_splits import balance_table
+from label_audit import audit_bank
+
 # Thresholds, chosen from the 2026-11-25 Qwen3-8B numbers; to be revised.
 RELIABILITY_MIN = 0.7        # median split-half cosine of a refitted direction
 NUISANCE_COS_MIN = 0.3       # |cos| with letter / style / order / cap is flagged above its shuffled-label null's 95th
@@ -277,9 +280,35 @@ def section_a(prompts, checks_dir):
                             "the checker solves a share of prompts differently: the stored correct option may be wrong there"))
         body += [f"<h3>Checker {esc(f.stem)}: {sum(r['agrees'] for r in rs)}/{len(rs)} agree, {sum(problems.values())} problem flags</h3>",
                  table(["problem category", "flags"], [[c, str(n)] for c, n in problems.most_common()])]
+    audits, balances = {}, {}
+    for split in splits:
+        records = [p for p in prompts.values() if p["split"] == split]
+        audit = audits[split] = audit_bank(records)
+        mismatched = sorted({uid for uids in audit["mismatches"].values() for uid in uids})
+        unset = sorted({uid for uids in audit["unset"].values() for uid in uids})
+        checks.append(check(f"labels [{split}]: rule-based recheck of regime / correct answer / label disagrees", len(mismatched),
+                            "> 0", bool(mismatched), "a stored label differs from what the prompt's own options and horizon give"))
+        checks.append(check(f"labels [{split}]: prompts with a confound label unset", len(unset), "> 0", bool(unset),
+                            "an analysis cannot split these prompts by that factor"))
+        kinds = Counter(k for d in audit["debatable"] for k in d["kinds"])
+        body.append(f"<h3>Label audit [{esc(split)}]: {len(mismatched)} recheck mismatches, {len(unset)} with unset labels; "
+                    f"debatable: {esc(', '.join(f'{k} {n}' for k, n in sorted(kinds.items())) or 'none')}</h3>")
+        balance = balances[split] = balance_table([p for p in records if p["regime"] != "no_horizon"])
+        flagged = [(factor, by_name, f) for factor, per_by in balance.items() for by_name, b in per_by.items() for f in b["flags"]]
+        for factor in sorted({factor for factor, _, _ in flagged}):
+            worst = max((f for fa, _, f in flagged if fa == factor), key=lambda f: abs(f["share"] - f["overall_share"]))
+            checks.append(check(f"balance [{split}]: {factor} vs regime / correct option", worst["share"] - worst["overall_share"],
+                                "a share > 0.10 from the overall share", True,
+                                f"{factor} = {worst['factor_level']} is {worst['share']:.0%} of {worst['by_level']} prompts against "
+                                f"{worst['overall_share']:.0%} overall: a contrast between those groups also contrasts {factor}"))
+        rows = [[factor, by_name, f["by_level"], f["factor_level"], f"{f['share']:.2f}", f"{f['overall_share']:.2f}", str(f["n"])]
+                for factor, by_name, f in flagged]
+        body.append(table(["factor", "against", "group", "level", "share in group", "overall", "group n"], rows) if rows
+                    else "<p>No factor more than 0.10 off its overall share.</p>")
     body += ["<h3>Per-prompt table</h3>", "<p>One row per prompt (split, fold, regime, option, H/far delay, label style, choice, correct, "
                                           "hit the cap, trace length, CAA classes) in <code>diagnostics_items.csv</code>.</p>"]
-    return {"id": "A", "title": title, "skipped": None, "checks": checks, "data": {"counts": counts, "checkers": checkers}, "body": "".join(body)}
+    data = {"counts": counts, "checkers": checkers, "label_audit": audits, "balance": balances}
+    return {"id": "A", "title": title, "skipped": None, "checks": checks, "data": data, "body": "".join(body)}
 
 
 def fisher_p(a, b, c, d):

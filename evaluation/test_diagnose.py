@@ -137,3 +137,22 @@ def test_accuracy_breakdown_flags_the_odd_phrasing():
     assert any("phrasing = 1," in n for n in looks)
     assert not any("phrasing = 0," in n or "phrasing = 3," in n for n in looks)
     assert not any(c["flag"] for c in checks if "label style" in c["name"] or "option order" in c["name"])
+
+
+def test_section_a_flags_a_wrong_label_and_an_unbalanced_factor():
+    from pathlib import Path
+    bank = Path(__file__).resolve().parents[1] / "prompt_bank" / "data" / "t0_s0" / "prompts.jsonl"
+    prompts = {r["uid"]: r for r in map(json.loads, bank.open())}
+    clean = {c["name"]: c for c in D.section_a(prompts, Path("/nonexistent"))["checks"]}
+    assert clean["labels [verification]: rule-based recheck of regime / correct answer / label disagrees"]["value"] == 0
+    # Corrupt one stored answer, and make every `both` prompt use 1)/2) labels.
+    broken = {uid: dict(r) for uid, r in prompts.items()}
+    first = next(uid for uid, r in broken.items() if r["split"] == "verification" and r["regime"] == "both")
+    broken[first]["correct_option"] = "near"
+    for r in broken.values():
+        if r["split"] == "verification" and r["regime"] == "both":
+            r["labels"] = ["1)", "2)"]
+    checks = {c["name"]: c for c in D.section_a(broken, Path("/nonexistent"))["checks"]}
+    recheck = checks["labels [verification]: rule-based recheck of regime / correct answer / label disagrees"]
+    assert recheck["flag"] and recheck["value"] >= 1
+    assert checks["balance [verification]: labels vs regime / correct option"]["flag"]
