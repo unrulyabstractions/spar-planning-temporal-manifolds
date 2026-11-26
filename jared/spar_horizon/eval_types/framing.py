@@ -289,6 +289,11 @@ MULTITURN_SCRIPTS = (
 )
 
 
+def evaluation_turn(option):
+    """The original script's evaluation turn; the boundary types (boundary.py) reuse it word for word."""
+    return MULTITURN_SCRIPTS[0][2].format(value=money(option.value), delay=option.delay_text)
+
+
 def multiturn_item(rng, i, regime):
     item = standard_item(rng, regime)
     if i >= len(PLAN):
