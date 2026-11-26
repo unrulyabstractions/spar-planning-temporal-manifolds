@@ -11,7 +11,11 @@ Docs are numbered; the specs and results of stage 1 and 2 are listed once, in
 | File | What it is |
 |---|---|
 | `01_plan.md` | Current plan: improving the evaluation pipeline (from 2026-11-19) |
-| `EvalsSpec.md`, `EvalsPromptTypes.md` | Draft eval prompt types (not approved, not in code) |
+| `EvalsSpec.md`, `EvalsPromptTypes.md` | Eval prompt types (2026-11-15 drafts); built, with the v2 wording, in `spar_horizon/eval_types/` |
+| `EvalsPromptsV2.md` | Eval types v2: unambiguous wording, results, E21/E22 specs |
+| `EvalsSteeringSpec.md`, `EvalsSteeringResults.md` | E20: phrase donor patching on the eval types |
+| `EvalsBoundarySpec.md` | Where the horizon structure holds and where it stops (E21) |
+| `EvalsRelatedQualities.md` | E23 (side question): does the horizon edit move power-seeking, survival, reward hacking |
 | `12_results_local_checks.md` | Two local checks on saved activations: natural closes and within-unit R² (Check 1), horizon vs delay before the hand-off (Check 2) |
 | `13_evidence.md` | Evidence index: each claim we rely on, its strength, and the figure behind it |
 | `23_literature.md` | Literature (2026-11-03): numbers, durations and manifolds; patching and steering pitfalls; CoT faithfulness; intertemporal choice |

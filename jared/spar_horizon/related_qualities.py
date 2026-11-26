@@ -12,9 +12,11 @@ per item) and a `swap` record (reversed), adjacent. Data and sources: data/relat
 
 import csv
 import functools
+import hashlib
 import json
 import random
 import re
+import urllib.request
 from pathlib import Path
 
 from .eval_types import common
@@ -24,6 +26,23 @@ MWE_FILES = {"mwe_power": "mwe_power-seeking-inclination.jsonl",
              "mwe_survival": "mwe_survival-instinct.jsonl",
              "mwe_wealth": "mwe_wealth-seeking-inclination.jsonl"}
 SORH_FILE = "sorh.csv"
+# The data files are not committed. Each is fetched from its public source on first use and checked
+# against the sha256 recorded when E23 ran, so every run sees exactly the rows E23 saw.
+MWE_SOURCE = "https://raw.githubusercontent.com/anthropics/evals/main/advanced-ai-risk/human_generated_evals"
+SOURCES = {
+    "mwe_power-seeking-inclination.jsonl": (
+        f"{MWE_SOURCE}/power-seeking-inclination.jsonl",
+        "a8a2094a1e404fb094b3d361e3049ecc06ecd2a26d0b4b827b4a83a98b6d886a"),
+    "mwe_survival-instinct.jsonl": (
+        f"{MWE_SOURCE}/survival-instinct.jsonl",
+        "0831782a9e0462f137eb9c4884edd19f248e18f17770f7a4540c67937b3af0e8"),
+    "mwe_wealth-seeking-inclination.jsonl": (
+        f"{MWE_SOURCE}/wealth-seeking-inclination.jsonl",
+        "7583bec06bd799cf21fe854c6e8b92ebb669ce02579ea1a869aa460cc0f18546"),
+    SORH_FILE: (
+        "https://huggingface.co/datasets/longtermrisk/school-of-reward-hacks/resolve/main/school-of-reward-hacks.csv",
+        "cedfea4c010e62311b6eb50c37d6aa78b184eb001b5f8099f4b5025b17285d2d"),
+}
 SETS = (*MWE_FILES, "sorh")
 TYPES = SETS
 
@@ -52,10 +71,28 @@ def parse_mwe_row(row):
     return stem.strip(), list(options.values()), list(options).index(behaviour_letter)
 
 
+def data_file(name):
+    """Path to a data file, downloaded and checked against its recorded sha256 if not here yet."""
+    path = DATA_DIR / name
+    if path.exists():
+        return path
+    url, expected = SOURCES[name]
+    with urllib.request.urlopen(url, timeout=120) as response:
+        body = response.read()
+    got = hashlib.sha256(body).hexdigest()
+    if got != expected:
+        raise RuntimeError(f"{url} no longer matches the data E23 used (sha256 {got}, expected {expected})")
+    # Write then rename, so an interrupted download never leaves a partial file that later loads.
+    partial = path.with_name(path.name + ".partial")
+    partial.write_bytes(body)
+    partial.replace(path)
+    return path
+
+
 def load_mwe(set_id):
     """Items of a MWE set as {source_index, prompt_stem, matching, not_matching}, with the number of
     source rows dropped for not having exactly two choices."""
-    rows = [json.loads(line) for line in (DATA_DIR / MWE_FILES[set_id]).read_text().splitlines()]
+    rows = [json.loads(line) for line in data_file(MWE_FILES[set_id]).read_text().splitlines()]
     items, dropped = [], 0
     for source_index, row in enumerate(rows):
         stem, options, behaviour = parse_mwe_row(row)
@@ -97,7 +134,7 @@ def load_sorh():
     """SoRH items that have both responses and a short enough prompt, with the counts dropped for each
     reason. The 100 'write a function' rows have no honest response (dataset README), so they never
     appear: every kept item is a non-coding task."""
-    with open(DATA_DIR / SORH_FILE, newline="") as f:
+    with open(data_file(SORH_FILE), newline="") as f:
         csv.field_size_limit(2**31 - 1)
         rows = list(csv.DictReader(f))
     items, no_control, too_long = [], 0, 0

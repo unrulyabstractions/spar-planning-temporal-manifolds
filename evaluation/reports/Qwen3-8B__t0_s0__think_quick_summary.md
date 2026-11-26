@@ -20,8 +20,9 @@ and in generation it makes the model reason until the token cap. On `system_prom
 - Strength frozen on held-out extraction prompts (fold 0, 34 prompts): x = 0.8 × typical norm, mean odd effect −1.16
   there with label mass unchanged (0.999).
 - Random baseline: 19 covariance-matched directions. Arms: CAA, curve-snap, covariance (the quick set, as on Gemma).
-- Files: `Qwen3-8B__t0_s0__think_quick_report.md` (T0 report card) and `…_quick_transfer.md` (transfer). The report
-  card's last line ("Plumbing run: the model is small…") is boilerplate from `analyze.py` and does not apply.
+- The full T0 report card (`analyze.py`) and transfer table (`transfer_eval.py`) are not committed; they are
+  regenerated from the run directory. The report card's last line ("Plumbing run: the model is small…") is
+  boilerplate from `analyze.py` and does not apply.
 
 ## Results
 

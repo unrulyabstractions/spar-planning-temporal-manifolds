@@ -1,6 +1,6 @@
 # Eval prompts v2: making the truth unambiguous (2026-11-17)
 
-Follows `EvalsResults_2026-11-16.md`. That run showed the model rarely takes a payout that comes
+Follows `history/EvalsResults_2026-11-16.md`. That run showed the model rarely takes a payout that comes
 after the horizon (`near` regime 11-12/12 in every two-option type), but often takes the sooner,
 smaller payout when both pay out within the horizon (`both`). This doc traces those errors to the
 template, proposes a clearer wording, and records the predictions made before the v2 run.

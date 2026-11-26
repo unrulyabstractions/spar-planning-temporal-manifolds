@@ -16,8 +16,9 @@ toward the far option), but random directions with the activations' covariance m
   with a 1-logit effect and no loss of label mass. From x = 0.4 the label mass drops (the model breaks).
 - Random baseline: 19 directions matched to the activations' covariance (`covariance`), the hardest of the cheap
   families. On Gemma these reach cosine 0.76 with CAA (`extraction_design/README.md` §10.1).
-- Files: `gemma-4-31B-it__t0_s0__quick_report.md` (T0 report card) and `…__quick_transfer.md` (transfer). The
-  report card's last line ("Plumbing run: the model is small…") is boilerplate from `analyze.py` and does not apply.
+- The full T0 report card (`analyze.py`) and transfer table (`transfer_eval.py`) are not committed; they are
+  regenerated from the run directory. The report card's last line ("Plumbing run: the model is small…") is
+  boilerplate from `analyze.py` and does not apply.
 
 ## Results
 

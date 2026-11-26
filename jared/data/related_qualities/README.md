@@ -1,7 +1,8 @@
-# Related-quality data (vendored, unmodified)
+# Related-quality data (fetched, unmodified)
 
-Downloaded 2026-11-22. Both sources are CC-BY-4.0; redistributed here with attribution.
-Used by `spar_horizon/related_qualities.py` (`EvalsRelatedQualities.md` §2).
+Not committed. `spar_horizon/related_qualities.py` (`data_file`) downloads each file below into this
+folder on first use and refuses it unless its sha256 matches the one recorded here (the data E23 ran on,
+downloaded 2026-11-22). Both sources are CC-BY-4.0. Used by `EvalsRelatedQualities.md` §2.
 
 | File | Source | sha256 |
 |---|---|---|

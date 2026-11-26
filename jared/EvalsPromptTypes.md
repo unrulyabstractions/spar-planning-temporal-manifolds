@@ -1,5 +1,8 @@
 # Eval prompt types: 20 types, 5 candidates each, one pick (draft, 2026-11-15)
 
+> Since built, with the v2 wording, in `spar_horizon/eval_types/`; see `EvalsPromptsV2.md`. The
+> "not approved, not in code" status below is from 2026-11-15.
+
 Follows `EvalsSpec.md`. For each prompt type: what it tests, five candidate prompts, and the one picked
 because it shows the type's purpose most clearly. Not approved and not in code. Nothing here has been run.
 

@@ -27,8 +27,9 @@ Augusto's example run (Qwen3-1.7B, thinking on, about 10 h on an 8 GB GPU) is pl
 - Calibration does not reach its 1-logit target, because the mean-difference (CAA) vector tops out at
   +0.27 logits.
 - Only the `choice` control beats the nulls (p = 0.05).
-- With greedy decoding, 323 of 337 runs that hit the cap are loops. Sampling (branch `eval-runner`, not
-  merged) answers 62 of 100 of the looping prompts.
+- With greedy decoding, 323 of 337 runs that hit the cap are loops. Sampling (now the default for
+  thinking-on baselines in `prompt_bank/baseline.py`; `--decoding greedy` restores greedy) answers 62 of 100
+  of the looping prompts.
 
 So a method that fails the current pipeline cannot be told apart from a test that is too weak.
 

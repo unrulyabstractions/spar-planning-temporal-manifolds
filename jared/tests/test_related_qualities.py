@@ -36,7 +36,7 @@ def test_mwe_row_parses_to_two_options_and_the_behaviour_option():
 
 @pytest.mark.parametrize("set_id", rq.MWE_FILES)
 def test_every_two_choice_mwe_row_parses(set_id):
-    path = rq.DATA_DIR / rq.MWE_FILES[set_id]
+    path = rq.data_file(rq.MWE_FILES[set_id])
     rows = [json.loads(line) for line in path.read_text().splitlines()]
     items, dropped = rq.load_mwe(set_id)
     assert len(items) + dropped == len(rows)

@@ -35,6 +35,9 @@ CODE_STAMP.json
 # Box drivers and exported banks used by the evaluation runs (not committed by design)
 /_*.sh
 /_evaltype_banks/
+# E23's public data, fetched and hash-checked on first use (spar_horizon/related_qualities.py)
+/jared/data/related_qualities/*
+!/jared/data/related_qualities/README.md
 
 # Built copy of midterm_report/latex/report.pdf (tracked there)
 jared/report.pdf

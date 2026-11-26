@@ -1,4 +1,4 @@
-# Spec: where the horizon structure holds, and where it stops (draft 2026-11-21, not approved)
+# Spec: where the horizon structure holds, and where it stops (2026-11-21)
 
 Status: **approved 2026-11-21** with the tier changes in §5. S0 done (results in
 `results/horizon/evaltypes_Qwen3-8B_think-on/boundary/`). S1 code ready (`exp21_boundary_off.py`,

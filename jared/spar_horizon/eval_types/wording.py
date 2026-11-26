@@ -1,4 +1,4 @@
-"""Eval types, v2: the T0 wording made unambiguous (EvalsResults_2026-11-16.md, EvalsPromptsV2.md).
+"""Eval types, v2: the T0 wording made unambiguous (history/EvalsResults_2026-11-16.md, EvalsPromptsV2.md).
 
 In the overnight run most errors were in the `both` regime, where the model took the sooner, smaller
 payout and argued that it could be reinvested for longer. Alan's template never says whether money
