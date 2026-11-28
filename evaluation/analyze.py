@@ -35,8 +35,8 @@ import nulls
 
 # Arms with their own rows in the report, never pooled as nulls. Prompting arms (replay_eval --prompting) have no
 # matched null family; their floor is the prompt:neutral sentence, so they are reported but not ranked.
-REPORTED = ("method", "control", "comparison", "prompting")
-RANKED = ("method", "control", "comparison")
+REPORTED = ("method", "control", "comparison", "prompting", "patch")
+RANKED = ("method", "control", "comparison", "patch")
 
 
 def read_jsonl(p):
@@ -209,7 +209,8 @@ def arm_results(out: Path, items, y0, keep=None, boot: int = 0) -> dict:
 
 def compare_to_nulls(res: dict, stats=("meaning", "delta_log10_H")) -> dict:
     """Each ranked arm (RANKED, not curve-snap@0) against every null family of its kind, per statistic; an N6 family
-    only against the method whose damage it matches."""
+    only against the method whose damage it matches. A subspace patch only against the null bases of its own dimension
+    (patch-null:k<k>), which no other arm is ranked against; the text and full patches have no null."""
     fams = {}
     for r in res.values():
         if r["family"] not in REPORTED:
@@ -220,7 +221,12 @@ def compare_to_nulls(res: dict, stats=("meaning", "delta_log10_H")) -> dict:
             continue
         comps[name] = {}
         for fam, rows in fams.items():
-            if fam.startswith("n6:"):
+            if (r["family"] == "patch") != fam.startswith("patch-null:"):
+                continue                           # patches vs patch nulls only, and the reverse
+            if fam.startswith("patch-null:"):
+                if fam != f"patch-null:k{r.get('k')}":
+                    continue
+            elif fam.startswith("n6:"):
                 if fam != f"n6:{name}":
                     continue                       # N6 is matched to one method's damage: only that method
             else:
@@ -258,6 +264,7 @@ def main(argv=None):
     comps = compare_to_nulls(res)
     cal = json.loads((out / "calibration.json").read_text())
     n0 = json.loads((out / "n0_check.json").read_text()) if (out / "n0_check.json").exists() else {}
+    run_args = json.loads((out / "settings.json").read_text())["args"] if (out / "settings.json").exists() else {}
     skipped = read_jsonl(out / "skipped.jsonl")
     n_ver_skipped = sum(1 for s in skipped if s["split"] == "verification")
     gen = {}
@@ -276,10 +283,18 @@ def main(argv=None):
               "arms": res, "comparisons": comps, "gencheck": gen, "n6": n6, "agreement": agreement}
     (out / "report.json").write_text(json.dumps(report, indent=2, default=float) + "\n")
 
+    if cal.get("fold") is not None:
+        strength = (f"- Push strength x = {cal['x_push']:g} × typical norm (calibrated on held-out fold {cal['fold']}, "
+                    f"target {cal['target_logit']} logit, reached: {cal['reached_target']}); target shift = "
+                    f"{cal['x_shift']:g} decades")
+    else:                    # screen.py select's calibration: no fold, and x_push is None for a curve winner
+        strength = f"- Push strength x = {cal['x_push']} × typical norm; target shift = {cal['x_shift']} decades ({cal.get('rule')})"
     L = ["# Report card (replay readout)", "",
          f"- Verification items readable: {len(items)} (unreadable: {n_ver_skipped}, listed in skipped.jsonl)",
-         f"- Push strength x = {cal['x_push']:g} × typical norm (calibrated on held-out fold {cal['fold']}, "
-         f"target {cal['target_logit']} logit, reached: {cal['reached_target']}); target shift = {cal['x_shift']:g} decades",
+         strength,
+         # runs from before --write-span and --tf32 had neither: every token written, no TF32
+         f"- Write span: {run_args.get('write_span', 'all')}; TF32: {'on' if run_args.get('tf32') else 'off'}; "
+         f"replay weights: {run_args.get('replay_dtype', 'not recorded')}",
          f"- N0: zero edit vs hook-free max |Δy| = {n0.get('max_abs_diff_vs_hook_free')}; unsteered replay matches the "
          f"generated choice on {n0.get('replay_matches_generated_choice', float('nan')):.1%}",
          f"- Unsteered switch point log10(H/D) = {loc0:+.3f}, slope {s0:.2f}, label mass {base['mass'].mean():.3f}", "",
@@ -301,6 +316,12 @@ def main(argv=None):
                      f"{r.get('slope_minus', float('nan')):.2f} | {r.get('plateau_low_plus', float('nan')):.2f} / "
                      f"{r.get('plateau_high_plus', float('nan')):.2f} | {r.get('label_mass_plus', float('nan')):.3f} / "
                      f"{r.get('label_mass_minus', float('nan')):.3f} |")
+    if any(r["family"] == "patch" for r in res.values()):
+        L += ["", "Patch arms (patching.py) use a source prompt whose horizon is 10x longer (+) or shorter (-). "
+              "patch:text rewrites the horizon in the prompt and keeps the reasoning: with the reasoning teacher-"
+              "forced it is the most a prompt-side horizon change can do here (2026-11-28, Qwen3-8B: meaning "
+              "+0.52, Δlog10 H* 0.00; the fixed reasoning dominates the answer). patch:full replaces the whole "
+              "state at the patched tokens."]
     L += ["", "## Against the nulls (rank p; |null| 95th percentile)", "",
           "| method | null family | K | meaning: stat / p95 / p | Δlog10 H*: stat / p95 / p |", "|---|---|---|---|---|"]
     for name, by in comps.items():
@@ -337,7 +358,6 @@ def main(argv=None):
         for k, g in gen.items():
             L.append(f"| {k} | {g['samples']} | {g['parsed']}/{g['n']} | {g['p_far'] if g['p_far'] is None else round(g['p_far'], 2)} | "
                      f"{g['hit_cap']} | {g['mean_tokens']:.0f} |")
-    L += ["", "Plumbing run: the model is small and the numbers are not evidence about steering."]
     (out / "report.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 

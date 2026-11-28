@@ -2,10 +2,12 @@
 
     python fit.py --activations activations/gemma-4-31B-it__t0_s0 --bank ../prompt_bank/data/t0_s0 --layer 38
     python fit.py ... --no-include-none --name no-none               # leave the "none" regime out
+    python fit.py ... --uids ../prompt_bank/data/t0_s0/splits/reserved_horizons.jsonl --uids-role fit --name reserved
 
 For one layer and site it writes fits/<activations name>/<name>/L<layer>_<site>/:
 
-    directions.npz   unit vectors: caa, reward (control), choice (diagnostic only), random [n, d] (controls);
+    directions.npz   unit vectors: caa, reward (control), choice (diagnostic only), trend and probe (horizon
+                     directions with the regime removed), random [n, d] (controls);
                      the within-regime CAAs caa_none, caa_near_only, caa_both and their pool caa_within (those that
                      could be formed); typical_norm (the strength unit); raw norms
     manifold.npz     the curve (steer/manifold.py, Manifold.load)
@@ -38,17 +40,28 @@ Definitions (report, Appendix A.3; details in the steer modules):
   --no-include-none); they enter the diagnostics only, never a method's parameters.
 * Choice (diagnostic, not a control): mean of replies that chose the far option minus those that chose near. Its
   cosine with CAA measures how much of CAA is "which option was chosen" rather than "how long the horizon is".
+* Trend and probe (horizon directions with the regime removed): within each regime, subtract the regime's mean
+  activation and mean log10 H. trend is the sum over prompts of (activation) x (log10 H), unit-normalized: the
+  covariance pattern of a horizon decoder (Haufe et al. 2014), the right direction for an additive edit. probe is the
+  ridge decoder's weight vector for the same target, alpha from logspace(0, 6, 13) by 5-fold CV that holds out whole
+  horizons (sorted distinct horizons dealt to folds in turn), unit-normalized. Both point toward longer horizons.
+  Diagnostics: held-out-horizon Spearman of each one's projection with the (demeaned) log10 H, probe's alpha, cosines
+  with caa, choice and reward, and the prompt counts (steer/horizon_decoders.py).
 * Manifold: per-horizon means -> PCA (k components) -> local-linear curve in log10(days) (steer/manifold.py).
 
 Which prompts: extraction-split prompts with a stated horizon. "None"-regime prompts are included by default, as the
 report's Methods section says they are "used for extraction"; --no-include-none leaves them out of everything (CAA,
 the controls and the curve). --exclude-horizons leaves out every prompt at the given stated horizons, e.g. to hold
-them out for calibration. Verification-grid prompts are never used, even if extract.py was run on them, and neither
+them out for calibration. --uids FILE keeps only prompts whose uid is a row of the jsonl FILE (with --uids-role ROLE,
+only rows whose "role" is ROLE, e.g. reserved_horizons.jsonl's fit/test); it combines with the rules above. fit.json
+records the file, its sha256, the role and, in `excluded`, the prompts it leaves out ("not_in_uids", counted only for
+prompts the other rules keep). Verification-grid prompts are never used, even if extract.py was run on them, and neither
 are the no-horizon (null) prompts, which have no horizon to place on the curve. fit.json counts the prompts left out
 for each reason.
 
 Diagnostics, all in fit.json:
 
+* trend and probe: see their definition above (diagnostics.horizon_decoders);
 * class sizes by regime, for CAA and reward (the CAA classes are not balanced by regime; see README);
 * the within-regime CAAs: class sizes and horizon cut-offs per regime, each class's share of far choices, cosines
   with CAA, choice and reward, and the cosines between the regimes' directions (do they agree on one direction?);
@@ -72,8 +85,9 @@ import numpy as np
 
 from pbank.local_model import log
 from pbank.provenance import utc_now
-from pbank.records import load_prompts, prompts_sha256, write_jsonl
+from pbank.records import load_prompts, prompts_sha256, read_jsonl, write_jsonl
 from steer import activations
+from steer.activations import file_sha256
 from steer.draws import load_shared
 from steer.provenance import code_commit
 from pbank.durations import Duration
@@ -92,6 +106,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                    help='use "none"-regime prompts (default: yes, as the report says)')
     p.add_argument("--exclude-horizons", nargs="+", default=[], metavar="HORIZON",
                    help='stated horizons (grid values, e.g. "3 years") whose prompts are left out of the fit')
+    p.add_argument("--uids", type=Path, metavar="FILE",
+                   help="jsonl with a uid per row (and a role): fit only on the prompts it lists")
+    p.add_argument("--uids-role", help='with --uids: only rows whose "role" is this (e.g. fit)')
     p.add_argument("--caa-long-min", type=float, default=4.0, help="H/D at or above which a prompt is 'long'")
     p.add_argument("--caa-short-max", type=float, default=0.25, help="H/D at or below which a prompt is 'short'")
     p.add_argument("--within-quantile", type=float, default=1 / 3,
@@ -113,7 +130,16 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def recorded_settings(args: argparse.Namespace) -> dict:
-    return {k: v for k, v in vars(args).items() if k not in ("activations", "bank", "draws")}
+    return {k: v for k, v in vars(args).items() if k not in ("activations", "bank", "draws", "uids")}
+
+
+def read_uids(path: Path, role: str | None) -> set[str]:
+    rows = read_jsonl(path)
+    if role is not None:
+        rows = [r for r in rows if r.get("role") == role]
+    if not rows:
+        sys.exit(f"--uids {path}: no rows" + (f" with role {role!r}" if role else ""))
+    return {r["uid"] for r in rows}
 
 
 def append_search(path: Path, row: dict) -> None:
@@ -154,7 +180,12 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
         if h not in grid:
             sys.exit(f"--exclude-horizons {h!r} is not a stated horizon of {args.bank.name}; grid values look like "
                      f"{sorted(grid, key=lambda g: Duration.parse(g).days)[:3]}")
-    selection = select(acts.uids, records, args.include_none, args.exclude_horizons)
+    if args.uids_role and not args.uids:
+        sys.exit("--uids-role needs --uids")
+    allowed = read_uids(args.uids, args.uids_role) if args.uids else None
+    if allowed is not None and not allowed <= records.keys():
+        sys.exit(f"--uids {args.uids}: {len(allowed - records.keys())} uids are not in {args.bank.name}")
+    selection = select(acts.uids, records, args.include_none, args.exclude_horizons, allowed)
     use = selection.rows
     X = acts.X[use]
     recs = [records[acts.uids[i]] for i in use]
@@ -182,9 +213,11 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
 
     out.mkdir(parents=True)
     within = {key: result.direction(key) for key in direction_keys(result) if key.startswith("caa_")}
-    np.savez(out / "directions.npz", caa=caa.vector, reward=reward.vector, choice=choice.vector, random=result.random,
+    np.savez(out / "directions.npz", caa=caa.vector, reward=reward.vector, choice=choice.vector,
+             trend=result.trend.vector, probe=result.probe.vector, random=result.random,
              typical_norm=norm, caa_raw_norm=caa.raw_norm, reward_raw_norm=reward.raw_norm,
              **{key: d.vector for key, d in within.items()},
+             trend_raw_norm=result.trend.raw_norm, probe_raw_norm=result.probe.raw_norm,
              **{f"{key}_raw_norm": d.raw_norm for key, d in within.items()})
     result.manifold.save(out / "manifold.npz")
     write_jsonl(out / "per_horizon.jsonl", result.per_horizon)
@@ -201,7 +234,10 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
                        "array_sha256": acts.meta["arrays"][array]["sha256"], "bank_name": args.bank.name,
                        "bank_prompts_sha256": acts.meta["settings"]["bank_prompts_sha256"],
                        "model": acts.meta["run_settings"]["model"], "thinking": acts.meta["run_settings"]["thinking"]},
-            "settings": recorded_settings(args), "random_source": random_source,
+            "settings": recorded_settings(args),
+            "uids_file": None if allowed is None else {"path": str(args.uids), "sha256": file_sha256(args.uids),
+                                                       "role": args.uids_role, "n_uids": len(allowed)},
+            "random_source": random_source,
             "n_prompts": result.n_prompts, "regimes": result.regime_counts, "excluded": selection.excluded,
             "diagnostics": diagnostics}
     (out / "fit.json").write_text(json.dumps(meta, indent=2) + "\n")
@@ -222,6 +258,11 @@ def run(args: argparse.Namespace, fits_root: Path) -> dict:
             f"{w['pooled']['cos_choice']:+.3f}; agreement between regimes {w['agreement']}")
     if w["not_formed"]:
         log(f"within: no classes could be formed in {w['not_formed']}")
+    hd = diagnostics["horizon_decoders"]
+    log(f"trend: held-out-horizon Spearman {hd['trend']['held_out_horizon_spearman']:+.3f}, cos with CAA "
+        f"{hd['trend']['cos_caa']:+.3f}, choice {hd['trend']['cos_choice']:+.3f}, reward {hd['trend']['cos_reward']:+.3f}")
+    log(f"probe: alpha {hd['probe']['alpha']:g}, held-out-horizon Spearman {hd['probe']['held_out_horizon_spearman']:+.3f}, "
+        f"cos with CAA {hd['probe']['cos_caa']:+.3f}, with trend {hd['cos_trend_probe']:+.3f}")
     log(f"curve: k={args.components}, explained {m['explained_variance_of_means']}, in-sample median |t-hat - t| "
         f"{m['in_sample_median_abs_err_decades']:.3f} decades")
     h = m["held_out"]

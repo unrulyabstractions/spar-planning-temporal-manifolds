@@ -5,7 +5,7 @@
 
 Writes methods/<model>/<method>__<activations>__<fit name>__L<layer>_<site>/ for each method, by default all the
 fit has: caa, curve-snap, curve-displace (the methods); reward, choice (concept controls fitted by the same recipe);
-and the within-regime CAAs caa-none, caa-near_only, caa-both and their pool caa-within (comparison methods). Each
+and the within-regime CAAs caa-none, caa-near_only, caa-both and their pool caa-within, and the regime-free horizon directions trend and probe (comparison methods). Each
 bundle carries method.json (what it is, how to apply it, what it was fitted on, hashes), its arrays, and copies of the
 fit's fit.json, fit_uids.jsonl and the activations' search log. Refuses to overwrite a bundle, and refuses a fit whose
 recorded activation hash does not match the activations directory.

@@ -99,6 +99,11 @@ something.
 
    `--exclude-horizons` leaves out given stated horizons, e.g. to hold them out for calibration. fit.json counts the
    prompts left out for each reason.
+   `--uids FILE [--uids-role ROLE]` fits only on the prompts listed in a jsonl file (rows with `uid`, and `role` for
+   `--uids-role`), e.g. `prompt_bank/data/t0_s0/splits/reserved_horizons.jsonl` with role `fit`. It combines with the
+   rules above; fit.json records the file, its sha256 and role under `uids_file`, and counts the prompts it leaves out as
+   `excluded.not_in_uids` (only prompts the other rules keep). `--draws` is not restricted: the shared draws come from
+   every fitted-split prompt of the extraction and enter the diagnostics only (see 4).
 2. **The CAA classes are not balanced by regime.** With D the far delay, H/D >= 4 holds only "both" prompts (the
    ones where "far" is the answer). H/D <= 1/4 holds "none" and "near_only" prompts. On the t0_s0 bank that is
    57 against 279 + 71.
@@ -118,6 +123,15 @@ something.
    - fit.py prints, and `fit.json` records under `diagnostics.caa_within`, each one's class sizes and cosines, and
      the cosines between the regimes' directions. A regime with fewer than two distinct horizons gets none, and
      bundle.py bundles what the fit has.
+   **Trend and probe** are horizon directions with the regime part removed, bundled as `trend` and `probe`.
+   - Within each regime the activations and log10 H are demeaned. `trend` is the sum over prompts of activation x log10 H,
+     unit-normalized: the covariance (activation pattern) of a horizon decoder (Haufe et al. 2014), the right vector for
+     an additive edit. A mean difference like CAA also carries the regime offset.
+   - `probe` is the ridge decoder's weight vector for the same target, alpha from `logspace(0, 6, 13)` by 5-fold CV over
+     whole horizons (sorted distinct horizons dealt to folds in turn), implemented in numpy by SVD (`steer/horizon_decoders.py`).
+   - Both point toward longer horizons. `fit.json` records, under `diagnostics.horizon_decoders`, each one's held-out-horizon
+     Spearman, probe's alpha, cosines with CAA, choice and reward, and the prompt counts.
+   - They use the regimes of the fitted prompts, so `--no-include-none` leaves "none" out of them too.
 3. **Reward-contrast control.** The report names this control but doesn't define it. Here it is the mean of
    prompts with reward multiplier >= 25 minus those with multiplier <= 5 (`--reward-high-min`,
    `--reward-low-max`).

@@ -10,13 +10,20 @@ generated token ids; for each prompt this script rebuilds the sequence the model
     chat template(prompt)  +  generated ids up to and including the answer-label token,
 
 runs it through the model once (teacher forcing, batch 1, so no padding), and keeps the residual stream at the
-requested layers (--layers all: every layer a hook can steer, 1 .. n_layers - 1) at up to four sites (see
+requested layers (--layers all: every layer a hook can steer, 1 .. n_layers - 1) at up to six sites (see
 steer/sites.py and steer/layers.py for the exact definitions):
 
     label        the token carrying the answer letter
     prelabel     the token before it, whose state predicts the letter
     prompt_end   the last token of the model input, whose state predicts the first generated token
     think_end    the end-of-thinking token, whose state predicts the first token of the answer (thinking runs only)
+    horizon_last the last token of the horizon phrase in the prompt ("7 years": " years")
+    horizon_mean the mean over the tokens of the horizon phrase ("7", " years")
+
+The two horizon sites are prompt tokens, found by steer.sites.locate_horizon in the same pass. A no-horizon (null)
+prompt has no such phrase: its rows of both are NaN (fit.py's `select` drops those prompts). Every horizon phrase must
+decode back to the prompt's stated horizon exactly, else nothing is run. index.jsonl records `horizon_token_indices`
+and `horizon_last_token` per row.
 
 It also keeps, at the prelabel site, the --top-logits (default 64) largest next-token logits with their token ids
 (prelabel_top_logits.npz): the unsteered scores of the answer letters, among whatever else ranks that high.
@@ -53,10 +60,10 @@ import numpy as np
 from pbank.local_model import LocalChatModel, log, model_revision
 from pbank.provenance import utc_now
 from pbank.records import load_prompts, prompts_sha256, read_jsonl, write_jsonl
-from steer.activations import POSITIONS, TOP_LOGITS_FILE, array_name, file_sha256
+from steer.activations import HORIZON_POSITIONS, POSITIONS, TOP_LOGITS_FILE, array_name, file_sha256
 from steer.provenance import code_commit
 from steer.layers import capture, check_layer, n_layers
-from steer.sites import locate_label, replay_sites
+from steer.sites import locate_horizon, locate_label, replay_sites
 
 HERE = Path(__file__).resolve().parent
 
@@ -95,6 +102,15 @@ def forward_at(model, ids: list[int], layers: list[int], positions: list[int] | 
     top_logits = best.values.cpu().numpy().astype(np.float32) if top else np.zeros(0, np.float32)
     return ({layer: acts[layer][0, positions].float().cpu().numpy() for layer in layers}, margin, rank,
             (top_ids, top_logits))
+
+
+def horizon_vectors(rows: np.ndarray, d: int) -> tuple[np.ndarray, np.ndarray]:
+    """(horizon_last, horizon_mean) from the activations [n_phrase_tokens, d] of one prompt's horizon phrase;
+    NaN vectors when the prompt states no horizon (zero rows)."""
+    if len(rows) == 0:
+        nan = np.full(d, np.nan, np.float32)
+        return nan, nan
+    return rows[-1], rows.mean(axis=0, dtype=np.float32)
 
 
 def main() -> None:
@@ -144,7 +160,20 @@ def main() -> None:
     layers = list(range(1, n_layers(model.model))) if args.layers == ["all"] else sorted({int(v) for v in args.layers})
     for layer in layers:
         check_layer(model.model, layer)
-    positions = [pos for pos in POSITIONS if thinking or pos != "think_end"]
+    replay_positions = [pos for pos in POSITIONS if pos not in HORIZON_POSITIONS and (thinking or pos != "think_end")]
+    positions = replay_positions + list(HORIZON_POSITIONS)
+    horizons, failures = {}, []        # uid -> HorizonSite; audited before any forward pass
+    for rec in selected:
+        if rec.horizon is None:
+            continue
+        chat = model.chat_text(rec.text, thinking)
+        horizon_site = locate_horizon(model.tok, chat, rec.text, rec.horizon)
+        if horizon_site.decoded.strip() != rec.horizon:
+            failures.append(f"{rec.uid}: horizon {rec.horizon!r}, tokens {horizon_site.tokens}")
+        horizons[rec.uid] = horizon_site
+    if failures:
+        sys.exit(f"{len(failures)} of {len(horizons)} horizons do not decode back from their tokens; nothing written:\n  "
+                 + "\n  ".join(failures[:20]))
     started = utc_now()
     log(f"{model_id}, thinking {'on' if thinking else 'off'}: {len(selected)} prompts of {args.bank.name}, "
         f"layers {layers[0]}..{layers[-1]} ({len(layers)}), sites {list(positions)}; baseline decoding {decoding}")
@@ -168,18 +197,28 @@ def main() -> None:
         prompt_ids = model.tok(model.chat_text(rec.text, thinking), add_special_tokens=False)["input_ids"]
         ids = prompt_ids + row["generated_ids"][:site.label_index + 1]
         where = replay_sites(len(prompt_ids), site, thinking)        # site -> index in `ids`
-        acts, margin, rank, top = forward_at(model, ids, layers, [where[pos] for pos in positions], args.top_logits)
+        horizon_site = horizons.get(rec.uid)
+        horizon_indices = horizon_site.token_indices if horizon_site else []
+        if horizon_site and [ids[k] for k in horizon_indices] != horizon_site.token_ids:
+            raise AssertionError(f"{rec.uid}: horizon token indices {horizon_indices} do not hold the horizon's tokens")
+        acts, margin, rank, top = forward_at(model, ids, layers,
+                                             [where[pos] for pos in replay_positions] + horizon_indices, args.top_logits)
         for layer in layers:
-            for k, pos in enumerate(positions):
+            for k, pos in enumerate(replay_positions):
                 arrays[(layer, pos)].append(acts[layer][k])
+            last, mean = horizon_vectors(acts[layer][len(replay_positions):], acts[layer].shape[1])
+            arrays[(layer, "horizon_last")].append(last)
+            arrays[(layer, "horizon_mean")].append(mean)
         top_ids.append(top[0]), top_logits.append(top[1])
         kept.append({"row": len(kept), "uid": rec.uid, "choice_label": row["choice_label"],
                      "chosen_option": row["chosen_option"],
                      "label_token": model.tok.decode([ids[-1]]), "prelabel_token": model.tok.decode([ids[-2]]),
                      "label_index": site.label_index, "seq_len": len(ids),
                      "prompt_len": len(prompt_ids), "answer_start": site.answer_start,
-                     **{f"{pos}_token": model.tok.decode([ids[where[pos]]]) for pos in positions
+                     **{f"{pos}_token": model.tok.decode([ids[where[pos]]]) for pos in replay_positions
                         if pos not in ("label", "prelabel")},
+                     "horizon_token_indices": horizon_indices,
+                     "horizon_last_token": horizon_site.tokens[-1] if horizon_site else None,
                      "replay_label_margin": round(margin, 4), "replay_predicts_label": margin >= 0,
                      "replay_label_rank": rank,
                      "replay_consistent": margin >= 0 if top_k is None else rank < top_k})

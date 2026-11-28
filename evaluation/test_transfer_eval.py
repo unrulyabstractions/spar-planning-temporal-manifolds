@@ -141,7 +141,7 @@ class FakeFactory:
     """Edits are named by arm; the readout adds x × the arm's effect to the unsteered y."""
 
     def __init__(self, args):
-        self.caa = SimpleNamespace(edit="caa")
+        self.zero_edit = "zero"
         self.positions = "all"
 
     def make(self, arm):

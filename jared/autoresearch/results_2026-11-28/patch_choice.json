@@ -1,0 +1,13 @@
+{
+  "rule": "the layer and span of the patch:full row with the largest S; there, the patch subspace (patch:<method> row) with the largest S",
+  "layer": 16,
+  "span": "from_horizon",
+  "full_S": 0.6145904064178467,
+  "basis": {
+    "bundle": "patch:curve-displace__Qwen3-8B__t0_s0__think__horizon__nonone__L16_horizon_last",
+    "path": "steering/methods/Qwen3-8B/curve-displace__Qwen3-8B__t0_s0__think__horizon__nonone__L16_horizon_last",
+    "method": "patch:curve-displace",
+    "site": "horizon_last",
+    "S": 0.24628174304962158
+  }
+}

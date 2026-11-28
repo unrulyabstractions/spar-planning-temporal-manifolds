@@ -1,8 +1,9 @@
 """Diagnostics report for a steering run (CPU only: numpy and json, no model, no plotting library).
 
 Reads what the run already wrote and shows, before anyone reads an effect, whether the directions and the dose could
-have worked: data and labels (A), baseline behaviour (B), each fitted direction (C), the push strength (D), outcomes
-(E) and readout noise (F). It reports and never gates: every check shows its value, its threshold and a flag.
+have worked: data and labels (A), baseline behaviour (B), each fitted direction (C), how many dimensions the horizon
+curve needs (Cd), the push strength (D), outcomes (E) and readout noise (F). It reports and never gates: every check
+shows its value, its threshold and a flag.
 A section whose inputs are missing says "skipped: <file>", so the tool runs right after fitting and again at the end.
 
 Usage:
@@ -24,6 +25,7 @@ from pathlib import Path
 
 import numpy as np
 
+import curve_dim
 from confound_splits import balance_table
 from label_audit import audit_bank
 
@@ -402,6 +404,7 @@ def load_bundles(methods_dir):
         out.append({"method": meta["method"], "site": meta["site"], "layer": meta["layer"], "single": single,
                     "direction": arrays["direction"] if single else None,
                     "typical_norm": float(arrays["typical_norm"]) if single else None,
+                    "components": None if single else int(arrays["U"].shape[1]),
                     "fit_rows": read_jsonl(d / "fit_uids.jsonl") if (d / "fit_uids.jsonl").exists() else None})
     return out
 
@@ -494,6 +497,55 @@ def section_c(bundles, acts_dir, baseline):
         body.append("<h3>Skipped</h3><ul>" + "".join(f"<li>{esc(s)}</li>" for s in skipped) + "</ul>")
     data = {"site": main_site, "layer": layer, "n_fit_rows": len(rows), "classes": stats, "sites": sites, "saved_vs_recomputed": sanity, "skipped": skipped}
     return {"id": "C", "title": title, "skipped": None, "checks": checks, "data": data, "body": "".join(body)}
+
+
+def section_curve_dimensions(bundles, acts_dir):
+    """How many dimensions the horizon curve needs, per site at the run's layer, on the fit's prompts (curve_dim.py)."""
+    title = "Cd. Curve dimensionality"
+    index_path = under(acts_dir, "--activations", "index.jsonl")
+    if absent(index_path):
+        return skipped_section("Cd", title, absent(index_path))
+    curve_bundle = next((b for b in bundles if not b["single"] and b["fit_rows"]), None)
+    source = curve_bundle or next((b for b in bundles if b["fit_rows"]), None)
+    if source is None:
+        return skipped_section("Cd", title, "skipped: no bundle with fit_uids.jsonl (needs --methods or --artifacts)")
+    k_used = curve_bundle["components"] if curve_bundle else 4
+    layer = source["layer"]
+    row_of = {r["uid"]: r.get("row", i) for i, r in enumerate(read_jsonl(index_path))}
+    rows = [r for r in source["fit_rows"] if r["uid"] in row_of and r.get("horizon_grid_value")]
+    if not rows:
+        return skipped_section("Cd", title, "skipped: no fit row has both an activation row and a horizon_grid_value")
+    idx = np.array([row_of[r["uid"]] for r in rows])
+    groups = [r["horizon_grid_value"] for r in rows]
+    t = np.array([curve_dim.log10_days(g) for g in groups])
+    is_none = np.array([r["regime"] == "none" for r in rows])
+    subsets = {"all prompts": np.ones(len(rows), bool), "without none": ~is_none}
+    ks = sorted({*curve_dim.CURVE_KS, k_used})
+    results, body, lines = {}, [], []
+    for path in sorted(acts_dir.glob(f"L{layer}_*.npy")):
+        site = path.stem.split("_", 1)[1]
+        X = np.load(path, mmap_mode="r")[idx].astype(np.float64)
+        for name, keep in subsets.items():
+            res = results.setdefault(site, {})[name] = curve_dim.analyse(X[keep], t[keep], [g for g, k in zip(groups, keep) if k], ks)
+            lines.append(f"{site}, {name}: {curve_dim.verdict(res, k_used)}")
+            table_rows = [[f"k = {k}", num(res["eig_over_null95"][k - 1]) if k <= len(res["eig_over_null95"]) else "-",
+                           num(res["curve"][k]["spearman"]) if k in res["curve"] else "-",
+                           num(res["curve"][k]["median_abs_err"]) if k in res["curve"] else "-"] for k in curve_dim.TABLE_KS]
+            table_rows.append(["ridge probe", "-", num(res["ridge"]["spearman"]), num(res["ridge"]["median_abs_err"])])
+            body += [f"<h3>{esc(site)} ({esc(name)}): {res['n_prompts']} prompts, {res['n_horizons']} horizons</h3>",
+                     table(["", "eigenvalue / null 95%", "held-out-horizon rho", "median |t-hat - t| (decades)"], table_rows)]
+    if not results:
+        return skipped_section("Cd", title, f"skipped: no {acts_dir / f'L{layer}_*.npy'} found")
+    intro = (f"<p>Layer {layer}; {len(rows)} fit prompts of {'the curve bundle' if curve_bundle else 'a bundle (there is no curve bundle)'}"
+             f", curve k = {k_used}{'' if curve_bundle else ' (the default; none was fitted)'}. Eigenvalue / null: the k-th principal "
+             f"component of the per-horizon means against the 95th percentile of the same with horizon labels shuffled across prompts "
+             f"({curve_dim.N_PERMUTATIONS} shuffles, seed {curve_dim.SEED}); above 1 is above chance. Held-out-horizon columns: "
+             f"{curve_dim.N_FOLDS} folds that hold out whole horizons; the curve is the steering curve of k components, the ridge probe "
+             f"regresses log10 horizon on the raw activations. Reports, never gates.</p>")
+    body = [intro, "<ul>" + "".join(f"<li>{esc(l)}</li>" for l in lines) + "</ul>", *body]
+    data = {"layer": layer, "curve_k_used": k_used, "has_curve_bundle": curve_bundle is not None, "n_permutations": curve_dim.N_PERMUTATIONS,
+            "verdicts": lines, "sites": results}
+    return {"id": "Cd", "title": title, "skipped": None, "checks": [], "data": data, "body": "".join(body)}
 
 
 def section_d(run, report):
@@ -652,7 +704,7 @@ def main(argv=None):
     bundles = load_bundles(methods) if methods else []
 
     sections = [section_a(prompts, under(a.bank, "--bank", "checks")), section_b(prompts, baseline),
-                section_c(bundles, acts, baseline), section_d(run, report), section_e(report), section_f(run, report)]
+                section_c(bundles, acts, baseline), section_curve_dimensions(bundles, acts), section_d(run, report), section_e(report), section_f(run, report)]
     flags = [(s["id"], c["name"], num(c["value"]), c["threshold"]) for s in sections for c in s["checks"] if c["flag"]]
     inputs = {"run": run, "bank": prompts_path if prompts else "missing", "baseline": resp_path if baseline else "missing",
               "activations": acts or "missing", "methods": methods or "missing"}

@@ -210,3 +210,175 @@ def test_choose_strength_peak_rule_stops_at_the_first_sign_change():
     # A method that steers backwards from the start is kept (sign is a result); unhealthy x are never chosen.
     assert choose_strength(sweep_rows([-0.1, -0.3, -0.6, -0.4, -2.0, 0.1], [True] * 4 + [False, True]), "peak", 1.0)[0] == 0.1
     assert choose_strength(sweep_rows([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]), "peak", 1.0)[0] == 0.8
+
+
+def test_prompt_write_span_edits_each_rows_prompt_tokens_only():
+    """Write span "prompt" in a batched replay: per row, every prompt state is edited and no reply or padding state
+    is, with rows of different prompt lengths in one pass; each row reads as hooks.replay_logits(positions="prompt")
+    alone. Span "all" is what the replay did before the span existed: one steering block over every pass."""
+    import sys
+    from pathlib import Path
+    from types import SimpleNamespace
+    torch = pytest.importorskip("torch")
+    transformers = pytest.importorskip("transformers")
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "steering"))
+    from steer.edits import LinearEdit
+    from steer.hooks import replay_logits, steering
+    from steer.layers import decoder_layers
+
+    torch.manual_seed(0)
+    cfg = transformers.Qwen3Config(vocab_size=64, hidden_size=32, intermediate_size=64, num_hidden_layers=2,
+                                   num_attention_heads=4, num_key_value_heads=2, head_dim=8)
+    model = transformers.Qwen3ForCausalLM(cfg).eval()
+    rep = object.__new__(re_.Replayer)
+    rep.M, rep.layer, rep.batch_size, rep.steering = SimpleNamespace(model=model), 1, 2, steering
+    # (prompt, reply) lengths; by total length the rows run 2, 0, 1, which is not their prompt-length order
+    shapes = [(6, 2), (3, 7), (4, 1)]
+    rep._cache = {f"u{i}": (list(range(1, 1 + p)), list(range(20, 20 + a))) for i, (p, a) in enumerate(shapes)}
+    items = [{"uid": f"u{i}", "far_id": 3, "near_id": 4} for i in range(len(shapes))]
+    edit = LinearEdit(np.eye(32)[0], typical_norm=5.0)
+    order = sorted(range(len(shapes)), key=lambda i: sum(shapes[i]))
+    passes = [order[s: s + rep.batch_size] for s in range(0, len(order), rep.batch_size)]
+
+    def states_after_block_1(x):
+        """Per pass, the residual stream entering block 2 (block 1's output, after the edit)."""
+        seen = []
+        handle = decoder_layers(model)[1].register_forward_pre_hook(
+            lambda m, args, kwargs: seen.append((args[0] if args else kwargs["hidden_states"]).clone()),
+            with_kwargs=True)
+        try:
+            y, _ = rep.run(items, edit, x)
+        finally:
+            handle.remove()
+        return seen, y
+
+    # the horizon spans need a bank and a tokenizer: test_patching.py
+    for span in ("all", "prompt"):
+        rep.write_span = span
+        unedited, _ = states_after_block_1(0.0)
+        edited, y = states_after_block_1(0.7)
+        assert len(edited) == len(passes)
+        for rows, h0, h1 in zip(passes, unedited, edited):
+            changed = (h1 - h0).abs().amax(-1) > 0                          # [rows, tokens]
+            for r, i in enumerate(rows):
+                p, a = shapes[i]
+                want = torch.zeros(changed.shape[1], dtype=torch.bool)
+                want[: p if span == "prompt" else p + a] = True              # never the padding after p + a
+                assert torch.equal(changed[r], want), (span, i)
+        if span == "prompt":
+            for n, it in enumerate(items):
+                p_ids, a_ids = rep._cache[it["uid"]]
+                lg = replay_logits(model, p_ids, a_ids, edit, 0.7, 1, positions="prompt")
+                assert y[n] == pytest.approx(float(lg[3] - lg[4]), abs=1e-5)
+        else:
+            with torch.no_grad(), steering(model, edit, 0.7, 1, "all"):
+                lg = rep._last_logits([p + a for p, a in map(rep.seqs, items)])
+            assert np.array_equal(y, re_.Replayer._readout(items, lg)[0])
+
+
+def write_bundle(d, method, kind, arrays, layer=3, site="prompt_end", typical_norm=2.0):
+    """A bundle that steer.methods.load accepts (format and file hashes), with the fields the runner reads."""
+    import json
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "steering"))
+    from steer.activations import file_sha256
+    d.mkdir(parents=True)
+    np.savez(d / "arrays.npz", **arrays)
+    (d / "fit.json").write_text(json.dumps({"diagnostics": {"typical_norm": typical_norm}}))
+    (d / "fit_uids.jsonl").write_text("")
+    (d / "search.jsonl").write_text("")
+    request = {"typical_norm": typical_norm} if kind == "push" else {"name": "shift"}
+    meta = {"format": "steer-method/1", "method_id": d.name, "method": method, "kind": kind, "layer": layer,
+            "site": site, "default_positions": "all", "request": request,
+            "files": {n: file_sha256(d / n) for n in ("arrays.npz", "fit.json", "fit_uids.jsonl", "search.jsonl")}}
+    (d / "method.json").write_text(json.dumps(meta))
+    return d
+
+
+class AddReplayer:
+    """y = 1 + x × (an effect per edit object), label mass 0.9; plain() reads the unsteered y."""
+
+    batch_size = 4
+
+    def __init__(self):
+        self.calls = []
+
+    def run(self, items, edit, x, positions="all"):
+        self.calls.append((edit, x))
+        return np.full(len(items), 1.0 + x * 0.5, np.float32), np.full(len(items), 0.9, np.float32)
+
+    def plain(self, it):
+        torch = pytest.importorskip("torch")
+        lg = torch.zeros(8)
+        lg[it["far_id"]] = 1.0
+        return lg
+
+
+@pytest.mark.parametrize("only", ["trend", "curve-displace"])
+def test_methods_dir_with_only_a_non_caa_bundle_replays_from_a_fixed_calibration(tmp_path, only):
+    """The confirm stage: a methods directory with the screen's winner alone and screen.py's calibration.json."""
+    import json
+    from types import SimpleNamespace
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "prompt_bank"))   # pbank, when not installed
+    d = 6
+    methods = tmp_path / "methods"
+    if only == "trend":
+        write_bundle(methods / "trend__L3_prompt_end", "trend", "push", {"direction": np.eye(d)[0], "typical_norm": 2.0})
+    else:
+        t = np.linspace(0, 3, 5)
+        write_bundle(methods / "curve-displace__L3_prompt_end", "curve-displace", "target",
+                     {"mu": np.zeros(d), "U": np.eye(d)[:, :2], "t_grid": t, "curve": np.stack([t, t ** 2], 1),
+                      "t_means": t, "z_means": np.stack([t, t ** 2], 1), "counts": np.ones(5), "bandwidth": 0.5,
+                      "explained": np.array([0.9, 0.1])})
+    draws = tmp_path / "draws"
+    draws.mkdir()
+    rng = np.random.default_rng(0)
+    np.savez(draws / "draws.npz", **{f: rng.normal(size=(3, d)) for f in ("isotropic", "covariance", "real_diff")})
+    bank = tmp_path / "bank"
+    bank.mkdir()
+    (bank / "prompts.jsonl").write_text("")
+    out = tmp_path / "out"
+    out.mkdir()
+    re_.write_jsonl_atomic(out / "items.jsonl", [{"uid": f"v{i}", "split": "verification", "far_id": 1, "near_id": 2,
+                                                  "chosen": "far"} for i in range(3)])
+    cal = {"x_push": 0.4 if only == "trend" else None, "x_shift": 1.0 if only == "trend" else 2.0, "fold": None,
+           "rule": "fixed by screen.py select", "write_span": "prompt"}
+    (out / "calibration.json").write_text(json.dumps(cal))
+    args = SimpleNamespace(bank=str(bank), activations="unused", methods=str(methods), draws=str(draws), k=2,
+                           n0_check=2, out=str(out), write_span="prompt", site=None,
+                           arms=[only, "covariance"] if only == "trend" else [only])
+
+    assert re_.stage_calibrate(args, None, None, None) == cal       # returns before looking for a caa bundle
+    assert re_.methods_layer(re_.method_dirs(methods)) == 3
+    arms = {a["arm"]: a for a in re_.build_arms(args, cal)}
+    assert arms[only]["family"] == "method" and arms[only]["kind"] == ("push" if only == "trend" else "target")
+    rep = AddReplayer()
+    re_.stage_replay(args, None, None, rep, cal, keep_arm=lambda a: re_.arm_selected(a, args.arms))
+    x = cal["x_push"] if only == "trend" else cal["x_shift"]
+    replayed = {xx for _, xx in rep.calls}
+    assert {x, -x} <= replayed
+    if only == "trend":                                               # the push nulls at the winner's strength
+        assert {"covariance[0]", "covariance[1]"} <= set(arms)
+        assert sum(1 for _, xx in rep.calls if xx == 0.4) == 1 + 2   # trend and two covariance draws
+    with pytest.raises(SystemExit, match="write span"):
+        re_.stage_calibrate(SimpleNamespace(**{**vars(args), "write_span": "all"}), None, None, None)
+
+
+def test_trend_and_probe_are_ranked_methods():
+    from types import SimpleNamespace
+    import json
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as tmp:
+        for name in ("caa", "trend", "probe", "reward"):
+            (Path(tmp) / name).mkdir()
+            (Path(tmp) / name / "method.json").write_text(json.dumps({"method": name, "site": "label"}))
+        args = SimpleNamespace(methods=tmp, k=1, out=tmp)
+        arms = {a["arm"]: a for a in re_.build_arms(args, {"x_push": 0.2, "x_shift": 1.0})}
+    assert all(arms[m]["family"] == "method" and arms[m]["kind"] == "push" and arms[m]["x"] == 0.2
+               for m in ("caa", "trend", "probe"))
+    assert arms["reward"]["family"] == "control"
+    assert re_.arm_selected(arms["trend"], ["trend", "covariance"]) and re_.arm_selected(arms["covariance[0]"], ["trend", "covariance"])

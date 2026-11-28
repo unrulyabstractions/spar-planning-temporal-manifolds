@@ -25,7 +25,7 @@ import json
 import re
 import sys
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from functools import partial
 from pathlib import Path
 
@@ -33,10 +33,17 @@ import numpy as np
 import torch
 
 import nulls
+import patching
 import shared_draws as sd
 
 CHOICE_RE = re.compile(r"I\s+choose\s*:?[\s*_`]*\(?([ab12])(?![a-z0-9])", re.I)
 SCORED = ("near_only", "both")
+PUSH_METHODS = ("caa", "trend", "probe")      # the linear horizon methods, ranked against the push nulls
+CONTROLS = ("reward", "choice")               # concept controls fitted by the same recipe, never candidates
+# which tokens a batched replay edits: every real one, the prompt's, the horizon phrase's, or the horizon phrase
+# through the end of the prompt (patching.span_indices)
+WRITE_SPANS = ("all", "prompt", "horizon", "from_horizon")
+MIN_MASS_RATIO = 0.95                         # calibration's health bound (label_mass_health)
 COMPARISON_PUSH = ("caa-none", "caa-near_only", "caa-both", "caa-within")   # within-regime CAA (PR 18)
 
 # N6 (damage-matched null): "damage" is the mean next-token KL(unedited || edited) over every token of these texts,
@@ -205,6 +212,12 @@ def weights_in(model, dtype: str):
         model.to(before)
 
 
+def set_tf32(on: bool) -> None:
+    """TF32 matmuls on CUDA: faster float32 passes at ~1e-3 relative precision (the screen checks the cost on y)."""
+    torch.backends.cuda.matmul.allow_tf32 = on
+    torch.backends.cudnn.allow_tf32 = on
+
+
 # ------------------------------------------------------------------ items: where to read the answer
 
 def locate_label(tok, gen_ids: list[int], end_think: int | None, thinking: bool, max_answer_tokens: int = 400):
@@ -315,21 +328,93 @@ def load_items(out: Path, split: str) -> list[dict]:
 
 # ------------------------------------------------------------------ readout
 
-class Replayer:
-    """y = logit(far) - logit(near) and label mass at the answer slot, per item, under one edit and request."""
+def prompt_tokens(prompt_lens: list[int]):
+    """A steering `positions` callable for one right-padded teacher-forced pass: row i's first prompt_lens[i] tokens.
+    The hook's own "prompt" mode splits a pass at one length for every row, which fits generation's left-padded
+    prefill but not a replay batch, whose rows have their own prompt lengths."""
+    lens = torch.as_tensor(prompt_lens, dtype=torch.long)
 
-    def __init__(self, M: Model, run_dir: Path, bank_dir: Path, thinking: bool, layer: int, batch_size: int = 16):
+    def mask(ctx) -> torch.Tensor:
+        if ctx.position.shape[0] != len(lens):
+            raise ValueError(f"prompt_tokens: {len(lens)} prompt lengths for a batch of {ctx.position.shape[0]}")
+        # right padding and one pass from position 0: a row's position is its token index
+        return ctx.position < lens.to(ctx.position.device)[:, None]
+
+    return mask
+
+
+class Replayer:
+    """y = logit(far) - logit(near) and label mass at the answer slot, per item, under one edit and request.
+
+    write_span: "all" edits every real token of prompt + reasoning; "prompt" only each row's prompt tokens; "horizon"
+    the tokens of the stated horizon; "from_horizon" those through the prompt's last token. A patch (patching.py) edits
+    its own aligned tokens of the span (patching.PATCH_SPANS)."""
+
+    write_span = "all"
+
+    def __init__(self, M: Model, run_dir: Path, bank_dir: Path, thinking: bool, layer: int, batch_size: int = 16,
+                 write_span: str = "all"):
         from steer.hooks import steering
+        if write_span not in WRITE_SPANS:
+            raise ValueError(f"write_span must be one of {WRITE_SPANS}")
         self.steering = steering
-        self.M, self.layer, self.batch_size = M, layer, batch_size
+        self.M, self.layer, self.batch_size, self.write_span = M, layer, batch_size, write_span
         bank = {r["uid"]: r for r in read_jsonl(bank_dir / "prompts.jsonl")}
         self.resp = last_per_uid(read_jsonl(run_dir / "responses.jsonl"))
         self.bank, self.thinking = bank, thinking
-        self._cache = {}
+        self._cache, self._horizon = {}, {}
 
     def prompt_of(self, it):
         """What the model was given for this item (a subclass may return a conversation)."""
         return self.bank[it["uid"]]["text"]
+
+    def horizon_site(self, it):
+        """Where the item's stated horizon is in its model input (steer.sites.HorizonSite)."""
+        if it["uid"] not in self._horizon:
+            text = self.prompt_of(it)
+            if not isinstance(text, str):
+                raise ValueError("horizon write spans need a plain prompt text, not a conversation")
+            self._horizon[it["uid"]] = patching.find_horizon(self.M.tok, self.M.lcm.chat_text(text, self.thinking),
+                                                             text, self.bank[it["uid"]]["horizon"])
+        return self._horizon[it["uid"]]
+
+    def span_positions(self, span: str, rows: list[dict], prompt_lens: list[int]):
+        """The steering `positions` of one pass over `rows` (in batch order) for a write span."""
+        if span == "all":
+            return "all"
+        if span == "prompt":
+            return prompt_tokens(prompt_lens)
+        return patching.token_mask([patching.span_indices(span, self.horizon_site(it), n)
+                                    for it, n in zip(rows, prompt_lens)])
+
+    @torch.no_grad()
+    def source_states(self, items, decades: int, span: str, layer: int) -> list[torch.Tensor]:
+        """Per item, float32 [positions, d]: layer `layer`'s states (the steering hook's point) at the patch span's
+        tokens of the item's prompt with its horizon times 10^decades. Checked: as many positions as the target's."""
+        from steer.layers import capture
+        seqs, where = [], []
+        for it in items:
+            text, horizon = self.prompt_of(it), self.bank[it["uid"]]["horizon"]
+            new = patching.scaled_horizon(horizon, decades)
+            src_text = patching.with_horizon(text, horizon, new)
+            chat = self.M.lcm.chat_text(src_text, self.thinking)
+            ids = self.M.tok(chat, add_special_tokens=False)["input_ids"]
+            pos = patching.span_indices(span, patching.find_horizon(self.M.tok, chat, src_text, new), len(ids))
+            n_target = len(patching.span_indices(span, self.horizon_site(it), len(self.seqs(it)[0])))
+            if len(pos) != n_target:
+                raise ValueError(f"{it['uid']}: the source has {len(pos)} {span} tokens, the target {n_target}")
+            seqs.append(ids), where.append(pos)
+        device, out = self.M.model.device, []
+        for s in range(0, len(seqs), self.batch_size):
+            chunk = seqs[s: s + self.batch_size]
+            ids = torch.zeros(len(chunk), max(map(len, chunk)), dtype=torch.long)
+            mask = torch.zeros_like(ids)
+            for i, q in enumerate(chunk):
+                ids[i, :len(q)], mask[i, :len(q)] = torch.tensor(q), 1
+            with capture(self.M.model, [layer]) as acts:
+                self.M.model(input_ids=ids.to(device), attention_mask=mask.to(device), use_cache=False, logits_to_keep=1)
+            out += [acts[layer][i, where[s + i]].float() for i in range(len(chunk))]
+        return out
 
     def seqs(self, it):
         if it["uid"] not in self._cache:
@@ -338,19 +423,21 @@ class Replayer:
             self._cache[it["uid"]] = (p, a)
         return self._cache[it["uid"]]
 
-    def _last_logits(self, seqs: list[list[int]]) -> torch.Tensor:
+    def _last_logits(self, seqs: list[list[int]], steer=None) -> torch.Tensor:
         """Next-token logits (float32 [n, vocab]) after each token sequence, batch_size sequences per forward pass.
 
         Right padding: under the causal mask a row's tokens never attend to the padding after them, and positions stay
         0..len-1, so each row reads as it would alone, up to batched bf16 arithmetic (stage_replay measures that gap).
-        The steering hook leaves padding unedited (attention mask 0)."""
+        The steering hook leaves padding unedited (attention mask 0).
+        steer(rows) -> the steering context for one pass over seqs[rows] (in batch order); None: no hook."""
         device = self.M.model.device
         # rows sorted by length, so a batch pads little (thinking replies run from 100 to 4,000 tokens); the
         # readouts go back to the callers' order at the end
         order = sorted(range(len(seqs)), key=lambda i: len(seqs[i]))
         out = []
         for s in range(0, len(order), self.batch_size):
-            chunk = [seqs[i] for i in order[s: s + self.batch_size]]
+            rows_of_pass = order[s: s + self.batch_size]
+            chunk = [seqs[i] for i in rows_of_pass]
             ids = torch.zeros(len(chunk), max(map(len, chunk)), dtype=torch.long)
             mask = torch.zeros_like(ids)
             for i, q in enumerate(chunk):
@@ -358,8 +445,9 @@ class Replayer:
                 mask[i, :len(q)] = 1
             last = (mask.sum(1) - 1).to(device)
             # logits only at the rows' last positions: [rows, rows, vocab], row i's own readout on the diagonal
-            lg = self.M.model(input_ids=ids.to(device), attention_mask=mask.to(device), use_cache=False,
-                              logits_to_keep=last).logits
+            with steer(rows_of_pass) if steer else nullcontext():
+                lg = self.M.model(input_ids=ids.to(device), attention_mask=mask.to(device), use_cache=False,
+                                  logits_to_keep=last).logits
             rows = torch.arange(len(chunk), device=lg.device)
             out.append(lg[rows, rows].float())
         sorted_logits = torch.cat(out)
@@ -391,10 +479,31 @@ class Replayer:
         if positions != "all":
             # a batch has one pass but many prompt lengths, so the hook could not tell each row's prompt from its reply
             raise ValueError(f"batched replay supports positions='all' only, not {positions!r}")
-        seqs = [p + a for p, a in map(self.seqs, items)]
-        with self.steering(self.M.model, edit, x, self.layer, positions):
-            lg = self._last_logits(seqs)
-        return self._readout(items, lg)
+        if isinstance(edit, patching.TextEdit):
+            # no hook: the rewritten prompt, then the target's own reasoning
+            seqs = [self.M.prompt_ids(edit.prompt_text(self.prompt_of(it), self.bank[it["uid"]]["horizon"], x),
+                                      self.thinking) + self.seqs(it)[1] for it in items]
+            return self._readout(items, self._last_logits(seqs))
+        span = self.write_span
+        if isinstance(edit, patching.PatchEdit):
+            if span not in patching.PATCH_SPANS:
+                raise ValueError(f"a patch needs write span horizon or from_horizon, not {span!r}")
+            span = patching.PATCH_SPANS[span]
+            edit.prepare(self, items, span, self.layer)        # source passes, before (outside) any hook
+        pairs = [self.seqs(it) for it in items]
+        prompt_lens = [len(p) for p, _ in pairs]
+
+        def steer(rows):
+            batch = [items[i] for i in rows]
+            return self.steering(self.M.model, edit, x, self.layer,
+                                 self.span_positions(span, batch, [prompt_lens[i] for i in rows]), rows=batch)
+
+        return self._readout(items, self._last_logits([p + a for p, a in pairs], steer))
+
+    @torch.no_grad()
+    def unsteered(self, items):
+        """y and label mass with no hook, batched as in run."""
+        return self._readout(items, self._last_logits([p + a for p, a in map(self.seqs, items)]))
 
     @torch.no_grad()
     def plain(self, it):
@@ -454,9 +563,9 @@ def build_arms(args, cfg: dict) -> list[dict]:
     """Arm specs (no tensors): what to load and at which request. Edits are built lazily in make_edit."""
     md = method_dirs(Path(args.methods), getattr(args, "site", None))   # no site given: no site filter
     arms = []
-    for name in ("caa", "reward", "choice"):
+    for name in PUSH_METHODS + CONTROLS:
         if name in md:
-            arms.append({"arm": name, "family": "method" if name == "caa" else "control", "kind": "push",
+            arms.append({"arm": name, "family": "method" if name in PUSH_METHODS else "control", "kind": "push",
                          "x": cfg["x_push"], "src": str(md[name])})
     for name in COMPARISON_PUSH:
         if name in md:
@@ -484,6 +593,8 @@ def build_arms(args, cfg: dict) -> list[dict]:
         for name, (plus, minus) in PROMPT_ARMS.items():
             arms.append({"arm": name, "family": "prompting", "kind": "prompt", "x": 1.0, "plus": plus, "minus": minus,
                          **({"single": True} if minus is None else {})})
+    if getattr(args, "patch", False):
+        arms += patch_arms(md, args.patch_k)
     n6_path = Path(args.out) / "n6.json"
     if n6_path.exists():                     # N6: isotropic draws at the strength that matches the method's damage
         for m, rec in json.loads(n6_path.read_text())["methods"].items():
@@ -496,6 +607,41 @@ def build_arms(args, cfg: dict) -> list[dict]:
     return arms
 
 
+def patch_arms(md: dict, k_null: int) -> list[dict]:
+    """The patching arms (patching.py), all at x = ±1 (source horizon 10x longer / shorter): the text rewrite, the full
+    patch, a subspace patch per bundle in the methods directory (its direction or curve PCs), and k_null null bases of
+    each subspace dimension, drawn from the shared covariance-matched draws."""
+    from steer.methods import load
+    arms = [{"arm": "patch:text", "family": "patch", "kind": "text", "x": 1.0, "basis": "text", "k": None},
+            {"arm": "patch:full", "family": "patch", "kind": "patch", "x": 1.0, "basis": "full", "k": None}]
+    dims = set()
+    for name, d in md.items():
+        k = len(patching.method_basis(load(d)))
+        arms.append({"arm": f"patch:{name}", "family": "patch", "kind": "patch", "x": 1.0, "basis": name, "k": k,
+                     "src": str(d)})
+        dims.add(k)
+    for k in sorted(dims):
+        arms += [{"arm": f"patch-null:k{k}[{i}]", "family": f"patch-null:k{k}", "kind": "patch", "x": 1.0, "k": k,
+                  "row": i} for i in range(k_null)]
+    return arms
+
+
+def methods_layer(md: dict) -> int:
+    """The one layer of the bundles in a methods directory: every arm is hooked there."""
+    layers = {json.loads((d / "method.json").read_text())["layer"] for d in md.values()}
+    if len(layers) != 1:
+        sys.exit(f"the methods directory must hold bundles at one layer, not {sorted(layers)}")
+    return layers.pop()
+
+
+def typical_norm(method) -> float:
+    """The push strength unit at a method's layer and site: in a push bundle's request, and in fit.py's diagnostics
+    (fit.json) for a curve bundle."""
+    if "typical_norm" in method.meta["request"]:
+        return float(method.meta["request"]["typical_norm"])
+    return float(json.loads((method.path / "fit.json").read_text())["diagnostics"]["typical_norm"])
+
+
 class EditFactory:
     def __init__(self, args):
         from steer.edits import LinearEdit
@@ -504,11 +650,15 @@ class EditFactory:
         self.args = args
         self.bank = {r["uid"]: r for r in read_jsonl(Path(args.bank) / "prompts.jsonl")}
         md = method_dirs(Path(args.methods), getattr(args, "site", None))
-        self.caa = load(md["caa"])
-        self.typical_norm = float(self.caa.meta["request"]["typical_norm"])
-        self.positions = self.caa.positions
+        # the bundle the nulls take their layer, site and strength unit from: CAA, or any bundle when the directory has
+        # no CAA (the confirm stage runs the screen's winner alone; its strength comes from screen.py's calibration)
+        self.ref = load(md["caa"] if "caa" in md else next(iter(md.values())))
+        self.typical_norm = typical_norm(self.ref)
+        self.positions = self.ref.positions
         dpath = Path(args.draws)
         self.draws = np.load(dpath / "draws.npz")
+        # delta exactly 0 at x = 0 whatever the direction, for the zero-edit check (a curve-snap at 0 is not a no-op)
+        self.zero_edit = LinearEdit(self.draws["isotropic"][0].astype(np.float64), self.typical_norm)
         self.span = None
         if "curve-displace" in md:
             arr = np.load(md["curve-displace"] / "arrays.npz")
@@ -531,11 +681,18 @@ class EditFactory:
             v = self.draws["isotropic" if fam.startswith("n6:") else fam][arm["row"]].astype(np.float64)
             return self.LinearEdit(v, self.typical_norm), self.positions
         if fam == "in_span":
-            key = sd.seed_key(self.caa.meta.get("fitted_on", {}).get("model", {}).get("model_id", "model"),
-                              self.caa.layer, self.caa.site, "in_span")
+            key = sd.seed_key(self.ref.meta.get("fitted_on", {}).get("model", {}).get("model_id", "model"),
+                              self.ref.layer, self.ref.site, "in_span")
             V = sd.normals(sd.stream(key), (self.args.k, self.span.shape[0])) @ self.span
             v = V[arm["row"]] / np.linalg.norm(V[arm["row"]])
             return self.LinearEdit(v, self.typical_norm), self.positions
+        if fam == "patch":
+            if arm["basis"] == "text":
+                return patching.TextEdit(), "all"
+            basis = None if arm["basis"] == "full" else patching.method_basis(self.method(arm["src"]))
+            return patching.PatchEdit(basis), "all"
+        if fam.startswith("patch-null:"):
+            return patching.PatchEdit(patching.draw_basis(self.draws["covariance"], arm["k"], arm["row"])), "all"
         if fam.startswith("shuffled:"):
             m = self.method(arm["src"])
             hz = shuffled_horizons(m.fit_uids(), self.bank, seed=1000 + arm["seed"])
@@ -552,6 +709,24 @@ def label_mass_health(mass_plus: float, mass_minus: float, mass0: float, ratio: 
     as much as -x raised it, and a rule on the smaller of the two stopped calibration at x = 0.02."""
     even = (mass_plus + mass_minus) / 2
     return even, even >= ratio * mass0
+
+
+def order_balanced_mean(o: np.ndarray, items) -> float:
+    """Mean of o over each option order, averaged, so a push toward one label (letter, C1) cancels out."""
+    nf = np.array([it["near_first"] for it in items])
+    return float((o[nf].mean() + o[~nf].mean()) / 2) if nf.any() and (~nf).any() else float(o.mean())
+
+
+def sweep_point(rep: Replayer, items, edit, x: float, positions, mass0: float, min_mass_ratio: float):
+    """One strength of a calibration sweep: (row, per-item odd parts). The row holds the order-balanced mean odd effect
+    of ±x and the label-mass health (label_mass_health)."""
+    yp, mp = rep.run(items, edit, x, positions)
+    ym, mm = rep.run(items, edit, -x, positions)
+    o = (yp - ym) / 2
+    mass, ok = label_mass_health(float(mp.mean()), float(mm.mean()), mass0, min_mass_ratio)
+    row = {"x": x, "mean_odd_logit": order_balanced_mean(o, items), "even_label_mass": mass, "healthy": ok,
+           "label_mass_plus": float(mp.mean()), "label_mass_minus": float(mm.mean())}
+    return row, o
 
 
 def choose_strength(sweep: list[dict], rule_name: str, target_logit: float) -> tuple[float, str]:
@@ -585,7 +760,12 @@ def choose_strength(sweep: list[dict], rule_name: str, target_logit: float) -> t
 def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     out = Path(args.out)
     if (out / "calibration.json").exists():
-        return json.loads((out / "calibration.json").read_text())
+        cal = json.loads((out / "calibration.json").read_text())
+        # a strength holds for the span it was found at; files from before --write-span were all "all"
+        if cal.get("write_span", "all") != args.write_span:
+            sys.exit(f"calibration.json was made with write span {cal.get('write_span', 'all')}, "
+                     f"not --write-span {args.write_span}")
+        return cal
     from steer.methods import load
     caa = load(method_dirs(Path(args.methods), args.site)["caa"])
     rows = caa.fit_uids()
@@ -598,21 +778,16 @@ def stage_calibrate(args, M, settings, rep: Replayer) -> dict:
     mass0 = float(m0.mean())
     sweep = []
     for x in args.x_grid:
-        yp, mp = rep.run(items, caa_f.edit, x, caa_f.positions)
-        ym, mm = rep.run(items, caa_f.edit, -x, caa_f.positions)
-        o = (yp - ym) / 2
-        nf = np.array([it["near_first"] for it in items])
-        # average the two option orders' means, so a push toward one label (letter, C1) cancels out
-        odd = float((o[nf].mean() + o[~nf].mean()) / 2) if nf.any() and (~nf).any() else float(o.mean())
-        mass, ok = label_mass_health(float(mp.mean()), float(mm.mean()), mass0, args.min_mass_ratio)
-        sweep.append({"x": x, "mean_odd_logit": odd, "even_label_mass": mass, "healthy": ok,
-                      "label_mass_plus": float(mp.mean()), "label_mass_minus": float(mm.mean())})
-        print(f"calibrate: x={x:g} mean odd {odd:+.3f} logits, even label mass {mass:.3f} (unsteered {mass0:.3f})"
-              f"{'' if ok else ' UNHEALTHY'} on {len(items)} held-out prompts")
+        row, _ = sweep_point(rep, items, caa_f.edit, x, caa_f.positions, mass0, args.min_mass_ratio)
+        sweep.append(row)
+        print(f"calibrate: x={x:g} mean odd {row['mean_odd_logit']:+.3f} logits, even label mass "
+              f"{row['even_label_mass']:.3f} (unsteered {mass0:.3f}){'' if row['healthy'] else ' UNHEALTHY'} "
+              f"on {len(items)} held-out prompts")
     chosen, rule = choose_strength(sweep, args.calib_rule, args.target_logit)
     cal = {"fold": fold, "n_train": len(train), "n_heldout_scored": len(items), "target_logit": args.target_logit,
            "min_mass_ratio": args.min_mass_ratio, "unsteered_label_mass": mass0, "sweep": sweep, "x_push": chosen,
-           "rule": rule, "reached_target": rule.startswith("smallest healthy"), "x_shift": args.x_shift}
+           "rule": rule, "reached_target": rule.startswith("smallest healthy"), "x_shift": args.x_shift,
+           "write_span": args.write_span}
     write_json(out / "calibration.json", cal)
     return cal
 
@@ -671,7 +846,7 @@ def stage_n6(args, M, settings, cal: dict) -> None:
         return
     fac = EditFactory(args)
     md = method_dirs(Path(args.methods), args.site)
-    dmg = Damage(M, fac.caa.layer)
+    dmg = Damage(M, fac.ref.layer)
     res, t0 = {}, time.time()
     for m in args.n6_methods:
         if m not in md:
@@ -708,9 +883,9 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "veri
     fac = EditFactory(args)
     # unsteered pass and the zero-edit check against a hook-free forward pass (N0)
     if not (adir / "_none.npz").exists():
-        y0, m0 = rep.run(items, fac.caa.edit, 0.0, fac.positions)
+        y0, m0 = rep.run(items, fac.zero_edit, 0.0, fac.positions)
         n0 = min(args.n0_check, len(items))
-        alone = [float(rep.run([it], fac.caa.edit, 0.0, fac.positions)[0][0]) for it in items[:n0]]
+        alone = [float(rep.run([it], fac.zero_edit, 0.0, fac.positions)[0][0]) for it in items[:n0]]
         diffs = [a - float(rep.plain(it)[it["far_id"]] - rep.plain(it)[it["near_id"]]) for a, it in zip(alone, items)]
         # the same items inside a padded batch vs alone: the cost of batching, kept apart from the hook check above
         batch_diffs = [float(y0[i]) - a for i, a in enumerate(alone)]
@@ -752,10 +927,19 @@ def stage_replay(args, M, settings, rep: Replayer, cal: dict, split: str = "veri
         print(f"[{n + 1}/{len(arms)}] {arm['arm']} x={arm['x']:g}  ({el / 60:.1f} min)", flush=True)
 
 
+def gen_span(M: Model, thinking: bool, text: str, horizon: str, span: str) -> list[int]:
+    """A horizon write span's token indices in a prompt's model input, for steer.hooks.at_prompt in generation."""
+    chat = M.lcm.chat_text(text, thinking)
+    n = len(M.tok(chat, add_special_tokens=False)["input_ids"])
+    return patching.span_indices(span, patching.find_horizon(M.tok, chat, text, horizon), n)
+
+
 def stage_gencheck(args, M, settings, cal: dict) -> None:
-    """Steered generation on a subset of verification pairs: none, and each of --gen-arms (caa +-x, isotropic[0] +-x,
-    curve-displace +-shift)."""
-    from steer.hooks import steering
+    """Steered generation on a subset of verification pairs: none, and each of --gen-arms (a bundle's method at +-x or
+    +-shift, e.g. caa or curve-displace; isotropic[0] at +-x; patch:text, the prompt with its horizon 10x longer /
+    shorter and no hook). Write span "prompt" edits the prefill pass only; "horizon" / "from_horizon" the horizon's
+    prompt tokens (through the prompt's end)."""
+    from steer.hooks import at_prompt, steering
     out = Path(args.out) / "gencheck"
     out.mkdir(exist_ok=True)
     items = load_items(Path(args.out), "verification")
@@ -769,10 +953,15 @@ def stage_gencheck(args, M, settings, cal: dict) -> None:
     fac = EditFactory(args)
     md = method_dirs(Path(args.methods), args.site)
     arms = [("none", None, 0.0)]
-    for nm, spec in (("caa", {"family": "method", "src": str(md["caa"])}),
-                     ("isotropic[0]", {"family": "isotropic", "row": 0}),
-                     ("curve-displace", {"family": "method", "src": str(md.get("curve-displace", ""))})):
-        if spec.get("src") == "" or nm not in args.gen_arms:
+    for nm in args.gen_arms:
+        if nm == "isotropic[0]":
+            spec = {"family": "isotropic", "row": 0}
+        elif nm == "patch:text":
+            arms += [("patch:text+", {"family": "text"}, 1.0), ("patch:text-", {"family": "text"}, -1.0)]
+            continue
+        elif nm in md:
+            spec = {"family": "method", "src": str(md[nm])}
+        else:
             continue
         x = cal["x_shift"] if nm.startswith("curve") else cal["x_push"]
         arms += [(f"{nm}+", spec, x), (f"{nm}-", spec, -x)]
@@ -790,12 +979,19 @@ def stage_gencheck(args, M, settings, cal: dict) -> None:
             for s in range(0, len(sub), args.gen_batch):
                 batch = sub[s: s + args.gen_batch]
                 texts = [bank[it["uid"]]["text"] for it in batch]
-                if spec is None:
+                if spec is not None and spec["family"] == "text":
+                    texts = [patching.TextEdit().prompt_text(t, bank[it["uid"]]["horizon"], x) for t, it in zip(texts, batch)]
+                if spec is None or spec["family"] == "text":
                     reps = M.lcm.generate(texts, thinking=settings["thinking"], max_new_tokens=settings["max_new_tokens"],
                                           decoding=dec)
                 else:
                     edit, positions = fac.make(spec)
-                    with steering(M.model, edit, x, fac.caa.layer, positions=positions):
+                    if args.write_span == "prompt":
+                        positions = "prompt"
+                    elif args.write_span in ("horizon", "from_horizon"):
+                        positions = at_prompt([gen_span(M, settings["thinking"], t, bank[it["uid"]]["horizon"],
+                                                        args.write_span) for t, it in zip(texts, batch)])
+                    with steering(M.model, edit, x, fac.ref.layer, positions=positions):
                         reps = M.lcm.generate(texts, thinking=settings["thinking"],
                                               max_new_tokens=settings["max_new_tokens"], decoding=dec)
                 for it, r in zip(batch, reps):
@@ -827,7 +1023,7 @@ def main(argv=None):
     p.add_argument("--calib-rule", choices=["target", "peak"], default="target",
                    help="target: smallest healthy x reaching --target-logit (else the largest healthy x); "
                         "peak: the healthy x with the largest |mean odd| (choose_strength)")
-    p.add_argument("--min-mass-ratio", type=float, default=0.95,
+    p.add_argument("--min-mass-ratio", type=float, default=MIN_MASS_RATIO,
                    help="health bound: the even part of the label mass, (mass(+x) + mass(-x)) / 2, must stay >= this "
                         "fraction of the unsteered mass")
     p.add_argument("--extraction-index", help="extract.py's index.jsonl, to cross-check our label locator")
@@ -841,6 +1037,10 @@ def main(argv=None):
                         "(an 8B model: 32 GB), so bfloat16 on a smaller GPU, at ~0.3 logit of rounding per item")
     p.add_argument("--prompting", action="store_true",
                    help="also replay the prompting baseline (PROMPTS: disposition and shift pairs, neutral sentence)")
+    p.add_argument("--patch", action="store_true",
+                   help="also replay the patching arms (patching.py; write span horizon or from_horizon): text "
+                        "rewrite, full patch, a subspace patch per bundle, and --patch-k null bases per dimension")
+    p.add_argument("--patch-k", type=int, default=9, help="null bases per subspace dimension (covariance draws)")
     p.add_argument("--arms", nargs="+", help="replay only these arms, families or methods (e.g. caa curve-snap "
                                              "covariance); default every arm")
     p.add_argument("--gen-arms", nargs="+", default=["caa", "isotropic[0]", "curve-displace"],
@@ -852,15 +1052,20 @@ def main(argv=None):
     p.add_argument("--n6-k", type=int, default=sd.K_GEN, help="draws per N6 family (rows [:k] of the isotropic draws)")
     p.add_argument("--gen-samples", type=int, default=1,
                    help="generation check on a sampled baseline: passes per arm, seeds seed..seed+n-1 (greedy: 1)")
+    p.add_argument("--write-span", choices=WRITE_SPANS, default="all",
+                   help="tokens every edit writes to (calibrate, replay, gencheck): all = prompt and reasoning; "
+                        "prompt = each prompt's own tokens (in generation: the prefill pass)")
+    p.add_argument("--tf32", action="store_true", help="TF32 matmuls on CUDA (faster, less precise float32)")
     args = p.parse_args(argv)
+    if args.tf32:
+        set_tf32(True)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     settings = run_settings(Path(args.run))
     write_json(out / "settings.json", {"args": vars(args), "run": settings})
     M = Model(settings["model_id"])
-    from steer.methods import load
-    layer = load(method_dirs(Path(args.methods), args.site)["caa"]).layer
-    rep = Replayer(M, Path(args.run), Path(args.bank), settings["thinking"], layer, args.replay_batch)
+    layer = methods_layer(method_dirs(Path(args.methods), args.site))
+    rep = Replayer(M, Path(args.run), Path(args.bank), settings["thinking"], layer, args.replay_batch, args.write_span)
     if "items" in args.stages:
         build_items(args, M, settings)
     cal = None
