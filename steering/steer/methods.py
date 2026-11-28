@@ -56,6 +56,14 @@ LINEAR["caa-within"] = (
     WITHIN_KEY, "longer horizons within a regime (the within-regime mean differences of the within_pool regimes, "
     "averaged with regime-size weights)", "regime-size-weighted average of within-regime differences of class means, "
     "unit-normalized")
+LINEAR["trend"] = (
+    "trend", "longer horizons, regime removed (within each regime the activations and log10 H are demeaned; the "
+    "direction is their covariance)", "covariance of the activation with log10 H pooled within regimes (the pattern "
+    "of a horizon decoder, Haufe et al. 2014), unit-normalized")
+LINEAR["probe"] = (
+    "probe", "longer horizons, regime removed (the weights of a ridge decoder of log10 H on regime-demeaned "
+    "activations; alpha by CV over held-out horizons)", "ridge regression weights, unit-normalized (for comparison "
+    "with trend)")
 CURVE = {"curve-snap": "snap", "curve-displace": "displace"}
 METHODS = tuple(LINEAR) + tuple(CURVE)
 

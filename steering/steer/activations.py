@@ -10,18 +10,26 @@
                               first generated token)
         L38_think_end.npy     float32 [n, d]: the same at the end-of-thinking token (its state predicts the first
                               token of the answer); thinking-on runs only
+        L38_horizon_last.npy  float32 [n, d]: the same at the last token of the horizon phrase in the prompt (the
+                              unit token, " years" of "7 years")
+        L38_horizon_mean.npy  float32 [n, d]: the mean over all tokens of the horizon phrase ("7", " years")
         prelabel_top_logits.npz   `token_ids` int32 [n, k] and `logits` float32 [n, k]: the k largest next-token
                               logits at the prelabel site, largest first (extract.json, prelabel_top_logits)
 
-All four sites are rows of the same prompts, in index.jsonl order. Extractions made before 2026-11-22 have only the
-label and prelabel arrays and no logits file.
+All sites are rows of the same prompts, in index.jsonl order. Extractions made before 2026-11-22 have only the
+label and prelabel arrays and no logits file; those made before the horizon sites were added have no horizon_last
+or horizon_mean array (`load` raises FileNotFoundError for them). The no-horizon (null) prompts have no horizon
+phrase: their rows of the two horizon sites are NaN. fit.py's `select` drops those prompts; any other reader of
+these arrays must too.
 
 index.jsonl fields: `row` (array row), `uid`, `choice_label` and `chosen_option` (from the baseline run),
 `label_token` and `prelabel_token` (the decoded tokens at the two sites, for auditing), `label_index` (position of
 the label token in the generated ids), `seq_len` (tokens in the replayed sequence, prompt included),
 `prompt_len` (tokens of the model input, so prompt_end is index prompt_len - 1 of the replayed sequence),
 `answer_start` (index in the generated ids where the answer begins; think_end is generated index answer_start - 1),
-`prompt_end_token` and `think_end_token` (decoded, for auditing),
+`prompt_end_token` and `think_end_token` (decoded, for auditing), `horizon_token_indices` (the horizon phrase's
+token indices in the model input, [] for a no-horizon prompt) and `horizon_last_token` (its last token, decoded;
+null for no horizon),
 `replay_label_margin` (at the prelabel site of the replayed pass: logit of the label token the model generated
 minus the largest other logit; >= 0 for a faithful replay of a greedy generation, except near-ties, which can come
 out one bf16 step, about 0.125, negative), `replay_predicts_label` (margin >= 0), `replay_label_rank` (how many
@@ -64,8 +72,10 @@ import numpy as np
 from pbank.records import read_jsonl
 
 # The sites extract.py reads, and fit.py can fit on. An extraction of a thinking-off run has no think_end, and
-# extractions made before 2026-11-22 have only the first two.
-POSITIONS = ("label", "prelabel", "prompt_end", "think_end")
+# extractions made before 2026-11-22 have only the first two. The horizon sites are in the prompt, not the reply,
+# and are NaN rows for a prompt without a horizon.
+HORIZON_POSITIONS = ("horizon_last", "horizon_mean")
+POSITIONS = ("label", "prelabel", "prompt_end", "think_end") + HORIZON_POSITIONS
 TOP_LOGITS_FILE = "prelabel_top_logits.npz"
 HORIZON = "horizon"                 # the site extract_horizon.py reads
 

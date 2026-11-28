@@ -282,3 +282,37 @@ def test_within_regime_settings_and_degenerate_regimes(tmp_path):
     assert list(classes) == ["none"] and label.tolist() == ["", "", "", "short", "", "long"]
     with pytest.raises(ValueError):
         within_regime_classes(t, regime, 0.5)
+
+
+RESERVED = BANK / "splits" / "reserved_horizons.jsonl"
+
+
+def test_uids_file_restricts_the_fit_and_role_picks_rows(tmp_path):
+    from pbank.records import load_prompts
+    rows = read_jsonl(RESERVED)
+    bank = {r.uid: r for r in load_prompts(BANK)}
+    usable = {r.uid for r in bank.values() if r.split == "extraction" and r.horizon is not None}
+    fit_uids = {r["uid"] for r in rows if r["role"] == "fit"} & usable
+    test_uids = {r["uid"] for r in rows if r["role"] == "test"} & usable
+    assert fit_uids and test_uids
+    acts = make_activations(tmp_path / "acts")
+    out = run_fit(acts, tmp_path / "fits", "--uids", str(RESERVED), "--uids-role", "fit")
+    meta = fit_json(out)
+    print(f"role fit: n {meta['n_prompts']}, excluded {meta['excluded']}, uids_file {meta['uids_file']}")
+    assert {r["uid"] for r in read_jsonl(out / "fit_uids.jsonl")} == fit_uids
+    assert meta["n_prompts"] == len(fit_uids) and meta["excluded"]["not_in_uids"] == len(usable) - len(fit_uids)
+    import hashlib
+    assert meta["uids_file"] == {"path": str(RESERVED), "sha256": hashlib.sha256(RESERVED.read_bytes()).hexdigest(),
+                                 "role": "fit", "n_uids": sum(r["role"] == "fit" for r in rows)}
+    # Without a role every listed row counts; it combines with --no-include-none.
+    both = fit_json(run_fit(acts, tmp_path / "fits", "--uids", str(RESERVED), "--no-include-none", "--name", "all-roles"))
+    assert both["uids_file"]["role"] is None and "none" not in both["regimes"]
+    assert both["n_prompts"] <= len(fit_uids | test_uids) and both["excluded"]["none_regime"] > 0
+
+
+def test_uids_role_without_a_file_or_with_no_rows_is_refused(tmp_path):
+    acts = make_activations(tmp_path / "acts")
+    with pytest.raises(SystemExit, match="needs --uids"):
+        run_fit(acts, tmp_path / "fits", "--uids-role", "fit")
+    with pytest.raises(SystemExit, match="no rows"):
+        run_fit(acts, tmp_path / "fits", "--uids", str(RESERVED), "--uids-role", "nope", "--name", "x")

@@ -139,6 +139,18 @@ With a methods directory that holds each method at several sites (the Gemma run:
   the generation-check items: per arm, the share of generated choices equal to the replay prediction (y > 0 = far)
   and both readouts' P(far); per ± pair, the odd effect on P(far) in generation (bootstrap CI over items) vs replay.
 
+- **Push methods:** `caa`, `trend` and `probe` bundles each become a `method` arm at x_push, ranked against the push
+  null families; `reward` and `choice` are controls. A methods directory may hold any bundles at one layer (no `caa`
+  needed) when `calibration.json` already exists: the nulls then take their typical norm from the first bundle (a
+  curve bundle's from its `fit.json`). That is how a confirm run replays `screen.py`'s winner alone.
+- **`--write-span {all,prompt}`** (default `all`): which tokens every edit writes to, in calibrate, replay (every arm,
+  nulls and N6 draws included) and gencheck. `all`: prompt and reasoning. `prompt`: each row's own prompt tokens only
+  (the patch reading), masked per row in the right-padded batch (`prompt_tokens`); in generation, the prefill pass
+  (`steer.hooks` "prompt"). N6's damage is still measured on the neutral texts at every token. `calibration.json`
+  records the span, and a calibration made at another span is refused.
+- **`--tf32`** (default off): TF32 matmuls on CUDA. The confirm stage stays in plain float32; `screen.py` uses TF32
+  only after its own check. Span, TF32 and replay dtype are in `settings.json` and the report header.
+
 Not yet: concept-control comparisons beyond reporting, C3–C8 except the C2 signatures, readout sites other than the
 answer label (prompt_end, think_end).
 Tests: `python -m pytest -q test_replay_eval.py` (label location on the real Qwen3 tokenizer, strata shuffle, the
@@ -150,6 +162,36 @@ the odd effect is noise. The even part stays at the unsteered 0.923 up to x = 0.
 `calibration.json` keeps both signs' masses (`label_mass_plus/minus`).
 With thinking on (Qwen3-1.7B, bf16, under the old rule) the sweep got CAA no further than +0.27 logits even at 75%
 of the unsteered mass, so there the rule was not what held calibration back.
+
+## Screen and select: `screen.py`
+
+Picks the one config (bundle = method at its layer and site, × write span) that the confirm run then tests once
+against its nulls (`jared/autoresearch/GOALS_2026-11-27.md`, Design). The model loads once; each bundle is hooked
+at its own layer.
+
+```
+python screen.py screen --bank B --run R --items-from <replay_eval out with items.jsonl> \
+    --uids ../prompt_bank/data/t0_s0/splits/reserved_horizons.jsonl --uids-role test \
+    --bundles <bundle dir> ... --write-span all prompt --out S [--tf32] [--deadline <unix time>] [--replay-batch 4]
+python screen.py select --out S --confirm-out <confirm run's replay_eval --out>
+```
+
+- **screen:** items are the readable extraction prompts whose uid has the role (`test`: 9 horizon values the fit never
+  saw), scored regimes only. Unsteered y once. Per config, the strength grid (`--push-grid` 0.1 0.2 0.4 0.8 × typical
+  norm, `--shift-grid` 0.5 1 2 4 decades) at ±s, each step computed as calibrate does (`sweep_point`); the sweep stops
+  at the first unhealthy strength or sign change. S = `choose_strength` "peak". One line per config in `screen.jsonl`
+  (sweep, chosen strength, S, mass ratio, odd by regime and option order, letter part, seconds); a restart skips the
+  configs there, and no config starts past `--deadline`. With `--tf32`, unsteered y is computed with and without TF32
+  first; over 0.05 logits on any item, the whole screen runs without. `screen_settings.json` keeps each invocation's
+  check and unsteered values.
+- **select:** highest S among non-control configs with a healthy chosen strength; within 0.25 logits of the best, the
+  smaller strength (by position in its own grid, so push and curve strengths compare). Writes `winner.json`,
+  `screen.md` (every config by S) and `<confirm-out>/calibration.json` with the winner's strength and span, which
+  replay_eval's calibrate stage returns unchanged. A curve winner has `x_push: null`: push nulls need a strength the
+  screen did not choose.
+
+Tests: `python -m pytest -q test_screen.py` (stop rule, peak score, regime and order split, resume, deadline, TF32
+check, selection rule, the calibration accepted by replay_eval).
 
 ## Transfer to the eval types: `transfer_eval.py`
 
@@ -261,8 +303,28 @@ python diagnose.py <run dir> --artifacts <dir with activations/ and methods/> --
 ```
 
 It writes `diagnostics.html` (one self-contained page: summary of every "look" flag at the top, then sections A data and
-labels, B baseline behaviour, C each fitted direction, D strength, E outcomes, F readout noise), `diagnostics.json`
+labels, B baseline behaviour, C each fitted direction, Cd curve dimensionality, D strength, E outcomes, F readout noise), `diagnostics.json`
 (every number) and `diagnostics_items.csv` (one row per prompt). Every check shows its value, a threshold and a flag;
 the thresholds are constants at the top of `diagnose.py`. Directions are refitted from each bundle's `fit_uids.jsonl`
 and the activations (`caa`, `caa-within`, `choice`, `regime`, `reward`), so the report does not trust the saved
 cosines. Tests: `python -m pytest -q test_diagnose.py`.
+
+### Curve dimensionality (diagnose.py section Cd) and `layer_sweep.py`
+
+How many dimensions does the curve need, and is `k = 4` enough? Section C2 answers it for every site extracted at the
+run's layer, on the fit prompts of the curve bundle (of any bundle, if there is no curve bundle), with and without
+`none`. Per site it prints one line, e.g. "curve at k=4, held-out horizons: rho 0.60 (ridge 0.96); k=8 adds +0.09; 0 of
+10 components tested above the shuffled-horizon null", and a table: for k = 1..8 the k-th eigenvalue of the per-horizon
+means over the 95th percentile of the same with the horizon labels shuffled across prompts (above 1 is above chance;
+50 shuffles, seed 0), and for k in {1, 2, 3, 4, 6, 8} the held-out-horizon Spearman and median |t-hat - t| (decades) of
+the curve, with the ridge probe of log10 horizon beside it. Folds hold out whole horizons (5 folds, horizon names dealt
+in turn); prompt-level folds leak. The rank-matched null cannot reject a nuisance dimension that ranks below a real
+component, so read the held-out columns before the count. It reports and never gates, and the numbers are in
+`diagnostics.json` (`sections.Cd`). Cost: about 45 s for the 4 sites of the Qwen3-8B quick run (CPU, 8 cores; the curve
+cross-validation and the shuffles dominate). The computation is in `curve_dim.py`.
+
+`layer_sweep.py <activations dir> --bank DIR [--uids splits/reserved_horizons.jsonl --uids-role fit]` does the layer by
+site version offline, for every `L<layer>_<site>.npy`: ridge-probe and curve (k = 4) held-out-horizon rho, CAA split-half
+reliability (100 halvings) and the CAA classes' far-rate gap, on prompts with a horizon and no `none`. It writes
+`layer_sweep.json` and `layer_sweep.html` (one shaded table per metric, no external dependencies, light and dark).
+Tests: `python -m pytest -q test_curve_dim.py test_layer_sweep.py`.

@@ -13,6 +13,7 @@ from typing import Optional
 import numpy as np
 
 from pbank.durations import Duration
+from steer.horizon_decoders import horizon_decoders
 from steer.directions import Direction, mean_difference, random_directions, threshold_masks, typical_norm
 from steer.manifold import Manifold, fit_manifold
 from steer.stats import grouped_folds, spearman
@@ -88,10 +89,12 @@ class FitResult:
     within: dict                # regime -> Direction of the within-regime CAA (absent if it could not be formed)
     within_pooled: Optional[Direction]   # caa-within: the pooled within-regime CAA, or None
     within_class: np.ndarray    # per row: "long", "short" or "", within the row's own regime
+    trend: Direction            # horizon covariance pattern, regimes demeaned (steer/horizon_decoders.py)
+    probe: Direction            # ridge decoder weights for the same target
 
     def direction(self, key: str) -> Direction:
         """The direction stored under `key` in directions.npz (steer.fitting.direction_keys)."""
-        if key in ("caa", "reward", "choice"):
+        if key in ("caa", "reward", "choice", "trend", "probe"):
             return getattr(self, key)
         found = self.within_pooled if key == WITHIN_KEY else self.within.get(key.removeprefix("caa_"))
         if found is None:
@@ -117,26 +120,32 @@ class Selection:
     excluded: dict           # reason -> number of extracted prompts left out for it
 
 
-def select(uids: list[str], records: dict, include_none: bool = True, exclude_horizons=()) -> Selection:
+def select(uids: list[str], records: dict, include_none: bool = True, exclude_horizons=(),
+           allowed_uids: Optional[set] = None) -> Selection:
     """The prompts a fit uses, out of an activation set's `uids`. In order, a prompt is left out if it is:
       * not in the extraction split (the verification grid is never fitted on, whatever extract.py was run on);
       * a no-horizon (null control) prompt: it has no horizon to place on the curve;
       * in the "none" regime, when include_none is false;
-      * at a stated horizon in `exclude_horizons` (grid values, e.g. "3 years"), held out for calibration.
+      * at a stated horizon in `exclude_horizons` (grid values, e.g. "3 years"), held out for calibration;
+      * not in `allowed_uids`, when that is given ("not_in_uids", counted only for prompts the rules above keep).
     The first applicable reason is counted."""
     exclude = set(exclude_horizons)
     regimes = fit_regimes(include_none)
-    rows, excluded = [], {"not_extraction_split": 0, "no_horizon": 0, "none_regime": 0, "excluded_horizon": 0}
+    rows, excluded = [], {"not_extraction_split": 0, "no_horizon": 0, "none_regime": 0, "excluded_horizon": 0,
+                        "not_in_uids": 0}
     for i, uid in enumerate(uids):
         r = records[uid]
         reason = ("not_extraction_split" if r.split != "extraction" else
                   "no_horizon" if r.horizon is None else
                   "none_regime" if r.regime not in regimes else
-                  "excluded_horizon" if r.horizon_grid_value in exclude else None)
+                  "excluded_horizon" if r.horizon_grid_value in exclude else
+                  "not_in_uids" if allowed_uids is not None and uid not in allowed_uids else None)
         if reason:
             excluded[reason] += 1
         else:
             rows.append(i)
+    if allowed_uids is None:
+        del excluded["not_in_uids"]
     return Selection(rows=rows, excluded=excluded)
 
 
@@ -200,6 +209,10 @@ def fit(X: np.ndarray, recs: list, chosen: np.ndarray, s: FitSettings,
         random_sets = {"isotropic": random_directions(X.shape[1], s.n_random, s.seed)}
     random = random_sets["isotropic"]
     norm = typical_norm(X)
+    trend, probe, horizon_diag = horizon_decoders(X, t, regime)
+    horizon_diag["classes"] = {"n_prompts": len(t), "by_regime": dict(Counter(regime))}
+    for key, d in (("trend", trend), ("probe", probe)):
+        horizon_diag[key].update(cosines(d.vector))
 
     # Manifold curve, and its check on held-out prompts.
     manifold = fit_manifold(X, t, groups, s.components, s.bandwidth)
@@ -232,6 +245,7 @@ def fit(X: np.ndarray, recs: list, chosen: np.ndarray, s: FitSettings,
                 "spearman_logH_vs_mean_projection": spearman([h["log10_days"] for h in per_horizon],
                                                              [h["caa_projection"] for h in per_horizon])},
         "caa_within": within_diag,
+        "horizon_decoders": horizon_diag,
         "reward": {"n_high": reward.n_plus, "n_low": reward.n_minus, "raw_norm": reward.raw_norm},
         "choice": {"n_far": choice.n_plus, "n_near": choice.n_minus, "raw_norm": choice.raw_norm},
         "typical_norm": norm,
@@ -254,10 +268,10 @@ def fit(X: np.ndarray, recs: list, chosen: np.ndarray, s: FitSettings,
                      per_horizon=per_horizon, diagnostics=diagnostics, regime_counts=dict(Counter(regime)),
                      n_prompts=len(recs), caa_class=np.where(long_, "long", np.where(short, "short", "")),
                      reward_class=np.where(high, "high", np.where(low, "low", "")), fold=fold,
-                     within=within, within_pooled=pooled, within_class=within_class)
+                     within=within, within_pooled=pooled, within_class=within_class, trend=trend, probe=probe)
 
 
 def direction_keys(result: FitResult) -> list[str]:
-    """The directions a fit has, as directions.npz names them: caa, reward, choice, then the within-regime CAAs."""
-    return (["caa", "reward", "choice"] + [within_key(g) for g in FIT_REGIMES if g in result.within]
+    """The directions a fit has, as directions.npz names them: caa, reward, choice, trend, probe, then the within-regime CAAs."""
+    return (["caa", "reward", "choice", "trend", "probe"] + [within_key(g) for g in FIT_REGIMES if g in result.within]
             + ([WITHIN_KEY] if result.within_pooled is not None else []))
